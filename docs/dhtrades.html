@@ -1,0 +1,60 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html><head><title>Python: module dhtrades</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head><body bgcolor="#f0f0f8">
+
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="heading">
+<tr bgcolor="#7799ee">
+<td valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial">&nbsp;<br><big><big><strong>dhtrades</strong></big></big></font></td
+><td align=right valign=bottom
+><font color="#ffffff" face="helvetica, arial"><a href=".">index</a><br><a href="file:/home/dusty/git/dhtrader/dhtrades.py">/home/dusty/git/dhtrader/dhtrades.py</a></font></td></tr></table>
+    <p></p>
+<p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ee77aa">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Classes</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#ee77aa"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><dl>
+<dt><font face="helvetica, arial"><a href="builtins.html#object">builtins.object</a>
+</font></dt><dd>
+<dl>
+<dt><font face="helvetica, arial"><a href="dhtrades.html#Trade">Trade</a>
+</font></dt></dl>
+</dd>
+</dl>
+ <p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ffc8d8">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="Trade">class <strong>Trade</strong></a>(<a href="builtins.html#object">builtins.object</a>)</font></td></tr>
+    
+<tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
+<td colspan=2><tt><a href="#Trade">Trade</a>(open_dt:&nbsp;str,&nbsp;direction:&nbsp;str,&nbsp;entry_price:&nbsp;float,&nbsp;stop_target:&nbsp;float,&nbsp;prof_target:&nbsp;float,&nbsp;open_drawdown:&nbsp;float,&nbsp;close_drawdown:&nbsp;float,&nbsp;max_drawdown:&nbsp;float,&nbsp;close_dt:&nbsp;str&nbsp;=&nbsp;None,&nbsp;evaluation_dt:&nbsp;str&nbsp;=&nbsp;None,&nbsp;exit_price:&nbsp;float&nbsp;=&nbsp;None,&nbsp;gain_loss:&nbsp;float&nbsp;=&nbsp;None,&nbsp;stop_ticks:&nbsp;float&nbsp;=&nbsp;0,&nbsp;prof_ticks:&nbsp;float&nbsp;=&nbsp;0,&nbsp;offset_ticks:&nbsp;float&nbsp;=&nbsp;0,&nbsp;drawdown_impact:&nbsp;float&nbsp;=&nbsp;0,&nbsp;ticker:&nbsp;str&nbsp;=&nbsp;'ES',&nbsp;contracts:&nbsp;int&nbsp;=&nbsp;1,&nbsp;contract_value:&nbsp;float&nbsp;=&nbsp;50,&nbsp;is_open:&nbsp;bool&nbsp;=&nbsp;True,&nbsp;successful:&nbsp;bool&nbsp;=&nbsp;None)<br>
+&nbsp;<br>
+<br>&nbsp;</tt></td></tr>
+<tr><td>&nbsp;</td>
+<td width="100%">Methods defined here:<br>
+<dl><dt><a name="Trade-__init__"><strong>__init__</strong></a>(self, open_dt: str, direction: str, entry_price: float, stop_target: float, prof_target: float, open_drawdown: float, close_drawdown: float, max_drawdown: float, close_dt: str = None, evaluation_dt: str = None, exit_price: float = None, gain_loss: float = None, stop_ticks: float = 0, prof_ticks: float = 0, offset_ticks: float = 0, drawdown_impact: float = 0, ticker: str = 'ES', contracts: int = 1, contract_value: float = 50, is_open: bool = True, successful: bool = None)</dt><dd><tt>Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</tt></dd></dl>
+
+<dl><dt><a name="Trade-close"><strong>close</strong></a>(self, price: float, time: str)</dt></dl>
+
+<dl><dt><a name="Trade-csv_header"><strong>csv_header</strong></a>(self)</dt></dl>
+
+<dl><dt><a name="Trade-csv_list"><strong>csv_list</strong></a>(self)</dt></dl>
+
+<dl><dt><a name="Trade-update_drawdown"><strong>update_drawdown</strong></a>(self, price_seen: float)</dt><dd><tt>Takes&nbsp;a&nbsp;price,&nbsp;typically&nbsp;the&nbsp;candle&nbsp;high&nbsp;or&nbsp;low,&nbsp;and&nbsp;updates<br>
+the&nbsp;drawdown&nbsp;impact&nbsp;accordingly</tt></dd></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><tt>dictionary&nbsp;for&nbsp;instance&nbsp;variables&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+</td></tr></table></td></tr></table>
+</body></html>

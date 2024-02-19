@@ -1,0 +1,150 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html><head><title>Python: module dhcharts</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head><body bgcolor="#f0f0f8">
+
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="heading">
+<tr bgcolor="#7799ee">
+<td valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial">&nbsp;<br><big><big><strong>dhcharts</strong></big></big></font></td
+><td align=right valign=bottom
+><font color="#ffffff" face="helvetica, arial"><a href=".">index</a><br><a href="file:/home/dusty/git/dhtrader/dhcharts.py">/home/dusty/git/dhtrader/dhcharts.py</a></font></td></tr></table>
+    <p></p>
+<p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#aa55cc">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Modules</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#aa55cc"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><table width="100%" summary="list"><tr><td width="25%" valign=top><a href="datetime.html">datetime</a><br>
+</td><td width="25%" valign=top><a href="sys.html">sys</a><br>
+</td><td width="25%" valign=top></td><td width="25%" valign=top></td></tr></table></td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ee77aa">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Classes</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#ee77aa"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><dl>
+<dt><font face="helvetica, arial"><a href="builtins.html#object">builtins.object</a>
+</font></dt><dd>
+<dl>
+<dt><font face="helvetica, arial"><a href="dhcharts.html#Candle">Candle</a>
+</font></dt><dt><font face="helvetica, arial"><a href="dhcharts.html#Chart">Chart</a>
+</font></dt><dt><font face="helvetica, arial"><a href="dhcharts.html#Day">Day</a>
+</font></dt><dt><font face="helvetica, arial"><a href="dhcharts.html#Symbol">Symbol</a>
+</font></dt></dl>
+</dd>
+</dl>
+ <p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ffc8d8">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="Candle">class <strong>Candle</strong></a>(<a href="builtins.html#object">builtins.object</a>)</font></td></tr>
+    
+<tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
+<td colspan=2><tt><a href="#Candle">Candle</a>(c_datetime,&nbsp;c_timeframe:&nbsp;str,&nbsp;c_open:&nbsp;float,&nbsp;c_high:&nbsp;float,&nbsp;c_low:&nbsp;float,&nbsp;c_close:&nbsp;float,&nbsp;c_volume:&nbsp;int,&nbsp;c_tags:&nbsp;list&nbsp;=&nbsp;None)<br>
+&nbsp;<br>
+<br>&nbsp;</tt></td></tr>
+<tr><td>&nbsp;</td>
+<td width="100%">Methods defined here:<br>
+<dl><dt><a name="Candle-__init__"><strong>__init__</strong></a>(self, c_datetime, c_timeframe: str, c_open: float, c_high: float, c_low: float, c_close: float, c_volume: int, c_tags: list = None)</dt><dd><tt>Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</tt></dd></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><tt>dictionary&nbsp;for&nbsp;instance&nbsp;variables&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+</td></tr></table> <p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ffc8d8">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="Chart">class <strong>Chart</strong></a>(<a href="builtins.html#object">builtins.object</a>)</font></td></tr>
+    
+<tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
+<td colspan=2><tt><a href="#Chart">Chart</a>(c_timeframe:&nbsp;str,&nbsp;c_start=None,&nbsp;c_end=None,&nbsp;c_candles:&nbsp;list&nbsp;=&nbsp;None)<br>
+&nbsp;<br>
+<br>&nbsp;</tt></td></tr>
+<tr><td>&nbsp;</td>
+<td width="100%">Methods defined here:<br>
+<dl><dt><a name="Chart-__init__"><strong>__init__</strong></a>(self, c_timeframe: str, c_start=None, c_end=None, c_candles: list = None)</dt><dd><tt>Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</tt></dd></dl>
+
+<dl><dt><a name="Chart-add_candle"><strong>add_candle</strong></a>(self, new_candle, sort=False)</dt></dl>
+
+<dl><dt><a name="Chart-sort_candles"><strong>sort_candles</strong></a>(self)</dt></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><tt>dictionary&nbsp;for&nbsp;instance&nbsp;variables&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+</td></tr></table> <p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ffc8d8">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="Day">class <strong>Day</strong></a>(<a href="builtins.html#object">builtins.object</a>)</font></td></tr>
+    
+<tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
+<td colspan=2><tt><a href="#Day">Day</a>(d_symbol,&nbsp;d_date,&nbsp;d_charts:&nbsp;list&nbsp;=&nbsp;None,&nbsp;d_open_eth:&nbsp;float&nbsp;=&nbsp;None,&nbsp;d_open_rth:&nbsp;float&nbsp;=&nbsp;None,&nbsp;d_high_eth:&nbsp;float&nbsp;=&nbsp;None,&nbsp;d_high_rth:&nbsp;float&nbsp;=&nbsp;None,&nbsp;d_low_eth:&nbsp;float&nbsp;=&nbsp;None,&nbsp;d_low_rth:&nbsp;float&nbsp;=&nbsp;None,&nbsp;d_close_eth:&nbsp;float&nbsp;=&nbsp;None,&nbsp;d_close_rth:&nbsp;float&nbsp;=&nbsp;None,&nbsp;d_volume_eth:&nbsp;int&nbsp;=&nbsp;None,&nbsp;d_volume_rth:&nbsp;int&nbsp;=&nbsp;None,&nbsp;d_tags:&nbsp;list&nbsp;=&nbsp;None,&nbsp;d_pattern_rth=None)<br>
+&nbsp;<br>
+<br>&nbsp;</tt></td></tr>
+<tr><td>&nbsp;</td>
+<td width="100%">Methods defined here:<br>
+<dl><dt><a name="Day-__init__"><strong>__init__</strong></a>(self, d_symbol, d_date, d_charts: list = None, d_open_eth: float = None, d_open_rth: float = None, d_high_eth: float = None, d_high_rth: float = None, d_low_eth: float = None, d_low_rth: float = None, d_close_eth: float = None, d_close_rth: float = None, d_volume_eth: int = None, d_volume_rth: int = None, d_tags: list = None, d_pattern_rth=None)</dt><dd><tt>Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</tt></dd></dl>
+
+<dl><dt><a name="Day-add_chart"><strong>add_chart</strong></a>(self, new_chart)</dt></dl>
+
+<dl><dt><a name="Day-get_chart"><strong>get_chart</strong></a>(self, timeframe: str)</dt></dl>
+
+<dl><dt><a name="Day-recalc_from_1m"><strong>recalc_from_1m</strong></a>(self)</dt></dl>
+
+<dl><dt><a name="Day-update_chart"><strong>update_chart</strong></a>(self, new_chart)</dt></dl>
+
+<dl><dt><a name="Day-write_file"><strong>write_file</strong></a>(self, output_file: str)</dt></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><tt>dictionary&nbsp;for&nbsp;instance&nbsp;variables&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+</td></tr></table> <p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ffc8d8">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="Symbol">class <strong>Symbol</strong></a>(<a href="builtins.html#object">builtins.object</a>)</font></td></tr>
+    
+<tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
+<td colspan=2><tt><a href="#Symbol">Symbol</a>(ticker:&nbsp;str,&nbsp;name:&nbsp;str,&nbsp;leverage_ratio:&nbsp;float)<br>
+&nbsp;<br>
+<br>&nbsp;</tt></td></tr>
+<tr><td>&nbsp;</td>
+<td width="100%">Methods defined here:<br>
+<dl><dt><a name="Symbol-__init__"><strong>__init__</strong></a>(self, ticker: str, name: str, leverage_ratio: float)</dt><dd><tt>Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</tt></dd></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><tt>dictionary&nbsp;for&nbsp;instance&nbsp;variables&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+</td></tr></table></td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#55aa55">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Data</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#55aa55"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><strong>CANDLE_TIMEFRAMES</strong> = ['1m', '5m', '15m', '1h', '4h', '1d', '1w']</td></tr></table>
+</body></html>

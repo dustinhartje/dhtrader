@@ -1,3 +1,11 @@
+# Additional ignores by me
+*.swp
+*.log
+*.ignore
+
+# Below is all from the github .gitignore Python template chosen at repo creation
+# -------------------------------------------------------------------------------
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
