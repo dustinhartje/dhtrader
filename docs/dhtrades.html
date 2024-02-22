@@ -12,6 +12,14 @@
     <p></p>
 <p>
 <table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#aa55cc">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Modules</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#aa55cc"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><table width="100%" summary="list"><tr><td width="25%" valign=top><a href="json.html">json</a><br>
+</td><td width="25%" valign=top></td><td width="25%" valign=top></td><td width="25%" valign=top></td></tr></table></td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
 <tr bgcolor="#ee77aa">
 <td colspan=3 valign=bottom>&nbsp;<br>
 <font color="#ffffff" face="helvetica, arial"><big><strong>Classes</strong></big></font></td></tr>
@@ -44,6 +52,11 @@
 <dl><dt><a name="Trade-csv_header"><strong>csv_header</strong></a>(self)</dt></dl>
 
 <dl><dt><a name="Trade-csv_list"><strong>csv_list</strong></a>(self)</dt></dl>
+
+<dl><dt><a name="Trade-from_json"><strong>from_json</strong></a>(self, json_str: str = None, file_path: str = None)</dt><dd><tt>Loads&nbsp;data&nbsp;into&nbsp;this&nbsp;<a href="#Trade">Trade</a>&nbsp;<a href="builtins.html#object">object</a>&nbsp;from&nbsp;a&nbsp;json&nbsp;string&nbsp;or&nbsp;file</tt></dd></dl>
+
+<dl><dt><a name="Trade-to_json"><strong>to_json</strong></a>(self, file_path: str = None)</dt><dd><tt>returns&nbsp;a&nbsp;json&nbsp;version&nbsp;of&nbsp;this&nbsp;<a href="#Trade">Trade</a>&nbsp;<a href="builtins.html#object">object</a>,&nbsp;optionally&nbsp;writing<br>
+it&nbsp;to&nbsp;a&nbsp;file&nbsp;as&nbsp;well</tt></dd></dl>
 
 <dl><dt><a name="Trade-update_drawdown"><strong>update_drawdown</strong></a>(self, price_seen: float)</dt><dd><tt>Takes&nbsp;a&nbsp;price,&nbsp;typically&nbsp;the&nbsp;candle&nbsp;high&nbsp;or&nbsp;low,&nbsp;and&nbsp;updates<br>
 the&nbsp;drawdown&nbsp;impact&nbsp;accordingly</tt></dd></dl>

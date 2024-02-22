@@ -1,3 +1,4 @@
+import json
 from datetime import datetime as dt
 
 
@@ -28,7 +29,7 @@ class Trade():
 
         self.open_dt = open_dt
         self.close_dt = close_dt
-        self.evaluation_dt = dt.now()
+        self.evaluation_dt = dt.now().strftime("%Y-%m-%d %H:%M:%S")
         self.direction = direction
         self.entry_price: float = entry_price
         self.stop_target = stop_target
@@ -95,6 +96,39 @@ class Trade():
                 'successful',
                 'evaluation_dt',
                 ]
+
+    def to_json(self, file_path: str = None):
+        """returns a json version of this Trade object, optionally writing
+        it to a file as well"""
+        if file_path is not None:
+            with open(file_path, 'w', newline='') as f:
+                json.dump(self.__dict__,
+                          f,
+                          indent=2,
+                          )
+        return json.dumps(self.__dict__)
+
+    def from_json(self, json_str: str = None, file_path: str = None):
+        """Loads data into this Trade object from a json string or file"""
+        if json_str is None and file_path is None:
+            raise Exception('Must provide either json_str or file_path')
+        if json_str is not None and file_path is not None:
+            raise Exception('Provide json_str OR file_path, not both')
+        if json_str is not None:
+            d=json.loads(json_str)
+        else:
+            with open(file_path) as f:
+                d = json.load(f)
+        self.__init__(open_dt=d['open_dt'],
+                      direction=d['direction'],
+                      entry_price=d['entry_price'],
+                      stop_target=d['stop_target'],
+                      prof_target=d['prof_target'],
+                      open_drawdown=d['open_drawdown'],
+                      close_drawdown=d['close_drawdown'],
+                      max_drawdown=d['max_drawdown']
+                      )
+        return True
 
     def update_drawdown(self,
                         price_seen: float):
