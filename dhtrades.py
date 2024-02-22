@@ -97,6 +97,42 @@ class Trade():
                 'evaluation_dt',
                 ]
 
+    def from_json(self, json_str: str = None, file_path: str = None):
+        """Loads data into this Trade object from a json string or file"""
+        if json_str is None and file_path is None:
+            raise Exception('Must provide either json_str or file_path')
+        if json_str is not None and file_path is not None:
+            raise Exception('Provide json_str OR file_path, not both')
+
+        if json_str is not None:
+            d=json.loads(json_str)
+        else:
+            with open(file_path) as f:
+                d = json.load(f)
+
+        self.open_dt = d['open_dt']
+        self.close_dt = d['close_dt']
+        self.evaluation_dt = d['evaluation_dt']
+        self.direction = d['direction']
+        self.entry_price = d['entry_price']
+        self.stop_target = d['stop_target']
+        self.prof_target = d['prof_target']
+        self.exit_price = d['exit_price']
+        self.open_drawdown = d['open_drawdown']
+        self.close_drawdown = d['close_drawdown']
+        self.max_drawdown = d['max_drawdown']
+        self.gain_loss = d['gain_loss']
+        self.stop_ticks = d['stop_ticks']
+        self.prof_ticks = d['prof_ticks']
+        self.offset_ticks = d['offset_ticks']
+        self.drawdown_impact = d['drawdown_impact']
+        self.ticker = d['ticker']
+        self.contracts = d['contracts']
+        self.contract_value = d['contract_value']
+        self.is_open = d['is_open']
+        self.successful = d['successful']
+        return True
+
     def to_json(self, file_path: str = None):
         """returns a json version of this Trade object, optionally writing
         it to a file as well"""
@@ -107,28 +143,6 @@ class Trade():
                           indent=2,
                           )
         return json.dumps(self.__dict__)
-
-    def from_json(self, json_str: str = None, file_path: str = None):
-        """Loads data into this Trade object from a json string or file"""
-        if json_str is None and file_path is None:
-            raise Exception('Must provide either json_str or file_path')
-        if json_str is not None and file_path is not None:
-            raise Exception('Provide json_str OR file_path, not both')
-        if json_str is not None:
-            d=json.loads(json_str)
-        else:
-            with open(file_path) as f:
-                d = json.load(f)
-        self.__init__(open_dt=d['open_dt'],
-                      direction=d['direction'],
-                      entry_price=d['entry_price'],
-                      stop_target=d['stop_target'],
-                      prof_target=d['prof_target'],
-                      open_drawdown=d['open_drawdown'],
-                      close_drawdown=d['close_drawdown'],
-                      max_drawdown=d['max_drawdown']
-                      )
-        return True
 
     def update_drawdown(self,
                         price_seen: float):
