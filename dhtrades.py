@@ -105,7 +105,7 @@ class Trade():
             raise Exception('Provide json_str OR file_path, not both')
 
         if json_str is not None:
-            d=json.loads(json_str)
+            d = json.loads(json_str)
         else:
             with open(file_path) as f:
                 d = json.load(f)
