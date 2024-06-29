@@ -25,6 +25,8 @@ class Trade():
                  contract_value: float = 50,
                  is_open: bool = True,
                  successful: bool = None,
+                 trade_name: str = None,
+                 trade_version: str = None,
                  ):
 
         self.open_dt = open_dt
@@ -48,6 +50,8 @@ class Trade():
         self.contract_value = contract_value
         self.is_open = is_open
         self.successful = successful
+        self.trade_name = trade_name
+        self.trade_version = trade_version
 
     def csv_list(self):
         return [self.open_dt,
@@ -71,6 +75,8 @@ class Trade():
                 self.is_open,
                 self.successful,
                 self.evaluation_dt,
+                self.trade_name,
+                self.trade_version,
                 ]
 
     def csv_header(self):
@@ -95,6 +101,8 @@ class Trade():
                 'is_open',
                 'successful',
                 'evaluation_dt',
+                'trade_name',
+                'trade_version',
                 ]
 
     def from_json(self, json_str: str = None, file_path: str = None):
@@ -134,8 +142,21 @@ class Trade():
         return True
 
     def to_json(self, file_path: str = None):
-        """returns a json version of this Trade object, optionally writing
-        it to a file as well"""
+        """returns a json version of this Trade object while normalizing
+        custom types (like datetime to string) and optionally writing the
+        result to a file as well"""
+        if not isinstance(self.open_dt, str):
+            self.open_dt = dt.strftime(
+                    self.open_dt,
+                    "%Y-%m-%d %H:%M:%S")
+        if not isinstance(self.close_dt, str):
+            self.close_dt = dt.strftime(
+                    self.close_dt,
+                    "%Y-%m-%d %H:%M:%S")
+        if not isinstance(self.evaluation_dt, str):
+            self.evaluation_dt = dt.strftime(
+                    self.evaluation_dt,
+                    "%Y-%m-%d %H:%M:%S")
         if file_path is not None:
             with open(file_path, 'w', newline='') as f:
                 json.dump(self.__dict__,
@@ -143,6 +164,12 @@ class Trade():
                           indent=2,
                           )
         return json.dumps(self.__dict__)
+
+    def to_clean_dict(self):
+        """Converts to JSON string then back to a python dict.  This helps
+        to normalize types (I'm looking at YOU datetime) while ensuring
+        a portable python data structure"""
+        return json.loads(self.to_json())
 
     def update_drawdown(self,
                         price_seen: float):
