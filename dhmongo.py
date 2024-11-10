@@ -8,7 +8,7 @@
 # REF: https://github.com/mongodb-university/atlas_starter_python/blob
 #      /master/atlas-starter.py
 
-import os
+import os, sys
 import pymongo
 from dotenv import load_dotenv, find_dotenv
 
@@ -23,8 +23,17 @@ if MONGO_CONN is None:
 if MONGO_DB is None:
     raise Exception("Unable to retrieve MONGO_DB from {MONGO_ENV_FILE}")
 
-mc = pymongo.MongoClient(MONGO_CONN)
-db = mc.MONGO_DB
+try:
+    mc = pymongo.MongoClient(MONGO_CONN)
+    db = mc.MONGO_DB
+except:
+    print("\n\nWell that failed.  So sad!")
+    print("\nThere's a good chance it's because my current IP address is not "
+          "allowed on the Atlas side.")
+    print("Log into the Atlas web interface > Clusters > Cluster0 > Connect "
+          "button.  It should show a dialogue that allows me to add it.")
+    print("If this keeps happening maybe add a subnet range too?")
+    sys.exit()
 
 
 def store_trades(trades,
