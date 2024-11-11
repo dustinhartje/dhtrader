@@ -44,6 +44,69 @@ def store_trades(trades,
     return result
 
 
+def list_indicators(meta_collection: str):
+    c = db[meta_collection]
+    result = c.find()
+
+    return result
+
+def get_indicator_datapoints(indicator_id: str,
+                             dp_collection: str,
+                             earliest_dt: str = "",
+                             latest_dt: str = "",
+                             ):
+    """retrieves all datapoints for the given indicator_id that fall within
+    the range of earliest_dt and latest_dt (inclusive of both), returning
+    them as a chronologially sorted list"""
+    #TODO actually use dt params, for initial testing it's just grabbing all
+    c = db[dp_collection]
+    result = c.find({"indicator_id": indicator_id})
+
+    return result
+                             
+
+def store_indicators(indicator_id: str,
+                     short_name: str,
+                     long_name: str,
+                     description: str,
+                     calc_version: str,
+                     calc_details: str,
+                     datapoints: list,
+                     meta_collection: str,
+                     dp_collection: str,
+                     ):
+    # First update or create the meta record for this unique indicator_id
+    meta_doc = {"indicator_id": indicator_id,
+                "short_name": short_name,
+                "long_name": long_name,
+                "description": description,
+                "calc_version": calc_version,
+                "calc_details": calc_details,
+               }
+    c = db[meta_collection]
+    # If a prior meta doc for this id exists, replace it entirely else add it
+    # upsert=True inserts if not found
+    result_meta = c.find_one_and_replace({"indicator_id": indicator_id},
+                                         meta_doc,
+                                         new=True,
+                                         upsert=True)
+
+    # Now insert the datapoints per last entry in
+    # https://stackoverflow.com/questions/18371351/python-pymongo-
+    # insert-and-update-documents
+    c = db[dp_collection]
+    result_dp = []
+    for d in datapoints:
+        r = c.update_many({'indicator_id': d['indicator_id'],
+                           'dt': d['dt']},
+                          {"$set": {"value": d['value']}},
+                          upsert=True)
+    result_dp.append(r)
+    result = {"meta": result_meta, "datapoints": result_dp}
+
+    return result
+
+
 def test_basics():
     """Used when script is run adhoc to perform basic connect/r/w test"""
 
