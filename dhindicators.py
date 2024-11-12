@@ -1,6 +1,8 @@
 import dhcharts as dhc
 import dhstore as dhs
+import dhutil as dhu
 import json
+import sys
 
 class IndicatorDataPoint():
     def __init__(self,
@@ -29,6 +31,9 @@ class Indicator():
                  short_name: str,
                  long_name: str,
                  description: str,
+                 timeframe: str,
+                 trading_hours: str,
+                 symbol: str,
                  calc_version: str,
                  calc_details: str,
                  ):
@@ -36,6 +41,13 @@ class Indicator():
         self.short_name = short_name
         self.long_name = long_name
         self.description = description
+        if not valid_timeframe(timeframe):
+            raise ValueError(f"{timeframe} not valid for timeframe")
+        self.timeframe = timeframe
+        if not valid_trading_hours(trading_hours):
+            raise ValueError(f"{trading_hours} not valid for trading_hours")
+        self.trading_hours = trading_hours
+        self.symbol = symbol
         self.calc_version = calc_version
         self.calc_details = calc_details
         self.datapoints = None
@@ -47,6 +59,9 @@ class Indicator():
                 "short_name": self.short_name,
                 "long_name": self.long_name,
                 "description": self.description,
+                "timeframe": self.timeframe,
+                "trading_hours": self.trading_hours,
+                "symbol": self.symbol,
                 "calc_version": self.calc_version,
                 "calc_details": self.calc_details,
                 }
@@ -71,12 +86,37 @@ class Indicator():
                                      short_name=self.short_name,
                                      long_name=self.long_name,
                                      description=self.description,
+                                     timeframe=self.timeframe,
+                                     trading_hours=self.trading_hours,
+                                     symbol=self.symbol,
                                      calc_version=self.calc_version,
                                      calc_details=self.calc_details,
                                      datapoints=self.datapoints,
                                     )
 
         return result
+
+
+class IndicatorEMA(Indicator):
+    def __init__(self,
+                 short_name,
+                 long_name,
+                 description,
+                 timeframe,
+                 trading_hours,
+                 symbol,
+                 calc_version,
+                 calc_details,
+                 ):
+        super().__init__(short_name,
+                         long_name,
+                         description,
+                         timeframe,
+                         trading_hours,
+                         symbol,
+                         calc_version,
+                         calc_details,
+                         )
 
     # TODO before going deeper on this parent class, create at least one
     #      subclass and make sure I'm not going to have to just repate all
@@ -97,6 +137,20 @@ class Indicator():
 
 if __name__ == '__main__':
     # TODO delete all this, just using it for quick testing
+
+    # Testing subclass stuff
+    i = IndicatorEMA(short_name="shorty",
+                     long_name="blah",
+                     description="yadda",
+                     calc_version="yoda",
+                     calc_details="yeeta"
+                     )
+    #print(i.__dict__)
+    print(i.get_info())
+
+    sys.exit()
+    # Testing storage and retrieval
+
     dps = [IndicatorDataPoint(dt='12/10/2024 01:30:00',
                               value=1.24,
                               indicator_id='test_indicator.0.1'),
