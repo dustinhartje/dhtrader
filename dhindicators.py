@@ -117,10 +117,27 @@ class IndicatorEMA(Indicator):
                          calc_version,
                          calc_details,
                          )
-
-    # TODO before going deeper on this parent class, create at least one
-    #      subclass and make sure I'm not going to have to just repate all
-    #      this crap before developig it further here
+    # TODO add functions to dhstore to be able to read 1m candles from the csv
+    #      raw data and drop them into a collection, probably a 1m_ES specific
+    #      collection.  This should upsert so they don't get duplicated
+    # TODO I'll also want some quick scripts to make daily/weekly updates easy
+    #      These might accept date ranges or at least earliest date so it
+    #      doesn't try to add everything.
+    # TODO while in the neighborhood, add some quick functions to review the
+    #      candles collection and report back what's avail in storage.  Ideal
+    #      would be a list of days and # candles in each day so I can quickly
+    #      sanity check for gaps.  Earliest and latest datestamps would be
+    #      good too.
+    # TODO Next I'll need to retrieve the candles for any given timeframe
+    #      into a Chart()
+    # TODO Then add functionality somewhere (Chart() method?) to build higher
+    #      timeframes from a 1m Chart().  This way I can start with the chart
+    #      matching the timeframe of the indicator to make indicator calcs
+    #      less tedious.  The calcs should always check the chart being input
+    #      to ensure it's timeframe matches theirs.  They should probably also
+    #      confirm the chart doesn't have gaps.
+    # TODO flesh out indicatorEMA to be able to build on any tf and hours
+    #      with whatever params make sense for calculating it
     # TODO method to retrieve results time series from mongo
     #      basic form was written in dhstore, needs to be able to limit time
     #      window though and then the calling method added here

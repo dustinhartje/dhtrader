@@ -11,6 +11,8 @@
 import os, sys
 import pymongo
 from dotenv import load_dotenv, find_dotenv
+import dhutil as dhu
+import dhcharts as dhc
 
 # Establish mongo connection parameters and client
 MONGO_ENV_FILE = 'mongo.env'
@@ -21,7 +23,7 @@ MONGO_DB = os.getenv("MONGO_DB")
 if MONGO_CONN is None:
     raise Exception(f"Unable to retrieve MONGO_CONN from {MONGO_ENV_FILE}")
 if MONGO_DB is None:
-    raise Exception("Unable to retrieve MONGO_DB from {MONGO_ENV_FILE}")
+    raise Exception(f"Unable to retrieve MONGO_DB from {MONGO_ENV_FILE}")
 
 try:
     mc = pymongo.MongoClient(MONGO_CONN)
@@ -36,6 +38,14 @@ except:
     sys.exit()
 
 
+def drop_collection(collection: str):
+    """Irretrievable drops a collection from the store.  Use carefully!"""
+    c = db[collection]
+    result = c.drop()
+
+    return result
+
+
 def store_trades(trades,
                  collection: str = "trades"):
     c = db[collection]
@@ -44,11 +54,59 @@ def store_trades(trades,
     return result
 
 
+def store_candle(c_datetime,
+                 c_timeframe: str,
+                 c_open: float,
+                 c_high: float,
+                 c_low: float,
+                 c_close: float,
+                 c_volume: int,
+                 c_symbol: str,
+                 c_epoch: int,
+                ):
+    """Stores a single candle object in mongo.  Overwrites if it exists."""
+    dhu.valid_timeframe(c_timeframe)
+    collection=f"candles_{c_symbol}_{c_timeframe}"
+    c_dt = dhu.dt_as_str(c_datetime)
+    candle_doc = {"c_datetime": c_dt,
+                  "c_timeframe": c_timeframe,
+                  "c_open": c_open,
+                  "c_high": c_high,
+                  "c_low": c_low,
+                  "c_close": c_close,
+                  "c_volume": c_volume,
+                  "c_symbol": c_symbol,
+                  "c_epoch": c_epoch,
+                 }
+    c = db[collection]
+    result = c.find_one_and_replace({"c_datetime": c_dt},
+                                         candle_doc,
+                                         new=True,
+                                         upsert=True)
+    return result
+
+
+def get_candles(start_epoch: int,
+                end_epoch: int,
+                timeframe: str,
+                symbol: str,
+                ):
+    """Returns a list of candle docs within the start and end epochs given
+    inclusive of both epochs"""
+    c = db[f"candles_{symbol}_{timeframe}"]
+    result = c.find({ "$and": [{"c_epoch": {"$gte": start_epoch}},
+                               {"c_epoch": {"$lte": end_epoch}}]})
+
+    return list(result)
+
+
 def list_indicators(meta_collection: str):
+    """Lists all available indicators in mongo"""
     c = db[meta_collection]
     result = c.find()
 
-    return result
+    return list(result)
+
 
 def get_indicator_datapoints(indicator_id: str,
                              dp_collection: str,
@@ -62,7 +120,7 @@ def get_indicator_datapoints(indicator_id: str,
     c = db[dp_collection]
     result = c.find({"indicator_id": indicator_id})
 
-    return result
+    return list(result)
                              
 
 def store_indicators(indicator_id: str,
@@ -116,35 +174,100 @@ def store_indicators(indicator_id: str,
 def test_basics():
     """Used when script is run adhoc to perform basic connect/r/w test"""
 
-    print("Listing collections")
+    print("\nListing collections")
     result = db.list_collection_names()
     print(result)
 
-    print("Creating a collection and inserting a test doc")
-    c = db["test_stuff"]
+    print("\nCreating a collection and inserting a test doc")
+    c = db["DELETEME_TEST_STUFF"]
     result = c.insert_one({"name": "test doc", "usefulness": "Not at all"})
     print(result)
 
-    print("Listing collections")
+    print("\nListing collections again to confirm the new one")
     result = db.list_collection_names()
     print(result)
 
-    print("Listing docs in the collection")
+    print("\nListing docs in the collection")
     result = c.find()
     print(result)
     for doc in result:
         print(doc)
 
-    print("Dropping collection")
+    print("\nDropping collection")
     result = c.drop()
     print(result)
 
-    print("Listing collections")
+    print("\nListing collections")
     result = db.list_collection_names()
     print(result)
 
-    print("...and we're done!")
+    print("\nStoring 2 candles")
+    result = store_candle(c_datetime="2024-01-01 12:30:00",
+                          c_timeframe="1m",
+                          c_open=5500.25,
+                          c_high=5505,
+                          c_low=5497.5,
+                          c_close=5501.5,
+                          c_volume=500,
+                          c_symbol= "DELETEME",
+                          c_epoch=dhu.dt_to_epoch("2024-01-01 12:30:00"),
+                         )
+    print(f"Candle 1: {result}")
+    result = store_candle(c_datetime="2024-01-05 14:35:00",
+                          c_timeframe= "1m",
+                          c_open= 5501.5,
+                          c_high= 5510,
+                          c_low= 5500.5,
+                          c_close= 5510,
+                          c_volume= 400,
+                          c_symbol= "DELETEME",
+                          c_epoch=dhu.dt_to_epoch("2024-01-05 14:35:00"),
+                         )
+    print(f"Candle 2: {result}")
+    print("\nListing all candles stored in test collection")
+    c=db["candles_DELETEME_1m"]
+    result=c.find()
+    for candle in result:
+        print(candle)
+    print("\nNow try to find only the first candle using epoch filters")
+    result = get_candles(start_epoch=1704130200,
+                         end_epoch=1704130201,
+                         timeframe="1m",
+                         symbol="DELETEME",
+                         )
+    print(result)
+    print("\nand then find only the second candle using epoch filters")
+    result = get_candles(start_epoch=1704130201,
+                         end_epoch=1704483300,
+                         timeframe="1m",
+                         symbol="DELETEME",
+                         )
+    print(result)
 
+    print("\nNow try to store a Candle using it's build in method")
+    test_candle = dhc.Candle(c_datetime="2024-02-10 09:20:00",
+                             c_timeframe= "1m",
+                             c_open= 5501.5,
+                             c_high= 5510,
+                             c_low= 5500.5,
+                             c_close= 5510,
+                             c_volume= 400,
+                             c_symbol= "DELETEME",
+                            )
+    test_candle.store()
+    print("\nsearch to see if it's there...")
+    result = c.find()
+    for r in result:
+        print(r)
+    result = get_candles(start_epoch=1704130201,
+                         end_epoch=1704483300,
+                         timeframe="1m",
+                         symbol="DELETEME",
+                         )
+
+    print("Now I'll just cleanup after myself in mongo...")
+    c.drop()
+    print("\n...and we're done!")
 
 if __name__ == '__main__':
     test_basics()

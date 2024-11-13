@@ -3,10 +3,12 @@ from datetime import datetime as dt
 TIMEFRAMES = ['1m', '5m', '15m', '1h', '1d', '1w', '1mo']
 TRADING_HOURS = ['rth', 'eth']
 
-def valid_timeframe(t):
+def valid_timeframe(t, exit=True):
     if t in TIMEFRAMES:
         return True
     else:
+        if exit:
+            raise ValueError(f"{t} is not a valid timeframe in {TIMEFRAMES}")
         return False
 
 
@@ -49,6 +51,10 @@ def test_basics():
     print(f"Datetime converted to epoch: {tde} {type(tde)}")
     t=dt_from_epoch(tde)
     print(f"Epoch converted back to datetime: {t} {type(t)}")
+    print("Testing valid timeframe")
+    print(valid_timeframe('1m'))
+    print("Testing an invalid timeframe, should raise an exception and exit")
+    print(valid_timeframe('20m'))
 
 if __name__ == '__main__':
     test_basics()

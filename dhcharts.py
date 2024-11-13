@@ -1,6 +1,7 @@
 import datetime as dt
 import sys
-# import json
+import dhutil as dhu
+import dhstore as dhs
 
 # TODO at this point I think it's time to start building classes/investigating
 #      backtest libraries to use because I think I want to go ahead and read
@@ -103,26 +104,27 @@ class Candle():
                  c_low: float,
                  c_close: float,
                  c_volume: int,
+                 c_symbol: str,
                  c_tags: list = None,
+                 c_epoch: int = None
                  ):
 
-        self.c_datetime = c_datetime
-        if not isinstance(self.c_datetime, dt.datetime):
-            raise TypeError(f"c_datetime {type(c_datetime)} must be a"
-                            "<class datetime.datetime> object")
+        self.c_datetime = dhu.dt_as_dt(c_datetime)
         self.c_timeframe = c_timeframe
-        if self.c_timeframe not in CANDLE_TIMEFRAMES:
-            raise ValueError(f"c_timeframe of {c_timeframe} is not in the "
-                             "known list {CANDLE_TIMEFRAMES}")
+        dhu.valid_timeframe(self.c_timeframe)
         self.c_open = c_open
         self.c_high = c_high
         self.c_low = c_low
         self.c_close = c_close
         self.c_volume = c_volume
+        self.c_symbol = c_symbol
         if c_tags is None:
             c_tags = []
         else:
             self.c_tags = c_tags
+        if c_epoch is None:
+            c_epoch=dhu.dt_to_epoch(self.c_datetime)
+        self.c_epoch = c_epoch
 
         self.c_size = abs(self.c_high - self.c_low)
         self.c_body_size = abs(self.c_open - self.c_close)
@@ -147,6 +149,9 @@ class Candle():
             self.c_direction = 'bearish'
         else:
             self.c_direction = 'unchanged'
+
+    def store(self):
+        dhs.store_candle(self)
 
 
 class Chart():

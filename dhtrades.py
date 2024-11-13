@@ -1,7 +1,6 @@
 import json
 from datetime import datetime as dt
 
-
 class Trade():
     def __init__(self,
                  open_dt: str,
