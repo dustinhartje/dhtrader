@@ -117,6 +117,8 @@ def store_candle(candle):
                      c_volume=candle.c_volume,
                      c_symbol=candle.c_symbol,
                      c_epoch=candle.c_epoch,
+                     c_date=candle.c_date,
+                     c_time=candle.c_time,
                     )
 
 

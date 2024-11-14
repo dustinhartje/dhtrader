@@ -63,6 +63,8 @@ def store_candle(c_datetime,
                  c_volume: int,
                  c_symbol: str,
                  c_epoch: int,
+                 c_date: str,
+                 c_time: str,
                 ):
     """Stores a single candle object in mongo.  Overwrites if it exists."""
     dhu.valid_timeframe(c_timeframe)
@@ -77,6 +79,8 @@ def store_candle(c_datetime,
                   "c_volume": c_volume,
                   "c_symbol": c_symbol,
                   "c_epoch": c_epoch,
+                  "c_date": c_date,
+                  "c_time": c_time,
                  }
     c = db[collection]
     result = c.find_one_and_replace({"c_datetime": c_dt},
@@ -235,6 +239,8 @@ def test_basics():
                           c_volume=500,
                           c_symbol= "DELETEME",
                           c_epoch=dhu.dt_to_epoch("2024-01-01 12:30:00"),
+                          c_date="2024-01-01",
+                          c_time="12:30:00",
                          )
     print(f"Candle 1: {result}")
     result = store_candle(c_datetime="2024-01-05 14:35:00",
@@ -246,6 +252,8 @@ def test_basics():
                           c_volume= 400,
                           c_symbol= "DELETEME",
                           c_epoch=dhu.dt_to_epoch("2024-01-05 14:35:00"),
+                          c_date="2024-01-05",
+                          c_time="14:35:00"
                          )
     print(f"Candle 2: {result}")
     print("\nListing all candles stored in test collection")

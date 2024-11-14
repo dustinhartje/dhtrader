@@ -46,7 +46,6 @@ def read_candles_from_csv(start_dt,
                           symbol: str = 'ES',
                           timeframe: str = '1m',
                          ):
-    # TODO update this docstring
     """Reads lines from a csv file and returns them as a list of
        dhcharts.Candle objects.  Assumes format matches FirstRate data
        standard of no header row the the following order of fields:

@@ -106,7 +106,9 @@ class Candle():
                  c_volume: int,
                  c_symbol: str,
                  c_tags: list = None,
-                 c_epoch: int = None
+                 c_epoch: int = None,
+                 c_date: str = None,
+                 c_time: str = None
                  ):
 
         self.c_datetime = dhu.dt_as_dt(c_datetime)
@@ -125,6 +127,12 @@ class Candle():
         if c_epoch is None:
             c_epoch=dhu.dt_to_epoch(self.c_datetime)
         self.c_epoch = c_epoch
+        if c_date is None:
+            c_date = dhu.dt_as_str(c_datetime).split()[0]
+        self.c_date = c_date
+        if c_time is None:
+            c_time = dhu.dt_as_str(c_datetime).split()[1]
+        self.c_time = c_time
 
         self.c_size = abs(self.c_high - self.c_low)
         self.c_body_size = abs(self.c_open - self.c_close)
