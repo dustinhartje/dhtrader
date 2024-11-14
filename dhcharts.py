@@ -112,11 +112,11 @@ class Candle():
         self.c_datetime = dhu.dt_as_dt(c_datetime)
         self.c_timeframe = c_timeframe
         dhu.valid_timeframe(self.c_timeframe)
-        self.c_open = c_open
-        self.c_high = c_high
-        self.c_low = c_low
-        self.c_close = c_close
-        self.c_volume = c_volume
+        self.c_open = float(c_open)
+        self.c_high = float(c_high)
+        self.c_low = float(c_low)
+        self.c_close = float(c_close)
+        self.c_volume = int(c_volume)
         self.c_symbol = c_symbol
         if c_tags is None:
             c_tags = []

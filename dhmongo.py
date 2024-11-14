@@ -100,6 +100,28 @@ def get_candles(start_epoch: int,
     return list(result)
 
 
+def review_candles(timeframe: str,
+                   symbol: str,
+                  ):
+    """Provides aggregate summary data about candles in central storage"""
+    c = db[f"candles_{symbol}_{timeframe}"]
+    epochs = list(c.aggregate([{"$group": { "_id": "null",
+                                "earliest_epoch": {"$min": "$c_epoch"},
+                                "latest_epoch": {"$max": "$c_epoch"},
+                               }}]))[0]
+    earliest_epoch=epochs['earliest_epoch']
+    earliest_dt=dhu.dt_as_str(dhu.dt_from_epoch(epochs['earliest_epoch']))
+    latest_epoch=epochs['latest_epoch']
+    latest_dt=dhu.dt_as_str(dhu.dt_from_epoch(epochs['latest_epoch']))
+    count = c.count_documents({})
+    result = {"earliest_dt": earliest_dt, "latest_dt": latest_dt,
+              "latest_dt": latest_dt, "latest_dt": latest_dt,
+              "count": count,
+             }
+
+    return result
+
+
 def list_indicators(meta_collection: str):
     """Lists all available indicators in mongo"""
     c = db[meta_collection]
@@ -172,7 +194,9 @@ def store_indicators(indicator_id: str,
 
 
 def test_basics():
-    """Used when script is run adhoc to perform basic connect/r/w test"""
+    """runs a few basics tests, mostly used during initial development
+       to confirm functionality as desired"""
+    # TODO consider converting these into unit tests some day
 
     print("\nListing collections")
     result = db.list_collection_names()
@@ -264,6 +288,10 @@ def test_basics():
                          timeframe="1m",
                          symbol="DELETEME",
                          )
+
+    # Test candle summary review functions
+    print("\nNow lets show a summary of the stored candles")
+    print(review_candles(timeframe='1m', symbol="DELETEME"))
 
     print("Now I'll just cleanup after myself in mongo...")
     c.drop()

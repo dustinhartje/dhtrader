@@ -117,17 +117,9 @@ class IndicatorEMA(Indicator):
                          calc_version,
                          calc_details,
                          )
-    # TODO add functions to dhstore to be able to read 1m candles from the csv
-    #      raw data and drop them into a collection, probably a 1m_ES specific
-    #      collection.  This should upsert so they don't get duplicated
     # TODO I'll also want some quick scripts to make daily/weekly updates easy
     #      These might accept date ranges or at least earliest date so it
     #      doesn't try to add everything.
-    # TODO while in the neighborhood, add some quick functions to review the
-    #      candles collection and report back what's avail in storage.  Ideal
-    #      would be a list of days and # candles in each day so I can quickly
-    #      sanity check for gaps.  Earliest and latest datestamps would be
-    #      good too.
     # TODO Next I'll need to retrieve the candles for any given timeframe
     #      into a Chart()
     # TODO Then add functionality somewhere (Chart() method?) to build higher

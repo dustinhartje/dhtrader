@@ -7,7 +7,11 @@
 #      currently doing, and instead act as an shim to translate the mongo
 #      specifics into generic types that could still be used by anything
 #      accessing the data even if I swapped out the storage layer entirely
+# TODO also review each function, they should accept dhcharts objects for
+#      the most part rather than detailed arguments to reduce duplication
+#      and be more shim-ish in nature
 
+import csv
 import dhcharts as dhc
 import dhutil as dhu
 import dhmongo as dhm
@@ -91,8 +95,15 @@ def store_indicator(indicator_id:str,
 
     return result
 
+def load_candles_from_csv(filepath: str,
+                          start_dt,
+                          end_dt,
+                         ):
+    """Loads 1m candles from a CSV file into central storage"""
+
+
 def store_candle(candle):
-    """Write a single candle to central storage"""
+    """Write a single dhcharts.Candle() to central storage"""
     if not isinstance(candle, dhc.Candle):
         raise TypeError(f"candle {type(candle)} must be a "
                          "<class dhc.Candle> object")
@@ -137,8 +148,25 @@ def get_candles(start_epoch: int,
 
     return candles
 
+
+def review_candles(timeframe: str,
+                   symbol: str,
+                  ):
+    """Provides aggregate summary data about candles in central storage"""
+    result = dhm.review_candles(timeframe=timeframe,
+                                symbol=symbol,
+                               )
+
+    return result
+
+
 def test_basics():
-    print("Storing 2 test candles")
+    """runs a few basics tests, mostly used during initial development
+       to confirm functionality as desired"""
+    # TODO consider converting these into unit tests some day
+
+    # Test basic candle storing functionality
+    print("\nStoring 2 test candles")
     tc1 = dhc.Candle(c_datetime="2024-02-10 09:20:00",
                      c_timeframe= "1m",
                      c_open= 5501.5,
@@ -159,7 +187,7 @@ def test_basics():
                      c_symbol= "DELETEME",
                     )
     tc2.store()
-    print("Now let's retrieve them")
+    print("\nNow let's retrieve them")
     result = get_candles(start_epoch=1704130201,
                          end_epoch=17044834300,
                          timeframe="1m",
@@ -167,8 +195,32 @@ def test_basics():
                          )
     for r in result:
         print(r.__dict__)
-    print("And drop the test collection to clean up")
+    print("\nAnd drop the test collection to clean up")
     dhm.drop_collection("candles_DELETEME_1m")
+
+    # Test storing raw candles read from a csv i.e. daily updates
+    print("\nStoring 5/10 candles from testcandles.csv with date filtering")
+    candles = dhu.read_candles_from_csv(start_dt='2024-01-01 00:00:00',
+                                        end_dt='2024-01-02 00:00:00',
+                                        filepath='testcandles.csv',
+                                        symbol='DELETEME',
+                                       )
+    for c in candles:
+        store_candle(c)
+    print("\nCheck a summary of them")
+    print(review_candles(timeframe='1m', symbol="DELETEME"))
+    print("\nNow let's retrieve them")
+    result = get_candles(start_epoch=1704130201,
+                         end_epoch=17044834300,
+                         timeframe="1m",
+                         symbol="DELETEME",
+                         )
+    for r in result:
+        print(r.__dict__)
+    print("\nAnd drop the test collection to clean up")
+    dhm.drop_collection("candles_DELETEME_1m")
+
+
 
 if __name__ == '__main__':
     test_basics()
