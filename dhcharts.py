@@ -125,7 +125,7 @@ class Candle():
         else:
             self.c_tags = c_tags
         if c_epoch is None:
-            c_epoch=dhu.dt_to_epoch(self.c_datetime)
+            c_epoch = dhu.dt_to_epoch(self.c_datetime)
         self.c_epoch = c_epoch
         if c_date is None:
             c_date = dhu.dt_as_str(c_datetime).split()[0]

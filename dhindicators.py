@@ -4,6 +4,7 @@ import dhutil as dhu
 import json
 import sys
 
+
 class IndicatorDataPoint():
     def __init__(self,
                  dt: str,
@@ -26,6 +27,7 @@ class IndicatorDataPoint():
         a portable python data structure"""
         return json.loads(self.to_json())
 
+
 class Indicator():
     def __init__(self,
                  short_name: str,
@@ -41,10 +43,10 @@ class Indicator():
         self.short_name = short_name
         self.long_name = long_name
         self.description = description
-        if not valid_timeframe(timeframe):
+        if not dhu.valid_timeframe(timeframe):
             raise ValueError(f"{timeframe} not valid for timeframe")
         self.timeframe = timeframe
-        if not valid_trading_hours(trading_hours):
+        if not dhu.valid_trading_hours(trading_hours):
             raise ValueError(f"{trading_hours} not valid for trading_hours")
         self.trading_hours = trading_hours
         self.symbol = symbol
@@ -72,7 +74,7 @@ class Indicator():
         datapoints from the candles."""
         if not isinstance(chart, dhc.Chart):
             raise TypeError(f"chart {type(chart)} must be a "
-                             "<class dhc.Chart> object")
+                            "<class dhc.Chart> object")
         # TODO In real class, make sure the chart is sorted unless the Chart
         # object already covers this out of the box
         print("No calculations can be done on parent class Indicator()")
@@ -92,7 +94,7 @@ class Indicator():
                                      calc_version=self.calc_version,
                                      calc_details=self.calc_details,
                                      datapoints=self.datapoints,
-                                    )
+                                     )
 
         return result
 
@@ -142,10 +144,12 @@ class IndicatorEMA(Indicator):
 #      with "all" being the default only item in the list.  For each indicator
 #      if it's in the list or all is in the list go ahead and run it.  Each of
 #      the indicators gets built as an object then it's store method is run
-#      by default unless that is 
+#      by default
+
 
 if __name__ == '__main__':
     # TODO delete all this, just using it for quick testing
+    #      or turn it into a test_basics function like elsewhere
 
     # Testing subclass stuff
     i = IndicatorEMA(short_name="shorty",
@@ -154,7 +158,6 @@ if __name__ == '__main__':
                      calc_version="yoda",
                      calc_details="yeeta"
                      )
-    #print(i.__dict__)
     print(i.get_info())
 
     sys.exit()
@@ -172,8 +175,8 @@ if __name__ == '__main__':
                   description='this is a description',
                   calc_version='0.1',
                   calc_details='no details yet just testing thigns',
-                 )
-    i.datapoints=dps
+                  )
+    i.datapoints = dps
     result = i.store()
     print(f"dhindicator received {result}")
     print("################################################")
@@ -182,6 +185,7 @@ if __name__ == '__main__':
     for i in indicators:
         print(i)
     print("And as for actual datapoints...")
-    datapoints = dhs.get_indicator_datapoints(indicator_id="test_indicator.0.1")
+    datapoints = dhs.get_indicator_datapoints(
+            indicator_id="test_indicator.0.1")
     for d in datapoints:
         print(d)

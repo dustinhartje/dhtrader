@@ -23,6 +23,7 @@ COLL_TRADES = "trades"
 COLL_IND_META = "indicators_meta"
 COLL_IND = "indicators"
 
+
 def store_trades(trade_name: str,
                  trade_version: str,
                  trades: list,
@@ -40,10 +41,12 @@ def store_trades(trade_name: str,
                               collection=collection)
     return result
 
+
 def list_indicators(meta_collection: str = COLL_IND_META):
     result = dhm.list_indicators(meta_collection=meta_collection)
 
     return result
+
 
 def get_indicator_datapoints(indicator_id: str,
                              dp_collection: str = COLL_IND,
@@ -58,7 +61,8 @@ def get_indicator_datapoints(indicator_id: str,
     # TODO update this to return an IndicatorDatapoint() object
     return result
 
-def store_indicator(indicator_id:str,
+
+def store_indicator(indicator_id: str,
                     short_name: str,
                     long_name: str,
                     description: str,
@@ -95,10 +99,11 @@ def store_indicator(indicator_id:str,
 
     return result
 
+
 def load_candles_from_csv(filepath: str,
                           start_dt,
                           end_dt,
-                         ):
+                          ):
     """Loads 1m candles from a CSV file into central storage"""
 
 
@@ -106,7 +111,7 @@ def store_candle(candle):
     """Write a single dhcharts.Candle() to central storage"""
     if not isinstance(candle, dhc.Candle):
         raise TypeError(f"candle {type(candle)} must be a "
-                         "<class dhc.Candle> object")
+                        "<class dhc.Candle> object")
     dhu.valid_timeframe(candle.c_timeframe)
     dhm.store_candle(c_datetime=candle.c_datetime,
                      c_timeframe=candle.c_timeframe,
@@ -119,7 +124,7 @@ def store_candle(candle):
                      c_epoch=candle.c_epoch,
                      c_date=candle.c_date,
                      c_time=candle.c_time,
-                    )
+                     )
 
 
 def get_candles(start_epoch: int,
@@ -133,7 +138,7 @@ def get_candles(start_epoch: int,
                              end_epoch=end_epoch,
                              timeframe=timeframe,
                              symbol=symbol,
-                            )
+                             )
 
     candles = []
     for r in result:
@@ -146,18 +151,18 @@ def get_candles(start_epoch: int,
                                   c_volume=r["c_volume"],
                                   c_symbol=r["c_symbol"],
                                   c_epoch=r["c_epoch"],
-                      ))
+                                  ))
 
     return candles
 
 
 def review_candles(timeframe: str,
                    symbol: str,
-                  ):
+                   ):
     """Provides aggregate summary data about candles in central storage"""
     result = dhm.review_candles(timeframe=timeframe,
                                 symbol=symbol,
-                               )
+                                )
 
     return result
 
@@ -170,24 +175,24 @@ def test_basics():
     # Test basic candle storing functionality
     print("\nStoring 2 test candles")
     tc1 = dhc.Candle(c_datetime="2024-02-10 09:20:00",
-                     c_timeframe= "1m",
-                     c_open= 5501.5,
-                     c_high= 5510,
-                     c_low= 5500.5,
-                     c_close= 5510,
-                     c_volume= 400,
-                     c_symbol= "DELETEME",
-                    )
+                     c_timeframe="1m",
+                     c_open=5501.5,
+                     c_high=5510,
+                     c_low=5500.5,
+                     c_close=5510,
+                     c_volume=400,
+                     c_symbol="DELETEME",
+                     )
     tc1.store()
     tc2 = dhc.Candle(c_datetime="2024-02-10 09:21:00",
-                     c_timeframe= "1m",
-                     c_open= 5503.5,
-                     c_high= 5512,
-                     c_low= 5500.5,
-                     c_close= 5500,
-                     c_volume= 600,
-                     c_symbol= "DELETEME",
-                    )
+                     c_timeframe="1m",
+                     c_open=5503.5,
+                     c_high=5512,
+                     c_low=5500.5,
+                     c_close=5500,
+                     c_volume=600,
+                     c_symbol="DELETEME",
+                     )
     tc2.store()
     print("\nNow let's retrieve them")
     result = get_candles(start_epoch=1704130201,
@@ -206,7 +211,7 @@ def test_basics():
                                         end_dt='2024-01-02 00:00:00',
                                         filepath='testcandles.csv',
                                         symbol='DELETEME',
-                                       )
+                                        )
     for c in candles:
         store_candle(c)
     print("\nCheck a summary of them")
@@ -221,7 +226,6 @@ def test_basics():
         print(r.__dict__)
     print("\nAnd drop the test collection to clean up")
     dhm.drop_collection("candles_DELETEME_1m")
-
 
 
 if __name__ == '__main__':

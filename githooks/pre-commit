@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+set -eo pipefail
+
+flake8 . --exclude=v1/* --extend-ignore=F401,E402

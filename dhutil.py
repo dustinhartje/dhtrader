@@ -5,12 +5,23 @@ import dhcharts as dhc
 TIMEFRAMES = ['1m', '5m', '15m', '1h', '1d', '1w', '1mo']
 TRADING_HOURS = ['rth', 'eth']
 
+
 def valid_timeframe(t, exit=True):
     if t in TIMEFRAMES:
         return True
     else:
         if exit:
             raise ValueError(f"{t} is not a valid timeframe in {TIMEFRAMES}")
+        return False
+
+
+def valid_trading_hours(t, exit=True):
+    if t in TRADING_HOURS:
+        return True
+    else:
+        if exit:
+            raise ValueError(f"{t} is not a valid trading hours specifier "
+                             "in {TRADING_HOURS}")
         return False
 
 
@@ -45,7 +56,7 @@ def read_candles_from_csv(start_dt,
                           filepath: str,
                           symbol: str = 'ES',
                           timeframe: str = '1m',
-                         ):
+                          ):
     """Reads lines from a csv file and returns them as a list of
        dhcharts.Candle objects.  Assumes format matches FirstRate data
        standard of no header row the the following order of fields:
@@ -56,7 +67,6 @@ def read_candles_from_csv(start_dt,
     candles = []
     with open(filepath, newline='') as src_file:
         rows = csv.reader(src_file)
-        progress = 0
         for r in rows:
             this_dt = dt.strptime(r[0], '%Y-%m-%d %H:%M:%S')
             if start_dt <= this_dt <= end_dt:
@@ -68,10 +78,11 @@ def read_candles_from_csv(start_dt,
                                c_low=r[3],
                                c_close=r[4],
                                c_volume=r[5],
-                              )
+                               )
                 candles.append(c)
 
     return candles
+
 
 def test_basics():
     """runs a few basics tests, mostly used during initial development
@@ -89,7 +100,7 @@ def test_basics():
     print(f"String converted to epoch: {tse} {type(tse)}")
     tde = dt_to_epoch(td)
     print(f"Datetime converted to epoch: {tde} {type(tde)}")
-    t=dt_from_epoch(tde)
+    t = dt_from_epoch(tde)
     print(f"Epoch converted back to datetime: {t} {type(t)}")
 
     # Test timeframe validation functions
@@ -99,8 +110,5 @@ def test_basics():
     print(valid_timeframe('20m'))
 
 
-
 if __name__ == '__main__':
     test_basics()
-
-
