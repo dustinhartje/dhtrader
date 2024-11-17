@@ -111,18 +111,25 @@ def review_candles(timeframe: str,
                    ):
     """Provides aggregate summary data about candles in central storage"""
     c = db[f"candles_{symbol}_{timeframe}"]
-    epochs = list(c.aggregate([{"$group": {"_id": "null",
-                  "earliest_epoch": {"$min": "$c_epoch"},
-                  "latest_epoch": {"$max": "$c_epoch"}}}]))[0]
-    earliest_dt = dhu.dt_as_str(dhu.dt_from_epoch(epochs['earliest_epoch']))
-    latest_dt = dhu.dt_as_str(dhu.dt_from_epoch(epochs['latest_epoch']))
-    count = c.count_documents({})
-    result = {"earliest_dt": earliest_dt, "latest_dt": latest_dt,
-              "latest_dt": latest_dt, "latest_dt": latest_dt,
-              "count": count,
-              }
+    try:
+        epochs = list(c.aggregate([{"$group": {"_id": "null",
+                      "earliest_epoch": {"$min": "$c_epoch"},
+                      "latest_epoch": {"$max": "$c_epoch"}}}]))[0]
+    # IndexError is raised if collection does not exist yet
+    except IndexError:
+        return None
+    else:
+        earliest_epoch = dhu.dt_from_epoch(epochs['earliest_epoch'])
+        earliest_dt = dhu.dt_as_str(earliest_epoch)
+        latest_epoch = dhu.dt_from_epoch(epochs['latest_epoch'])
+        latest_dt = dhu.dt_as_str(latest_epoch)
+        count = c.count_documents({})
+        result = {"earliest_dt": earliest_dt, "latest_dt": latest_dt,
+                  "latest_dt": latest_dt, "latest_dt": latest_dt,
+                  "count": count,
+                  }
 
-    return result
+        return result
 
 
 def list_indicators(meta_collection: str):
@@ -200,6 +207,11 @@ def test_basics():
     """runs a few basics tests, mostly used during initial development
        to confirm functionality as desired"""
     # TODO consider converting these into unit tests some day
+
+    print("\nChecking 1m candles summary.  Note this should return None "
+          "if the collection is not yet populated")
+    c = review_candles(timeframe='1m', symbol='ES')
+    print(c)
 
     print("\nListing collections")
     result = db.list_collection_names()
