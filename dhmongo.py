@@ -205,17 +205,9 @@ def store_indicators(indicator_id: str,
 
 def test_basics():
     """runs a few basics tests, mostly used during initial development
-       to confirm functionality as desired"""
+       to confirm functionality as desired.  Also dumps a basic summary
+       of the database for quick checks at the end"""
     # TODO consider converting these into unit tests some day
-
-    print("\nChecking 1m candles summary.  Note this should return None "
-          "if the collection is not yet populated")
-    c = review_candles(timeframe='1m', symbol='ES')
-    print(c)
-
-    print("\nListing collections")
-    result = db.list_collection_names()
-    print(result)
 
     print("\nCreating a collection and inserting a test doc")
     c = db["DELETEME_TEST_STUFF"]
@@ -309,11 +301,17 @@ def test_basics():
                          )
 
     # Test candle summary review functions
+    print("\nListing collections")
+    result = db.list_collection_names()
+
     print("\nNow lets show a summary of the stored candles")
     print(review_candles(timeframe='1m', symbol="DELETEME"))
 
     print("Now I'll just cleanup after myself in mongo...")
     c.drop()
+
+    print("\n===============================================================")
+    print("DATABASE AND COLLECTIONS SUMMARY DATA")
     print("\nLet's get some overall db stats")
     print(db.command("dbstats"))
     # The collection output is fairly verbose and usually I just care about
@@ -321,6 +319,28 @@ def test_basics():
     # Keeping the command here for reference when needed but not autorunning
     # print("\n1m candle collection status")
     # print(db.command("collstats", "candles_ES_1m"))
+
+    print("\nListing collections")
+    result = db.list_collection_names()
+    print(result)
+
+    print("\nChecking raw candles summaries.  Note this should return None "
+          "if the collection is not yet populated")
+    c = review_candles(timeframe='1m', symbol='ES')
+    print("1m")
+    print(c)
+    c = review_candles(timeframe='5m', symbol='ES')
+    print("5m")
+    print(c)
+    c = review_candles(timeframe='r1h', symbol='ES')
+    print("r1h")
+    print(c)
+    c = review_candles(timeframe='e1h', symbol='ES')
+    print("e1h")
+    print(c)
+    c = review_candles(timeframe='1d', symbol='ES')
+    print("1d")
+    print(c)
 
 
 if __name__ == '__main__':
