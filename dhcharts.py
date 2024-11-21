@@ -165,15 +165,21 @@ class Candle():
 class Chart():
     def __init__(self,
                  c_timeframe: str,
+                 c_symbol: str,
                  c_start=None,
                  c_end=None,
                  c_candles: list = None,
+                 autoload: bool = False,
                  ):
 
         self.c_timeframe = c_timeframe
         if self.c_timeframe not in CANDLE_TIMEFRAMES:
             raise ValueError(f"c_timeframe of {c_timeframe} is not in the "
                              "known list {CANDLE_TIMEFRAMES}")
+        self.c_symbol = c_symbol
+        if not self.c_symbol == 'ES':
+            raise ValueError(f"c_symbol {self.c_symbol} is not supported, "
+                             "only 'ES' is currently allowed.")
         self.c_start = c_start
         if not isinstance(self.c_start, dt.datetime) and c_start is not None:
             raise TypeError(f"c_start {type(c_start)} must be a"
@@ -186,6 +192,23 @@ class Chart():
             self.c_candles = []
         else:
             self.c_candles = c_candles
+        self.autoload = autoload
+        if self.autoload:
+            self.load_candles()
+
+    def __repr__(self):
+        return {"c_timeframe": self.c_timeframe,
+                "c_symbol": self.c_symbol,
+                "c_start": self.c_start,
+                "c_end": self.c_end,
+                "autoload": self.autoload,
+                "candles_count": len(self.candles),
+                "earliest_candle": self.candles[0],
+                "latest_candle": self.candles[-1],
+                }
+
+    def __str__(self):
+        return str(self.__repr__)
 
     def sort_candles(self):
         self.c_candles.sort(key=lambda c: c.c_datetime)
@@ -213,6 +236,16 @@ class Chart():
 
         # TODO do I need to check for gaps in candles?  what if I find them?
         # maybe this should be a separate method to call on demand?
+
+    def load_candles(self):
+        """Load candles from central storage based on current attributes"""
+        self.c_candles = dhs.get_candles(
+                start_epoch=dhu.dt_as_epoch(self.c_start),
+                end_epoch=dhu.dt_as_epoch(self.c_end),
+                timeframe=self.c_timeframe,
+                symbol=self.c_symbol,
+                )
+        self.sort_candles()
 
 
 class Day():

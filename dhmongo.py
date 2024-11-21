@@ -316,8 +316,11 @@ def test_basics():
     c.drop()
     print("\nLet's get some overall db stats")
     print(db.command("dbstats"))
-    print("\n1m candle collection status")
-    print(db.command("collstats", "candles_ES_1m"))
+    # The collection output is fairly verbose and usually I just care about
+    # the overall dbstats not individual collections.
+    # Keeping the command here for reference when needed but not autorunning
+    # print("\n1m candle collection status")
+    # print(db.command("collstats", "candles_ES_1m"))
 
 
 if __name__ == '__main__':
