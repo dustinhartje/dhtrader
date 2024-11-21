@@ -198,8 +198,8 @@ class Chart():
 
     def __repr__(self):
         if self.c_candles is not None:
-            earliest_candle = self.c_candles[0]
-            latest_candle = self.c_candles[-1]
+            earliest_candle = self.c_candles[0].c_datetime
+            latest_candle = self.c_candles[-1].c_datetime
             candles_count = len(self.c_candles)
         else:
             earliest_candle = None
