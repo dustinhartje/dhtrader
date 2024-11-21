@@ -202,9 +202,9 @@ class Chart():
                 "c_start": self.c_start,
                 "c_end": self.c_end,
                 "autoload": self.autoload,
-                "candles_count": len(self.candles),
-                "earliest_candle": self.candles[0],
-                "latest_candle": self.candles[-1],
+                "candles_count": len(self.c_candles),
+                "earliest_candle": self.c_candles[0],
+                "latest_candle": self.c_candles[-1],
                 }
 
     def __str__(self):
