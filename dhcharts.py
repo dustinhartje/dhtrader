@@ -248,8 +248,8 @@ class Chart():
     def load_candles(self):
         """Load candles from central storage based on current attributes"""
         self.c_candles = dhs.get_candles(
-                start_epoch=dhu.dt_as_epoch(self.c_start),
-                end_epoch=dhu.dt_as_epoch(self.c_end),
+                start_epoch=dhu.dt_to_epoch(self.c_start),
+                end_epoch=dhu.dt_to_epoch(self.c_end),
                 timeframe=self.c_timeframe,
                 symbol=self.c_symbol,
                 )
