@@ -205,7 +205,7 @@ class Chart():
             earliest_candle = None
             latest_candle = None
             candles_count = 0
-        return {"c_timeframe": self.c_timeframe,
+        this = {"c_timeframe": self.c_timeframe,
                 "c_symbol": self.c_symbol,
                 "c_start": self.c_start,
                 "c_end": self.c_end,
@@ -214,6 +214,7 @@ class Chart():
                 "earliest_candle": earliest_candle,
                 "latest_candle": latest_candle,
                 }
+        return str(this)
 
     def __str__(self):
         return str(self.__repr__)
