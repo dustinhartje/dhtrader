@@ -197,14 +197,22 @@ class Chart():
             self.load_candles()
 
     def __repr__(self):
+        if self.c_candles is not None:
+            earliest_candle = self.c_candles[0]
+            latest_candle = self.c_candles[-1]
+            candles_count = len(self.c_candles)
+        else:
+            earliest_candle = None
+            latest_candle = None
+            candles_count = 0
         return {"c_timeframe": self.c_timeframe,
                 "c_symbol": self.c_symbol,
                 "c_start": self.c_start,
                 "c_end": self.c_end,
                 "autoload": self.autoload,
-                "candles_count": len(self.c_candles),
-                "earliest_candle": self.c_candles[0],
-                "latest_candle": self.c_candles[-1],
+                "candles_count": candles_count,
+                "earliest_candle": earliest_candle,
+                "latest_candle": latest_candle,
                 }
 
     def __str__(self):
