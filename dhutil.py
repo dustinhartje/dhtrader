@@ -2,7 +2,7 @@ from datetime import datetime as dt
 import csv
 import dhcharts as dhc
 
-TIMEFRAMES = ['1m', '5m', '15m', '1h', '1d', '1w', '1mo']
+TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w', '1mo']
 TRADING_HOURS = ['rth', 'eth']
 
 

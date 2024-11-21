@@ -314,7 +314,10 @@ def test_basics():
 
     print("Now I'll just cleanup after myself in mongo...")
     c.drop()
-    print("\n...and we're done!")
+    print("\nLet's get some overall db stats")
+    print(db.command("dbstats"))
+    print("\n1m candle collection status")
+    print(db.command("collstats", "candles_ES_1m"))
 
 
 if __name__ == '__main__':
