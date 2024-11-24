@@ -167,6 +167,18 @@ def review_candles(timeframe: str,
     return result
 
 
+def drop_candles(timeframe: str,
+                 symbol: str,
+                 earliest_dt=None,
+                 latest_dt=None,
+                 ):
+    """Deletes candles from central storage"""
+    if earliest_dt is None and latest_dt is None:
+        return dhm.drop_collection(f"candles_{symbol}_{timeframe}")
+    else:
+        return "Sorry, Dusty hasn't written code for select timeframes yet"
+
+
 def test_basics():
     """runs a few basics tests, mostly used during initial development
        to confirm functionality as desired"""
@@ -203,7 +215,13 @@ def test_basics():
     for r in result:
         print(r.__dict__)
     print("\nAnd drop the test collection to clean up")
-    dhm.drop_collection("candles_DELETEME_1m")
+    drop_candles(timeframe="1m", symbol="DELETEME")
+
+    print("\nLets check the collections list to confirm it no longer exists")
+    collections = dhm.list_collections()
+    print(collections)
+    if "candles_DELETEME_1m" in collections:
+        raise Exception("Oops, why is 'candles_DELETEME_1m' still there?!")
 
     # Test storing raw candles read from a csv i.e. daily updates
     print("\nStoring 5/10 candles from testcandles.csv with date filtering")
@@ -225,7 +243,7 @@ def test_basics():
     for r in result:
         print(r.__dict__)
     print("\nAnd drop the test collection to clean up")
-    dhm.drop_collection("candles_DELETEME_1m")
+    drop_candles(timeframe="1m", symbol="DELETEME")
 
 
 if __name__ == '__main__':

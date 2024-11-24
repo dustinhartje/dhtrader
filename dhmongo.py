@@ -39,6 +39,11 @@ except Exception:
     sys.exit()
 
 
+def list_collections():
+    """List all current collections in mongo"""
+    return db.list_collection_names()
+
+
 def drop_collection(collection: str):
     """Irretrievable drops a collection from the store.  Use carefully!"""
     c = db[collection]
@@ -209,14 +214,16 @@ def test_basics():
        of the database for quick checks at the end"""
     # TODO consider converting these into unit tests some day
 
+    print("\nListing current collections before we make changes")
+    print(list_collections())
+
     print("\nCreating a collection and inserting a test doc")
     c = db["DELETEME_TEST_STUFF"]
     result = c.insert_one({"name": "test doc", "usefulness": "Not at all"})
     print(result)
 
     print("\nListing collections again to confirm the new one")
-    result = db.list_collection_names()
-    print(result)
+    print(list_collections())
 
     print("\nListing docs in the collection")
     result = c.find()
@@ -228,9 +235,8 @@ def test_basics():
     result = c.drop()
     print(result)
 
-    print("\nListing collections")
-    result = db.list_collection_names()
-    print(result)
+    print("\nListing collections again")
+    print(list_collections())
 
     print("\nStoring 2 candles")
     result = store_candle(c_datetime="2024-01-01 12:30:00",
