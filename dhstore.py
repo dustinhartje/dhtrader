@@ -179,9 +179,11 @@ def review_candles(timeframe: str,
                                           )
         status = "OK"
         err_msg = None
-        if breakdown["expected_data"] is not None:
-            for k, v in breakdown["expected_data"].items():
-                if breakdown["summary_data"][k] != v:
+        summary_data = breakdown["summary_data"]
+        expected_data = breakdown["expected_data"]
+        if expected_data is not None:
+            for k, v in expected_data.items():
+                if summary_data[k] != v:
                     status = "ERROR"
                     if err_msg is None:
                         err_msg = ""
@@ -201,10 +203,13 @@ def review_candles(timeframe: str,
     else:
         integrity_data = None
         breakdown = None
+        summary_data = None
+        expected_data = None
 
     return {"overview": overview,
             "integrity_data": integrity_data,
-            "summary_data": breakdown,
+            "summary_data": summary_data,
+            "expected_data": expected_data,
             }
 
 
