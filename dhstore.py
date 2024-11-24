@@ -158,13 +158,54 @@ def get_candles(start_epoch: int,
 
 def review_candles(timeframe: str,
                    symbol: str,
+                   check_integrity: bool = False,
                    ):
     """Provides aggregate summary data about candles in central storage"""
-    result = dhm.review_candles(timeframe=timeframe,
-                                symbol=symbol,
-                                )
+    overview = dhm.review_candles(timeframe=timeframe,
+                                  symbol=symbol,
+                                  )
+    start_epoch = dhu.dt_to_epoch(overview["earliest_dt"])
+    end_epoch = dhu.dt_to_epoch(overview["latest_dt"])
+    if check_integrity:
+        candles = get_candles(timeframe=timeframe,
+                              symbol=symbol,
+                              start_epoch=start_epoch,
+                              end_epoch=end_epoch,
+                              )
+        # TODO do a basic check on the times list vs expected for the timeframe
+        breakdown = dhu.summarize_candles(timeframe=timeframe,
+                                          symbol=symbol,
+                                          candles=candles,
+                                          )
+        status = "OK"
+        err_msg = None
+        if breakdown["expected_data"] is not None:
+            for k, v in breakdown["expected_data"].items():
+                if breakdown["summary_data"][k] != v:
+                    status = "ERROR"
+                    if err_msg is None:
+                        err_msg = ""
+                    else:
+                        err_msg += "\n"
+                    err_msg += f"{k} summary data does not match expected"
+        else:
+            status = "UNKNOWN"
+            err_msg = f"Expected data not defined for timeframe: {timeframe}"
+        integrity_data = {"status": status, "err_msg": err_msg}
+        # TODO do a more extensive check on all the datetimes vs expected
+        #      datetimes which I'll have to build out procedurally.  Look for
+        #      missing or extra items in the actual list vs expected
+        # TODO I'll probably need to build an Exclusions class to make this
+        #      managable.  Exclusions will need to also be able to store and
+        #      retrieve from mongo...
+    else:
+        integrity_data = None
+        breakdown = None
 
-    return result
+    return {"overview": overview,
+            "integrity_data": integrity_data,
+            "summary_data": breakdown,
+            }
 
 
 def drop_candles(timeframe: str,
@@ -244,6 +285,15 @@ def test_basics():
         print(r.__dict__)
     print("\nAnd drop the test collection to clean up")
     drop_candles(timeframe="1m", symbol="DELETEME")
+
+    # Test integrity check process
+    print("\nChecking integrity of stored r1h candles")
+    integrity = review_candles(timeframe='r1h',
+                               symbol='ES',
+                               check_integrity=True,
+                               )
+    print(integrity)
+    print(f"\n\nIntegrity result: {integrity['integrity_data']}")
 
 
 if __name__ == '__main__':
