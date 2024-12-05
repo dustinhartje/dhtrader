@@ -208,6 +208,30 @@ def store_indicators(indicator_id: str,
     return result
 
 
+def store_event(start_dt,
+                end_dt,
+                symbol: str,
+                category: str,
+                notes: str,
+                ):
+    """Write a single dhcharts.Event() to mongo"""
+    event_doc = {"start_dt": dhu.dt_as_str(start_dt),
+                 "end_dt": dhu.dt_as_str(end_dt),
+                 "category": category,
+                 "notes": notes,
+                 }
+    collection = f"events_{symbol}"
+    c = db[collection]
+    result = c.find_one_and_replace({"start_dt": event_doc["start_dt"],
+                                     "category": event_doc["category"]},
+                                    event_doc,
+                                    new=True,
+                                    upsert=True,
+                                    )
+
+    return result
+
+
 def test_basics():
     """runs a few basics tests, mostly used during initial development
        to confirm functionality as desired.  Also dumps a basic summary
@@ -313,13 +337,57 @@ def test_basics():
     print("\nNow lets show a summary of the stored candles")
     print(review_candles(timeframe='1m', symbol="DELETEME"))
 
-    print("Now I'll just cleanup after myself in mongo...")
+    print("\nNow I'll just cleanup after myself in mongo...")
     c.drop()
+
+    # Test event storage and retrieval
+    c = db["events_DELETEME"]
+    print("\nTesting event storage by creating 3 test events")
+    result = store_event(start_dt="11/1/2024 13:00:00",
+                         end_dt="11/1/2024 14:00:00",
+                         symbol="DELETEME",
+                         category="Closed",
+                         notes="Not really though, lul!",
+                         )
+    print(result)
+    result = store_event(start_dt="11/5/2024 16:00:00",
+                         end_dt="11/6/2024 9:30:00",
+                         symbol="DELETEME",
+                         category="LowVol",
+                         notes="Nobody trades at night",
+                         )
+    print(result)
+    result = store_event(start_dt="11/20/2024 14:00:00",
+                         end_dt="11/20/2024 15:00:00",
+                         symbol="DELETEME",
+                         category="FOMC",
+                         notes="FOMC meeting volatility expected",
+                         )
+    print(result)
+
+    print("\nListing docs in the events_DELETEME collection")
+    result = c.find()
+    print(result)
+    for doc in result:
+        print(doc)
+
+    print("\nNow I'll just cleanup after myself in mongo...")
+    c.drop()
+
+    print("\nListing collections")
+    result = db.list_collection_names()
+    print(result)
 
     print("\n===============================================================")
     print("DATABASE AND COLLECTIONS SUMMARY DATA")
     print("\nLet's get some overall db stats")
-    print(db.command("dbstats"))
+    result = db.command("dbstats")
+    print(result)
+    data_size_GB = round(result["dataSize"]/1024/1024/1024, 2)
+    storage_size_GB = round(result["storageSize"]/1024/1024/1024, 2)
+    print(f"data_size_GB = {data_size_GB}")
+    print(f"storage_size_GB = {storage_size_GB}")
+
     # The collection output is fairly verbose and usually I just care about
     # the overall dbstats not individual collections.
     # Keeping the command here for reference when needed but not autorunning

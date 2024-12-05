@@ -160,7 +160,8 @@ def review_candles(timeframe: str,
                    symbol: str,
                    check_integrity: bool = False,
                    ):
-    """Provides aggregate summary data about candles in central storage"""
+    """Provides aggregate summary data about candles in central storage
+    with options to further check completeness (integrity) of candle data"""
     overview = dhm.review_candles(timeframe=timeframe,
                                   symbol=symbol,
                                   )
@@ -197,9 +198,35 @@ def review_candles(timeframe: str,
         # TODO do a more extensive check on all the datetimes vs expected
         #      datetimes which I'll have to build out procedurally.  Look for
         #      missing or extra items in the actual list vs expected
-        # TODO I'll probably need to build an Exclusions class to make this
-        #      managable.  Exclusions will need to also be able to store and
-        #      retrieve from mongo...
+        #
+        # TODO Need some kind of running event update process, maybe part of
+        #       refreshdata.py to add new events; todoist daily or weekly
+        #       to check upcoming days/weeks and get them in ahead of events?
+        #      ** I think this is best done via a .json or .yaml file that
+        #         contains my list of events and a script
+        #         (or part of refresh data)
+        #         that just runs through and upserts them so I can just add
+        #         more to the json.  Alternatively I could have a script that
+        #         adds additional events adhoc and then exports the full list
+        #         so it's available as a backup to be reinserted if needed.
+        #         I would probably want to commit this list so it's backed
+        #         up in git for future restoration.
+        #      *Where should the master list live in the code so I can rebuild
+        #       them in storage if it's lost/changed?  dhutil?  dhcharts?  a
+        #       new script entirely?  it should be in dhtrader I think just
+        #       need to noodle more on which script gets it
+        #      *What happens if I missed one, what would need to be wiped or
+        #       recalced?  should there be a method or function to accomplish
+        #       this somehow?
+        #
+        #      --what happens on daylight savings time changes?
+        #      --market holidays when closed
+        #      --FOMC meetings (soft) - possibly one event for the full day
+        #                               and separate for announcment/presser
+        #      --OPEX (soft)
+        #      --holidays when open with low volume (soft) - check annual
+        #        holiday calendars for ideas around this
+        #      --contract rollover periods (the whole week?)
     else:
         integrity_data = None
         breakdown = None
@@ -223,6 +250,18 @@ def drop_candles(timeframe: str,
         return dhm.drop_collection(f"candles_{symbol}_{timeframe}")
     else:
         return "Sorry, Dusty hasn't written code for select timeframes yet"
+
+
+def store_event(event):
+    """Write a single dhcharts.Event() to central storage"""
+    if not isinstance(event, dhc.Event):
+        raise TypeError(f"event {type(event)} must be a "
+                        "<class dhcharts.Event> object")
+    dhm.store_event(start_dt=event.start_dt,
+                    end_dt=event.end_dt,
+                    category=event.category,
+                    notes=event.notes,
+                    )
 
 
 def test_basics():

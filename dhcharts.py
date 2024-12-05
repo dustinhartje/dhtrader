@@ -257,7 +257,41 @@ class Chart():
         self.sort_candles()
 
 
+class Event():
+    """Classifies periods of time that are notable and may need to be
+    correlated or excluded from charts during analysis.  May include holiday
+    closures, FOMC meetings, and any other substantial occurences, planned
+    or unplanned, that have immediate impact on the data beyond the usual.
+    category is context dependent and to be defined by the user.  These should
+    be unique enough to easily group similar events together, and the
+    combination of start_dt + category is used to delineate unique events in
+    storage to prevent duplication."""
+    def __init__(self,
+                 start_dt,
+                 end_dt,
+                 symbol: str,
+                 category: str,
+                 notes: str = "",
+                 ):
+        self.start_dt = dhu.dt_as_dt(start_dt)
+        self.end_dt = dhu.dt_as_dt(end_dt)
+        self.symbol = symbol
+        if self.symbol != "ES":
+            raise ValueError("Only ES is currently supported for Event.symbol")
+        self.category = category
+        self.notes = notes
+
+    def store(self):
+        dhs.store_event(self)
+
+
 class Day():
+    # TODO - Review this class for possible deprecation.  I suspect I created
+    #        it mostly for use on the assumption I'd be writing candle data
+    #        to disk in a Day based folder structure which is no longer needed.
+    #        It looks like the only place I've used it is in firstrate.py
+    #        in the process_unpacked_data() function which appears to also
+    #        probably be obsolete at a glance and possibly also deprecatable.
     def __init__(self,
                  d_symbol,
                  d_date,
