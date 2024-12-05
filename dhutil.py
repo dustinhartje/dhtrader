@@ -1,4 +1,5 @@
 from datetime import datetime as dt
+from datetime import timedelta
 import csv
 import dhcharts as dhc
 
@@ -49,6 +50,128 @@ def dt_to_epoch(d):
 def dt_from_epoch(d):
     """return a datetime object from an epoch integer"""
     return dt.fromtimestamp(d)
+
+
+def next_candle_start(dt, timeframe: str = "1m"):
+    """returns the next datetime that represents a proper candle start
+    for the given datetime.  May return the same as input"""
+    next_dt = dt_as_dt(dt)
+    add_min = timedelta(minutes=1)
+    # Start by rounding up to the next minute if we have secs or microsecs
+    if (next_dt.second > 0) or (next_dt.microsecond > 0):
+        next_dt = next_dt.replace(microsecond=0, second=0) + add_min
+    # Now bump by a minute at a time to reach the timeframe correct minute
+    if timeframe == "1m":
+        pass
+    elif timeframe == "5m":
+        while next_dt.minute % 5 != 0:
+            next_dt = next_dt + add_min
+    elif timeframe == "r1h":
+        while next_dt.minute != 30:
+            next_dt = next_dt + add_min
+    elif timeframe == "e1h":
+        while next_dt.minute != 0:
+            next_dt = next_dt + add_min
+    else:
+        raise ValueError(f"timeframe: {timeframe} not supported")
+
+    return next_dt
+
+
+def expected_candle_datetimes(start_dt,
+                              end_dt,
+                              symbol: str,
+                              timeframe: str,
+                              exclude_categories: list = None,
+                              ):
+    """Return a sorted list of datetimes within the provided start_dt and
+    end_dt (inclusive of both) that should exist for the given symbol based on
+    standard market hours, after removing any known Closed events.
+    Optionally also exclude anything within known Event times matching
+    exclude_categories."""
+    if symbol == "ES":
+        if timeframe == "r1h":
+            weekday_open = {"hour": 9, "minute": 30, "second": 0}
+            weekday_close = {"hour": 15, "minute": 59, "second": 0}
+            # Market opens for the week Sunday evening
+            week_open = {"day": 0, "hour": 9, "minute": 30, "second": 0}
+            # Market closes for the week Friday evening
+            week_close = {"day": 4, "hour": 15, "minute": 59, "second": 0}
+        else:
+            weekday_open = {"hour": 18, "minute": 0, "second": 0}
+            weekday_close = {"hour": 16, "minute": 59, "second": 0}
+            # Market opens for the week Sunday evening
+            week_open = {"day": 6, "hour": 18, "minute": 0, "second": 0}
+            # Market closes for the week Friday evening
+            week_close = {"day": 4, "hour": 16, "minute": 59, "second": 0}
+    else:
+        raise ValueError("Only ES is currently supported as symbol for now")
+    # Build a list of possible candles within standard market hours
+    result = []
+    if timeframe == "1m":
+        adder = timedelta(minutes=1)
+    elif timeframe == "5m":
+        adder = timedelta(minutes=5)
+    elif (timeframe == "r1h") or (timeframe == "e1h"):
+        adder = timedelta(hours=1)
+    elif timeframe == "1d":
+        adder = timedelta(days=1)
+    else:
+        raise ValueError(f"timeframe: {timeframe} not currently supported")
+    this = next_candle_start(dt=start_dt, timeframe=timeframe)
+    ender = dt_as_dt(end_dt)
+    while this <= ender:
+        include = True
+        # Check if this candle falls in the weekday closure window
+        this_weekday_close = this.replace(hour=weekday_close["hour"],
+                                          minute=weekday_close["minute"],
+                                          second=weekday_close["second"],
+                                          )
+        this_weekday_open = this.replace(hour=weekday_open["hour"],
+                                         minute=weekday_open["minute"],
+                                         second=weekday_open["second"],
+                                         )
+        # Same vs next day open dictates test logic
+        # if opening time is later we reopen same day, exclude between
+        if this_weekday_open > this_weekday_close:
+            if (this > this_weekday_close) and (this < this_weekday_open):
+                include = False
+        # Otherwise we reopen next day, exclude outside
+        else:
+            if (this > this_weekday_close) or (this < this_weekday_open):
+                include = False
+        # Check if this candle falls in the weekend closure window
+        this_week_close = this.replace(hour=week_close["hour"],
+                                       minute=week_close["minute"],
+                                       second=week_close["second"],
+                                       )
+        days_delta = week_close["day"] - this_week_close.weekday()
+        this_week_close = this_week_close + timedelta(days=days_delta)
+        this_week_open = this.replace(hour=week_open["hour"],
+                                      minute=week_open["minute"],
+                                      second=week_open["second"],
+                                      )
+        days_delta = week_open["day"] - this_week_open.weekday()
+        this_week_open = this_week_open + timedelta(days=days_delta)
+        if this_week_open < this_week_close:
+            this_week_open = this_week_open + timedelta(days=7)
+        # Range has been determined, test it
+        if (this > this_week_close) and (this < this_week_open):
+            include = False
+        # TODO can I figure out the NEXT weekday and weekend closure times and
+        # just keep looping til I clear the reopen then udpate them? vs
+        # recalculating them for every single candle?  Is it slow enough to
+        # make this worth the time to figure out in the current state?
+        if include:
+            result.append(this)
+        this = this + adder
+
+    # TODO build a list of exclusion ranges for Closed + exclude_category
+    # TODO run through candles list comparing to exclusions to prune
+    # TODO do I need to sort the list? it should still be sorted right?
+    # TODO return the modified list
+
+    return result
 
 
 def read_candles_from_csv(start_dt,
@@ -233,6 +356,40 @@ def test_basics():
     print(f"Datetime converted to epoch: {tde} {type(tde)}")
     t = dt_from_epoch(tde)
     print(f"Epoch converted back to datetime: {t} {type(t)}")
+
+    # Test expected candle range generation
+    print("\nExpected candles spanning weekend closure, 1m")
+    weekend_gap = expected_candle_datetimes(start_dt="2024-11-29 16:52:00",
+                                            end_dt="2024-12-01 18:07:00",
+                                            symbol="ES",
+                                            timeframe="1m",
+                                            )
+    for c in weekend_gap:
+        print(dt_as_str(c))
+    print("\nExpected candles spanning weekday closure, 5m")
+    weekday_gap = expected_candle_datetimes(start_dt="2024-12-02 16:30:00",
+                                            end_dt="2024-12-02 18:40:00",
+                                            symbol="ES",
+                                            timeframe="5m",
+                                            )
+    for c in weekday_gap:
+        print(dt_as_str(c))
+    print("\nExpected candles spanning weekday closure, e1h")
+    weekday_gap = expected_candle_datetimes(start_dt="2024-12-02 12:05:00",
+                                            end_dt="2024-12-03 4:05:00",
+                                            symbol="ES",
+                                            timeframe="e1h",
+                                            )
+    for c in weekday_gap:
+        print(dt_as_str(c))
+    print("\nExpected candles spanning both weekday and weekend closures, r1h")
+    weekday_gap = expected_candle_datetimes(start_dt="2024-11-29 12:05:00",
+                                            end_dt="2024-12-04 12:05:00",
+                                            symbol="ES",
+                                            timeframe="r1h",
+                                            )
+    for c in weekday_gap:
+        print(dt_as_str(c))
 
     # Test timeframe validation functions
     print("Testing valid timeframe")
