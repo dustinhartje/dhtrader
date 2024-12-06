@@ -214,6 +214,8 @@ def store_event(start_dt,
                 category: str,
                 tags: list,
                 notes: str,
+                start_epoch: int,
+                end_epoch: int,
                 ):
     """Write a single dhcharts.Event() to mongo"""
     event_doc = {"start_dt": dhu.dt_as_str(start_dt),
@@ -221,6 +223,8 @@ def store_event(start_dt,
                  "category": category,
                  "tags": tags,
                  "notes": notes,
+                 "start_epoch": start_epoch,
+                 "end_epoch": end_epoch,
                  }
     collection = f"events_{symbol}"
     c = db[collection]
@@ -232,6 +236,23 @@ def store_event(start_dt,
                                     )
 
     return result
+
+
+def get_events(start_epoch: int,
+               end_epoch: int,
+               symbol: str,
+               categories: list = None,
+               tags: list = None,
+               ):
+    """Returns a list of events starting within the start and end epochs given
+    inclusive of both epochs.  Note this will return events that end after
+    end_epoch so long as they start before or on it."""
+    # TODO add ability to further filter by categories and tags if passed
+    c = db[f"events_{symbol}"]
+    result = c.find({"$and": [{"start_epoch": {"$gte": start_epoch}},
+                    {"start_epoch": {"$lte": end_epoch}}]})
+
+    return list(result)
 
 
 def test_basics():
@@ -345,25 +366,34 @@ def test_basics():
     # Test event storage and retrieval
     c = db["events_DELETEME"]
     print("\nTesting event storage by creating 3 test events")
-    result = store_event(start_dt="11/1/2024 13:00:00",
-                         end_dt="11/1/2024 14:00:00",
+    result = store_event(start_dt="2024-11-01 13:00:00",
+                         end_dt="2024-11-01 14:00:00",
                          symbol="DELETEME",
                          category="Closed",
+                         tags=[],
                          notes="Not really though, lul!",
+                         start_epoch=1730480400,
+                         end_epoch=1730484000,
                          )
     print(result)
-    result = store_event(start_dt="11/5/2024 16:00:00",
-                         end_dt="11/6/2024 9:30:00",
+    result = store_event(start_dt="2024-11-05 16:00:00",
+                         end_dt="2024-11-06 9:30:00",
                          symbol="DELETEME",
-                         category="LowVol",
+                         category="LowVolume",
+                         tags=[],
                          notes="Nobody trades at night",
+                         start_epoch=1730840400,
+                         end_epoch=1730903400,
                          )
     print(result)
-    result = store_event(start_dt="11/20/2024 14:00:00",
-                         end_dt="11/20/2024 15:00:00",
+    result = store_event(start_dt="2024-11-20 14:00:00",
+                         end_dt="2024-11-20 15:00:00",
                          symbol="DELETEME",
-                         category="FOMC",
+                         category="Data",
+                         tags=['FOMC'],
                          notes="FOMC meeting volatility expected",
+                         start_epoch=1732129200,
+                         end_epoch=1732132800,
                          )
     print(result)
 
@@ -372,6 +402,13 @@ def test_basics():
     print(result)
     for doc in result:
         print(doc)
+    print("\nTesting get_events() on this collection, should get the 11/1 "
+          "and 11/5 events but not 11/20")
+    result = get_events(start_epoch=1730840400,
+                        end_epoch=1732133000,
+                        symbol="DELETEME",
+                        )
+    print(result)
 
     print("\nNow I'll just cleanup after myself in mongo...")
     c.drop()

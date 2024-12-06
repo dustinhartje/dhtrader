@@ -5,7 +5,7 @@ import dhcharts as dhc
 
 TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w', '1mo']
 TRADING_HOURS = ['rth', 'eth']
-EVENT_CATEGORIES = ['Closed', 'Data', 'Unplanned']
+EVENT_CATEGORIES = ['Closed', 'Data', 'Unplanned', 'LowVolume', 'Rollover']
 
 
 def valid_timeframe(t, exit=True):

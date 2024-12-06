@@ -284,6 +284,8 @@ class Event():
         if tags is None:
             tags = []
         self.notes = notes
+        self.start_epoch = dhu.dt_as_epoch(self.start_dt)
+        self.end_epoch = dhu.dt_as_epoch(self.end_dt)
 
     def store(self):
         dhs.store_event(self)

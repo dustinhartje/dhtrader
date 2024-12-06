@@ -319,13 +319,49 @@ def store_event(event):
     if not isinstance(event, dhc.Event):
         raise TypeError(f"event {type(event)} must be a "
                         "<class dhcharts.Event> object")
-    dhm.store_event(start_dt=event.start_dt,
-                    end_dt=event.end_dt,
-                    symbol=event.symbol,
-                    category=event.category,
-                    tags=event.tags,
-                    notes=event.notes,
-                    )
+    result = dhm.store_event(start_dt=event.start_dt,
+                             end_dt=event.end_dt,
+                             symbol=event.symbol,
+                             category=event.category,
+                             tags=event.tags,
+                             notes=event.notes,
+                             start_epoch=event.start_epoch,
+                             end_epoch=event.end_epoch,
+                             )
+
+    return result
+
+
+def get_events(start_epoch: int,
+               end_epoch: int,
+               symbol: str,
+               categories: list = None,
+               tags: list = None,
+               ):
+    """Returns a list of events starting within the start and end epochs given
+    inclusive of both epochs.  Note this will return events that end after
+    end_epoch so long as they start before or on it."""
+    # TODO add ability to further filter by categories and tags if passed
+    result = dhm.get_events(start_epoch=start_epoch,
+                            end_epoch=end_epoch,
+                            symbol=symbol,
+                            categories=categories,
+                            tags=tags,
+                            )
+
+    events = []
+    for r in result:
+        events.append(dhc.Event(start_dt=r["start_dt"],
+                                end_dt=r["end_dt"],
+                                symbol=r["symbol"],
+                                category=r["category"],
+                                tags=r["tags"],
+                                notes=r["notes"],
+                                start_epoch=r["start_epoch"],
+                                end_epoch=r["end_epoch"],
+                                ))
+
+    return events
 
 
 def test_basics():
@@ -394,7 +430,7 @@ def test_basics():
     print("\nAnd drop the test collection to clean up")
     drop_candles(timeframe="1m", symbol="DELETEME")
 
-    # Test integrity check process
+    # Test candle integrity check process
     print("\nChecking integrity of stored r1h candles")
     integrity = review_candles(timeframe='r1h',
                                symbol='ES',
@@ -402,6 +438,18 @@ def test_basics():
                                )
     print(integrity)
     print(f"\n\nIntegrity result: {integrity['integrity_data']}")
+
+    # Test event storage and retrieval
+    print("\n----------------------------------------------------------------")
+    print("\nTesting event retrieval, assumes some ES events in storage")
+    print("This should print the first 5 events in 2024:")
+    result = get_events(start_epoch=1704085200,
+                        end_epoch=1735707599,
+                        symbol="ES",
+                        )
+    first_five = result[:5]
+    for r in first_five:
+        print(r)
 
 
 if __name__ == '__main__':
