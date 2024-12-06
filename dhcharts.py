@@ -288,7 +288,7 @@ class Event():
         self.end_epoch = dhu.dt_to_epoch(self.end_dt)
 
     def store(self):
-        dhs.store_event(self)
+        return dhs.store_event(self)
 
 
 class Day():
