@@ -271,6 +271,7 @@ class Event():
                  end_dt,
                  symbol: str,
                  category: str,
+                 tags: list = None,
                  notes: str = "",
                  ):
         self.start_dt = dhu.dt_as_dt(start_dt)

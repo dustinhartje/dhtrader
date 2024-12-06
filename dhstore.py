@@ -174,6 +174,7 @@ def review_candles(timeframe: str,
                               start_epoch=start_epoch,
                               end_epoch=end_epoch,
                               )
+
         # Perform a basic check on the times list vs expected for the timeframe
         breakdown = dhu.summarize_candles(timeframe=timeframe,
                                           symbol=symbol,
@@ -193,9 +194,6 @@ def review_candles(timeframe: str,
         else:
             status = "UNKNOWN"
             err_msg = f"Expected data not defined for timeframe: {timeframe}"
-        # TODO do a more extensive check on all the datetimes vs expected
-        #      datetimes which I'll have to build out procedurally.  Look for
-        #      missing or extra items in the actual list vs expected
 
         # Perform a detailed analysis of actual vs expected timestamps
         dt_actual = []
@@ -324,6 +322,7 @@ def store_event(event):
     dhm.store_event(start_dt=event.start_dt,
                     end_dt=event.end_dt,
                     category=event.category,
+                    tags=event.tags,
                     notes=event.notes,
                     )
 

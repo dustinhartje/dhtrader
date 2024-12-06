@@ -5,6 +5,7 @@ import dhcharts as dhc
 
 TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w', '1mo']
 TRADING_HOURS = ['rth', 'eth']
+EVENT_CATEGORIES = ['Closed', 'Data', 'Unplanned']
 
 
 def valid_timeframe(t, exit=True):
@@ -22,7 +23,17 @@ def valid_trading_hours(t, exit=True):
     else:
         if exit:
             raise ValueError(f"{t} is not a valid trading hours specifier "
-                             "in {TRADING_HOURS}")
+                             f"in {TRADING_HOURS}")
+        return False
+
+
+def valid_event_category(c, exit=True):
+    if c in EVENT_CATEGORIES:
+        return True
+    else:
+        if exit:
+            raise ValueError(f"{c} is not a valid event category in "
+                             f"{EVENT_CATEGORIES}")
         return False
 
 

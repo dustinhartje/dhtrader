@@ -131,7 +131,7 @@ def review_candles(timeframe: str,
         count = c.count_documents({})
         result = {"earliest_dt": earliest_dt, "latest_dt": latest_dt,
                   "latest_dt": latest_dt, "latest_dt": latest_dt,
-                  "count": count,
+                  "timeframe": timeframe, "count": count,
                   }
 
         return result
@@ -212,12 +212,14 @@ def store_event(start_dt,
                 end_dt,
                 symbol: str,
                 category: str,
+                tags: list,
                 notes: str,
                 ):
     """Write a single dhcharts.Event() to mongo"""
     event_doc = {"start_dt": dhu.dt_as_str(start_dt),
                  "end_dt": dhu.dt_as_str(end_dt),
                  "category": category,
+                 "tags": tags,
                  "notes": notes,
                  }
     collection = f"events_{symbol}"
