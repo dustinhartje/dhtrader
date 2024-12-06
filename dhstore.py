@@ -206,8 +206,42 @@ def review_candles(timeframe: str,
                                                     symbol=symbol,
                                                     timeframe=timeframe,
                                                     )
+        # Remove any candles falling inside of non-standard market closures
+        all_events = get_events(start_epoch=start_epoch,
+                                end_epoch=end_epoch,
+                                symbol=symbol,
+                                )
+        closure_events = []
+        dt_expected_open = []
+        # Only evaluate market Closed events
+        for e in all_events:
+            if e.category == "Closed":
+                closure_events.append(e)
+        # Check each candle against closures to build a new expected list
+        for c in dt_expected:
+            include = True
+            for e in closure_events:
+                if e.start_epoch < dhu.dt_to_epoch(c) < e.end_epoch:
+                    include = False
+            if include:
+                dt_expected_open.append(c)
+        # TODO above logic to exclude closure events seems to be working
+        #      but I still have a few hourly candles failing integrity
+        #      in both e1h and r1h timeframes.  dig deeper into these
+        #      by running the copy of check_candle_integrity_all_timeframes.py
+        #      in dhtrader repo to get the list and checking them one by
+        #      one.  Either I have a minor issue with logic here or, I think
+        #      more likely, I need to make some adjustments to the timestamps
+        #      I have in the stored events.  Look at actual 1m candles avail
+        #      in storage and/or in firstrate data download CSVs as source
+        #      of truth to figure out what hours the market was ACTUALLY
+        #      recoding candles around the times the hourly candles are
+        #      failing integrity because the way the CME site displays
+        #      it is quite unintuitive
+
+        # Convert expected to strings for comparison and review
         dt_expected_str = []
-        for d in dt_expected:
+        for d in dt_expected_open:
             dt_expected_str.append(dhu.dt_as_str(d))
         # Ensure we don't have any timestamp duplications
         set_actual = set(dt_actual)
@@ -440,14 +474,14 @@ def test_basics():
     # Test event storage and retrieval
     print("\n----------------------------------------------------------------")
     print("\nTesting event retrieval, assumes some ES events in storage")
-    print("This should print the first 5 events in 2024:")
     result = get_events(start_epoch=1704085200,
                         end_epoch=1735707599,
                         symbol="ES",
                         )
+    print(f"Found {len(result)} events in 2024.  Showing the first 5:")
     first_five = result[:5]
     for r in first_five:
-        print(r)
+        print(r.__dict__)
 
 
 if __name__ == '__main__':
