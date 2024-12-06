@@ -280,6 +280,9 @@ class Event():
         if self.symbol != "ES":
             raise ValueError("Only ES is currently supported for Event.symbol")
         self.category = category
+        self.tags = tags
+        if tags is None:
+            tags = []
         self.notes = notes
 
     def store(self):

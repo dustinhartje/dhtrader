@@ -321,6 +321,7 @@ def store_event(event):
                         "<class dhcharts.Event> object")
     dhm.store_event(start_dt=event.start_dt,
                     end_dt=event.end_dt,
+                    symbol=event.symbol,
                     category=event.category,
                     tags=event.tags,
                     notes=event.notes,
