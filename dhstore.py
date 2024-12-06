@@ -405,6 +405,17 @@ def get_events(start_epoch: int,
     return events
 
 
+def drop_events(symbol: str,
+                earliest_dt=None,
+                latest_dt=None,
+                ):
+    """Deletes events from central storage"""
+    if earliest_dt is None and latest_dt is None:
+        return dhm.drop_collection(f"events_{symbol}")
+    else:
+        return "Sorry, Dusty hasn't written code for select timeframes yet"
+
+
 def test_basics():
     """runs a few basics tests, mostly used during initial development
        to confirm functionality as desired"""
