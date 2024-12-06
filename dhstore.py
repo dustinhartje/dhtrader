@@ -160,6 +160,7 @@ def get_candles(start_epoch: int,
 def review_candles(timeframe: str,
                    symbol: str,
                    check_integrity: bool = False,
+                   return_detail: bool = False,
                    ):
     """Provides aggregate summary data about candles in central storage
     with options to further check completeness (integrity) of candle data"""
@@ -328,12 +329,20 @@ def review_candles(timeframe: str,
         summary_expected = None
         gap_analysis = None
 
-    return {"overview": overview,
-            "integrity_data": integrity_data,
-            "summary_data": summary_data,
-            "summary_expected": summary_expected,
-            "gap_analysis": gap_analysis,
-            }
+    if return_detail:
+        result = {"overview": overview,
+                  "integrity_data": integrity_data,
+                  "summary_data": summary_data,
+                  "summary_expected": summary_expected,
+                  "gap_analysis": gap_analysis,
+                  }
+    else:
+        result = {"overview": overview,
+                  "integrity_data": integrity_data,
+                  "gap_analysis": gap_analysis,
+                  }
+
+    return result
 
 
 def drop_candles(timeframe: str,
