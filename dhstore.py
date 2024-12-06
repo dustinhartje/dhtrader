@@ -353,12 +353,10 @@ def get_events(start_epoch: int,
     for r in result:
         events.append(dhc.Event(start_dt=r["start_dt"],
                                 end_dt=r["end_dt"],
-                                symbol=r["symbol"],
+                                symbol=symbol,
                                 category=r["category"],
                                 tags=r["tags"],
                                 notes=r["notes"],
-                                start_epoch=r["start_epoch"],
-                                end_epoch=r["end_epoch"],
                                 ))
 
     return events
