@@ -12,6 +12,7 @@
 #      and be more shim-ish in nature
 
 import csv
+from collections import Counter
 import dhcharts as dhc
 import dhutil as dhu
 import dhmongo as dhm
@@ -173,32 +174,92 @@ def review_candles(timeframe: str,
                               start_epoch=start_epoch,
                               end_epoch=end_epoch,
                               )
-        # TODO do a basic check on the times list vs expected for the timeframe
+        # Perform a basic check on the times list vs expected for the timeframe
         breakdown = dhu.summarize_candles(timeframe=timeframe,
                                           symbol=symbol,
                                           candles=candles,
                                           )
         status = "OK"
-        err_msg = None
+        err_msg = ""
         summary_data = breakdown["summary_data"]
-        expected_data = breakdown["expected_data"]
-        if expected_data is not None:
-            for k, v in expected_data.items():
+        summary_expected = breakdown["summary_expected"]
+        if summary_expected is not None:
+            for k, v in summary_expected.items():
                 if summary_data[k] != v:
                     status = "ERROR"
-                    if err_msg is None:
-                        err_msg = ""
-                    else:
+                    if err_msg != "":
                         err_msg += "\n"
                     err_msg += f"{k} summary data does not match expected"
         else:
             status = "UNKNOWN"
             err_msg = f"Expected data not defined for timeframe: {timeframe}"
-        integrity_data = {"status": status, "err_msg": err_msg}
         # TODO do a more extensive check on all the datetimes vs expected
         #      datetimes which I'll have to build out procedurally.  Look for
         #      missing or extra items in the actual list vs expected
-        #
+
+        # Perform a detailed analysis of actual vs expected timestamps
+        dt_actual = []
+        for c in candles:
+            dt_actual.append(dhu.dt_as_str(c.c_datetime))
+        start_dt = dhu.dt_from_epoch(start_epoch)
+        end_dt = dhu.dt_from_epoch(end_epoch)
+        dt_expected = dhu.expected_candle_datetimes(start_dt=start_dt,
+                                                    end_dt=end_dt,
+                                                    symbol=symbol,
+                                                    timeframe=timeframe,
+                                                    )
+        dt_expected_str = []
+        for d in dt_expected:
+            dt_expected_str.append(dhu.dt_as_str(d))
+        # Ensure we don't have any timestamp duplications
+        set_actual = set(dt_actual)
+        set_expected = set(dt_expected_str)
+        if len(dt_actual) != len(set_actual):
+            counters = Counter(dt_actual)
+            dupes = []
+            for k, v in counters.items():
+                if v > 1:
+                    dupes.append({k: v})
+            raise Exception(f"len(dt_actual) {len(dt_actual)} != "
+                            f"len(set(actual) {len(set_actual)}.  Likely "
+                            "there are duplicates in stored candle data "
+                            "which will corrupt analysis results.  Duplicates "
+                            f"found in dt_actual:\n\n{dupes}"
+                            )
+        if len(dt_expected_str) != len(set_expected):
+            counters = Counter(dt_expected_str)
+            dupes = []
+            for k, v in counters.items():
+                if v > 1:
+                    dupes.append({k: v})
+            raise Exception(f"len(dt_expected) {len(dt_expected)} != "
+                            f"len(set(expected) {len(set_expected)}.  Likely "
+                            "there is a problem in expected candle calcs "
+                            "which will corrupt analysis results.  Duplicates "
+                            f"found in dt_expected:\n\n{dupes}"
+                            )
+
+        # Check for differences between actual and expected candle sets
+        missing_from_actual = sorted(set_expected - set_actual)
+        missing_candles_count = len(missing_from_actual)
+        unexpected_in_actual = set_actual - set_expected
+        unexpected_candles_count = len(unexpected_in_actual)
+        gap_analysis = {"missing_candles_count": missing_candles_count,
+                        "unexpected_candles_count": unexpected_candles_count,
+                        "missing_candles": missing_from_actual,
+                        "unexpected_candles": unexpected_in_actual,
+                        }
+        if missing_candles_count > 0:
+            status = "ERROR"
+            if err_msg != "":
+                err_msg += "\n"
+            err_msg += f"{missing_candles_count} expected candles missing"
+        if unexpected_candles_count > 0:
+            status = "ERROR"
+            if err_msg != "":
+                err_msg += "\n"
+            err_msg += f"{unexpected_candles_count} unexpected candles found"
+
         # TODO Need some kind of running event update process, maybe part of
         #       refreshdata.py to add new events; todoist daily or weekly
         #       to check upcoming days/weeks and get them in ahead of events?
@@ -227,16 +288,19 @@ def review_candles(timeframe: str,
         #      --holidays when open with low volume (soft) - check annual
         #        holiday calendars for ideas around this
         #      --contract rollover periods (the whole week?)
+        integrity_data = {"status": status, "err_msg": err_msg}
     else:
         integrity_data = None
         breakdown = None
         summary_data = None
-        expected_data = None
+        summary_expected = None
+        gap_analysis = None
 
     return {"overview": overview,
             "integrity_data": integrity_data,
             "summary_data": summary_data,
-            "expected_data": expected_data,
+            "summary_expected": summary_expected,
+            "gap_analysis": gap_analysis,
             }
 
 

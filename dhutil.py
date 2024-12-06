@@ -166,10 +166,21 @@ def expected_candle_datetimes(start_dt,
             result.append(this)
         this = this + adder
 
+    # TODO build a function to compare expected vs actual candles and get some
+    #      initial view into closure events I need to add from this year.
+    #      Start with hourly charts to make the ranges less noisy, get
+    #      those events input, then check lower timeframes
+    # TODO build a script in backtesting repo plus a yaml or json of known
+    #      events so I can load them as I identify them
     # TODO build a list of exclusion ranges for Closed + exclude_category
+    #      into this function and confirm expected shows them (probably add
+    #      at least 1 to the test functions in this script as well,
+    #      something obvious like thanksgiving day)
     # TODO run through candles list comparing to exclusions to prune
     # TODO do I need to sort the list? it should still be sorted right?
     # TODO return the modified list
+    # TODO keep refining these functions and possibly updating candle data
+    #      until I get a clean comparison for all of 2024
 
     return result
 
@@ -247,7 +258,7 @@ def summarize_candles(timeframe: str,
                     "dates": dates_list,
                     "Days of Week": dows_list,
                     }
-    expected_data = {}
+    summary_expected = {}
     if timeframe == '5m':
         minutes = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45',
                    '50', '55']
@@ -326,15 +337,15 @@ def summarize_candles(timeframe: str,
                  '15:00:00', '16:00:00', '18:00:00', '19:00:00', '20:00:00',
                  '21:00:00', '22:00:00', '23:00:00']
     else:
-        expected_data = None
-    if expected_data is not None:
-        expected_data = {'minutes': minutes,
-                         'hours': hours,
-                         'times': times,
-                         }
+        summary_expected = None
+    if summary_expected is not None:
+        summary_expected = {'minutes': minutes,
+                            'hours': hours,
+                            'times': times,
+                            }
 
     return {"summary_data": summary_data,
-            "expected_data": expected_data,
+            "summary_expected": summary_expected,
             }
 
 
