@@ -287,6 +287,12 @@ class Event():
         self.start_epoch = dhu.dt_to_epoch(self.start_dt)
         self.end_epoch = dhu.dt_to_epoch(self.end_dt)
 
+    def __str__(self):
+        return str(self.__dict__)
+
+    def __repr__(self):
+        return str(self)
+
     def store(self):
         return dhs.store_event(self)
 
