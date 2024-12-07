@@ -12,7 +12,7 @@
 #      and be more shim-ish in nature
 
 import csv
-from collections import Counter
+from collections import Counter, defaultdict
 import dhcharts as dhc
 import dhutil as dhu
 import dhmongo as dhm
@@ -163,7 +163,8 @@ def review_candles(timeframe: str,
                    return_detail: bool = False,
                    ):
     """Provides aggregate summary data about candles in central storage
-    with options to further check completeness (integrity) of candle data"""
+    with options to further check completeness (integrity) of candle data and
+    provide remediation"""
     overview = dhm.review_candles(timeframe=timeframe,
                                   symbol=symbol,
                                   )
@@ -190,7 +191,7 @@ def review_candles(timeframe: str,
                 if summary_data[k] != v:
                     status = "ERROR"
                     if err_msg != "":
-                        err_msg += "\n"
+                        err_msg += " || "
                     err_msg += f"{k} summary data does not match expected"
         else:
             status = "UNKNOWN"
@@ -219,10 +220,12 @@ def review_candles(timeframe: str,
             if e.category == "Closed":
                 closure_events.append(e)
         # Check each candle against closures to build a new expected list
+        # TODO this logic should eventually get moved into
+        #      dhutil.expected_candle_datetimes
         for c in dt_expected:
             include = True
             for e in closure_events:
-                if e.start_epoch < dhu.dt_to_epoch(c) < e.end_epoch:
+                if e.start_epoch <= dhu.dt_to_epoch(c) <= e.end_epoch:
                     include = False
             if include:
                 dt_expected_open.append(c)
@@ -239,6 +242,40 @@ def review_candles(timeframe: str,
         #      recoding candles around the times the hourly candles are
         #      failing integrity because the way the CME site displays
         #      it is quite unintuitive
+        # TODO edge cases discovered:
+        #      1m candles with zero volume are not written in firstrate data
+        #      --this seems to result in higher timeframe candles not getting
+        #        closed when the last 1m candle they should have doesn't exist
+        #      --this also may be an issue for 1m candles generally
+        #      **possible solution: fill gaps in 1m charts with a candle that
+        #        has OHLC values all set to the close of the previous candle
+        #        and 0 for volume.  do this before calculating higher
+        #        timeframes always?
+        #        The downside to this solution is that if I have incomplete
+        #        data for other reasons it won't get flagged once it's
+        #        been "fixed".  am I ok with this?  can I sanity check some
+        #        other way like flagging if there are too many zero volume
+        #        candles in a given timeframe?
+        #      **alt solution: test if the next candle timestamp is as
+        #        expected while calculating higher timeframes and handle it
+        #        on the fly during the calculation, but don't necessarily write
+        #        a zero volume candle to storage so that the 1m gaps
+        #        remain.  Then when testing 1m vs expected only flag when
+        #        multiple sequential candles are missing?
+        #      **BEST SOLUTION (so far thunk up) - data update process should
+        #        flag any missing 1m candles after updating but before calcing
+        #        higher timeframes.  It should essentially list them then
+        #        pause and offer to replace them with zero volume candles.
+        #        This gives me the ability to double check them in TV before
+        #        giving the go-ahead, or decline and have it exit without
+        #        doing anything else so I can do a manual operation to resolve
+        #        whatever is wrong.  This should always be done when reviewing
+        #        1m candles even outside of the refresh process, but not for
+        #        any other timeframes.
+        #        **how to handle large batch loads though?  do I leave them
+        #          blank at load time to give me more time to review, and then
+        #          add the zero vol candles manually?  I mean I can probably
+        #          write a dhutil function to do that pretty easy.
 
         # Convert expected to strings for comparison and review
         dt_expected_str = []
@@ -273,8 +310,26 @@ def review_candles(timeframe: str,
                             )
 
         # Check for differences between actual and expected candle sets
+        # and parse results into a few helpful views
         missing_from_actual = sorted(set_expected - set_actual)
         missing_candles_count = len(missing_from_actual)
+        missing_candles_by_date = defaultdict(list)
+        for c in missing_from_actual:
+            k = c.split(' ')[0]
+            v = c.split(' ')[1]
+            missing_candles_by_date[k].append(v)
+        missing_candles_by_date = dhu.sort_dict(dict(missing_candles_by_date))
+        missing_count_by_date = {}
+        for k, v in missing_candles_by_date.items():
+            missing_count_by_date[k] = len(v)
+        missing_candles_by_hour = defaultdict(list)
+        for c in missing_from_actual:
+            k = c.split(' ')[1].split(':')[0]
+            missing_candles_by_hour[k].append(c)
+        missing_candles_by_hour = dhu.sort_dict(dict(missing_candles_by_hour))
+        missing_count_by_hour = {}
+        for k, v in missing_candles_by_hour.items():
+            missing_count_by_hour[k] = len(v)
         unexpected_in_actual = set_actual - set_expected
         unexpected_candles_count = len(unexpected_in_actual)
         gap_analysis = {"missing_candles_count": missing_candles_count,
@@ -285,7 +340,7 @@ def review_candles(timeframe: str,
         if missing_candles_count > 0:
             status = "ERROR"
             if err_msg != "":
-                err_msg += "\n"
+                err_msg += " || "
             err_msg += f"{missing_candles_count} expected candles missing"
         if unexpected_candles_count > 0:
             status = "ERROR"
@@ -335,6 +390,10 @@ def review_candles(timeframe: str,
                   "summary_data": summary_data,
                   "summary_expected": summary_expected,
                   "gap_analysis": gap_analysis,
+                  "missing_count_by_date": missing_count_by_date,
+                  "missing_count_by_hour": missing_count_by_hour,
+                  "missing_candles_by_date": missing_candles_by_date,
+                  "missing_candles_by_hour": missing_candles_by_hour,
                   }
     else:
         result = {"overview": overview,
@@ -502,6 +561,22 @@ def test_basics():
     first_five = result[:5]
     for r in first_five:
         print(r.__dict__)
+
+    # Test candle integrity check process - detailed
+    # runs slowly, only uncomment as needed
+    print("\nChecking for missing 1m candles")
+    integrity = review_candles(timeframe='1m',
+                               symbol='ES',
+                               check_integrity=True,
+                               return_detail=True,
+                               )
+    print(integrity)
+    print("\nCount of missing candles by date")
+    for k, v in integrity["missing_count_by_date"].items():
+        print(k, v)
+    print("\nCount of missing candles by hour")
+    for k, v in integrity["missing_count_by_hour"].items():
+        print(k, v)
 
 
 if __name__ == '__main__':

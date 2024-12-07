@@ -8,6 +8,19 @@ TRADING_HOURS = ['rth', 'eth']
 EVENT_CATEGORIES = ['Closed', 'Data', 'Unplanned', 'LowVolume', 'Rollover']
 
 
+def sort_dict(d: dict):
+    """Uses insertion ordering to sort a dictionary by keys"""
+    keys = []
+    sorted_dict = {}
+    for k in d.keys():
+        keys.append(k)
+    keys = sorted(keys)
+    for k in keys:
+        sorted_dict[k] = d[k]
+
+    return sorted_dict
+
+
 def valid_timeframe(t, exit=True):
     if t in TIMEFRAMES:
         return True
@@ -169,10 +182,6 @@ def expected_candle_datetimes(start_dt,
         # Range has been determined, test it
         if (this > this_week_close) and (this < this_week_open):
             include = False
-        # TODO can I figure out the NEXT weekday and weekend closure times and
-        # just keep looping til I clear the reopen then udpate them? vs
-        # recalculating them for every single candle?  Is it slow enough to
-        # make this worth the time to figure out in the current state?
         if include:
             result.append(this)
         this = this + adder
@@ -181,8 +190,6 @@ def expected_candle_datetimes(start_dt,
     #      initial view into closure events I need to add from this year.
     #      Start with hourly charts to make the ranges less noisy, get
     #      those events input, then check lower timeframes
-    # TODO build a script in backtesting repo plus a yaml or json of known
-    #      events so I can load them as I identify them
     # TODO build a list of exclusion ranges for Closed + exclude_category
     #      into this function and confirm expected shows them (probably add
     #      at least 1 to the test functions in this script as well,
