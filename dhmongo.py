@@ -12,6 +12,7 @@ import os
 import sys
 import pymongo
 from dotenv import load_dotenv, find_dotenv
+from operator import itemgetter
 import dhutil as dhu
 import dhcharts as dhc
 
@@ -108,7 +109,7 @@ def get_candles(start_epoch: int,
     result = c.find({"$and": [{"c_epoch": {"$gte": start_epoch}},
                     {"c_epoch": {"$lte": end_epoch}}]})
 
-    return list(result)
+    return sorted(list(result), key=itemgetter('c_epoch'))
 
 
 def review_candles(timeframe: str,
