@@ -13,6 +13,7 @@
 
 import csv
 from collections import Counter, defaultdict
+from datetime import timedelta
 import dhcharts as dhc
 import dhutil as dhu
 import dhmongo as dhm
@@ -165,6 +166,7 @@ def review_candles(timeframe: str,
     """Provides aggregate summary data about candles in central storage
     with options to further check completeness (integrity) of candle data and
     provide remediation"""
+    print("Retreiving many candles, this may take a few minutes")
     overview = dhm.review_candles(timeframe=timeframe,
                                   symbol=symbol,
                                   )
@@ -208,78 +210,10 @@ def review_candles(timeframe: str,
                                                     symbol=symbol,
                                                     timeframe=timeframe,
                                                     )
-        # Remove any candles falling inside of non-standard market closures
-        all_events = get_events(start_epoch=start_epoch,
-                                end_epoch=end_epoch,
-                                symbol=symbol,
-                                )
-        closure_events = []
-        dt_expected_open = []
-        # Only evaluate market Closed events
-        for e in all_events:
-            if e.category == "Closed":
-                closure_events.append(e)
-        # Check each candle against closures to build a new expected list
-        # TODO this logic should eventually get moved into
-        #      dhutil.expected_candle_datetimes
-        for c in dt_expected:
-            include = True
-            for e in closure_events:
-                if e.start_epoch <= dhu.dt_to_epoch(c) <= e.end_epoch:
-                    include = False
-            if include:
-                dt_expected_open.append(c)
-        # TODO above logic to exclude closure events seems to be working
-        #      but I still have a few hourly candles failing integrity
-        #      in both e1h and r1h timeframes.  dig deeper into these
-        #      by running the copy of check_candle_integrity_all_timeframes.py
-        #      in dhtrader repo to get the list and checking them one by
-        #      one.  Either I have a minor issue with logic here or, I think
-        #      more likely, I need to make some adjustments to the timestamps
-        #      I have in the stored events.  Look at actual 1m candles avail
-        #      in storage and/or in firstrate data download CSVs as source
-        #      of truth to figure out what hours the market was ACTUALLY
-        #      recoding candles around the times the hourly candles are
-        #      failing integrity because the way the CME site displays
-        #      it is quite unintuitive
-        # TODO edge cases discovered:
-        #      1m candles with zero volume are not written in firstrate data
-        #      --this seems to result in higher timeframe candles not getting
-        #        closed when the last 1m candle they should have doesn't exist
-        #      --this also may be an issue for 1m candles generally
-        #      **possible solution: fill gaps in 1m charts with a candle that
-        #        has OHLC values all set to the close of the previous candle
-        #        and 0 for volume.  do this before calculating higher
-        #        timeframes always?
-        #        The downside to this solution is that if I have incomplete
-        #        data for other reasons it won't get flagged once it's
-        #        been "fixed".  am I ok with this?  can I sanity check some
-        #        other way like flagging if there are too many zero volume
-        #        candles in a given timeframe?
-        #      **alt solution: test if the next candle timestamp is as
-        #        expected while calculating higher timeframes and handle it
-        #        on the fly during the calculation, but don't necessarily write
-        #        a zero volume candle to storage so that the 1m gaps
-        #        remain.  Then when testing 1m vs expected only flag when
-        #        multiple sequential candles are missing?
-        #      **BEST SOLUTION (so far thunk up) - data update process should
-        #        flag any missing 1m candles after updating but before calcing
-        #        higher timeframes.  It should essentially list them then
-        #        pause and offer to replace them with zero volume candles.
-        #        This gives me the ability to double check them in TV before
-        #        giving the go-ahead, or decline and have it exit without
-        #        doing anything else so I can do a manual operation to resolve
-        #        whatever is wrong.  This should always be done when reviewing
-        #        1m candles even outside of the refresh process, but not for
-        #        any other timeframes.
-        #        **how to handle large batch loads though?  do I leave them
-        #          blank at load time to give me more time to review, and then
-        #          add the zero vol candles manually?  I mean I can probably
-        #          write a dhutil function to do that pretty easy.
 
         # Convert expected to strings for comparison and review
         dt_expected_str = []
-        for d in dt_expected_open:
+        for d in dt_expected:
             dt_expected_str.append(dhu.dt_as_str(d))
         # Ensure we don't have any timestamp duplications
         set_actual = set(dt_actual)
@@ -348,28 +282,12 @@ def review_candles(timeframe: str,
                 err_msg += "\n"
             err_msg += f"{unexpected_candles_count} unexpected candles found"
 
-        # TODO Need some kind of running event update process, maybe part of
-        #       refreshdata.py to add new events; todoist daily or weekly
-        #       to check upcoming days/weeks and get them in ahead of events?
-        #      ** I think this is best done via a .json or .yaml file that
-        #         contains my list of events and a script
-        #         (or part of refresh data)
-        #         that just runs through and upserts them so I can just add
-        #         more to the json.  Alternatively I could have a script that
-        #         adds additional events adhoc and then exports the full list
-        #         so it's available as a backup to be reinserted if needed.
-        #         I would probably want to commit this list so it's backed
-        #         up in git for future restoration.
-        #      *Where should the master list live in the code so I can rebuild
-        #       them in storage if it's lost/changed?  dhutil?  dhcharts?  a
-        #       new script entirely?  it should be in dhtrader I think just
-        #       need to noodle more on which script gets it
-        #      *What happens if I missed one, what would need to be wiped or
-        #       recalced?  should there be a method or function to accomplish
-        #       this somehow?
-        #
+        # TODO create event identification and update process for myself
+        #      probably as a todoist or similar.  I should have the below
+        #      list of recurring events and process in the README probably
+        # TODO potential items to create events for:
         #      --what happens on daylight savings time changes?
-        #      --market holidays when closed
+        # DONE --market holidays when closed
         #      --FOMC meetings (soft) - possibly one event for the full day
         #                               and separate for announcment/presser
         #      --OPEX (soft)
@@ -479,6 +397,7 @@ def test_basics():
     """runs a few basics tests, mostly used during initial development
        to confirm functionality as desired"""
     # TODO consider converting these into unit tests some day
+    # https://docs.python.org/3/library/unittest.html
 
     # Test basic candle storing functionality
     print("\nStoring 2 test candles")
@@ -550,18 +469,6 @@ def test_basics():
     print(integrity)
     print(f"\n\nIntegrity result: {integrity['integrity_data']}")
 
-    # Test event storage and retrieval
-    print("\n----------------------------------------------------------------")
-    print("\nTesting event retrieval, assumes some ES events in storage")
-    result = get_events(start_epoch=1704085200,
-                        end_epoch=1735707599,
-                        symbol="ES",
-                        )
-    print(f"Found {len(result)} events in 2024.  Showing the first 5:")
-    first_five = result[:5]
-    for r in first_five:
-        print(r.__dict__)
-
     # Test candle integrity check process - detailed
     # runs slowly, only uncomment as needed
     print("\nChecking for missing 1m candles")
@@ -577,6 +484,18 @@ def test_basics():
     print("\nCount of missing candles by hour")
     for k, v in integrity["missing_count_by_hour"].items():
         print(k, v)
+
+    # Test event storage and retrieval
+    print("\n----------------------------------------------------------------")
+    print("\nTesting event retrieval, assumes some ES events in storage")
+    result = get_events(start_epoch=1704085200,
+                        end_epoch=1735707599,
+                        symbol="ES",
+                        )
+    print(f"Found {len(result)} events in 2024.  Showing the first 5:")
+    first_five = result[:5]
+    for r in first_five:
+        print(r.__dict__)
 
 
 if __name__ == '__main__':

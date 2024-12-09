@@ -153,7 +153,7 @@ def get_indicator_datapoints(indicator_id: str,
     """retrieves all datapoints for the given indicator_id that fall within
     the range of earliest_dt and latest_dt (inclusive of both), returning
     them as a chronologially sorted list"""
-    # TODO actually use dt params, for initial testing it's just grabbing all
+    # TODO actually use *_dt args, for initial testing it's just grabbing all
     c = db[dp_collection]
     result = c.find({"indicator_id": indicator_id})
 
@@ -260,6 +260,7 @@ def test_basics():
        to confirm functionality as desired.  Also dumps a basic summary
        of the database for quick checks at the end"""
     # TODO consider converting these into unit tests some day
+    # https://docs.python.org/3/library/unittest.html
 
     print("\nListing current collections before we make changes")
     print(list_collections())

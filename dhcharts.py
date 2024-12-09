@@ -3,83 +3,6 @@ import sys
 import dhutil as dhu
 import dhstore as dhs
 
-# TODO at this point I think it's time to start building classes/investigating
-#      backtest libraries to use because I think I want to go ahead and read
-#      the CSV data into Candle & Day objects from here
-#      Then those objects (probably Day objects) will build out the smaller
-#      timeframe candles as lists/attributes (Charts?)
-#
-#      I want to be able to pass data into these objects at this point in the
-#      script in a way that can be swapped out later if I switch to an api or
-#      other data source.  i.e. firstrate.py should only contain stuff that is
-#      specific to reading firstrate data, it should not do anything with it
-#      beyond passing it to another module which can then take care of how I'm
-#      going to organize and store it long term
-
-#     TODO I need to decide how I'm going to want to store stuff for sure.  I
-#          was originally thinking a structure like:
-#          FuturesHistoricalData/ES/<DATE>/1m.csv/15m.csv/etc but after
-#          thinking through classes below a little I think I'd like them to be
-#          organized primarily as Days with the smaller timeframes as
-#          subclasses or whatever the right term would be attached to each day
-#          since I'll mostly use this for intraday stuff.
-#
-#          I'll create Chart objects which can pull specific times from Days
-#          attributes or combine multiple Days when working on higher
-#          timeframes when I'm actually working with the data, these don't
-#          necessarily need to get stored but might if I decide to later
-#
-#          As I think about the objects I want, I'm leaning more and more
-#          towards storing each Day as a json file for now and seeing how that
-#          works out.  At some point I do want to explore putting them in
-#          Mongo or some other such datastore but the amount of data I have is
-#          manageable in files I think and all of it will be rebuildable.
-#
-#          I should definitely build it with a reusable idempotent script that
-#          can be rerun at will so I don't have to worry about backups
-#
-#          TODO think a bit more about how this works if a Day changes and has
-#               to be rewritten but some of it's data was used in a Chart or
-#               higher timeframe that was also saved.  Does it somehow trigger
-#               a recalc on those things?  I at least need to leave a note to
-#               explore this later / maybe a github issue?
-#
-#               I definitely will want each of those other objects to have
-#               rebuild() methods and maybe just need to write a master
-#               rebuild_all script to run periodically which starts with
-#               recalcing/rebuilding Days then moves on to other objects in
-#               whatever order makes sense
-#
-#      candle
-#        attributes: start and end times, symbol, timeframe (i.e. 1m/5m),
-#                    o, h, l, c, direction/color
-#          to think about / research:
-#             what happens if a candle closes unchanged?  it's not red or green
-#             what is it?  do I default it to green?
-#             type/shape i.e. doji, buy signal, inside/outside/outsideup.
-#             maybe this is None unless it matches some particular criteria
-#             sizes: body size in pts, wick sizes, proportion of body to wicks
-#             (helps to determine patterns)
-#             for starters I can create these attributes and just set them all
-#             to None, then if I want to use them later it'll easy to adjust.
-#
-#      day
-#        attributes: symbol, date, list of candles for each timeframe, list of
-#                    timeframes?)
-#        OHLCV data / it's own candle object as an attribute?  I think that
-#            makes the most sense
-#        methods: check_integrity, rebuild
-#      week / month
-#        like a day, but for a week/month
-#      pattern?
-#          this would be an object with a specific type and some other info
-#          attributes like
-#          maybe a description, how to play it, etc.  it would have multiple
-#          sequential candles
-#      chart?  (i.e. multiple candles with defined timeframe/market hours)
-#      play?  now we're getting into how to trade, I probably need to table
-#          this until I get the rest built out
-
 CANDLE_TIMEFRAMES = ['1m', '5m', '15m', '1h', '4h', '1d', '1w']
 
 
@@ -157,6 +80,12 @@ class Candle():
             self.c_direction = 'bearish'
         else:
             self.c_direction = 'unchanged'
+
+    def __str__(self):
+        return str(self.__dict__)
+
+    def __repr__(self):
+        return str(self.__dict__)
 
     def store(self):
         dhs.store_candle(self)
@@ -242,9 +171,6 @@ class Chart():
             self.c_end = max(self.c_end, new_candle.c_datetime)
         else:
             self.c_end = new_candle.c_datetime
-
-        # TODO do I need to check for gaps in candles?  what if I find them?
-        # maybe this should be a separate method to call on demand?
 
     def load_candles(self):
         """Load candles from central storage based on current attributes"""
@@ -431,13 +357,6 @@ class Day():
                         self.d_volume_rth = candle.c_volume
                     else:
                         self.d_volume_rth += candle.c_volume
-            # Everything up to this point has been validated using 10/9 data
-            # TODO calculate higher timeframe charts i.e. 5m, 15m, 1h..
-            #      for each timeframe, build a new chart here
-            #      then self.add_chart()
-            #      can probably build each higher chart from the prev
-            #      for speed vs using 1m as base for all?
-            #      TODO make sure 1m chart is correctly sorted going into this
 
     def add_chart(self, new_chart):
         if not isinstance(new_chart, Chart):

@@ -1,7 +1,10 @@
 from datetime import datetime as dt
-from datetime import timedelta
+from datetime import timedelta, date
 import csv
+import sys
+from tabulate import tabulate
 import dhcharts as dhc
+import dhstore as dhs
 
 TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w', '1mo']
 TRADING_HOURS = ['rth', 'eth']
@@ -25,8 +28,11 @@ def valid_timeframe(t, exit=True):
     if t in TIMEFRAMES:
         return True
     else:
+        err_msg = f"{t} is not a valid timeframe in {TIMEFRAMES}"
         if exit:
-            raise ValueError(f"{t} is not a valid timeframe in {TIMEFRAMES}")
+            raise ValueError(err_msg)
+        else:
+            print(err_msg)
         return False
 
 
@@ -34,9 +40,11 @@ def valid_trading_hours(t, exit=True):
     if t in TRADING_HOURS:
         return True
     else:
+        err_msg = f"{t} is not a valid specifier in {TRADING_HOURS}"
         if exit:
-            raise ValueError(f"{t} is not a valid trading hours specifier "
-                             f"in {TRADING_HOURS}")
+            raise ValueError(err_msg)
+        else:
+            print(err_msg)
         return False
 
 
@@ -44,9 +52,9 @@ def valid_event_category(c, exit=True):
     if c in EVENT_CATEGORIES:
         return True
     else:
+        err_msg = "{c} is not a valid event category in {EVENT_CATEGORIES}"
         if exit:
-            raise ValueError(f"{c} is not a valid event category in "
-                             f"{EVENT_CATEGORIES}")
+            raise ValueError(err_msg)
         return False
 
 
@@ -102,6 +110,43 @@ def next_candle_start(dt, timeframe: str = "1m"):
     return next_dt
 
 
+def generate_zero_volume_candle(c_datetime,
+                                timeframe: str = "1m",
+                                symbol: str = "ES",
+                                ):
+    """Returns a zero volume candle with OHLC values all set to the prior
+    candle's closing value.  Primarily used to fill gaps in 1m candle storage
+    where data providers sometimes omit candles with zero trading volume."""
+    if symbol != "ES":
+        raise ValueError("Only symbol: 'ES' is currently supported")
+    if timeframe == "1m":
+        delta = timedelta(minutes=1)
+    else:
+        raise ValueError(f"timeframe: {timeframe} is not currently supported")
+    prior_epoch = dt_to_epoch(dt_as_dt(c_datetime) - delta)
+    prior_candle = dhs.get_candles(start_epoch=prior_epoch,
+                                   end_epoch=prior_epoch,
+                                   timeframe=timeframe,
+                                   symbol=symbol,
+                                   )
+    # Ensure we got back exactly one Candle and use it's closing value
+    if len(prior_candle) == 1 and isinstance(prior_candle[0], dhc.Candle):
+        v = prior_candle[0].c_close
+        result = dhc.Candle(c_datetime=c_datetime,
+                            c_timeframe=timeframe,
+                            c_open=v,
+                            c_high=v,
+                            c_low=v,
+                            c_close=v,
+                            c_volume=0,
+                            c_symbol=symbol,
+                            )
+    else:
+        result = None
+
+    return result
+
+
 def expected_candle_datetimes(start_dt,
                               end_dt,
                               symbol: str,
@@ -131,7 +176,7 @@ def expected_candle_datetimes(start_dt,
     else:
         raise ValueError("Only ES is currently supported as symbol for now")
     # Build a list of possible candles within standard market hours
-    result = []
+    result_std = []
     if timeframe == "1m":
         adder = timedelta(minutes=1)
     elif timeframe == "5m":
@@ -183,24 +228,255 @@ def expected_candle_datetimes(start_dt,
         if (this > this_week_close) and (this < this_week_open):
             include = False
         if include:
-            result.append(this)
+            result_std.append(this)
         this = this + adder
 
-    # TODO build a function to compare expected vs actual candles and get some
-    #      initial view into closure events I need to add from this year.
-    #      Start with hourly charts to make the ranges less noisy, get
-    #      those events input, then check lower timeframes
-    # TODO build a list of exclusion ranges for Closed + exclude_category
-    #      into this function and confirm expected shows them (probably add
-    #      at least 1 to the test functions in this script as well,
-    #      something obvious like thanksgiving day)
-    # TODO run through candles list comparing to exclusions to prune
-    # TODO do I need to sort the list? it should still be sorted right?
-    # TODO return the modified list
-    # TODO keep refining these functions and possibly updating candle data
-    #      until I get a clean comparison for all of 2024
+    # Remove any candles falling inside of non-standard market closures
+    start_epoch = dt_to_epoch(start_dt)
+    end_epoch = dt_to_epoch(end_dt)
+    all_events = dhs.get_events(start_epoch=start_epoch,
+                                end_epoch=end_epoch,
+                                symbol=symbol,
+                                )
+    closures = []
+    result = []
+    # Only evaluate market Closed events
+    for e in all_events:
+        if e.category == "Closed":
+            closures.append(e)
+    # Check each candle against closures to build a new expected list
+    for c in result_std:
+        include = True
+        for e in closures:
+            if e.start_epoch <= dt_to_epoch(c) <= e.end_epoch:
+                include = False
+        if include:
+            result.append(c)
 
     return result
+
+
+def remediate_candle_gaps(timeframe: str = "1m",
+                          symbol: str = "ES",
+                          prompt: bool = True,
+                          fix_obvious: bool = False,
+                          fix_unclear: bool = False,
+                          dry_run=False,
+                          ):
+    """Identifies gaps for review in stored candles and offers to store zero
+    volume candles in their place.  Currently only supports 1m as the other
+    timeframes are calced from these, but I wrote in timeframe to keep
+    consistent argument flows and allow future expansion optionality.
+
+    fix_obvious: Automatically fix any candles that are obviously gaps due to
+    normal after hours zero volume periods
+
+    prompt: Whether to prompt the user for confirmation before fixing candles
+            that have not been fixed due to obvious criteria being met
+
+    dry_run: Run all logic as if remediation is being performed, but only
+    print candle storage actions without actually performing them."""
+    if timeframe == "1m":
+        delta = timedelta(minutes=1)
+    else:
+        raise ValueError("timeframe: {timeframe} is not currently supported")
+    if symbol != "ES":
+        raise ValueError("symbol: {symbol} is not currently supported")
+    print("Remediating Candle Gaps")
+    print(f"Auto fixing obvious zero volume gaps: {fix_obvious}")
+    print(f"Prompting before fixing unclear candles: {prompt}")
+    print(f"Dry Run Mode (only simulate changes): {dry_run}")
+    review = dhs.review_candles(timeframe='1m',
+                                symbol='ES',
+                                check_integrity=True,
+                                return_detail=True,
+                                )
+    candles = review["missing_candles_by_date"]
+    count_date = review["missing_count_by_date"]
+    dates = []
+    fixed_obvious = []
+    fixed_unclear = []
+    skipped = []
+    errored = []
+    for k, v in count_date.items():
+        dates.append(k)
+    total_dates = len(dates)
+    total_missing = str(review["gap_analysis"]["missing_candles_count"])
+    print(f"\n{total_dates} dates found with {total_missing} missing candles.")
+    print("\nWorking through them by date\n")
+    for d in dates:
+        obvious_fix = []
+        unclear_fix = []
+        print("\n============================================================")
+        print(f"{d} - {len(candles[d])} missing candles")
+        for c in candles[d]:
+            c_dt = dt_as_dt(f"{d} {c}")
+            pre_start = dt_to_epoch(c_dt - (delta * 5))
+            pre_end = dt_to_epoch(c_dt - delta)
+            post_start = dt_to_epoch(c_dt + delta)
+            post_end = dt_to_epoch(c_dt + (delta * 5))
+            pre_cans = dhs.get_candles(timeframe=timeframe,
+                                       symbol=symbol,
+                                       start_epoch=pre_start,
+                                       end_epoch=pre_end,
+                                       )
+            post_cans = dhs.get_candles(timeframe=timeframe,
+                                        symbol=symbol,
+                                        start_epoch=post_start,
+                                        end_epoch=post_end,
+                                        )
+            # Print an overview of each candle and surrounding candles
+            # for human review before fixing
+            this_time = str(c)
+            this_vol = "0"
+            pre_cans_times = []
+            pre_cans_vols = []
+            post_cans_times = []
+            post_cans_vols = []
+            for can in pre_cans:
+                pre_cans_times.append(str(can.c_datetime).split(" ")[1][:5])
+                pre_cans_vols.append(str(can.c_volume))
+            for can in post_cans:
+                post_cans_times.append(str(can.c_datetime).split(" ")[1][:5])
+                post_cans_vols.append(str(can.c_volume))
+            times = pre_cans_times.copy()
+            adj_times = pre_cans_times.copy()
+            times.extend([f"[{this_time}]"])
+            times.extend(post_cans_times)
+            adj_times.extend(post_cans_times)
+            vols = pre_cans_vols.copy()
+            vols.extend([f"[{this_vol}]"])
+            vols.extend(post_cans_vols)
+            adj_vols = []
+            for v in pre_cans_vols:
+                adj_vols.append(int(v))
+            for v in post_cans_vols:
+                adj_vols.append(int(v))
+            # Mark obvious if candle falls outside of regular trading hours,
+            # all 10 adjacent candles exist, and the avg vol of adjacent
+            # candles is low
+            if len(adj_vols) > 0:
+                avg_vol = sum(adj_vols) / len(adj_vols)
+            else:
+                avg_vol = 0
+            if ((c_dt.hour < 9 or c_dt.hour > 15) and len(pre_cans) == 5
+                    and len(post_cans) == 5 and 0 < avg_vol < 100):
+                print(f"OBVIOUS: {c_dt.hour} len(pre_cans)={len(pre_cans)} "
+                      f"len(post_cans)={len(post_cans)} avg_vol={avg_vol}")
+                obvious_fix.append({"c_dt": c_dt,
+                                    "times": times,
+                                    "vols": vols,
+                                    })
+            else:
+                print(f"UNCLEAR: hr={c_dt.hour} len(pre_cans)={len(pre_cans)} "
+                      f"len(post_cans)={len(post_cans)} avg_vol={avg_vol}")
+                unclear_fix.append({"c_dt": c_dt,
+                                    "times": times,
+                                    "vols": vols,
+                                    })
+
+        # Work through obvious fixes if flagged, else move them to unclear
+        if not fix_obvious:
+            unclear_fix.extend(obvious_fix)
+        else:
+            if dry_run:
+                msg = "DRY RUN: "
+            else:
+                msg = ""
+            msg += f"Fixing {len(obvious_fix)} obvious candles"
+            print(msg)
+            for c in obvious_fix:
+                print(tabulate([c["vols"]],
+                               headers=c["times"],
+                               stralign="center",
+                               numalign="center",
+                               tablefmt="plain",
+                               )
+                      )
+                z = generate_zero_volume_candle(c_datetime=c["c_dt"],
+                                                timeframe="1m",
+                                                symbol="ES",
+                                                )
+                if z is not None:
+                    fixed_obvious.append(c)
+                    if dry_run:
+                        print(f"DRY RUN: I would have fixed with: {z}")
+                    else:
+                        print(f"Storing zero volume fix candle: {z}")
+                        z.store()
+                else:
+                    print(f"Error creating zero volume candle, skipped {c_dt}")
+                    errored.append(c)
+        # Now work through unclear candles that did not meed obvious criteria
+        print("\n------------------------------------------------------------")
+        print(f"{len(unclear_fix)} Unclear candles require human review\n")
+        for c in unclear_fix:
+            print(tabulate([c["vols"]],
+                           headers=c["times"],
+                           stralign="center",
+                           numalign="center",
+                           tablefmt="plain",
+                           )
+                  )
+        cont = ""
+        if dry_run:
+            cont_msg = "DRY RUN: "
+        else:
+            cont_msg = ""
+        cont_msg += ("Fix by inserting zero volume candles for these [X=Exit] "
+                     "(Y/N/X)?")
+        while cont not in ["Y", "y", "N", "n", "X", "x"]:
+            if fix_unclear and prompt and len(unclear_fix) > 0:
+                cont = input(cont_msg)
+            else:
+                cont = "Y"
+            if cont in ["Y", "y"]:
+                for c in unclear_fix:
+                    z = generate_zero_volume_candle(c_datetime=c["c_dt"],
+                                                    timeframe="1m",
+                                                    symbol="ES",
+                                                    )
+                    if z is not None:
+                        if dry_run and fix_unclear:
+                            print(f"DRY RUN: I would have fixed with: {z}")
+                            fixed_unclear.append(c)
+                        elif fix_unclear:
+                            print(f"Storing zero volume fix candle: {z}")
+                            z.store()
+                            fixed_unclear.append(c)
+                        else:
+                            print(f"Skipping unclear candles for this run")
+                            skipped.append(c)
+                    else:
+                        print("Error creating zero volume candle, skipping",
+                              c["c_dt"])
+                        errored.append(c)
+            elif cont in ["X", "x"]:
+                print("Exiting without processing any more days...")
+                sys.exit()
+            else:
+                print("Skipping unclear candles for this day")
+                for c in unclear_fix:
+                    skipped.append(c)
+    if dry_run:
+        overview = "DRY_RUN Would have: "
+    else:
+        overview = ""
+    overview += (f"Fixed {len(fixed_obvious)} obvious candles, "
+                 f"Fixed {len(fixed_unclear)} unclear candles, "
+                 f"Skipped {len(skipped)} candles, "
+                 f"Errors encountered on {len(errored)}"
+                 )
+
+    return {"fixed_obvious": fixed_obvious,
+            "fixed_unclear": fixed_unclear,
+            "skipped": skipped,
+            "errored": errored,
+            "overview": overview,
+            }
+    # TODO when all that is working and all the 1m gaps are filled,
+    #      wipe and recalc the higher timeframes and confirm all timeframes
+    #      are gap free / fix any further issues found
 
 
 def read_candles_from_csv(start_dt,
@@ -371,6 +647,7 @@ def test_basics():
     """runs a few basics tests, mostly used during initial development
        to confirm functionality as desired"""
     # TODO consider converting these into unit tests some day
+    # https://docs.python.org/3/library/unittest.html
 
     # Test datatime functions
     ts = "2024-01-01 12:30:00"
@@ -419,12 +696,40 @@ def test_basics():
                                             )
     for c in weekday_gap:
         print(dt_as_str(c))
+    print("\nExpected candles spanning 2 days with early holiday closes, r1h")
+    print("This should show r1h candles from 9:30-13:00 only for both days")
+    weekday_gap = expected_candle_datetimes(start_dt="2024-07-03 09:00:00",
+                                            end_dt="2024-07-05 00:00:00",
+                                            symbol="ES",
+                                            timeframe="r1h",
+                                            )
+    for c in weekday_gap:
+        print(dt_as_str(c))
 
     # Test timeframe validation functions
-    print("Testing valid timeframe")
+    print("Testing valid timeframe, should return True")
     print(valid_timeframe('1m'))
-    print("Testing an invalid timeframe, should raise an exception and exit")
-    print(valid_timeframe('20m'))
+    print("Testing an invalid timeframe, should return an error messge")
+    print(valid_timeframe('20m', exit=False))
+
+    # Optionally run candle gap mitigation
+    remediate = ""
+    while remediate not in ["Y", "y", "N", "n"]:
+        remediate = input("\nFinished testing.  Would you like to dry-run 1m "
+                          "candle remediation to simulate filling candle gaps "
+                          "(Y/N)?")
+        if remediate in ["Y", "y"]:
+            remed = remediate_candle_gaps(timeframe="1m",
+                                          symbol="ES",
+                                          prompt=False,
+                                          fix_obvious=True,
+                                          fix_unclear=True,
+                                          dry_run=True,
+                                          )
+            print("==========================================================")
+            print("==========================================================")
+            print("==========================================================")
+            print(remed["overview"])
 
 
 if __name__ == '__main__':
