@@ -163,6 +163,9 @@ def review_candles(timeframe: str,
     overview = dhm.review_candles(timeframe=timeframe,
                                   symbol=symbol,
                                   )
+    if overview is None:
+        print(f"No candles found for the specified timeframe {timeframe}")
+        return None
     start_epoch = dhu.dt_to_epoch(overview["earliest_dt"])
     end_epoch = dhu.dt_to_epoch(overview["latest_dt"])
     if check_integrity:
