@@ -102,13 +102,6 @@ def store_indicator(indicator_id: str,
     return result
 
 
-def load_candles_from_csv(filepath: str,
-                          start_dt,
-                          end_dt,
-                          ):
-    """Loads 1m candles from a CSV file into central storage"""
-
-
 def store_candle(candle):
     """Write a single dhcharts.Candle() to central storage"""
     if not isinstance(candle, dhc.Candle):

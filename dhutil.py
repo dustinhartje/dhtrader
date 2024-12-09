@@ -512,6 +512,36 @@ def read_candles_from_csv(start_dt,
     return candles
 
 
+def store_candles_from_csv(filepath: str,
+                           start_dt,
+                           end_dt,
+                           timeframe: str = "1m",
+                           symbol: str = "ES",
+                           ):
+    """Loads 1m candles from a CSV file into central storage.  Mostly useful
+    for quick manual gap fill operations via python console."""
+    candles = read_candles_from_csv(start_dt=start_dt,
+                                    end_dt=end_dt,
+                                    filepath=filepath,
+                                    symbol=symbol,
+                                    timeframe=timeframe,
+                                    )
+    print(f"{len(candles)} candles found, storing them")
+    for c in candles:
+        c.store()
+    print("Done storing, attempting to retrieve them for validation.")
+    new_candles = dhs.get_candles(start_epoch=dt_to_epoch(start_dt),
+                                  end_epoch=dt_to_epoch(end_dt),
+                                  timeframe=timeframe,
+                                  symbol=symbol,
+                                  )
+    new_dts = []
+    for c in new_candles:
+        new_dts.append(dt_as_str(c.c_datetime))
+    print(new_dts)
+    print(f"{len(new_candles)} candles retrieved successfully")
+
+
 def summarize_candles(timeframe: str,
                       symbol: str = "ES",
                       candles: list = None,
