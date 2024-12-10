@@ -24,6 +24,16 @@ def sort_dict(d: dict):
     return sorted_dict
 
 
+def prompt_yn(msg):
+    p = ""
+    while p not in ["Y", "y", "N", "n"]:
+        p = input(f"{msg} (Y/N)?:")
+    if p in ["Y", "y"]:
+        return True
+    else:
+        return False
+
+
 def valid_timeframe(t, exit=True):
     if t in TIMEFRAMES:
         return True
@@ -276,6 +286,9 @@ def remediate_candle_gaps(timeframe: str = "1m",
 
     dry_run: Run all logic as if remediation is being performed, but only
     print candle storage actions without actually performing them."""
+    # TODO review currently flagging 11/28 and 11/29 gaps, presumably
+    #      thanksgiving.  update events and rerun refreshdata.py to confirm
+    #      cleared
     # TODO make this function accept a csv filepath and/or a list of candles
     #      such that I can load firstrate data into it and it should try
     #      to resolve any candle gaps first by checking the file/list for them
