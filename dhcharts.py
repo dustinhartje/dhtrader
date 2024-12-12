@@ -87,6 +87,22 @@ class Candle():
     def __repr__(self):
         return str(self.__dict__)
 
+    def __eq__(self, other):
+        if not isinstance(other, Candle):
+            print("wrong type")
+            return False
+        return (self.c_datetime == other.c_datetime and
+                self.c_timeframe == other.c_timeframe and
+                self.c_open == other.c_open and
+                self.c_high == other.c_high and
+                self.c_low == other.c_low and
+                self.c_close == other.c_close and
+                self.c_volume == other.c_volume and
+                self.c_symbol == other.c_symbol)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def store(self):
         dhs.store_candle(self)
 

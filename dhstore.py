@@ -159,7 +159,7 @@ def review_candles(timeframe: str,
     """Provides aggregate summary data about candles in central storage
     with options to further check completeness (integrity) of candle data and
     provide remediation"""
-    print("Retreiving many candles, this may take a few minutes")
+    print("Retrieving candles from storage, this may take a few minutes...")
     overview = dhm.review_candles(timeframe=timeframe,
                                   symbol=symbol,
                                   )

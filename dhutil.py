@@ -11,6 +11,10 @@ TRADING_HOURS = ['rth', 'eth']
 EVENT_CATEGORIES = ['Closed', 'Data', 'Unplanned', 'LowVolume', 'Rollover']
 
 
+# TODO review all functions in this file.  Some may make sense to move to
+#      other files (such as dhstore for storage validation stuff) or as
+#      methods on dhcharts objects rather than standalone functions
+
 def sort_dict(d: dict):
     """Uses insertion ordering to sort a dictionary by keys"""
     keys = []
@@ -286,9 +290,6 @@ def remediate_candle_gaps(timeframe: str = "1m",
 
     dry_run: Run all logic as if remediation is being performed, but only
     print candle storage actions without actually performing them."""
-    # TODO review currently flagging 11/28 and 11/29 gaps, presumably
-    #      thanksgiving.  update events and rerun refreshdata.py to confirm
-    #      cleared
     # TODO make this function accept a csv filepath and/or a list of candles
     #      such that I can load firstrate data into it and it should try
     #      to resolve any candle gaps first by checking the file/list for them
@@ -568,6 +569,130 @@ def store_candles_from_csv(filepath: str,
         new_dts.append(dt_as_str(c.c_datetime))
     print(new_dts)
     print(f"{len(new_candles)} candles retrieved successfully")
+
+
+def compare_candles_vs_csv(filepath,
+                           timeframe: str = "1m",
+                           symbol: str = "ES",
+                           start_dt=None,
+                           end_dt=None,
+                           ):
+    """Check stored candles against a CSV source file, primarily used to
+    confirm calculated higher timeframes against data provider equivalents
+    where available to sanity check calculation process"""
+    # Determine start/end datetimes from stored candles if not provided
+    if start_dt is None or end_dt is None:
+        review = dhs.review_candles(timeframe=timeframe,
+                                    symbol=symbol,
+                                    check_integrity=False,
+                                    return_detail=False,
+                                    )
+        if start_dt is None:
+            start_dt = review["overview"]["earliest_dt"]
+        if end_dt is None:
+            end_dt = review["overview"]["latest_dt"]
+    print(f"Comparing {symbol} {timeframe} candles in {start_dt} to {end_dt}")
+    # Get candles from storage
+    start_epoch = dt_to_epoch(start_dt)
+    end_epoch = dt_to_epoch(end_dt)
+    stored_cans = dhs.get_candles(start_epoch=start_epoch,
+                                  end_epoch=end_epoch,
+                                  timeframe=timeframe,
+                                  symbol=symbol,
+                                  )
+    # Get candles from CSV
+    csv_cans = read_candles_from_csv(start_dt=start_dt,
+                                     end_dt=end_dt,
+                                     filepath=filepath,
+                                     symbol=symbol,
+                                     timeframe=timeframe,
+                                     )
+    # Compare sets to find any diffs
+    all_equal = True
+    stored = {}
+    csved = {}
+    missing = {}
+    extras = {}
+    zeros = {}
+    diffs = {}
+    for c in stored_cans:
+        stored[c.c_epoch] = c
+    for c in csv_cans:
+        csved[c.c_epoch] = c
+    # Note any candles in the csv that aren't found in storage
+    for k, v in csved.items():
+        if k not in stored.keys():
+            missing[k] = v
+    # Note any candles in storage that aren't found in the CSV
+    for k, v in stored.items():
+        if k not in csved.keys():
+            if v.c_volume > 0:
+                extras[k] = v
+            else:
+                zeros[k] = v
+    # Now lets find the diffs for non-missing keys
+    for k, v in stored.items():
+        if k in csved.keys():
+            if v != csved[k]:
+                sc = v
+                cc = csved[k]
+                c_diffs = {}
+                if sc.c_datetime != cc.c_datetime:
+                    c_diffs["c_datetime"] = {"stored": sc.c_datetime,
+                                             "csv": cc.c_datetime}
+                if sc.c_open != cc.c_open:
+                    c_diffs["c_open"] = {"stored": sc.c_open,
+                                         "csv": cc.c_open}
+                if sc.c_high != cc.c_high:
+                    c_diffs["c_high"] = {"stored": sc.c_high,
+                                         "csv": cc.c_high}
+                if sc.c_low != cc.c_low:
+                    c_diffs["c_low"] = {"stored": sc.c_low,
+                                        "csv": cc.c_low}
+                if sc.c_close != cc.c_close:
+                    c_diffs["c_close"] = {"stored": sc.c_close,
+                                          "csv": cc.c_close}
+                if sc.c_volume != cc.c_volume:
+                    c_diffs["c_volume"] = {"stored": sc.c_volume,
+                                           "csv": cc.c_volume}
+                # Store diffs by stringified datetime to simplify later review
+                diffs[dt_as_str(v.c_datetime)] = {"stored_candle": stored[k],
+                                                  "csv_candle": csved[k],
+                                                  "differences": c_diffs,
+                                                  }
+    # And put it together into a returnable
+    count_stored_dupes = len(stored_cans) - len(stored)
+    count_csv_dupes = len(csv_cans) - len(csved)
+    count_stored_candles = len(stored_cans)
+    count_csv_candles = len(csv_cans)
+    count_missing_from_storage = len(missing)
+    count_extras_in_storage = len(extras)
+    count_zero_vol_extras_in_storage = len(zeros)
+    count_different_from_csv = len(diffs)
+    if (count_stored_dupes > 0 or count_csv_dupes > 0
+            or count_missing_from_storage > 0 or count_extras_in_storage > 0
+            or count_different_from_csv > 0):
+        all_equal = False
+    if count_stored_candles != count_csv_candles:
+        all_equal = False
+    counts = {"stored_dupes": count_stored_dupes,
+              "csv_dupes": count_csv_dupes,
+              "stored_candles": count_stored_candles,
+              "csv_candles": count_csv_candles,
+              "missing_from_storage": count_missing_from_storage,
+              "extras_in_storage": count_extras_in_storage,
+              "zero_vol_extras_in_storage": count_zero_vol_extras_in_storage,
+              "different_from_csv": count_different_from_csv,
+              }
+    result = {"all_equal": all_equal,
+              "counts": counts,
+              "differences": diffs,
+              "missing_from_storage": missing,
+              "extras_in_storage": extras,
+              "zero_volume_storage_only": zeros,
+              }
+
+    return result
 
 
 def summarize_candles(timeframe: str,
