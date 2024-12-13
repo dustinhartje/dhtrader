@@ -62,10 +62,6 @@ class Candle():
         self.c_upper_wick_size = self.c_high - max(self.c_open, self.c_close)
         self.c_lower_wick_size = min(self.c_open, self.c_close) - self.c_low
         if self.c_size == 0:
-            # TODO revisit this later as I'm not sure how they'll be used yet
-            #      and what the implications are for perfectly flat candles
-            #      as sometimes seen especially in the depths of the overnight
-            #      Should these be None?  0?  100?
             self.c_body_perc: float = None
             self.c_upper_wick_perc: float = None
             self.c_lower_wick_perc: float = None
@@ -322,10 +318,6 @@ class Day():
         if base_chart is None:
             sys.exit('No 1m chart found, cannot recalc Day object')
         else:
-            # print('------------------------')
-            # print('Precalc daily candles and attributes')
-            # print(vars(self))
-            # print('------------------------')
             for candle in base_chart.c_candles:
                 # TODO need to factor in day of week here, no weekends!
                 if (candle.c_datetime >= self.rth_start
@@ -414,37 +406,3 @@ class Day():
             if c.c_timeframe == timeframe:
                 return c
         return None
-
-    def write_file(self, output_file: str):
-        # TODO DEFERRING THIS STEP FOR THE NEAR TERM
-        #      I want to get some actual trades running before I come back
-        #      to trying to get a more robust storage system going and using
-        #      long timeframe backtesting which is going to require me to
-        #      store the processed daily data and then store the calculated
-        #      results as well.  More notes below on initial findings and
-        #      possible paths to explore (most disk vs sql)
-
-        # TODO write this function to save to disk initially with the path
-        #      to be provided by the caller.  Consider adding a set path
-        #      as an attribute to the class maybe later instead?
-        # TODO I will also need some way to read from disk eventually
-        #      ideally without repeating a bunch of the __init__ code...
-
-        # TODO figure out how to deal with the non-serializable issues here
-        #      https://stackoverflow.com/questions/3768895/
-        #             how-to-make-a-class-json-serializable
-        #      has some ideas I can explore.
-
-        #      Alternatively, try just loading everything
-        #      This was very slow trying to load the full 15y file I think
-        #      because the dataframe gets so big the lookups take a long time
-        #      to get each individual day probably.  It was very slow per day
-        #      Using only 6 weeks of data though it goes pretty quick, loads
-        #      that up in probably 10-15 seconds which is managable for now.
-
-        #      TODO consider SQL options
-        #           https://stackoverflow.com/questions/2047814/is-it-possible
-        #               -to-store-python-class-objects-in-sqlite
-        # with open(output_file, 'w') as f:
-        #     f.write(json.dumps(self))
-        return True

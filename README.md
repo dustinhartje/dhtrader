@@ -9,3 +9,18 @@ Two main reasons exist for building this.  Mostly it's a personal project to hel
 See /docs/ for class details
 
 Note to self - docs are not autoupdating, run mkdocs.sh to update them.  Perhaps this can be a pre-commit hook?
+
+# Events suggestions
+
+The following events are what I find helpful to load into my central storage for use in backtesting analysis.  There is no hard fast rule here, it's up to the user to determine what events are relevant for their testing.  That being said, gap analsyis and similar functions will throw errors if market closures are not included.
+
+* Holidays (Closed)
+* FOMC Rate Announcements - mark the whole day or just relevant hours?
+* OPEX - mark the whole day
+* ES Contract rollover periods - TBD, which days to include?
+* Big data drops with potential to move the market
+  * CPI
+  * PPI
+  * NFP
+  * What else?
+* Periods of high volatility due to unexpected news

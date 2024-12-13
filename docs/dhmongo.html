@@ -1,0 +1,71 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html><head><title>Python: module dhmongo</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head><body bgcolor="#f0f0f8">
+
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="heading">
+<tr bgcolor="#7799ee">
+<td valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial">&nbsp;<br><big><big><strong>dhmongo</strong></big></big></font></td
+><td align=right valign=bottom
+><font color="#ffffff" face="helvetica, arial"><a href=".">index</a><br><a href="file:/home/dusty/git/dhtrader/dhmongo.py">/home/dusty/git/dhtrader/dhmongo.py</a></font></td></tr></table>
+    <p><tt>#&nbsp;Mongo&nbsp;specific&nbsp;functions&nbsp;for&nbsp;storing&nbsp;and&nbsp;retrieving&nbsp;data<br>
+#<br>
+#&nbsp;These&nbsp;functions&nbsp;will&nbsp;be&nbsp;wrapped&nbsp;by&nbsp;dhstore.py&nbsp;functions&nbsp;to&nbsp;allow&nbsp;for<br>
+#&nbsp;changing&nbsp;database&nbsp;layer&nbsp;in&nbsp;the&nbsp;future&nbsp;without&nbsp;major&nbsp;overhaul<br>
+#<br>
+#&nbsp;Running&nbsp;this&nbsp;script&nbsp;ad&nbsp;hoc&nbsp;will&nbsp;perform&nbsp;a&nbsp;basic&nbsp;connect,&nbsp;write,&nbsp;read&nbsp;test<br>
+#<br>
+#&nbsp;REF:&nbsp;https://github.com/mongodb-university/atlas_starter_python/blob<br>
+#&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/master/atlas-starter.py</tt></p>
+<p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#aa55cc">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Modules</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#aa55cc"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><table width="100%" summary="list"><tr><td width="25%" valign=top><a href="dhcharts.html">dhcharts</a><br>
+<a href="dhutil.html">dhutil</a><br>
+</td><td width="25%" valign=top><a href="os.html">os</a><br>
+<a href="pymongo.html">pymongo</a><br>
+</td><td width="25%" valign=top><a href="sys.html">sys</a><br>
+</td><td width="25%" valign=top></td></tr></table></td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#eeaa77">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Functions</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#eeaa77"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><dl><dt><a name="-drop_collection"><strong>drop_collection</strong></a>(collection: str)</dt><dd><tt>Irretrievable&nbsp;drops&nbsp;a&nbsp;collection&nbsp;from&nbsp;the&nbsp;store.&nbsp;&nbsp;Use&nbsp;carefully!</tt></dd></dl>
+ <dl><dt><a name="-get_candles"><strong>get_candles</strong></a>(start_epoch: int, end_epoch: int, timeframe: str, symbol: str)</dt><dd><tt>Returns&nbsp;a&nbsp;list&nbsp;of&nbsp;candle&nbsp;docs&nbsp;within&nbsp;the&nbsp;start&nbsp;and&nbsp;end&nbsp;epochs&nbsp;given<br>
+inclusive&nbsp;of&nbsp;both&nbsp;epochs</tt></dd></dl>
+ <dl><dt><a name="-get_events"><strong>get_events</strong></a>(start_epoch: int, end_epoch: int, symbol: str, categories: list = None, tags: list = None)</dt><dd><tt>Returns&nbsp;a&nbsp;list&nbsp;of&nbsp;events&nbsp;starting&nbsp;within&nbsp;the&nbsp;start&nbsp;and&nbsp;end&nbsp;epochs&nbsp;given<br>
+inclusive&nbsp;of&nbsp;both&nbsp;epochs.&nbsp;&nbsp;Note&nbsp;this&nbsp;will&nbsp;return&nbsp;events&nbsp;that&nbsp;end&nbsp;after<br>
+end_epoch&nbsp;so&nbsp;long&nbsp;as&nbsp;they&nbsp;start&nbsp;before&nbsp;or&nbsp;on&nbsp;it.</tt></dd></dl>
+ <dl><dt><a name="-get_indicator_datapoints"><strong>get_indicator_datapoints</strong></a>(indicator_id: str, dp_collection: str, earliest_dt: str = '', latest_dt: str = '')</dt><dd><tt>retrieves&nbsp;all&nbsp;datapoints&nbsp;for&nbsp;the&nbsp;given&nbsp;indicator_id&nbsp;that&nbsp;fall&nbsp;within<br>
+the&nbsp;range&nbsp;of&nbsp;earliest_dt&nbsp;and&nbsp;latest_dt&nbsp;(inclusive&nbsp;of&nbsp;both),&nbsp;returning<br>
+them&nbsp;as&nbsp;a&nbsp;chronologially&nbsp;sorted&nbsp;list</tt></dd></dl>
+ <dl><dt><a name="-list_collections"><strong>list_collections</strong></a>()</dt><dd><tt>List&nbsp;all&nbsp;current&nbsp;collections&nbsp;in&nbsp;mongo</tt></dd></dl>
+ <dl><dt><a name="-list_indicators"><strong>list_indicators</strong></a>(meta_collection: str)</dt><dd><tt>Lists&nbsp;all&nbsp;available&nbsp;indicators&nbsp;in&nbsp;mongo</tt></dd></dl>
+ <dl><dt><a name="-review_candles"><strong>review_candles</strong></a>(timeframe: str, symbol: str)</dt><dd><tt>Provides&nbsp;aggregate&nbsp;summary&nbsp;data&nbsp;about&nbsp;candles&nbsp;in&nbsp;central&nbsp;storage</tt></dd></dl>
+ <dl><dt><a name="-store_candle"><strong>store_candle</strong></a>(c_datetime, c_timeframe: str, c_open: float, c_high: float, c_low: float, c_close: float, c_volume: int, c_symbol: str, c_epoch: int, c_date: str, c_time: str)</dt><dd><tt>Stores&nbsp;a&nbsp;single&nbsp;candle&nbsp;object&nbsp;in&nbsp;mongo.&nbsp;&nbsp;Overwrites&nbsp;if&nbsp;it&nbsp;exists.</tt></dd></dl>
+ <dl><dt><a name="-store_event"><strong>store_event</strong></a>(start_dt, end_dt, symbol: str, category: str, tags: list, notes: str, start_epoch: int, end_epoch: int)</dt><dd><tt>Write&nbsp;a&nbsp;single&nbsp;dhcharts.Event()&nbsp;to&nbsp;mongo</tt></dd></dl>
+ <dl><dt><a name="-store_indicators"><strong>store_indicators</strong></a>(indicator_id: str, short_name: str, long_name: str, description: str, timeframe: str, trading_hours: str, symbol: str, calc_version: str, calc_details: str, datapoints: list, meta_collection: str, dp_collection: str)</dt></dl>
+ <dl><dt><a name="-store_trades"><strong>store_trades</strong></a>(trades, collection: str = 'trades')</dt></dl>
+ <dl><dt><a name="-test_basics"><strong>test_basics</strong></a>()</dt><dd><tt>runs&nbsp;a&nbsp;few&nbsp;basics&nbsp;tests,&nbsp;mostly&nbsp;used&nbsp;during&nbsp;initial&nbsp;development<br>
+to&nbsp;confirm&nbsp;functionality&nbsp;as&nbsp;desired.&nbsp;&nbsp;Also&nbsp;dumps&nbsp;a&nbsp;basic&nbsp;summary<br>
+of&nbsp;the&nbsp;database&nbsp;for&nbsp;quick&nbsp;checks&nbsp;at&nbsp;the&nbsp;end</tt></dd></dl>
+</td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#55aa55">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Data</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#55aa55"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><strong>MONGO_CONN</strong> = 'mongodb+srv://dustinhartje:EaB8vGXcftwo5KpK@clus...net/?retryWrites=true&amp;w=majority&amp;appName=Cluster0'<br>
+<strong>MONGO_DB</strong> = 'Cluster0'<br>
+<strong>MONGO_ENV_FILE</strong> = 'mongo.env'<br>
+<strong>db</strong> = Database(MongoClient(host=['ac-xm65fnp-shard-00-...et='atlas-kmcvwc-shard-0', tls=True), 'MONGO_DB')<br>
+<strong>mc</strong> = MongoClient(host=['ac-xm65fnp-shard-00-01.mtukdk...in', replicaset='atlas-kmcvwc-shard-0', tls=True)</td></tr></table>
+</body></html>

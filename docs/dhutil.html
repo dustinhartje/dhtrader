@@ -1,0 +1,86 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html><head><title>Python: module dhutil</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head><body bgcolor="#f0f0f8">
+
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="heading">
+<tr bgcolor="#7799ee">
+<td valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial">&nbsp;<br><big><big><strong>dhutil</strong></big></big></font></td
+><td align=right valign=bottom
+><font color="#ffffff" face="helvetica, arial"><a href=".">index</a><br><a href="file:/home/dusty/git/dhtrader/dhutil.py">/home/dusty/git/dhtrader/dhutil.py</a></font></td></tr></table>
+    <p></p>
+<p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#aa55cc">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Modules</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#aa55cc"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><table width="100%" summary="list"><tr><td width="25%" valign=top><a href="csv.html">csv</a><br>
+</td><td width="25%" valign=top><a href="dhcharts.html">dhcharts</a><br>
+</td><td width="25%" valign=top><a href="dhstore.html">dhstore</a><br>
+</td><td width="25%" valign=top><a href="sys.html">sys</a><br>
+</td></tr></table></td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#eeaa77">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Functions</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#eeaa77"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><dl><dt><a name="-compare_candles_vs_csv"><strong>compare_candles_vs_csv</strong></a>(filepath, timeframe: str = '1m', symbol: str = 'ES', start_dt=None, end_dt=None)</dt><dd><tt>Check&nbsp;stored&nbsp;candles&nbsp;against&nbsp;a&nbsp;CSV&nbsp;source&nbsp;file,&nbsp;primarily&nbsp;used&nbsp;to<br>
+confirm&nbsp;calculated&nbsp;higher&nbsp;timeframes&nbsp;against&nbsp;data&nbsp;provider&nbsp;equivalents<br>
+where&nbsp;available&nbsp;to&nbsp;sanity&nbsp;check&nbsp;calculation&nbsp;process</tt></dd></dl>
+ <dl><dt><a name="-dt_as_dt"><strong>dt_as_dt</strong></a>(d)</dt><dd><tt>return&nbsp;a&nbsp;datetime&nbsp;object&nbsp;regardless&nbsp;of&nbsp;datetime&nbsp;or&nbsp;string&nbsp;input</tt></dd></dl>
+ <dl><dt><a name="-dt_as_str"><strong>dt_as_str</strong></a>(d)</dt><dd><tt>return&nbsp;a&nbsp;string&nbsp;object&nbsp;regardless&nbsp;of&nbsp;datetime&nbsp;or&nbsp;string&nbsp;input</tt></dd></dl>
+ <dl><dt><a name="-dt_from_epoch"><strong>dt_from_epoch</strong></a>(d)</dt><dd><tt>return&nbsp;a&nbsp;datetime&nbsp;object&nbsp;from&nbsp;an&nbsp;epoch&nbsp;integer</tt></dd></dl>
+ <dl><dt><a name="-dt_to_epoch"><strong>dt_to_epoch</strong></a>(d)</dt><dd><tt>return&nbsp;an&nbsp;epoch&nbsp;integer&nbsp;from&nbsp;a&nbsp;datetime&nbsp;or&nbsp;string</tt></dd></dl>
+ <dl><dt><a name="-expected_candle_datetimes"><strong>expected_candle_datetimes</strong></a>(start_dt, end_dt, symbol: str, timeframe: str, exclude_categories: list = None)</dt><dd><tt>Return&nbsp;a&nbsp;sorted&nbsp;list&nbsp;of&nbsp;datetimes&nbsp;within&nbsp;the&nbsp;provided&nbsp;start_dt&nbsp;and<br>
+end_dt&nbsp;(inclusive&nbsp;of&nbsp;both)&nbsp;that&nbsp;should&nbsp;exist&nbsp;for&nbsp;the&nbsp;given&nbsp;symbol&nbsp;based&nbsp;on<br>
+standard&nbsp;market&nbsp;hours,&nbsp;after&nbsp;removing&nbsp;any&nbsp;known&nbsp;Closed&nbsp;events.<br>
+Optionally&nbsp;also&nbsp;exclude&nbsp;anything&nbsp;within&nbsp;known&nbsp;Event&nbsp;times&nbsp;matching<br>
+exclude_categories.</tt></dd></dl>
+ <dl><dt><a name="-generate_zero_volume_candle"><strong>generate_zero_volume_candle</strong></a>(c_datetime, timeframe: str = '1m', symbol: str = 'ES')</dt><dd><tt>Returns&nbsp;a&nbsp;zero&nbsp;volume&nbsp;candle&nbsp;with&nbsp;OHLC&nbsp;values&nbsp;all&nbsp;set&nbsp;to&nbsp;the&nbsp;prior<br>
+candle's&nbsp;closing&nbsp;value.&nbsp;&nbsp;Primarily&nbsp;used&nbsp;to&nbsp;fill&nbsp;gaps&nbsp;in&nbsp;1m&nbsp;candle&nbsp;storage<br>
+where&nbsp;data&nbsp;providers&nbsp;sometimes&nbsp;omit&nbsp;candles&nbsp;with&nbsp;zero&nbsp;trading&nbsp;volume.</tt></dd></dl>
+ <dl><dt><a name="-next_candle_start"><strong>next_candle_start</strong></a>(dt, timeframe: str = '1m')</dt><dd><tt>returns&nbsp;the&nbsp;next&nbsp;datetime&nbsp;that&nbsp;represents&nbsp;a&nbsp;proper&nbsp;candle&nbsp;start<br>
+for&nbsp;the&nbsp;given&nbsp;datetime.&nbsp;&nbsp;May&nbsp;return&nbsp;the&nbsp;same&nbsp;as&nbsp;input</tt></dd></dl>
+ <dl><dt><a name="-prompt_yn"><strong>prompt_yn</strong></a>(msg)</dt></dl>
+ <dl><dt><a name="-read_candles_from_csv"><strong>read_candles_from_csv</strong></a>(start_dt, end_dt, filepath: str, symbol: str = 'ES', timeframe: str = '1m')</dt><dd><tt>Reads&nbsp;lines&nbsp;from&nbsp;a&nbsp;csv&nbsp;file&nbsp;and&nbsp;returns&nbsp;them&nbsp;as&nbsp;a&nbsp;list&nbsp;of<br>
+dhcharts.Candle&nbsp;objects.&nbsp;&nbsp;Assumes&nbsp;format&nbsp;matches&nbsp;FirstRate&nbsp;data<br>
+standard&nbsp;of&nbsp;no&nbsp;header&nbsp;row&nbsp;the&nbsp;the&nbsp;following&nbsp;order&nbsp;of&nbsp;fields:<br>
+datetime,open,high,low,close,volume<br>
+This&nbsp;will&nbsp;fail&nbsp;badly&nbsp;if&nbsp;the&nbsp;format&nbsp;of&nbsp;the&nbsp;source&nbsp;file&nbsp;is&nbsp;incorrect!</tt></dd></dl>
+ <dl><dt><a name="-remediate_candle_gaps"><strong>remediate_candle_gaps</strong></a>(timeframe: str = '1m', symbol: str = 'ES', prompt: bool = True, fix_obvious: bool = False, fix_unclear: bool = False, dry_run=False)</dt><dd><tt>Identifies&nbsp;gaps&nbsp;for&nbsp;review&nbsp;in&nbsp;stored&nbsp;candles&nbsp;and&nbsp;offers&nbsp;to&nbsp;store&nbsp;zero<br>
+volume&nbsp;candles&nbsp;in&nbsp;their&nbsp;place.&nbsp;&nbsp;Currently&nbsp;only&nbsp;supports&nbsp;1m&nbsp;as&nbsp;the&nbsp;other<br>
+timeframes&nbsp;are&nbsp;calced&nbsp;from&nbsp;these,&nbsp;but&nbsp;I&nbsp;wrote&nbsp;in&nbsp;timeframe&nbsp;to&nbsp;keep<br>
+consistent&nbsp;argument&nbsp;flows&nbsp;and&nbsp;allow&nbsp;future&nbsp;expansion&nbsp;optionality.<br>
+&nbsp;<br>
+fix_obvious:&nbsp;Automatically&nbsp;fix&nbsp;any&nbsp;candles&nbsp;that&nbsp;are&nbsp;obviously&nbsp;gaps&nbsp;due&nbsp;to<br>
+normal&nbsp;after&nbsp;hours&nbsp;zero&nbsp;volume&nbsp;periods<br>
+&nbsp;<br>
+prompt:&nbsp;Whether&nbsp;to&nbsp;prompt&nbsp;the&nbsp;user&nbsp;for&nbsp;confirmation&nbsp;before&nbsp;fixing&nbsp;candles<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;that&nbsp;have&nbsp;not&nbsp;been&nbsp;fixed&nbsp;due&nbsp;to&nbsp;obvious&nbsp;criteria&nbsp;being&nbsp;met<br>
+&nbsp;<br>
+dry_run:&nbsp;Run&nbsp;all&nbsp;logic&nbsp;as&nbsp;if&nbsp;remediation&nbsp;is&nbsp;being&nbsp;performed,&nbsp;but&nbsp;only<br>
+print&nbsp;candle&nbsp;storage&nbsp;actions&nbsp;without&nbsp;actually&nbsp;performing&nbsp;them.</tt></dd></dl>
+ <dl><dt><a name="-sort_dict"><strong>sort_dict</strong></a>(d: dict)</dt><dd><tt>Uses&nbsp;insertion&nbsp;ordering&nbsp;to&nbsp;sort&nbsp;a&nbsp;dictionary&nbsp;by&nbsp;keys</tt></dd></dl>
+ <dl><dt><a name="-store_candles_from_csv"><strong>store_candles_from_csv</strong></a>(filepath: str, start_dt, end_dt, timeframe: str = '1m', symbol: str = 'ES')</dt><dd><tt>Loads&nbsp;1m&nbsp;candles&nbsp;from&nbsp;a&nbsp;CSV&nbsp;file&nbsp;into&nbsp;central&nbsp;storage.&nbsp;&nbsp;Mostly&nbsp;useful<br>
+for&nbsp;quick&nbsp;manual&nbsp;gap&nbsp;fill&nbsp;operations&nbsp;via&nbsp;python&nbsp;console.</tt></dd></dl>
+ <dl><dt><a name="-summarize_candles"><strong>summarize_candles</strong></a>(timeframe: str, symbol: str = 'ES', candles: list = None)</dt></dl>
+ <dl><dt><a name="-test_basics"><strong>test_basics</strong></a>()</dt><dd><tt>runs&nbsp;a&nbsp;few&nbsp;basics&nbsp;tests,&nbsp;mostly&nbsp;used&nbsp;during&nbsp;initial&nbsp;development<br>
+to&nbsp;confirm&nbsp;functionality&nbsp;as&nbsp;desired</tt></dd></dl>
+ <dl><dt><a name="-valid_event_category"><strong>valid_event_category</strong></a>(c, exit=True)</dt></dl>
+ <dl><dt><a name="-valid_timeframe"><strong>valid_timeframe</strong></a>(t, exit=True)</dt></dl>
+ <dl><dt><a name="-valid_trading_hours"><strong>valid_trading_hours</strong></a>(t, exit=True)</dt></dl>
+</td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#55aa55">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Data</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#55aa55"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><strong>EVENT_CATEGORIES</strong> = ['Closed', 'Data', 'Unplanned', 'LowVolume', 'Rollover']<br>
+<strong>TIMEFRAMES</strong> = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w', '1mo']<br>
+<strong>TRADING_HOURS</strong> = ['rth', 'eth']</td></tr></table>
+</body></html>

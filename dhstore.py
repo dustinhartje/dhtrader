@@ -277,19 +277,6 @@ def review_candles(timeframe: str,
             if err_msg != "":
                 err_msg += "\n"
             err_msg += f"{unexpected_candles_count} unexpected candles found"
-
-        # TODO create event identification and update process for myself
-        #      probably as a todoist or similar.  I should have the below
-        #      list of recurring events and process in the README probably
-        # TODO potential items to create events for:
-        #      --what happens on daylight savings time changes?
-        # DONE --market holidays when closed
-        #      --FOMC meetings (soft) - possibly one event for the full day
-        #                               and separate for announcment/presser
-        #      --OPEX (soft)
-        #      --holidays when open with low volume (soft) - check annual
-        #        holiday calendars for ideas around this
-        #      --contract rollover periods (the whole week?)
         integrity_data = {"status": status, "err_msg": err_msg}
     else:
         integrity_data = None

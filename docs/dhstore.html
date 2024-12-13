@@ -1,0 +1,61 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html><head><title>Python: module dhstore</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head><body bgcolor="#f0f0f8">
+
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="heading">
+<tr bgcolor="#7799ee">
+<td valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial">&nbsp;<br><big><big><strong>dhstore</strong></big></big></font></td
+><td align=right valign=bottom
+><font color="#ffffff" face="helvetica, arial"><a href=".">index</a><br><a href="file:/home/dusty/git/dhtrader/dhstore.py">/home/dusty/git/dhtrader/dhstore.py</a></font></td></tr></table>
+    <p><tt>#&nbsp;Wrapper&nbsp;for&nbsp;current&nbsp;(dhmongo.py)&nbsp;data&nbsp;storage&nbsp;I'm&nbsp;using&nbsp;to&nbsp;allow<br>
+#&nbsp;migration&nbsp;to&nbsp;a&nbsp;different&nbsp;storage&nbsp;solution&nbsp;in&nbsp;the&nbsp;future&nbsp;without<br>
+#&nbsp;massive&nbsp;overhaul&nbsp;of&nbsp;backtest,&nbsp;chart,&nbsp;and&nbsp;trader&nbsp;code&nbsp;bases.</tt></p>
+<p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#aa55cc">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Modules</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#aa55cc"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><table width="100%" summary="list"><tr><td width="25%" valign=top><a href="csv.html">csv</a><br>
+</td><td width="25%" valign=top><a href="dhcharts.html">dhcharts</a><br>
+</td><td width="25%" valign=top><a href="dhmongo.html">dhmongo</a><br>
+</td><td width="25%" valign=top><a href="dhutil.html">dhutil</a><br>
+</td></tr></table></td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#eeaa77">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Functions</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#eeaa77"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><dl><dt><a name="-drop_candles"><strong>drop_candles</strong></a>(timeframe: str, symbol: str, earliest_dt=None, latest_dt=None)</dt><dd><tt>Deletes&nbsp;candles&nbsp;from&nbsp;central&nbsp;storage</tt></dd></dl>
+ <dl><dt><a name="-drop_events"><strong>drop_events</strong></a>(symbol: str, earliest_dt=None, latest_dt=None)</dt><dd><tt>Deletes&nbsp;events&nbsp;from&nbsp;central&nbsp;storage</tt></dd></dl>
+ <dl><dt><a name="-get_candles"><strong>get_candles</strong></a>(start_epoch: int, end_epoch: int, timeframe: str, symbol: str)</dt><dd><tt>Returns&nbsp;a&nbsp;list&nbsp;of&nbsp;candle&nbsp;docs&nbsp;within&nbsp;the&nbsp;start&nbsp;and&nbsp;end&nbsp;epochs&nbsp;given<br>
+inclusive&nbsp;of&nbsp;both&nbsp;epochs</tt></dd></dl>
+ <dl><dt><a name="-get_events"><strong>get_events</strong></a>(start_epoch: int, end_epoch: int, symbol: str, categories: list = None, tags: list = None)</dt><dd><tt>Returns&nbsp;a&nbsp;list&nbsp;of&nbsp;events&nbsp;starting&nbsp;within&nbsp;the&nbsp;start&nbsp;and&nbsp;end&nbsp;epochs&nbsp;given<br>
+inclusive&nbsp;of&nbsp;both&nbsp;epochs.&nbsp;&nbsp;Note&nbsp;this&nbsp;will&nbsp;return&nbsp;events&nbsp;that&nbsp;end&nbsp;after<br>
+end_epoch&nbsp;so&nbsp;long&nbsp;as&nbsp;they&nbsp;start&nbsp;before&nbsp;or&nbsp;on&nbsp;it.</tt></dd></dl>
+ <dl><dt><a name="-get_indicator_datapoints"><strong>get_indicator_datapoints</strong></a>(indicator_id: str, dp_collection: str = 'indicators', earliest_dt: str = '', latest_dt: str = '')</dt></dl>
+ <dl><dt><a name="-list_indicators"><strong>list_indicators</strong></a>(meta_collection: str = 'indicators_meta')</dt></dl>
+ <dl><dt><a name="-review_candles"><strong>review_candles</strong></a>(timeframe: str, symbol: str, check_integrity: bool = False, return_detail: bool = False)</dt><dd><tt>Provides&nbsp;aggregate&nbsp;summary&nbsp;data&nbsp;about&nbsp;candles&nbsp;in&nbsp;central&nbsp;storage<br>
+with&nbsp;options&nbsp;to&nbsp;further&nbsp;check&nbsp;completeness&nbsp;(integrity)&nbsp;of&nbsp;candle&nbsp;data&nbsp;and<br>
+provide&nbsp;remediation</tt></dd></dl>
+ <dl><dt><a name="-store_candle"><strong>store_candle</strong></a>(candle)</dt><dd><tt>Write&nbsp;a&nbsp;single&nbsp;dhcharts.Candle()&nbsp;to&nbsp;central&nbsp;storage</tt></dd></dl>
+ <dl><dt><a name="-store_event"><strong>store_event</strong></a>(event)</dt><dd><tt>Write&nbsp;a&nbsp;single&nbsp;dhcharts.Event()&nbsp;to&nbsp;central&nbsp;storage</tt></dd></dl>
+ <dl><dt><a name="-store_indicator"><strong>store_indicator</strong></a>(indicator_id: str, short_name: str, long_name: str, description: str, timeframe: str, trading_hours: str, symbol: str, calc_version: str, calc_details: str, datapoints: list, meta_collection: str = 'indicators_meta', dp_collection: str = 'indicators')</dt><dd><tt>Store&nbsp;indicator&nbsp;meta&nbsp;and&nbsp;datapoints&nbsp;in&nbsp;central&nbsp;storage</tt></dd></dl>
+ <dl><dt><a name="-store_trades"><strong>store_trades</strong></a>(trade_name: str, trade_version: str, trades: list, collection: str = 'trades')</dt><dd><tt>Store&nbsp;one&nbsp;or&nbsp;more&nbsp;trades&nbsp;in&nbsp;central&nbsp;storage</tt></dd></dl>
+ <dl><dt><a name="-test_basics"><strong>test_basics</strong></a>()</dt><dd><tt>runs&nbsp;a&nbsp;few&nbsp;basics&nbsp;tests,&nbsp;mostly&nbsp;used&nbsp;during&nbsp;initial&nbsp;development<br>
+to&nbsp;confirm&nbsp;functionality&nbsp;as&nbsp;desired</tt></dd></dl>
+</td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#55aa55">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Data</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#55aa55"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><strong>COLL_IND</strong> = 'indicators'<br>
+<strong>COLL_IND_META</strong> = 'indicators_meta'<br>
+<strong>COLL_TRADES</strong> = 'trades'</td></tr></table>
+</body></html>

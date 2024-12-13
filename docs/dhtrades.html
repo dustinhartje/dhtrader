@@ -40,12 +40,12 @@
 <font color="#000000" face="helvetica, arial"><a name="Trade">class <strong>Trade</strong></a>(<a href="builtins.html#object">builtins.object</a>)</font></td></tr>
     
 <tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
-<td colspan=2><tt><a href="#Trade">Trade</a>(open_dt:&nbsp;str,&nbsp;direction:&nbsp;str,&nbsp;entry_price:&nbsp;float,&nbsp;stop_target:&nbsp;float,&nbsp;prof_target:&nbsp;float,&nbsp;open_drawdown:&nbsp;float,&nbsp;close_drawdown:&nbsp;float,&nbsp;max_drawdown:&nbsp;float,&nbsp;close_dt:&nbsp;str&nbsp;=&nbsp;None,&nbsp;evaluation_dt:&nbsp;str&nbsp;=&nbsp;None,&nbsp;exit_price:&nbsp;float&nbsp;=&nbsp;None,&nbsp;gain_loss:&nbsp;float&nbsp;=&nbsp;None,&nbsp;stop_ticks:&nbsp;float&nbsp;=&nbsp;0,&nbsp;prof_ticks:&nbsp;float&nbsp;=&nbsp;0,&nbsp;offset_ticks:&nbsp;float&nbsp;=&nbsp;0,&nbsp;drawdown_impact:&nbsp;float&nbsp;=&nbsp;0,&nbsp;ticker:&nbsp;str&nbsp;=&nbsp;'ES',&nbsp;contracts:&nbsp;int&nbsp;=&nbsp;1,&nbsp;contract_value:&nbsp;float&nbsp;=&nbsp;50,&nbsp;is_open:&nbsp;bool&nbsp;=&nbsp;True,&nbsp;successful:&nbsp;bool&nbsp;=&nbsp;None)<br>
+<td colspan=2><tt><a href="#Trade">Trade</a>(open_dt:&nbsp;str,&nbsp;direction:&nbsp;str,&nbsp;entry_price:&nbsp;float,&nbsp;stop_target:&nbsp;float,&nbsp;prof_target:&nbsp;float,&nbsp;open_drawdown:&nbsp;float,&nbsp;close_drawdown:&nbsp;float,&nbsp;max_drawdown:&nbsp;float,&nbsp;close_dt:&nbsp;str&nbsp;=&nbsp;None,&nbsp;evaluation_dt:&nbsp;str&nbsp;=&nbsp;None,&nbsp;exit_price:&nbsp;float&nbsp;=&nbsp;None,&nbsp;gain_loss:&nbsp;float&nbsp;=&nbsp;None,&nbsp;stop_ticks:&nbsp;float&nbsp;=&nbsp;0,&nbsp;prof_ticks:&nbsp;float&nbsp;=&nbsp;0,&nbsp;offset_ticks:&nbsp;float&nbsp;=&nbsp;0,&nbsp;drawdown_impact:&nbsp;float&nbsp;=&nbsp;0,&nbsp;ticker:&nbsp;str&nbsp;=&nbsp;'ES',&nbsp;contracts:&nbsp;int&nbsp;=&nbsp;1,&nbsp;contract_value:&nbsp;float&nbsp;=&nbsp;50,&nbsp;is_open:&nbsp;bool&nbsp;=&nbsp;True,&nbsp;successful:&nbsp;bool&nbsp;=&nbsp;None,&nbsp;trade_name:&nbsp;str&nbsp;=&nbsp;None,&nbsp;trade_version:&nbsp;str&nbsp;=&nbsp;None)<br>
 &nbsp;<br>
 <br>&nbsp;</tt></td></tr>
 <tr><td>&nbsp;</td>
 <td width="100%">Methods defined here:<br>
-<dl><dt><a name="Trade-__init__"><strong>__init__</strong></a>(self, open_dt: str, direction: str, entry_price: float, stop_target: float, prof_target: float, open_drawdown: float, close_drawdown: float, max_drawdown: float, close_dt: str = None, evaluation_dt: str = None, exit_price: float = None, gain_loss: float = None, stop_ticks: float = 0, prof_ticks: float = 0, offset_ticks: float = 0, drawdown_impact: float = 0, ticker: str = 'ES', contracts: int = 1, contract_value: float = 50, is_open: bool = True, successful: bool = None)</dt><dd><tt>Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</tt></dd></dl>
+<dl><dt><a name="Trade-__init__"><strong>__init__</strong></a>(self, open_dt: str, direction: str, entry_price: float, stop_target: float, prof_target: float, open_drawdown: float, close_drawdown: float, max_drawdown: float, close_dt: str = None, evaluation_dt: str = None, exit_price: float = None, gain_loss: float = None, stop_ticks: float = 0, prof_ticks: float = 0, offset_ticks: float = 0, drawdown_impact: float = 0, ticker: str = 'ES', contracts: int = 1, contract_value: float = 50, is_open: bool = True, successful: bool = None, trade_name: str = None, trade_version: str = None)</dt><dd><tt>Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</tt></dd></dl>
 
 <dl><dt><a name="Trade-close"><strong>close</strong></a>(self, price: float, time: str)</dt></dl>
 
@@ -55,8 +55,13 @@
 
 <dl><dt><a name="Trade-from_json"><strong>from_json</strong></a>(self, json_str: str = None, file_path: str = None)</dt><dd><tt>Loads&nbsp;data&nbsp;into&nbsp;this&nbsp;<a href="#Trade">Trade</a>&nbsp;<a href="builtins.html#object">object</a>&nbsp;from&nbsp;a&nbsp;json&nbsp;string&nbsp;or&nbsp;file</tt></dd></dl>
 
-<dl><dt><a name="Trade-to_json"><strong>to_json</strong></a>(self, file_path: str = None)</dt><dd><tt>returns&nbsp;a&nbsp;json&nbsp;version&nbsp;of&nbsp;this&nbsp;<a href="#Trade">Trade</a>&nbsp;<a href="builtins.html#object">object</a>,&nbsp;optionally&nbsp;writing<br>
-it&nbsp;to&nbsp;a&nbsp;file&nbsp;as&nbsp;well</tt></dd></dl>
+<dl><dt><a name="Trade-to_clean_dict"><strong>to_clean_dict</strong></a>(self)</dt><dd><tt>Converts&nbsp;to&nbsp;JSON&nbsp;string&nbsp;then&nbsp;back&nbsp;to&nbsp;a&nbsp;python&nbsp;dict.&nbsp;&nbsp;This&nbsp;helps<br>
+to&nbsp;normalize&nbsp;types&nbsp;(I'm&nbsp;looking&nbsp;at&nbsp;YOU&nbsp;datetime)&nbsp;while&nbsp;ensuring<br>
+a&nbsp;portable&nbsp;python&nbsp;data&nbsp;structure</tt></dd></dl>
+
+<dl><dt><a name="Trade-to_json"><strong>to_json</strong></a>(self, file_path: str = None)</dt><dd><tt>returns&nbsp;a&nbsp;json&nbsp;version&nbsp;of&nbsp;this&nbsp;<a href="#Trade">Trade</a>&nbsp;<a href="builtins.html#object">object</a>&nbsp;while&nbsp;normalizing<br>
+custom&nbsp;types&nbsp;(like&nbsp;datetime&nbsp;to&nbsp;string)&nbsp;and&nbsp;optionally&nbsp;writing&nbsp;the<br>
+result&nbsp;to&nbsp;a&nbsp;file&nbsp;as&nbsp;well</tt></dd></dl>
 
 <dl><dt><a name="Trade-update_drawdown"><strong>update_drawdown</strong></a>(self, price_seen: float)</dt><dd><tt>Takes&nbsp;a&nbsp;price,&nbsp;typically&nbsp;the&nbsp;candle&nbsp;high&nbsp;or&nbsp;low,&nbsp;and&nbsp;updates<br>
 the&nbsp;drawdown&nbsp;impact&nbsp;accordingly</tt></dd></dl>

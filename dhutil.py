@@ -290,16 +290,6 @@ def remediate_candle_gaps(timeframe: str = "1m",
 
     dry_run: Run all logic as if remediation is being performed, but only
     print candle storage actions without actually performing them."""
-    # TODO make this function accept a csv filepath and/or a list of candles
-    #      such that I can load firstrate data into it and it should try
-    #      to resolve any candle gaps first by checking the file/list for them
-    #      before trying to write zero volume candles.  A file is the quickest
-    #      and easiest way to get it done so probabyl do that first probably
-    #      using read_candles_from_csv()
-    #      make it an optional arg, default to None and confirm it returns
-    #      a valid list of candles or raise an Exception.
-    #      make sure to specify start_dt and end_dt when calling to read the
-    #      file to make sure it doesn't load 10+years of data unnecessarily
     if timeframe == "1m":
         delta = timedelta(minutes=1)
     else:
@@ -498,9 +488,6 @@ def remediate_candle_gaps(timeframe: str = "1m",
             "errored": errored,
             "overview": overview,
             }
-    # TODO when all that is working and all the 1m gaps are filled,
-    #      wipe and recalc the higher timeframes and confirm all timeframes
-    #      are gap free / fix any further issues found
 
 
 def read_candles_from_csv(start_dt,
@@ -514,11 +501,6 @@ def read_candles_from_csv(start_dt,
     standard of no header row the the following order of fields:
     datetime,open,high,low,close,volume
     This will fail badly if the format of the source file is incorrect!"""
-    # TODO do some sanity checking on csv format before using it?
-    #      at minimum, test the first row (maybe first 100 rows?) to confirm
-    #      there is the right number of fields and that each can be converted
-    #      into the correct type (dt_as_dt works, then float() for OHLC and
-    #      int() for volume.
     start_dt = dt_as_dt(start_dt)
     end_dt = dt_as_dt(end_dt)
     candles = []

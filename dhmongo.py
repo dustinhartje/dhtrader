@@ -429,12 +429,6 @@ def test_basics():
     print(f"data_size_GB = {data_size_GB}")
     print(f"storage_size_GB = {storage_size_GB}")
 
-    # The collection output is fairly verbose and usually I just care about
-    # the overall dbstats not individual collections.
-    # Keeping the command here for reference when needed but not autorunning
-    # print("\n1m candle collection status")
-    # print(db.command("collstats", "candles_ES_1m"))
-
     print("\nListing collections")
     result = db.list_collection_names()
     print(result)
