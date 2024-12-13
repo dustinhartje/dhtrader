@@ -479,7 +479,7 @@ def remediate_candle_gaps(timeframe: str = "1m",
     overview += (f"Fixed {len(fixed_obvious)} obvious candles, "
                  f"Fixed {len(fixed_unclear)} unclear candles, "
                  f"Skipped {len(skipped)} candles, "
-                 f"Errors encountered on {len(errored)}"
+                 f"Errors encountered on {len(errored)} candles"
                  )
 
     return {"fixed_obvious": fixed_obvious,
@@ -619,29 +619,52 @@ def compare_candles_vs_csv(filepath,
                 sc = v
                 cc = csved[k]
                 c_diffs = {}
+                c_minor_diffs = {}
                 if sc.c_datetime != cc.c_datetime:
                     c_diffs["c_datetime"] = {"stored": sc.c_datetime,
                                              "csv": cc.c_datetime}
+                # For small OHLC differences we can usually disregard as
+                # a minor calculation / order timing anomaly if the prices are
+                # very close.  These are statistically trivial and likely
+                # couldn't be resolved in any case.
                 if sc.c_open != cc.c_open:
-                    c_diffs["c_open"] = {"stored": sc.c_open,
-                                         "csv": cc.c_open}
+                    if abs(sc.c_open - cc.c_open) < 0.5:
+                        c_minor_diffs["c_open"] = {"stored": sc.c_open,
+                                                   "csv": cc.c_open}
+                    else:
+                        c_diffs["c_open"] = {"stored": sc.c_open,
+                                             "csv": cc.c_open}
                 if sc.c_high != cc.c_high:
-                    c_diffs["c_high"] = {"stored": sc.c_high,
-                                         "csv": cc.c_high}
+                    if abs(sc.c_high - cc.c_high) < 0.5:
+                        c_minor_diffs["c_high"] = {"stored": sc.c_high,
+                                                   "csv": cc.c_high}
+                    else:
+                        c_diffs["c_high"] = {"stored": sc.c_high,
+                                             "csv": cc.c_high}
                 if sc.c_low != cc.c_low:
-                    c_diffs["c_low"] = {"stored": sc.c_low,
-                                        "csv": cc.c_low}
+                    if abs(sc.c_low - cc.c_low) < 0.5:
+                        c_minor_diffs["c_low"] = {"stored": sc.c_low,
+                                                  "csv": cc.c_low}
+                    else:
+                        c_diffs["c_low"] = {"stored": sc.c_low,
+                                            "csv": cc.c_low}
                 if sc.c_close != cc.c_close:
-                    c_diffs["c_close"] = {"stored": sc.c_close,
-                                          "csv": cc.c_close}
+                    if abs(sc.c_close - cc.c_close) < 0.5:
+                        c_minor_diffs["c_close"] = {"stored": sc.c_close,
+                                                    "csv": cc.c_close}
+                    else:
+                        c_diffs["c_close"] = {"stored": sc.c_close,
+                                              "csv": cc.c_close}
                 if sc.c_volume != cc.c_volume:
                     c_diffs["c_volume"] = {"stored": sc.c_volume,
                                            "csv": cc.c_volume}
                 # Store diffs by stringified datetime to simplify later review
-                diffs[dt_as_str(v.c_datetime)] = {"stored_candle": stored[k],
-                                                  "csv_candle": csved[k],
-                                                  "differences": c_diffs,
-                                                  }
+                this_diff = {"stored_candle": stored[k],
+                             "csv_candle": csved[k],
+                             "differences": c_diffs,
+                             "minor_differences": c_minor_diffs,
+                             }
+                diffs[dt_as_str(v.c_datetime)] = this_diff
     # And put it together into a returnable
     count_stored_dupes = len(stored_cans) - len(stored)
     count_csv_dupes = len(csv_cans) - len(csved)
