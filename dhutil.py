@@ -98,9 +98,26 @@ def dt_from_epoch(d):
     return dt.fromtimestamp(d)
 
 
+def timeframe_delta(timeframe: str):
+    """return a timedelta object based on the candle timeframe given"""
+    if timeframe == "1m":
+        return timedelta(minutes=1)
+    elif timeframe == "5m":
+        return timedelta(minutes=5)
+    elif timeframe in ["r1h", "e1h"]:
+        return timedelta(hours=1)
+    elif timeframe in ["1d", "r1d", "e1d"]:
+        return timedelta(days=1)
+    else:
+        raise ValueError(f"timeframe: {timeframe} not supported")
+
+
 def next_candle_start(dt, timeframe: str = "1m"):
     """returns the next datetime that represents a proper candle start
     for the given datetime.  May return the same as input"""
+    # TODO factor in market closures and events
+    #      be sure to test regression when I do though to make sure this
+    #      doesn't break things already using this function
     next_dt = dt_as_dt(dt)
     add_min = timedelta(minutes=1)
     # Start by rounding up to the next minute if we have secs or microsecs
@@ -124,6 +141,36 @@ def next_candle_start(dt, timeframe: str = "1m"):
     return next_dt
 
 
+def rangify_candle_times(times: list,
+                         timeframe: str,
+                         ):
+    """Takes a list of datetimes and returns a list of aggregated datetime
+    ranges.  Primarily intended to make human review sane on large sets of
+    gap and unexpected candles during integrity checks"""
+    delta = timeframe_delta(timeframe)
+    sorted_times = sorted(times)
+    ranges = []
+    this_range = None
+    for t in sorted_times:
+        # For the starting range just set both values to the current time
+        if this_range is None:
+            this_range = {"start_dt": dt_as_str(t), "end_dt": dt_as_str(t)}
+        else:
+            # If the time is one increment after the previously seen time
+            # just update the current range
+            if dt_as_dt(t) == dt_as_dt(this_range["end_dt"]) + delta:
+                this_range["end_dt"] = dt_as_str(t)
+            # Otherwise add the current range to the list and start a new one
+            else:
+                ranges.append(this_range)
+                this_range = None
+                this_range = {"start_dt": dt_as_str(t), "end_dt": dt_as_str(t)}
+    # The last range won't get added in the loop so add it after
+    ranges.append(this_range)
+
+    return ranges
+
+
 def generate_zero_volume_candle(c_datetime,
                                 timeframe: str = "1m",
                                 symbol: str = "ES",
@@ -134,7 +181,7 @@ def generate_zero_volume_candle(c_datetime,
     if symbol != "ES":
         raise ValueError("Only symbol: 'ES' is currently supported")
     if timeframe == "1m":
-        delta = timedelta(minutes=1)
+        delta = timeframe_delta(timeframe)
     else:
         raise ValueError(f"timeframe: {timeframe} is not currently supported")
     prior_epoch = dt_to_epoch(dt_as_dt(c_datetime) - delta)
@@ -191,16 +238,7 @@ def expected_candle_datetimes(start_dt,
         raise ValueError("Only ES is currently supported as symbol for now")
     # Build a list of possible candles within standard market hours
     result_std = []
-    if timeframe == "1m":
-        adder = timedelta(minutes=1)
-    elif timeframe == "5m":
-        adder = timedelta(minutes=5)
-    elif (timeframe == "r1h") or (timeframe == "e1h"):
-        adder = timedelta(hours=1)
-    elif timeframe == "1d":
-        adder = timedelta(days=1)
-    else:
-        raise ValueError(f"timeframe: {timeframe} not currently supported")
+    adder = timeframe_delta(timeframe)
     this = next_candle_start(dt=start_dt, timeframe=timeframe)
     ender = dt_as_dt(end_dt)
     while this <= ender:

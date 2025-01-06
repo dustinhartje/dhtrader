@@ -260,12 +260,22 @@ def review_candles(timeframe: str,
         missing_count_by_hour = {}
         for k, v in missing_candles_by_hour.items():
             missing_count_by_hour[k] = len(v)
-        unexpected_in_actual = set_actual - set_expected
+        unexpected_in_actual = sorted(set_actual - set_expected)
         unexpected_candles_count = len(unexpected_in_actual)
+        # Create human digestible ranges
+        missing_ranges = dhu.rangify_candle_times(times=missing_from_actual,
+                                                  timeframe=timeframe,
+                                                  )
+        unexpected_ranges = dhu.rangify_candle_times(
+                times=unexpected_in_actual,
+                timeframe=timeframe,
+                )
         gap_analysis = {"missing_candles_count": missing_candles_count,
                         "unexpected_candles_count": unexpected_candles_count,
                         "missing_candles": missing_from_actual,
                         "unexpected_candles": unexpected_in_actual,
+                        "missing_candles_ranges": missing_ranges,
+                        "unexpected_candles_ranges": unexpected_ranges,
                         }
         if missing_candles_count > 0:
             status = "ERROR"

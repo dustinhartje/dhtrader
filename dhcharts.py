@@ -243,6 +243,22 @@ class Day():
     #        It looks like the only place I've used it is in firstrate.py
     #        in the process_unpacked_data() function which appears to also
     #        probably be obsolete at a glance and possibly also deprecatable.
+    #      --on the flip side, this would still be handy for identifying things
+    #        like opening range characteristics.  Perhaps rather than having
+    #        candle specific attributes it should just retrieve r1d and e1d
+    #        candles from storage during init then calculate things like
+    #        opening range and such that are day specific.  HOD, LOD, stuff
+    #        like that.  Only things that aren't already in a candle or are
+    #        essentially indicators.  Not sure what all that would mean yet
+    #        so basically just simplify it down to unique things, possibly
+    #        remove the charts or maybe those are helpful at least for rth?
+    #        Then just add things to it if/when I find uses for it while
+    #        building backtesters.  If I get several backtesters built and
+    #        still have not found a use for this class or see a likely use for
+    #        it in upcoming backtests then it will be safe to remove.
+    #      --it could also be potentially useful for somehow capturing Brooks
+    #        style encyclopedia patterns across the whole day?  How would I use
+    #        something like that?
     def __init__(self,
                  d_symbol,
                  d_date,
