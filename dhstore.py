@@ -13,6 +13,7 @@
 
 import csv
 from collections import Counter, defaultdict
+from datetime import datetime as dt
 from datetime import timedelta
 import dhcharts as dhc
 import dhutil as dhu
@@ -464,8 +465,8 @@ def test_basics():
 
     # Test candle integrity check process - detailed
     # runs slowly, only uncomment as needed
-    print("\nChecking for missing 1m candles")
-    integrity = review_candles(timeframe='1m',
+    print("\nChecking for missing e1h candles")
+    integrity = review_candles(timeframe='e1h',
                                symbol='ES',
                                check_integrity=True,
                                return_detail=True,
@@ -489,6 +490,30 @@ def test_basics():
     first_five = result[:5]
     for r in first_five:
         print(r.__dict__)
+
+    print("Testing complete.")
+    print("\n----------------------------------------------------------------")
+
+    # Prompt to run full reviews of stored items
+    prompt = dhu.prompt_yn("List all stored ES events?")
+    if prompt:
+        events = get_events(start_epoch=dhu.dt_to_epoch("2000-01-01 00:00:00"),
+                            end_epoch=dhu.dt_to_epoch(dt.now()),
+                            symbol="ES",
+                            )
+        for e in events:
+            print(e)
+    print("\n----------------------------------------------------------------")
+
+    prompt = dhu.prompt_yn("Run full integrity check of stored candles")
+    if prompt:
+        for t in ['1m', '5m', 'r1h', 'e1h']:
+            integrity = review_candles(timeframe=t,
+                                       symbol='ES',
+                                       check_integrity=True,
+                                       return_detail=False,
+                                       )
+            print(integrity)
 
 
 if __name__ == '__main__':
