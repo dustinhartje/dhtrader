@@ -716,7 +716,8 @@ def compare_candles_vs_csv(filepath,
             or count_missing_from_storage > 0 or count_extras_in_storage > 0
             or count_different_from_csv > 0):
         all_equal = False
-    if count_stored_candles != count_csv_candles:
+    count_csv_plus_zeros = count_csv_candles + count_zero_vol_extras_in_storage
+    if count_stored_candles != count_csv_plus_zeros:
         all_equal = False
     counts = {"stored_dupes": count_stored_dupes,
               "csv_dupes": count_csv_dupes,
