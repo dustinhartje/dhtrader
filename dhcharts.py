@@ -108,8 +108,8 @@ class Chart():
     def __init__(self,
                  c_timeframe: str,
                  c_symbol: str,
-                 c_start=None,
-                 c_end=None,
+                 c_start: str = None,
+                 c_end: str = None,
                  c_candles: list = None,
                  autoload: bool = False,
                  ):
@@ -122,14 +122,8 @@ class Chart():
         if not self.c_symbol == 'ES':
             raise ValueError(f"c_symbol {self.c_symbol} is not supported, "
                              "only 'ES' is currently allowed.")
-        self.c_start = c_start
-        if not isinstance(self.c_start, dt.datetime) and c_start is not None:
-            raise TypeError(f"c_start {type(c_start)} must be a"
-                            "<class datetime.datetime> object")
-        self.c_end = c_end
-        if not isinstance(self.c_end, dt.datetime) and c_end is not None:
-            raise TypeError(f"c_end {type(c_end)} must be a"
-                            "<class datetime.datetime> object")
+        self.c_start = dhu.dt_as_dt(c_start)
+        self.c_end = dhu.dt_as_dt(c_end)
         if c_candles is None:
             self.c_candles = []
         else:
@@ -429,11 +423,24 @@ class IndicatorDataPoint():
     def __init__(self,
                  dt: str,
                  value: float,
-                 indicator_id: str,
+                 ind_id: str,
+                 epoch: int = None
                  ):
         self.dt = dt
         self.value = value
-        self.indicator_id = indicator_id
+        self.ind_id = ind_id
+        if epoch is None:
+            self.epoch = dhu.dt_to_epoch(dt)
+        else:
+            self.epoch = epoch
+    """Simple class to handle time series datapoints for indicators.  I might
+    swap this out for an even more generic TSDataPoint or similar if I find
+    more uses for time series beyond this."""
+    # TODO consider writing a store() method for these objects directly instead
+    #      of the methodology currently used which is done through the
+    #      Indicator().store() method by looping through them during dhstore
+    #      and dhmongo functions.  This would be more appropriate but is not
+    #      high on the priority list to retrofit.
 
     def to_json(self):
         """returns a json version of this Trade object while normalizing
@@ -450,18 +457,23 @@ class IndicatorDataPoint():
 
 class Indicator():
     def __init__(self,
-                 short_name: str,
-                 long_name: str,
+                 name: str,
                  description: str,
                  timeframe: str,
                  trading_hours: str,
                  symbol: str,
                  calc_version: str,
                  calc_details: str,
+                 start_dt="2024-01-01 00:00:00",
+                 end_dt=None,
+                 candle_chart=None,
+                 parameters={}
                  ):
-
-        self.short_name = short_name
-        self.long_name = long_name
+        """Base class for indicators.  Names should be short and simple
+        abbreviations as they are used in tagging and storage, think like
+        sma, hod, vwap, etc.  This class won't be used directly, use it's
+        child classes which will be indicator type specific"""
+        self.name = name
         self.description = description
         if not dhu.valid_timeframe(timeframe):
             raise ValueError(f"{timeframe} not valid for timeframe")
@@ -472,29 +484,49 @@ class Indicator():
         self.symbol = symbol
         self.calc_version = calc_version
         self.calc_details = calc_details
+        self.start_dt = start_dt
+        self.end_dt = end_dt
+        if self.end_dt is None:
+            self.end_dt = dhu.dt_as_str(dt.datetime.now())
+        self.candle_chart = candle_chart
         self.datapoints = None
-        self.indicator_id = f"{self.short_name}.{self.calc_version}"
+        self.ind_id = (f"{self.symbol}{self.trading_hours}"
+                       f"{self.timeframe}{self.name}"
+                       )
 
     def get_info(self):
         # TODO add earliest and latest datapoints info to this
-        return {"indicator_id": self.indicator_id,
-                "short_name": self.short_name,
-                "long_name": self.long_name,
+        #      see dhmongo review_candles() for example
+        return {"ind_id": self.ind_id,
+                "name": self.name,
                 "description": self.description,
                 "timeframe": self.timeframe,
                 "trading_hours": self.trading_hours,
                 "symbol": self.symbol,
                 "calc_version": self.calc_version,
                 "calc_details": self.calc_details,
+                "start_dt": self.start_dt,
+                "end_dt": self.end_dt,
                 }
 
-    def calculate(self, chart: object):
+    def load_underlying_chart(self):
+        """Load the underlying candle chart from central storage"""
+        self.candle_chart = Chart(c_timeframe=self.timeframe,
+                                  c_symbol=self.symbol,
+                                  c_start=self.start_dt,
+                                  c_end=self.end_dt,
+                                  autoload=True,
+                                  )
+
+    def calculate(self):
         """This method will be specific to each type of indicator.  It should
         accpet only a list of Candles, sort it, and calculate new indicator
         datapoints from the candles."""
-        if not isinstance(chart, Chart):
-            raise TypeError(f"chart {type(chart)} must be a "
-                            "<class dhcharts.Chart> object")
+        if self.chart is None:
+            self.load_underlying_chart()
+        if not isinstance(self.candle_chart, Chart):
+            raise TypeError(f"candle_chart {type(self.candle_chart)} must be a"
+                            " <class dhcharts.Chart> object")
         # TODO In real class, make sure the chart is sorted unless the Chart
         # object already covers this out of the box
         print("No calculations can be done on parent class Indicator()")
@@ -504,9 +536,8 @@ class Indicator():
     def store(self):
         """uses DHStore functionality to store metadata and time series
         datapoints in the default storage system (probably mongo)"""
-        result = dhs.store_indicator(indicator_id=self.indicator_id,
-                                     short_name=self.short_name,
-                                     long_name=self.long_name,
+        result = dhs.store_indicator(ind_id=self.ind_id,
+                                     name=self.name,
                                      description=self.description,
                                      timeframe=self.timeframe,
                                      trading_hours=self.trading_hours,
@@ -519,51 +550,68 @@ class Indicator():
         return result
 
 
-class IndicatorEMA(Indicator):
+class IndicatorSMA(Indicator):
     def __init__(self,
-                 short_name,
-                 long_name,
                  description,
                  timeframe,
                  trading_hours,
                  symbol,
                  calc_version,
                  calc_details,
+                 start_dt="2024-01-01 00:00:00",
+                 end_dt=None,
+                 candle_chart=None,
+                 name="SMA",
+                 parameters={},
                  ):
-        super().__init__(short_name,
-                         long_name,
-                         description,
-                         timeframe,
-                         trading_hours,
-                         symbol,
-                         calc_version,
-                         calc_details,
+        super().__init__(name=name,
+                         description=description,
+                         timeframe=timeframe,
+                         trading_hours=trading_hours,
+                         symbol=symbol,
+                         calc_version=calc_version,
+                         calc_details=calc_details,
+                         start_dt=start_dt,
+                         end_dt=end_dt,
+                         candle_chart=candle_chart,
+                         parameters=parameters,
                          )
-    # TODO Next I'll need to retrieve the candles for any given timeframe
-    #      into a Chart()
-    # TODO Then add functionality somewhere (Chart() method?) to build higher
-    #      timeframes from a 1m Chart().  This way I can start with the chart
-    #      matching the timeframe of the indicator to make indicator calcs
-    #      less tedious.  The calcs should always check the chart being input
-    #      to ensure it's timeframe matches theirs.  They should probably also
-    #      confirm the chart doesn't have gaps.
-    #      --This might not be necessary at all.  I think I might just give
-    #      each indicator it's own timeframe, with things like HOD/GXLO all
-    #      using 1min charts.  then each indicator has a method that takes
-    #      a datetime and returns the appropriate IndicatorDatapoint that
-    #      closed during that candle or the candle before (need to think on
-    #      which makes more sense.  maybe separate methods for each?  like
-    #      get_prior_close_value() and get_current_close_value()?)
-    #      ----I might be mixing up two different ideas here, read it again
-    #      when I'm not falling asleep
-    # TODO flesh out indicatorEMA to be able to build on any tf and hours
-    #      with whatever params make sense for calculating it
-    # TODO method to retrieve results time series from mongo
-    #      basic form was written in dhstore, needs to be able to limit time
-    #      window though and then the calling method added here
-    # TODO method to check time series for missing data points
+        # TODO pick apart parameters passed, this will need to be
+        #      subclass specific.  I'm not sure if there's a way to force
+        #      typing and such here?  maybe pass it into a subclass specific
+        #      method that checks that it has all the right things and they are
+        #      the right types?
+        # TODO parameters for SMA should include period (i.e. 9, 20) (what
+        #      should I name this?  make it match TV terminology), what it's
+        #      based on (default=close and this should be the only supported
+        #      thing for now), and that's probably it?  does TV have any
+        #      other configurable params worth including?
+        # TODO write the calculate method and spot check it's results
+        #      against TV charts
+        # TODO work through storage and retrival, making sure all attributes
+        #      exist through the whole chain of functions and methods
+        # TODO permanently add a real retrieval to the test stuff below
+        # TODO make sure test stuff removes the test indicator and datapoints
+        #      --should write dhs/dhm functions to remove individual indicator
+        #      by ind_id and also remove all of it's datapoints.  this can
+        #      be used for the test functions and future data cleanup needs
+        # TODO method to retrieve datapoints from storage, which should then
+        #      possibly also calculate anything missing based on underlying
+        #      candles' timestamps.  Or maybe just trigger a full recalc
+        #      if anything seems amiss?
+        # TODO should calculate also always write them to storage?
+        # TODO need some functions to review and cleanup both indicator meta
+        #      and datapoints stuff
+        # TODO create a calculations versions changelog for indicators as
+        #      a separate text/md file with a section for each indicator
 
+
+# TODO create a script and possibly .json file that creates/updates all the
+#      indicators I'm going to maintain (starting with 9 and 20 sma
 # TODO add subclass of Inidicators class for each type of indicator I want
+#      9 & 20 EMAs, HOD, LOD, OOD, GXLO, GXHI should all be easy to do now
+#      when I get around to adding 1d timeframes also do 20/50/100/200dSMA
+#      later maybe do VWAP, RSI, what else?
 
 # TODO add function to update some or all indicators based on incoming candles
 #      this should accept a list of indicators to loop through by short_name,
@@ -583,40 +631,40 @@ if __name__ == '__main__':
     #      Or or move a version of it into dhstore and dhmongo
 
     # Testing subclass stuff
-    i = IndicatorEMA(short_name="shorty",
-                     long_name="blah",
-                     description="yadda",
-                     calc_version="yoda",
-                     calc_details="yeeta"
-                     )
-    print(i.get_info())
+    itest = IndicatorSMA(name="TestSMA",
+                         timeframe="5m",
+                         trading_hours="eth",
+                         symbol="ES",
+                         description="yadda",
+                         calc_version="yoda",
+                         calc_details="yeeta",
+                         start_dt="2024-12-01 00:00:00",
+                         )
+    print(itest.get_info())
+    print(itest.candle_chart)
+    itest.load_underlying_chart()
+    print(itest.candle_chart)
 
-    sys.exit()
+    # sys.exit()
     # Testing storage and retrieval
 
-    dps = [IndicatorDataPoint(dt='12/10/2024 01:30:00',
+    dps = [IndicatorDataPoint(dt='2024-12-10 01:30:00',
                               value=1.24,
-                              indicator_id='test_indicator.0.1'),
-           IndicatorDataPoint(dt='12/10/2024 02:30:00',
+                              ind_id=itest.ind_id),
+           IndicatorDataPoint(dt='2024-12-10 02:30:00',
                               value=2.1,
-                              indicator_id='test_indicator.0.1')]
+                              ind_id=itest.ind_id)]
     print(dps)
-    i = Indicator(short_name='test_ind',
-                  long_name='Indicator made for testing',
-                  description='this is a description',
-                  calc_version='0.1',
-                  calc_details='no details yet just testing thigns',
-                  )
-    i.datapoints = dps
-    result = i.store()
+    itest.datapoints = dps
+    result = itest.store()
     print(f"dhindicator received {result}")
     print("################################################")
-    print("Now let's see what's in mongo...")
+    print("Listing all indicators in storage")
     indicators = dhs.list_indicators()
     for i in indicators:
         print(i)
     print("And as for actual datapoints...")
     datapoints = dhs.get_indicator_datapoints(
-            indicator_id="test_indicator.0.1")
+            ind_id=itest.ind_id)
     for d in datapoints:
         print(d)

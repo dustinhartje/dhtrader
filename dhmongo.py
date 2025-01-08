@@ -139,45 +139,43 @@ def review_candles(timeframe: str,
 
 
 def list_indicators(meta_collection: str):
-    """Lists all available indicators in mongo"""
+    """Lists all available indicators in mongo based on metadata"""
     c = db[meta_collection]
     result = c.find()
 
     return list(result)
 
 
-def get_indicator_datapoints(indicator_id: str,
+def get_indicator_datapoints(ind_id: str,
                              dp_collection: str,
                              earliest_dt: str = "",
                              latest_dt: str = "",
                              ):
-    """retrieves all datapoints for the given indicator_id that fall within
+    """retrieves all datapoints for the given ind_id that fall within
     the range of earliest_dt and latest_dt (inclusive of both), returning
     them as a chronologially sorted list"""
     # TODO actually use *_dt args, for initial testing it's just grabbing all
     c = db[dp_collection]
-    result = c.find({"indicator_id": indicator_id})
+    result = c.find({"ind_id": ind_id})
 
     return list(result)
 
 
-def store_indicators(indicator_id: str,
-                     short_name: str,
-                     long_name: str,
-                     description: str,
-                     timeframe: str,
-                     trading_hours: str,
-                     symbol: str,
-                     calc_version: str,
-                     calc_details: str,
-                     datapoints: list,
-                     meta_collection: str,
-                     dp_collection: str,
-                     ):
-    # First update or create the meta record for this unique indicator_id
-    meta_doc = {"indicator_id": indicator_id,
-                "short_name": short_name,
-                "long_name": long_name,
+def store_indicator(ind_id: str,
+                    name: str,
+                    description: str,
+                    timeframe: str,
+                    trading_hours: str,
+                    symbol: str,
+                    calc_version: str,
+                    calc_details: str,
+                    datapoints: list,
+                    meta_collection: str,
+                    dp_collection: str,
+                    ):
+    # First update or create the meta record for this unique ind_id
+    meta_doc = {"ind_id": ind_id,
+                "name": name,
                 "description": description,
                 "timeframe": timeframe,
                 "trading_hours": trading_hours,
@@ -188,7 +186,7 @@ def store_indicators(indicator_id: str,
     c = db[meta_collection]
     # If a prior meta doc for this id exists, replace it entirely else add it
     # upsert=True inserts if not found
-    result_meta = c.find_one_and_replace({"indicator_id": indicator_id},
+    result_meta = c.find_one_and_replace({"ind_id": ind_id},
                                          meta_doc,
                                          new=True,
                                          upsert=True)
@@ -199,8 +197,9 @@ def store_indicators(indicator_id: str,
     c = db[dp_collection]
     result_dp = []
     for d in datapoints:
-        r = c.update_many({'indicator_id': d['indicator_id'],
-                           'dt': d['dt']},
+        r = c.update_many({'ind_id': d['ind_id'],
+                           'dt': d['dt'],
+                           'epoch': d['epoch']},
                           {"$set": {"value": d['value']}},
                           upsert=True)
     result_dp.append(r)

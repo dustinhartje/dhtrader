@@ -27,6 +27,12 @@ COLL_IND_META = "indicators_meta"
 COLL_IND = "indicators"
 
 
+def drop_collection(collection: str):
+    """Used for brute force cleanup of storage, it will wipe all data from the
+    named collection.  WIELD THIS POWER CAREFULLY!!!"""
+    return dhm.drop_collection(collection=collection)
+
+
 def store_trades(trade_name: str,
                  trade_version: str,
                  trades: list,
@@ -51,12 +57,12 @@ def list_indicators(meta_collection: str = COLL_IND_META):
     return result
 
 
-def get_indicator_datapoints(indicator_id: str,
+def get_indicator_datapoints(ind_id: str,
                              dp_collection: str = COLL_IND,
                              earliest_dt: str = "",
                              latest_dt: str = "",
                              ):
-    result = dhm.get_indicator_datapoints(indicator_id=indicator_id,
+    result = dhm.get_indicator_datapoints(ind_id=ind_id,
                                           dp_collection=dp_collection,
                                           earliest_dt=earliest_dt,
                                           latest_dt=latest_dt,
@@ -65,9 +71,8 @@ def get_indicator_datapoints(indicator_id: str,
     return result
 
 
-def store_indicator(indicator_id: str,
-                    short_name: str,
-                    long_name: str,
+def store_indicator(ind_id: str,
+                    name: str,
                     description: str,
                     timeframe: str,
                     trading_hours: str,
@@ -81,24 +86,25 @@ def store_indicator(indicator_id: str,
     # TODO I really should set this up to receive an Indicator object
     #      and break it down rather than indivdiual params.  That was the
     #      whole point of having two files...
+    # TODO it also needs to account for additional attributes in subclass
+    #      indicators, can I use *args and **kwargs?
 
     # make a working copy
     working_dp = []
     for d in datapoints:
         working_dp.append(d.to_clean_dict())
-    result = dhm.store_indicators(indicator_id=indicator_id,
-                                  short_name=short_name,
-                                  long_name=long_name,
-                                  description=description,
-                                  timeframe=timeframe,
-                                  trading_hours=trading_hours,
-                                  symbol=symbol,
-                                  calc_version=calc_version,
-                                  calc_details=calc_details,
-                                  datapoints=working_dp,
-                                  meta_collection=meta_collection,
-                                  dp_collection=dp_collection,
-                                  )
+    result = dhm.store_indicator(ind_id=ind_id,
+                                 name=name,
+                                 description=description,
+                                 timeframe=timeframe,
+                                 trading_hours=trading_hours,
+                                 symbol=symbol,
+                                 calc_version=calc_version,
+                                 calc_details=calc_details,
+                                 datapoints=working_dp,
+                                 meta_collection=meta_collection,
+                                 dp_collection=dp_collection,
+                                 )
 
     return result
 
