@@ -3,6 +3,7 @@ import sys
 import json
 import dhutil as dhu
 import dhstore as dhs
+from statistics import fmean
 
 CANDLE_TIMEFRAMES = ['1m', '5m', '15m', '1h', '4h', '1d', '1w']
 
@@ -133,10 +134,10 @@ class Chart():
             self.load_candles()
 
     def __repr__(self):
-        if self.c_candles is not None:
+        if len(self.c_candles) > 0:
+            candles_count = len(self.c_candles)
             earliest_candle = self.c_candles[0].c_datetime
             latest_candle = self.c_candles[-1].c_datetime
-            candles_count = len(self.c_candles)
         else:
             earliest_candle = None
             latest_candle = None
@@ -439,8 +440,8 @@ class IndicatorDataPoint():
     # TODO consider writing a store() method for these objects directly instead
     #      of the methodology currently used which is done through the
     #      Indicator().store() method by looping through them during dhstore
-    #      and dhmongo functions.  This would be more appropriate but is not
-    #      high on the priority list to retrofit.
+    #      and dhmongo functions.  Doing this within the datapoint objects
+    #      would match conventions elsewhere better.  Low priority: this works
 
     def to_json(self):
         """returns a json version of this Trade object while normalizing
@@ -489,6 +490,9 @@ class Indicator():
         if self.end_dt is None:
             self.end_dt = dhu.dt_as_str(dt.datetime.now())
         self.candle_chart = candle_chart
+        if self.candle_chart is None:
+            self.load_underlying_chart()
+        self.parameters = parameters
         self.datapoints = None
         self.ind_id = (f"{self.symbol}{self.trading_hours}"
                        f"{self.timeframe}{self.name}"
@@ -507,6 +511,7 @@ class Indicator():
                 "calc_details": self.calc_details,
                 "start_dt": self.start_dt,
                 "end_dt": self.end_dt,
+                "paramters": self.parameters,
                 }
 
     def load_underlying_chart(self):
@@ -521,17 +526,20 @@ class Indicator():
     def calculate(self):
         """This method will be specific to each type of indicator.  It should
         accpet only a list of Candles, sort it, and calculate new indicator
-        datapoints from the candles."""
+        datapoints from the candles.  Copy and modify this method as needed
+        in subclasses."""
         if self.chart is None:
             self.load_underlying_chart()
         if not isinstance(self.candle_chart, Chart):
             raise TypeError(f"candle_chart {type(self.candle_chart)} must be a"
                             " <class dhcharts.Chart> object")
-        # TODO In real class, make sure the chart is sorted unless the Chart
-        # object already covers this out of the box
-        print("No calculations can be done on parent class Indicator()")
+        self.chart.sort()
 
-        return False
+        # Subclass specific functionality starts here
+        result = "No calculations can be done on parent class Indicator()"
+        print(result)
+
+        return result
 
     def store(self):
         """uses DHStore functionality to store metadata and time series
@@ -544,6 +552,7 @@ class Indicator():
                                      symbol=self.symbol,
                                      calc_version=self.calc_version,
                                      calc_details=self.calc_details,
+                                     parameters=self.parameters,
                                      datapoints=self.datapoints,
                                      )
 
@@ -576,21 +585,65 @@ class IndicatorSMA(Indicator):
                          candle_chart=candle_chart,
                          parameters=parameters,
                          )
-        # TODO pick apart parameters passed, this will need to be
-        #      subclass specific.  I'm not sure if there's a way to force
-        #      typing and such here?  maybe pass it into a subclass specific
-        #      method that checks that it has all the right things and they are
-        #      the right types?
-        # TODO parameters for SMA should include period (i.e. 9, 20) (what
-        #      should I name this?  make it match TV terminology), what it's
-        #      based on (default=close and this should be the only supported
-        #      thing for now), and that's probably it?  does TV have any
-        #      other configurable params worth including?
-        # TODO write the calculate method and spot check it's results
-        #      against TV charts
-        # TODO work through storage and retrival, making sure all attributes
-        #      exist through the whole chain of functions and methods
-        # TODO permanently add a real retrieval to the test stuff below
+        # Confirm that parameters includes the subclass specific arguments
+        # needed for this type of indicator
+        # For simple SMA we just need a length and a method/value to use
+        if "length" not in parameters.keys():
+            raise ValueError("Must provide length in parameters")
+        if "method" not in parameters.keys():
+            raise ValueError("Must provide method in parameters")
+        if not isinstance(parameters["length"], int):
+            raise TypeError("Must provide length as an integer, got "
+                            f"{type(parameters['length'])}"
+                            )
+        self.length = parameters["length"]
+        supported_methods = ["close"]
+        if not parameters["method"] in supported_methods:
+            raise TypeError(f"Method {parameters['method']} not supported, "
+                            f"must be one of: f{supported_methods}"
+                            )
+        self.method = parameters["method"]
+
+    def calculate(self):
+        """This method will be specific to each type of indicator.  It should
+        accpet only a list of Candles, sort it, and calculate new indicator
+        datapoints from the candles.  Copy and modify this method as needed
+        in subclasses."""
+        if self.candle_chart is None:
+            self.load_underlying_chart()
+        if not isinstance(self.candle_chart, Chart):
+            raise TypeError(f"candle_chart {type(self.candle_chart)} must be a"
+                            " <class dhcharts.Chart> object")
+        self.candle_chart.sort_candles()
+
+        # Subclass specific functionality starts here
+        self.datapoints = []
+        counter = 0
+        # value = 0
+        # Build a working list of the same length as our SMA
+        values = []
+        while counter < self.length:
+            values.append(0)
+            counter += 1
+        counter = 0
+        # Work through candles, updating/calcing from the working list
+        for c in self.candle_chart.c_candles:
+            # Drop the oldest value and add the current to the end of the list
+            values = values[1:]
+            if self.method == "close":
+                values.append(c.c_close)
+            else:
+                raise ValueError(f"Unsupported method: {self.method}")
+            # Once enough candles are in the working list, calc the datapoint
+            if counter >= (self.length - 1):
+                dp = IndicatorDataPoint(dt=dhu.dt_as_str(c.c_datetime),
+                                        value=round(fmean(values), 2),
+                                        ind_id=self.ind_id,
+                                        )
+                self.datapoints.append(dp)
+            counter += 1
+
+        return True
         # TODO make sure test stuff removes the test indicator and datapoints
         #      --should write dhs/dhm functions to remove individual indicator
         #      by ind_id and also remove all of it's datapoints.  this can
@@ -626,11 +679,10 @@ class IndicatorSMA(Indicator):
 
 
 if __name__ == '__main__':
-    # TODO delete all this, just using it for quick testing
-    #      or turn it into a test_basics function like elsewhere
-    #      Or or move a version of it into dhstore and dhmongo
-
-    # Testing subclass stuff
+    # TODO LOWPRI these should be unit tests or something similar eventually
+    # Run a few tests to confirm desired functionality
+    # Testing subclass mechanics and retrieval of real data
+    print("\n################################################")
     itest = IndicatorSMA(name="TestSMA",
                          timeframe="5m",
                          trading_hours="eth",
@@ -638,15 +690,20 @@ if __name__ == '__main__':
                          description="yadda",
                          calc_version="yoda",
                          calc_details="yeeta",
-                         start_dt="2024-12-01 00:00:00",
+                         start_dt="2025-01-08 09:30:00",
+                         end_dt="2025-01-08 11:30:00",
+                         parameters={"length": 9,
+                                       "method": "close"}
                          )
-    print(itest.get_info())
-    print(itest.candle_chart)
     itest.load_underlying_chart()
-    print(itest.candle_chart)
+    itest.calculate()
+    print("Building 5m9sma for 2025-01-08 9:30am-11:30am")
+    print(itest.get_info())
+    print(f"length of candle_chart: {len(itest.candle_chart.c_candles)}")
+    print("\n################################################")
 
-    # sys.exit()
     # Testing storage and retrieval
+    print("Testing storage of 2 test indicator datapoints")
 
     dps = [IndicatorDataPoint(dt='2024-12-10 01:30:00',
                               value=1.24,
@@ -654,16 +711,15 @@ if __name__ == '__main__':
            IndicatorDataPoint(dt='2024-12-10 02:30:00',
                               value=2.1,
                               ind_id=itest.ind_id)]
-    print(dps)
     itest.datapoints = dps
     result = itest.store()
-    print(f"dhindicator received {result}")
-    print("################################################")
-    print("Listing all indicators in storage")
+    print(f"Indicators storage result:\n{result}")
+    print("\n------------------------------------------------")
+    print(f"Listing all indicators in storage, should include {itest.ind_id}")
     indicators = dhs.list_indicators()
     for i in indicators:
-        print(i)
-    print("And as for actual datapoints...")
+        print(f"* {i['ind_id']} {i['description']}")
+    print(f"\nRetrieving stored datapoints for {itest.ind_id}\n")
     datapoints = dhs.get_indicator_datapoints(
             ind_id=itest.ind_id)
     for d in datapoints:

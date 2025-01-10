@@ -154,7 +154,7 @@ def get_indicator_datapoints(ind_id: str,
     """retrieves all datapoints for the given ind_id that fall within
     the range of earliest_dt and latest_dt (inclusive of both), returning
     them as a chronologially sorted list"""
-    # TODO actually use *_dt args, for initial testing it's just grabbing all
+    # TODO LOWPRI actually use *_dt args when I find a need, seems likely
     c = db[dp_collection]
     result = c.find({"ind_id": ind_id})
 
@@ -169,6 +169,7 @@ def store_indicator(ind_id: str,
                     symbol: str,
                     calc_version: str,
                     calc_details: str,
+                    parameters: dict,
                     datapoints: list,
                     meta_collection: str,
                     dp_collection: str,
@@ -182,6 +183,7 @@ def store_indicator(ind_id: str,
                 "symbol": symbol,
                 "calc_version": calc_version,
                 "calc_details": calc_details,
+                "parameters": parameters,
                 }
     c = db[meta_collection]
     # If a prior meta doc for this id exists, replace it entirely else add it
@@ -195,15 +197,20 @@ def store_indicator(ind_id: str,
     # https://stackoverflow.com/questions/18371351/python-pymongo-
     # insert-and-update-documents
     c = db[dp_collection]
-    result_dp = []
+    result_datapoints = []
     for d in datapoints:
+        # TODO review and test with find_one_and_replace, not sure why
+        #      I did update_many here?  Is it possible to do update_many
+        #      and still maintain upsert and list of unique fields to match
+        #      when providing an iterable instead of looping through each?
+        #      Low priority as it's working this way, but it's probably slow
         r = c.update_many({'ind_id': d['ind_id'],
                            'dt': d['dt'],
                            'epoch': d['epoch']},
                           {"$set": {"value": d['value']}},
                           upsert=True)
-    result_dp.append(r)
-    result = {"meta": result_meta, "datapoints": result_dp}
+    result_datapoints.append(r)
+    result = {"meta": result_meta, "datapoints": result_datapoints}
 
     return result
 
