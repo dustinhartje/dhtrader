@@ -619,7 +619,6 @@ class IndicatorSMA(Indicator):
         # Subclass specific functionality starts here
         self.datapoints = []
         counter = 0
-        # value = 0
         # Build a working list of the same length as our SMA
         values = []
         while counter < self.length:
@@ -652,7 +651,14 @@ class IndicatorSMA(Indicator):
         #      possibly also calculate anything missing based on underlying
         #      candles' timestamps.  Or maybe just trigger a full recalc
         #      if anything seems amiss?
-        # TODO should calculate also always write them to storage?
+        #      TODO note earliest and latest timestamps then use expected
+        #      candle functionality to check for missing datapoints.  Will
+        #      need to account somehow for things like the first 8 bars of a
+        #      9 bar ema/sma not being included, that's gonna get tricky
+        #      if I don't want to write this to be indicator specific.  Maybe
+        #      I can include leading and trailing gap parameters with default
+        #      zero in the base class then adjust to be indicator specific
+        #      in the subclasses, that should work!
         # TODO need some functions to review and cleanup both indicator meta
         #      and datapoints stuff
         # TODO create a calculations versions changelog for indicators as
@@ -683,7 +689,7 @@ if __name__ == '__main__':
     # Run a few tests to confirm desired functionality
     # Testing subclass mechanics and retrieval of real data
     print("\n################################################")
-    itest = IndicatorSMA(name="TestSMA",
+    itest = IndicatorSMA(name="TestSMA-DELETEME",
                          timeframe="5m",
                          trading_hours="eth",
                          symbol="ES",
@@ -693,7 +699,8 @@ if __name__ == '__main__':
                          start_dt="2025-01-08 09:30:00",
                          end_dt="2025-01-08 11:30:00",
                          parameters={"length": 9,
-                                       "method": "close"}
+                                     "method": "close"
+                                     },
                          )
     itest.load_underlying_chart()
     itest.calculate()
@@ -724,3 +731,18 @@ if __name__ == '__main__':
             ind_id=itest.ind_id)
     for d in datapoints:
         print(d)
+    print("\n------------------------------------------------")
+    print("\nRemoving test documents from storage")
+    print(dhs.delete_indicator(itest.ind_id))
+    print(f"Checking indicators in storage, should NOT include {itest.ind_id}")
+    indicators = dhs.list_indicators()
+    for i in indicators:
+        print(f"* {i['ind_id']} {i['description']}")
+    print(f"\nRetrieving stored datapoints for {itest.ind_id} which should "
+          "no longer exist:\n")
+    datapoints = dhs.get_indicator_datapoints(
+            ind_id=itest.ind_id)
+    for d in datapoints:
+        print(d)
+
+    print("We're done here.")

@@ -109,6 +109,18 @@ def store_indicator(ind_id: str,
     return result
 
 
+def delete_indicator(ind_id: str,
+                     meta_collection: str = COLL_IND_META,
+                     dp_collection: str = COLL_IND,
+                     ):
+    """Remove a single indicator and all of it's datapoints from central
+    storage based on it's ind_id attribute"""
+    return dhm.delete_indicator(ind_id=ind_id,
+                                meta_collection=meta_collection,
+                                dp_collection=dp_collection,
+                                )
+
+
 def store_candle(candle):
     """Write a single dhcharts.Candle() to central storage"""
     if not isinstance(candle, dhc.Candle):

@@ -215,6 +215,22 @@ def store_indicator(ind_id: str,
     return result
 
 
+def delete_indicator(ind_id: str,
+                     meta_collection: str,
+                     dp_collection: str,
+                     ):
+    """Remove a single indicator and all of it's datapoints from central
+    storage based on it's ind_id attribute"""
+    c = db[meta_collection]
+    result_meta = c.delete_many({"ind_id": ind_id})
+    c = db[dp_collection]
+    result_datapoints = c.delete_many({"ind_id": ind_id})
+
+    return {"meta": result_meta,
+            "datapoints": result_datapoints,
+            }
+
+
 def store_event(start_dt,
                 end_dt,
                 symbol: str,
