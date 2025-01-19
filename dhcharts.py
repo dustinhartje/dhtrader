@@ -5,7 +5,7 @@ import dhutil as dhu
 import dhstore as dhs
 from statistics import fmean
 
-CANDLE_TIMEFRAMES = ['1m', '5m', '15m', '1h', '4h', '1d', '1w']
+CANDLE_TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w']
 
 
 class Symbol():
@@ -455,6 +455,12 @@ class IndicatorDataPoint():
         a portable python data structure"""
         return json.loads(self.to_json())
 
+    def __str__(self):
+        return str(self.to_clean_dict())
+
+    def __repr__(self):
+        return str(self)
+
 
 class Indicator():
     def __init__(self,
@@ -557,6 +563,22 @@ class Indicator():
                                      )
 
         return result
+        # TODO method to populate datapoints from storage, which should then
+        #      possibly also calculate anything missing based on underlying
+        #      candles' timestamps.  Or maybe just trigger a full recalc
+        #      if anything seems amiss?
+        #      TODO note earliest and latest timestamps then use expected
+        #      candle functionality to check for missing datapoints.  Will
+        #      need to account somehow for things like the first 8 bars of a
+        #      9 bar ema/sma not being included, that's gonna get tricky
+        #      if I don't want to write this to be indicator specific.  Maybe
+        #      I can include leading and trailing gap parameters with default
+        #      zero in the base class then adjust to be indicator specific
+        #      in the subclasses, that should work!
+        # TODO need some functions to review and cleanup both indicator meta
+        #      and datapoints stuff
+        # TODO create a calculations versions changelog for indicators as
+        #      a separate text/md file with a section for each indicator
 
 
 class IndicatorSMA(Indicator):
@@ -585,30 +607,31 @@ class IndicatorSMA(Indicator):
                          candle_chart=candle_chart,
                          parameters=parameters,
                          )
+        """Subclass of Indicator() specifically used for simple moving avg"""
         # Confirm that parameters includes the subclass specific arguments
         # needed for this type of indicator
         # For simple SMA we just need a length and a method/value to use
-        if "length" not in parameters.keys():
+        if "length" in parameters.keys():
+            self.length = parameters["length"]
+        else:
             raise ValueError("Must provide length in parameters")
-        if "method" not in parameters.keys():
-            raise ValueError("Must provide method in parameters")
-        if not isinstance(parameters["length"], int):
-            raise TypeError("Must provide length as an integer, got "
-                            f"{type(parameters['length'])}"
-                            )
-        self.length = parameters["length"]
+        if "method" in parameters.keys():
+            self.method = parameters["method"]
+        else:
+            self.method = "close"
         supported_methods = ["close"]
         if not parameters["method"] in supported_methods:
             raise TypeError(f"Method {parameters['method']} not supported, "
                             f"must be one of: f{supported_methods}"
                             )
-        self.method = parameters["method"]
+        if not isinstance(parameters["length"], int):
+            raise TypeError("Must provide length as an integer, got "
+                            f"{type(parameters['length'])}"
+                            )
 
     def calculate(self):
-        """This method will be specific to each type of indicator.  It should
-        accpet only a list of Candles, sort it, and calculate new indicator
-        datapoints from the candles.  Copy and modify this method as needed
-        in subclasses."""
+        """Calculate a simple moving average over time.  Defaults to using
+        the 'close' value of each candle."""
         if self.candle_chart is None:
             self.load_underlying_chart()
         if not isinstance(self.candle_chart, Chart):
@@ -643,34 +666,132 @@ class IndicatorSMA(Indicator):
             counter += 1
 
         return True
-        # TODO make sure test stuff removes the test indicator and datapoints
-        #      --should write dhs/dhm functions to remove individual indicator
-        #      by ind_id and also remove all of it's datapoints.  this can
-        #      be used for the test functions and future data cleanup needs
-        # TODO method to retrieve datapoints from storage, which should then
-        #      possibly also calculate anything missing based on underlying
-        #      candles' timestamps.  Or maybe just trigger a full recalc
-        #      if anything seems amiss?
-        #      TODO note earliest and latest timestamps then use expected
-        #      candle functionality to check for missing datapoints.  Will
-        #      need to account somehow for things like the first 8 bars of a
-        #      9 bar ema/sma not being included, that's gonna get tricky
-        #      if I don't want to write this to be indicator specific.  Maybe
-        #      I can include leading and trailing gap parameters with default
-        #      zero in the base class then adjust to be indicator specific
-        #      in the subclasses, that should work!
-        # TODO need some functions to review and cleanup both indicator meta
-        #      and datapoints stuff
-        # TODO create a calculations versions changelog for indicators as
-        #      a separate text/md file with a section for each indicator
 
 
+class IndicatorEMA(Indicator):
+    def __init__(self,
+                 description,
+                 timeframe,
+                 trading_hours,
+                 symbol,
+                 calc_version,
+                 calc_details,
+                 start_dt="2024-01-01 00:00:00",
+                 end_dt=None,
+                 candle_chart=None,
+                 name="EMA",
+                 parameters={},
+                 ):
+        super().__init__(name=name,
+                         description=description,
+                         timeframe=timeframe,
+                         trading_hours=trading_hours,
+                         symbol=symbol,
+                         calc_version=calc_version,
+                         calc_details=calc_details,
+                         start_dt=start_dt,
+                         end_dt=end_dt,
+                         candle_chart=candle_chart,
+                         parameters=parameters,
+                         )
+        """Sublcass of Indicator() used for exponential moving averages.
+        Requires a length, method (default: close) and smoothing (default: 2).
+        The first 4*length calculated values will not be kept as the early
+        part of the calculation has to start with a simple average and does
+        not reach true EMA values until it has substantial history to
+        effectively factor out the initial non-EMA baseline.  Spot testing
+        found roughly 4 times the length is when accuracy reaches +/- $0.01 vs
+        the same timestamp datapoints when the series is started at a much
+        earlier point in time."""
+        # Confirm that parameters includes the subclass specific arguments
+        # needed for this type of indicator
+        # For EMA we just need a length, method, and smoothing factor
+        if "length" in parameters.keys():
+            self.length = parameters["length"]
+        else:
+            raise ValueError("Must provide length in parameters")
+        if "method" in parameters.keys():
+            self.method = parameters["method"]
+        else:
+            self.method = "close"
+        supported_methods = ["close"]
+        if not parameters["method"] in supported_methods:
+            raise TypeError(f"Method {parameters['method']} not supported, "
+                            f"must be one of: f{supported_methods}"
+                            )
+        if not isinstance(parameters["length"], int):
+            raise TypeError("Must provide length as an integer, got "
+                            f"{type(parameters['length'])}"
+                            )
+        if "smoothing" in parameters.keys():
+            self.smoothing = parameters["method"]
+        else:
+            self.smoothing = 2
+
+    def calculate(self):
+        """Calculate an exponential simple moving average over time.  Defaults
+        to using the 'close' value of each candle and a smoothing factor of 2.
+        """
+        if self.candle_chart is None:
+            self.load_underlying_chart()
+        if not isinstance(self.candle_chart, Chart):
+            raise TypeError(f"candle_chart {type(self.candle_chart)} must be a"
+                            " <class dhcharts.Chart> object")
+        self.candle_chart.sort_candles()
+        # Subclass specific functionality starts here
+        self.datapoints = []
+        counter = 0
+        # Build an initial SMA to use on the first EMA datapoint
+        starting_values = []
+        counter = 0
+        min_cans = self.length * 4
+        # Work through candles, updating/calcing from the working list
+        for c in self.candle_chart.c_candles:
+            # Until we reach length only build list of the initial candles
+            # which will be averaged to fudge a "prior_ema" for the first calc
+            if counter < self.length:
+                if self.method == "close":
+                    starting_values.append(c.c_close)
+                counter += 1
+            else:
+                # Use the initial simple average for the first prior_ema
+                # After this we'll always have a prior_ema from the prev calc
+                if counter == self.length:
+                    prior_ema = round(fmean(starting_values), 2)
+                if self.method == "close":
+                    v = c.c_close
+                s = self.smoothing
+                ln = self.length + 1
+                p = prior_ema
+                # Calculate
+                # ref: https://www.investopedia.com/terms/e/ema.asp
+                this_ema = (v * (s / ln)) + (p * (1 - (s / ln)))
+                # Only keep/ store once we reach the minimum needed to ensure
+                # accurate values.  See docstring for details.
+                if counter >= min_cans:
+                    dp = IndicatorDataPoint(dt=dhu.dt_as_str(c.c_datetime),
+                                            value=round(this_ema, 2),
+                                            ind_id=self.ind_id,
+                                            )
+                    self.datapoints.append(dp)
+                # Update vars for next candle
+                prior_ema = this_ema
+                counter += 1
+
+# TODO -----CURRENT PRIORITIES JAN 2025-----
+# TODO add low hanging fruit like HOD/LOD/YRHI/YRLO/OOD/GXHI/GXLO/YRCL
 # TODO create a script and possibly .json file that creates/updates all the
 #      indicators I'm going to maintain (starting with 9 and 20 sma
 # TODO add subclass of Inidicators class for each type of indicator I want
 #      9 & 20 EMAs, HOD, LOD, OOD, GXLO, GXHI should all be easy to do now
 #      when I get around to adding 1d timeframes also do 20/50/100/200dSMA
 #      later maybe do VWAP, RSI, what else?
+# TODO get a backtester and analyzer built for EMAs as a framework that can
+#      be used for other indicators.  Should spit out raw "best" as well as
+#      things like running-last-week, running-lastX as the first version.
+#      Other more complex scenarios can be added later per-idea, including
+#      stuff like what the opening range or daily chart looks like as triggers
+#      --------------------------------------
 
 # TODO add function to update some or all indicators based on incoming candles
 #      this should accept a list of indicators to loop through by short_name,
@@ -689,6 +810,7 @@ if __name__ == '__main__':
     # Run a few tests to confirm desired functionality
     # Testing subclass mechanics and retrieval of real data
     print("\n################################################")
+    print("Building 5m9sma for 2025-01-08 9:30am-11:30am")
     itest = IndicatorSMA(name="TestSMA-DELETEME",
                          timeframe="5m",
                          trading_hours="eth",
@@ -704,21 +826,51 @@ if __name__ == '__main__':
                          )
     itest.load_underlying_chart()
     itest.calculate()
-    print("Building 5m9sma for 2025-01-08 9:30am-11:30am")
     print(itest.get_info())
     print(f"length of candle_chart: {len(itest.candle_chart.c_candles)}")
+    print("Last 5 datapoints:")
+    for d in itest.datapoints[:5]:
+        print(d)
+    print("\n################################################")
+    print("Building e1h9ema for 2025-01-08 - 2025-01-12")
+    # A test that spans a weekend closure covers most edge cases
+    itest = IndicatorEMA(name="TestEMA-DELETEME",
+                         timeframe="e1h",
+                         trading_hours="eth",
+                         symbol="ES",
+                         description="yadda",
+                         calc_version="yoda",
+                         calc_details="yeeta",
+                         start_dt="2025-01-08 00:00:00",
+                         end_dt="2025-01-12 20:00:00",
+                         parameters={"length": 9,
+                                     "method": "close"
+                                     },
+                         )
+    itest.load_underlying_chart()
+    itest.calculate()
+    print(itest.get_info())
+    print(f"length of candle_chart: {len(itest.candle_chart.c_candles)}")
+    expected = [{'dt': '2025-01-10 15:00:00', 'value': 5890.25,
+                 'ind_id': 'ESethe1hTestEMA-DELETEME', 'epoch': 1736539200},
+                {'dt': '2025-01-10 16:00:00', 'value': 5884.5,
+                 'ind_id': 'ESethe1hTestEMA-DELETEME', 'epoch': 1736542800},
+                {'dt': '2025-01-12 18:00:00', 'value': 5879.6,
+                 'ind_id': 'ESethe1hTestEMA-DELETEME', 'epoch': 1736722800},
+                {'dt': '2025-01-12 19:00:00', 'value': 5875.38,
+                 'ind_id': 'ESethe1hTestEMA-DELETEME', 'epoch': 1736726400},
+                {'dt': '2025-01-12 20:00:00', 'value': 5869.3,
+                 'ind_id': 'ESethe1hTestEMA-DELETEME', 'epoch': 1736730000},
+                ]
+    calculated = itest.datapoints[-5:]
+    print("(E)xpected vs (C)alculated last 5 datapoints:")
+    for i in range(5):
+        print(f"E: {expected[i]}")
+        print(f"C: {calculated[i]}")
+    print("If expected and calculated don't match above, something is broken")
     print("\n################################################")
 
     # Testing storage and retrieval
-    print("Testing storage of 2 test indicator datapoints")
-
-    dps = [IndicatorDataPoint(dt='2024-12-10 01:30:00',
-                              value=1.24,
-                              ind_id=itest.ind_id),
-           IndicatorDataPoint(dt='2024-12-10 02:30:00',
-                              value=2.1,
-                              ind_id=itest.ind_id)]
-    itest.datapoints = dps
     result = itest.store()
     print(f"Indicators storage result:\n{result}")
     print("\n------------------------------------------------")
@@ -732,9 +884,9 @@ if __name__ == '__main__':
     for d in datapoints:
         print(d)
     print("\n------------------------------------------------")
-    print("\nRemoving test documents from storage")
+    print("\nRemoving test documents from storage\n")
     print(dhs.delete_indicator(itest.ind_id))
-    print(f"Checking indicators in storage, should NOT include {itest.ind_id}")
+    print(f"\nListing stored indicators; should NOT include {itest.ind_id}")
     indicators = dhs.list_indicators()
     for i in indicators:
         print(f"* {i['ind_id']} {i['description']}")
