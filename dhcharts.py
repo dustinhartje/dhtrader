@@ -500,9 +500,7 @@ class Indicator():
             self.load_underlying_chart()
         self.parameters = parameters
         self.datapoints = None
-        self.ind_id = (f"{self.symbol}{self.trading_hours}"
-                       f"{self.timeframe}{self.name}"
-                       )
+        self.ind_id = (f"{self.symbol}{self.timeframe}{self.name}")
 
     def __str__(self):
         return str(self.get_info())
@@ -630,6 +628,7 @@ class IndicatorSMA(Indicator):
             raise TypeError(f"Method {parameters['method']} not supported, "
                             f"must be one of: f{supported_methods}"
                             )
+        self.ind_id += str(self.length)
 
     def calculate(self):
         """Calculate a simple moving average over time.  Defaults to using
@@ -725,6 +724,7 @@ class IndicatorEMA(Indicator):
             self.smoothing = int(parameters["smoothing"])
         else:
             self.smoothing = 2
+        self.ind_id += str(self.length)
 
     def calculate(self):
         """Calculate an exponential simple moving average over time.  Defaults
