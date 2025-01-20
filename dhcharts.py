@@ -618,7 +618,7 @@ class IndicatorSMA(Indicator):
         # needed for this type of indicator
         # For simple SMA we just need a length and a method/value to use
         if "length" in parameters.keys():
-            self.length = parameters["length"]
+            self.length = int(parameters["length"])
         else:
             raise ValueError("Must provide length in parameters")
         if "method" in parameters.keys():
@@ -629,10 +629,6 @@ class IndicatorSMA(Indicator):
         if not parameters["method"] in supported_methods:
             raise TypeError(f"Method {parameters['method']} not supported, "
                             f"must be one of: f{supported_methods}"
-                            )
-        if not isinstance(parameters["length"], int):
-            raise TypeError("Must provide length as an integer, got "
-                            f"{type(parameters['length'])}"
                             )
 
     def calculate(self):
@@ -713,7 +709,7 @@ class IndicatorEMA(Indicator):
         # needed for this type of indicator
         # For EMA we just need a length, method, and smoothing factor
         if "length" in parameters.keys():
-            self.length = parameters["length"]
+            self.length = int(parameters["length"])
         else:
             raise ValueError("Must provide length in parameters")
         if "method" in parameters.keys():
@@ -725,12 +721,8 @@ class IndicatorEMA(Indicator):
             raise TypeError(f"Method {parameters['method']} not supported, "
                             f"must be one of: f{supported_methods}"
                             )
-        if not isinstance(parameters["length"], int):
-            raise TypeError("Must provide length as an integer, got "
-                            f"{type(parameters['length'])}"
-                            )
         if "smoothing" in parameters.keys():
-            self.smoothing = parameters["method"]
+            self.smoothing = int(parameters["smoothing"])
         else:
             self.smoothing = 2
 
