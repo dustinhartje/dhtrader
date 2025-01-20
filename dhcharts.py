@@ -444,7 +444,7 @@ class IndicatorDataPoint():
     #      would match conventions elsewhere better.  Low priority: this works
 
     def to_json(self):
-        """returns a json version of this Trade object while normalizing
+        """returns a json version of this object while normalizing
         custom types (like datetime to string)"""
 
         return json.dumps(self.__dict__)
@@ -503,6 +503,12 @@ class Indicator():
         self.ind_id = (f"{self.symbol}{self.trading_hours}"
                        f"{self.timeframe}{self.name}"
                        )
+
+    def __str__(self):
+        return str(self.get_info())
+
+    def __repr__(self):
+        return str(self)
 
     def get_info(self):
         # TODO add earliest and latest datapoints info to this
