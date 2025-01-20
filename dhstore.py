@@ -52,7 +52,18 @@ def store_trades(trade_name: str,
 
 
 def list_indicators(meta_collection: str = COLL_IND_META):
+    """Return a simple list of indicators in storage"""
     result = dhm.list_indicators(meta_collection=meta_collection)
+
+    return result
+
+
+def review_indicators(meta_collection: str = COLL_IND_META,
+                      dp_collection: str = COLL_IND):
+    """Return a more detailed overview of indicators in storage"""
+    result = dhm.review_indicators(meta_collection=meta_collection,
+                                   dp_collection=dp_collection,
+                                   )
 
     return result
 
@@ -527,7 +538,6 @@ def test_basics():
         for e in events:
             print(e)
     print("\n----------------------------------------------------------------")
-
     prompt = dhu.prompt_yn("Run full integrity check of stored candles")
     if prompt:
         for t in ['1m', '5m', 'r1h', 'e1h']:
@@ -537,6 +547,20 @@ def test_basics():
                                        return_detail=False,
                                        )
             print(integrity)
+
+    # Review indicators in storage
+    print("\n----------------------------------------------------------------")
+    print("Reviewing stored indicators:\n\n")
+    indicators = review_indicators()
+    print("==== Meta Docs ====")
+    for m in indicators["meta_docs"]:
+        print(m['ind_id'])
+        print(f"{m}\n")
+    print("==== Datapoints ====")
+    for d in indicators["datapoints"]:
+        print(f"{d['ind_id']} contains {d['count']} datapoints from "
+              f"{d['earliest_dt']} to {d['latest_dt']}"
+              )
 
 
 if __name__ == '__main__':

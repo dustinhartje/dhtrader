@@ -177,6 +177,39 @@ def get_indicator_datapoints(ind_id: str,
     return list(result)
 
 
+def review_indicators(meta_collection: str,
+                      dp_collection: str,
+                      ):
+    """Return a more detailed overview of indicators in storage"""
+    meta = list_indicators(meta_collection=meta_collection)
+    result = {"meta_docs": meta, "datapoints": []}
+    c = db[dp_collection]
+    try:
+        dps = c.aggregate([{"$group": {"_id": "$ind_id",
+                                       "earliest_epoch": {"$min": "$epoch"},
+                                       "latest_epoch": {"$max": "$epoch"},
+                                       "count": {"$sum": 1},
+                                       }}])
+    # IndexError is raised if collection does not exist yet
+    except IndexError:
+        this = None
+    else:
+        for i in list(dps):
+            ind_id = i['_id']
+            earliest_epoch = dhu.dt_from_epoch(i['earliest_epoch'])
+            earliest_dt = dhu.dt_as_str(earliest_epoch)
+            latest_epoch = dhu.dt_from_epoch(i['latest_epoch'])
+            latest_dt = dhu.dt_as_str(latest_epoch)
+            count = i['count']
+            this = {"ind_id": ind_id, "count": count,
+                    "earliest_dt": earliest_dt, "latest_dt": latest_dt,
+                    "latest_dt": latest_dt, "latest_dt": latest_dt,
+                    }
+            result["datapoints"].append(this)
+
+    return result
+
+
 def store_indicator(ind_id: str,
                     name: str,
                     description: str,
