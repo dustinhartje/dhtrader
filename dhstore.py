@@ -339,11 +339,16 @@ def drop_candles(timeframe: str,
                  earliest_dt=None,
                  latest_dt=None,
                  ):
-    """Deletes candles from central storage"""
+    """Deletes candles from central storage either en masse or for a
+    specific datetime range."""
     if earliest_dt is None and latest_dt is None:
         return dhm.drop_collection(f"candles_{symbol}_{timeframe}")
     else:
-        return "Sorry, Dusty hasn't written code for select timeframes yet"
+        return dhm.drop_candles(timeframe=timeframe,
+                                symbol=symbol,
+                                earliest_dt=earliest_dt,
+                                latest_dt=latest_dt,
+                                )
 
 
 def store_event(event):
