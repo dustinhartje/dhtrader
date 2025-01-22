@@ -700,8 +700,8 @@ def compare_candles_vs_csv(filepath,
                 # Store diffs by stringified datetime to simplify later review
                 this_diff = {"stored_candle": stored[k],
                              "csv_candle": csved[k],
-                             "differences": c_diffs,
-                             "minor_differences": c_minor_diffs,
+                             "diffs": c_diffs,
+                             "minor_diffs": c_minor_diffs,
                              }
                 diffs[dt_as_str(v.c_datetime)] = this_diff
     # And put it together into a returnable
@@ -709,25 +709,30 @@ def compare_candles_vs_csv(filepath,
     count_csv_dupes = len(csv_cans) - len(csved)
     count_stored_candles = len(stored_cans)
     count_csv_candles = len(csv_cans)
-    count_missing_from_storage = len(missing)
-    count_extras_in_storage = len(extras)
-    count_zero_vol_extras_in_storage = len(zeros)
-    count_different_from_csv = len(diffs)
+    count_missing_storage = len(missing)
+    count_extras_storage = len(extras)
+    count_zerovol_storage = len(zeros)
+    count_diffs = 0
+    count_minor_diffs = 0
+    for k, v in diffs.items():
+        count_diffs += len(v["diffs"])
+        count_minor_diffs += len(v["minor_diffs"])
     if (count_stored_dupes > 0 or count_csv_dupes > 0
-            or count_missing_from_storage > 0 or count_extras_in_storage > 0
-            or count_different_from_csv > 0):
+            or count_missing_storage > 0 or count_extras_storage > 0
+            or count_diffs > 0):
         all_equal = False
-    count_csv_plus_zeros = count_csv_candles + count_zero_vol_extras_in_storage
+    count_csv_plus_zeros = count_csv_candles + count_zerovol_storage
     if count_stored_candles != count_csv_plus_zeros:
         all_equal = False
     counts = {"stored_dupes": count_stored_dupes,
               "csv_dupes": count_csv_dupes,
               "stored_candles": count_stored_candles,
               "csv_candles": count_csv_candles,
-              "missing_from_storage": count_missing_from_storage,
-              "extras_in_storage": count_extras_in_storage,
-              "zero_vol_extras_in_storage": count_zero_vol_extras_in_storage,
-              "different_from_csv": count_different_from_csv,
+              "missing_from_storage": count_missing_storage,
+              "extras_in_storage": count_extras_storage,
+              "zero_vol_extras_in_storage": count_zerovol_storage,
+              "diffs_from_csv": count_diffs,
+              "minor_diffs_from_csv": count_minor_diffs,
               }
     result = {"all_equal": all_equal,
               "counts": counts,
