@@ -58,6 +58,16 @@ def list_indicators(meta_collection: str = COLL_IND_META):
     return result
 
 
+def list_indicators_names(meta_collection: str = COLL_IND_META):
+    """Return a simple list of indicators (ind_id only) in storage"""
+    indicators = dhm.list_indicators(meta_collection=meta_collection)
+    result = []
+    for i in indicators:
+        result.append(i['ind_id'])
+
+    return result
+
+
 def review_indicators(meta_collection: str = COLL_IND_META,
                       dp_collection: str = COLL_IND):
     """Return a more detailed overview of indicators in storage"""

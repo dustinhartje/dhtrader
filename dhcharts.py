@@ -437,11 +437,12 @@ class IndicatorDataPoint():
     """Simple class to handle time series datapoints for indicators.  I might
     swap this out for an even more generic TSDataPoint or similar if I find
     more uses for time series beyond this."""
-    # TODO consider writing a store() method for these objects directly instead
+    # TODO LOWPRI consider a store() method for these objects directly instead
     #      of the methodology currently used which is done through the
     #      Indicator().store() method by looping through them during dhstore
     #      and dhmongo functions.  Doing this within the datapoint objects
-    #      would match conventions elsewhere better.  Low priority: this works
+    #      would match conventions elsewhere better, though insert_many in the
+    #      containing Indicator would probably be best performance so... hmmm
 
     def to_json(self):
         """returns a json version of this object while normalizing
