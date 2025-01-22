@@ -390,9 +390,9 @@ def store_event(event):
     return result
 
 
-def get_events(start_epoch: int,
-               end_epoch: int,
-               symbol: str,
+def get_events(symbol: str = "ES",
+               start_epoch: int = None,
+               end_epoch: int = None,
                categories: list = None,
                tags: list = None,
                ):
@@ -400,6 +400,10 @@ def get_events(start_epoch: int,
     inclusive of both epochs.  Note this will return events that end after
     end_epoch so long as they start before or on it."""
     # TODO add ability to further filter by categories and tags if passed
+    if start_epoch is None:
+        start_epoch = dhu.dt_to_epoch("1900-01-01 00:00:00")
+    if end_epoch is None:
+        end_epoch = dhu.dt_to_epoch(dt.now())
     result = dhm.get_events(start_epoch=start_epoch,
                             end_epoch=end_epoch,
                             symbol=symbol,

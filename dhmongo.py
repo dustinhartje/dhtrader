@@ -310,9 +310,9 @@ def store_event(start_dt,
     return result
 
 
-def get_events(start_epoch: int,
+def get_events(symbol: str,
+               start_epoch: int,
                end_epoch: int,
-               symbol: str,
                categories: list = None,
                tags: list = None,
                ):
