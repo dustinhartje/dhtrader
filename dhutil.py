@@ -2,6 +2,7 @@ from datetime import datetime as dt
 from datetime import timedelta, date
 import csv
 import sys
+import re
 from tabulate import tabulate
 import dhcharts as dhc
 import dhstore as dhs
@@ -14,6 +15,32 @@ EVENT_CATEGORIES = ['Closed', 'Data', 'Unplanned', 'LowVolume', 'Rollover']
 # TODO review all functions in this file.  Some may make sense to move to
 #      other files (such as dhstore for storage validation stuff) or as
 #      methods on dhcharts objects rather than standalone functions
+
+class OperationTimer():
+    def __init__(self,
+                 name: str,
+                 start_dt=None,
+                 end_dt=None,
+                 elapsed_dt=None,
+                 elapsed_str="",
+                 auto_start: bool = True,
+                 ):
+        self.start_dt = start_dt
+        self.end_dt = end_dt
+        self.elapsed_dt = elapsed_dt
+        self.elapsed_str = elapsed_str
+        self.auto_start = auto_start
+        if self.auto_start:
+            self.start()
+
+    def start(self):
+        self.start_dt = dt.now()
+
+    def stop(self):
+        self.end_dt = dt.now()
+        self.elapsed_dt = self.end_dt - self.start_dt
+        self.elapsed_str = re.sub("\\..*", "", str(self.elapsed_dt))
+
 
 def sort_dict(d: dict):
     """Uses insertion ordering to sort a dictionary by keys"""
