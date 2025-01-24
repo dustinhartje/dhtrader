@@ -871,7 +871,9 @@ if __name__ == '__main__':
 
     # Testing storage and retrieval
     result = itest.store()
-    print(f"Indicators storage result:\n{result}")
+    print("Indicators storage result:")
+    print(f"Elapsed {result['elapsed'].elapsed_str}")
+    print(result)
     print("\n------------------------------------------------")
     print(f"Listing all indicators in storage, should include {itest.ind_id}")
     indicators = dhs.list_indicators()

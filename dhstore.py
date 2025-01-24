@@ -80,14 +80,21 @@ def review_indicators(meta_collection: str = COLL_IND_META,
 
 def get_indicator_datapoints(ind_id: str,
                              dp_collection: str = COLL_IND,
-                             earliest_dt: str = "",
-                             latest_dt: str = "",
+                             earliest_dt: str = None,
+                             latest_dt: str = None,
                              ):
-    result = dhm.get_indicator_datapoints(ind_id=ind_id,
-                                          dp_collection=dp_collection,
-                                          earliest_dt=earliest_dt,
-                                          latest_dt=latest_dt,
-                                          )
+    working = dhm.get_indicator_datapoints(ind_id=ind_id,
+                                           dp_collection=dp_collection,
+                                           earliest_dt=earliest_dt,
+                                           latest_dt=latest_dt,
+                                           )
+    result = []
+    for d in working:
+        result.append(dhc.IndicatorDataPoint(dt=d["dt"],
+                                             value=d["value"],
+                                             ind_id=d["ind_id"],
+                                             epoch=d["epoch"]
+                                             ))
 
     return result
 
@@ -103,8 +110,11 @@ def store_indicator(ind_id: str,
                     parameters: dict,
                     datapoints: list,
                     meta_collection: str = COLL_IND_META,
-                    dp_collection: str = COLL_IND):
-    """Store indicator meta and datapoints in central storage"""
+                    dp_collection: str = COLL_IND,
+                    overwrite_dp: bool = False,
+                    ):
+    """Store indicator meta and datapoints in central storage.  Does not
+    overwrite existing datapoints unless overwrite_dp == True"""
     # TODO I really should set this up to receive an Indicator object
     #      and break it down rather than indivdiual params.  That was the
     #      whole point of having two files...

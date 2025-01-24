@@ -13,6 +13,8 @@ import sys
 import pymongo
 from dotenv import load_dotenv, find_dotenv
 from operator import itemgetter
+from datetime import datetime as dt
+from datetime import timedelta
 import dhutil as dhu
 import dhcharts as dhc
 
@@ -55,6 +57,7 @@ def drop_collection(collection: str):
 
 def store_trades(trades,
                  collection: str = "trades"):
+    """Store one or more trades in mongo"""
     c = db[collection]
     result = c.insert_many(trades)
 
@@ -164,15 +167,25 @@ def list_indicators(meta_collection: str):
 
 def get_indicator_datapoints(ind_id: str,
                              dp_collection: str,
-                             earliest_dt: str = "",
-                             latest_dt: str = "",
+                             earliest_dt: str = None,
+                             latest_dt: str = None,
                              ):
     """retrieves all datapoints for the given ind_id that fall within
     the range of earliest_dt and latest_dt (inclusive of both), returning
     them as a chronologially sorted list"""
-    # TODO LOWPRI actually use *_dt args when I find a need, seems likely
+    if earliest_dt is None:
+        earliest_epoch = 0
+    else:
+        earliest_epoch = dhu.dt_to_epoch(earliest_dt)
+    if latest_dt is None:
+        latest_epoch = dhu.dt_to_epoch(dt.now())
+    else:
+        latest_epoch = dhu.dt_to_epoch(latest_dt)
     c = db[dp_collection]
-    result = c.find({"ind_id": ind_id})
+    result = c.find({"$and": [{"ind_id": ind_id},
+                              {"epoch": {"$gte": earliest_epoch}},
+                              {"epoch": {"$lte": latest_epoch}},
+                              ]})
 
     return list(result)
 
@@ -222,8 +235,92 @@ def store_indicator(ind_id: str,
                     datapoints: list,
                     meta_collection: str,
                     dp_collection: str,
+                    overwrite_dp: bool = False,
                     ):
-    # First update or create the meta record for this unique ind_id
+    """Store indicator meta and datapoints in mongo.  overwrite_dp (default
+    false) forces wipe and recreation of all stored datapoints.  This can take
+    2+ hours for a year of data at 5 minute granularity so use only for new
+    indicators or in dire circumstances."""
+    # Insert the datapoints per last entry in
+    # https://stackoverflow.com/questions/18371351/python-pymongo-
+    # insert-and-update-documents
+    c = db[dp_collection]
+    result_dps = []
+    # TODO factor in overwrite_dp to make updates take less than hours.
+    #      Two possible approahces:
+    #      1) quick and dirty - get latest_dt from storage and only update
+    #         datapoints that are newer.  Easiest to code but will require me
+    #         to remember to wipe the data if/when I make changes to calcs or
+    #         fix bugs/data ingegrity issues
+    #      2) ideal if it's fast enough - get all datapoints in storage and
+    #         then loop through new datapoints comparing them with the same
+    #         datetime (if it exists) from storage.  If equal, skip, else
+    #         overwrite.
+    #         --need to do some performance testing on this method, if it's
+    #         still super slow to do all the comparisons it's not worth it.
+    #      Performance reference:
+    #      --e5m9ema for ~1yr data took about 2hrs to overwrite all datapoints
+    #        doing it "the easy way" i.e. wipe and restore every time.  Way
+    #        too long considering I'll be adding many more at this granularity
+    #        and lower
+    op_timer = dhu.OperationTimer(name="Indicator Storage Job")
+    count_dps = {"written": 0, "unchanged": 0}
+    if overwrite_dp:
+        # Delete any existing datapoints and meta record
+        delete_indicator(ind_id=ind_id,
+                         meta_collection=meta_collection,
+                         dp_collection=dp_collection,
+                         )
+        # We'll insert all datapoints
+        new_dps = datapoints
+    else:
+        # Pull all stored datapoints and put them in a dict so we can
+        # reference a key for comparison to isolate new and changed only
+        stored_dps = get_indicator_datapoints(ind_id=ind_id,
+                                              dp_collection=dp_collection,
+                                              )
+        prev_dps = {}
+        for d in stored_dps:
+            prev_dps[d["dt"]] = d
+            # remove the _id field added by mongo or they fail comparison
+            prev_dps[d["dt"]].pop("_id")
+        # Build a list of only those that are new or different to be stored
+        # and a list that we're keeping unchanged
+        new_dps = []
+        same_dps = []
+        for d in datapoints:
+            if d["dt"] in prev_dps.keys():
+                if d == prev_dps[d["dt"]]:
+                    same_dps.append(d)
+                else:
+                    new_dps.append(d)
+            else:
+                new_dps.append(d)
+        count_dps["unchanged"] = len(same_dps)
+
+    # Insert all datapoints we identified for updates
+    eta_mins = round(len(new_dps)/620)
+    eta_dt = dhu.dt_as_str(dt.now() + timedelta(minutes=eta_mins))
+    print(f"{dhu.dt_as_str(dt.now())} - Storing {len(new_dps)} indicator "
+          "datapoints"
+          )
+    print(f"Estimating completion in {eta_mins} minutes at {eta_dt}")
+    for d in new_dps:
+        # TODO LOWPRI review and test with find_one_and_replace, not sure why
+        #      I did update_many here?  Is it possible to do update_many
+        #      and still maintain upsert and list of unique fields to match
+        #      when providing an iterable instead of looping through each?
+        #      Low priority as it's working this way, it's probably slow
+        #      but update_many hasn't been obviously faster elsewhere
+        r = c.update_many({'ind_id': d['ind_id'],
+                           'dt': d['dt'],
+                           'epoch': d['epoch']},
+                          {"$set": {"value": d['value']}},
+                          upsert=True)
+        result_dps.append(r)
+    count_dps["written"] = len(result_dps)
+
+    # Now update or create the meta record for this unique ind_id
     meta_doc = {"ind_id": ind_id,
                 "name": name,
                 "description": description,
@@ -235,31 +332,17 @@ def store_indicator(ind_id: str,
                 "parameters": parameters,
                 }
     c = db[meta_collection]
-    # If a prior meta doc for this id exists, replace it entirely else add it
-    # upsert=True inserts if not found
+    # upsert=True updates existing or creates new if not found
     result_meta = c.find_one_and_replace({"ind_id": ind_id},
                                          meta_doc,
                                          new=True,
                                          upsert=True)
-
-    # Now insert the datapoints per last entry in
-    # https://stackoverflow.com/questions/18371351/python-pymongo-
-    # insert-and-update-documents
-    c = db[dp_collection]
-    result_datapoints = []
-    for d in datapoints:
-        # TODO review and test with find_one_and_replace, not sure why
-        #      I did update_many here?  Is it possible to do update_many
-        #      and still maintain upsert and list of unique fields to match
-        #      when providing an iterable instead of looping through each?
-        #      Low priority as it's working this way, but it's probably slow
-        r = c.update_many({'ind_id': d['ind_id'],
-                           'dt': d['dt'],
-                           'epoch': d['epoch']},
-                          {"$set": {"value": d['value']}},
-                          upsert=True)
-    result_datapoints.append(r)
-    result = {"meta": result_meta, "datapoints": result_datapoints}
+    op_timer.stop()
+    result = {"meta": result_meta,
+              "datapoints": result_dps,
+              "datapoints_count": count_dps,
+              "elapsed": op_timer,
+              }
 
     return result
 

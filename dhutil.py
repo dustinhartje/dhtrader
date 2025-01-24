@@ -33,6 +33,12 @@ class OperationTimer():
         if self.auto_start:
             self.start()
 
+    def __str__(self):
+        return str(self.__dict__)
+
+    def __repr__(self):
+        return str(self.__dict__)
+
     def start(self):
         self.start_dt = dt.now()
 
