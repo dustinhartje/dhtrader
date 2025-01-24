@@ -246,23 +246,6 @@ def store_indicator(ind_id: str,
     # insert-and-update-documents
     c = db[dp_collection]
     result_dps = []
-    # TODO factor in overwrite_dp to make updates take less than hours.
-    #      Two possible approahces:
-    #      1) quick and dirty - get latest_dt from storage and only update
-    #         datapoints that are newer.  Easiest to code but will require me
-    #         to remember to wipe the data if/when I make changes to calcs or
-    #         fix bugs/data ingegrity issues
-    #      2) ideal if it's fast enough - get all datapoints in storage and
-    #         then loop through new datapoints comparing them with the same
-    #         datetime (if it exists) from storage.  If equal, skip, else
-    #         overwrite.
-    #         --need to do some performance testing on this method, if it's
-    #         still super slow to do all the comparisons it's not worth it.
-    #      Performance reference:
-    #      --e5m9ema for ~1yr data took about 2hrs to overwrite all datapoints
-    #        doing it "the easy way" i.e. wipe and restore every time.  Way
-    #        too long considering I'll be adding many more at this granularity
-    #        and lower
     op_timer = dhu.OperationTimer(name="Indicator Storage Job")
     count_dps = {"written": 0, "unchanged": 0}
     if overwrite_dp:
@@ -594,6 +577,9 @@ def test_basics():
     print(c)
     c = review_candles(timeframe='5m', symbol='ES')
     print("5m")
+    print(c)
+    c = review_candles(timeframe='15m', symbol='ES')
+    print("15m")
     print(c)
     c = review_candles(timeframe='r1h', symbol='ES')
     print("r1h")

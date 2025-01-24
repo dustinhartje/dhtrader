@@ -564,7 +564,7 @@ def test_basics():
     print("\n----------------------------------------------------------------")
     prompt = dhu.prompt_yn("Run full integrity check of stored candles")
     if prompt:
-        for t in ['1m', '5m', 'r1h', 'e1h']:
+        for t in ['1m', '5m', '15m', 'r1h', 'e1h']:
             integrity = review_candles(timeframe=t,
                                        symbol='ES',
                                        check_integrity=True,
