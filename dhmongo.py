@@ -42,6 +42,21 @@ except Exception:
     sys.exit()
 
 
+def review_database():
+    """Quick function to gather useful information about the state of mongo"""
+    raw = db.command("dbstats")
+    overview = {"collection": raw["collections"],
+                "objects": raw["objects"],
+                "data_GB": round(raw["dataSize"]/1024/1024/1024, 2),
+                "storage_GB": round(raw["storageSize"]/1024/1024/1024, 2),
+                }
+    result = {"raw": raw,
+              "overview": overview,
+              }
+
+    return result
+
+
 def list_collections():
     """List all current collections in mongo"""
     return db.list_collection_names()
@@ -564,12 +579,7 @@ def test_basics():
     print("\n===============================================================")
     print("DATABASE AND COLLECTIONS SUMMARY DATA")
     print("\nLet's get some overall db stats")
-    result = db.command("dbstats")
-    print(result)
-    data_size_GB = round(result["dataSize"]/1024/1024/1024, 2)
-    storage_size_GB = round(result["storageSize"]/1024/1024/1024, 2)
-    print(f"data_size_GB = {data_size_GB}")
-    print(f"storage_size_GB = {storage_size_GB}")
+    print(review_database()["overview"])
 
     print("\nListing collections")
     result = db.list_collection_names()
