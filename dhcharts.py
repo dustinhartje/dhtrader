@@ -6,6 +6,16 @@ import dhstore as dhs
 from statistics import fmean
 
 CANDLE_TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w']
+BEGINNING_OF_TIME = "2024-01-01 00:00:00"
+
+
+def bot():
+    """Return universal beginning of time for this and other modules.  This
+    represents the earliest time candles should be imported for among other
+    things, setting a limit on how far back these modules can look to keep
+    performance and resource needs reasonable."""
+
+    return BEGINNING_OF_TIME
 
 
 class Symbol():
@@ -472,7 +482,7 @@ class Indicator():
                  symbol: str,
                  calc_version: str,
                  calc_details: str,
-                 start_dt=dhu.begin(),
+                 start_dt=bot(),
                  end_dt=None,
                  candle_chart=None,
                  parameters={}
@@ -594,7 +604,7 @@ class IndicatorSMA(Indicator):
                  symbol,
                  calc_version,
                  calc_details,
-                 start_dt=dhu.begin(),
+                 start_dt=bot(),
                  end_dt=None,
                  candle_chart=None,
                  name="SMA",
@@ -678,7 +688,7 @@ class IndicatorEMA(Indicator):
                  symbol,
                  calc_version,
                  calc_details,
-                 start_dt=dhu.begin(),
+                 start_dt=bot(),
                  end_dt=None,
                  candle_chart=None,
                  name="EMA",

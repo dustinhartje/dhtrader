@@ -10,7 +10,6 @@ import dhstore as dhs
 TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w', '1mo']
 TRADING_HOURS = ['rth', 'eth']
 EVENT_CATEGORIES = ['Closed', 'Data', 'Unplanned', 'LowVolume', 'Rollover']
-BEGINNING_OF_TIME = "2024-01-01 00:00:00"
 
 
 # TODO review all functions in this file.  Some may make sense to move to
@@ -70,10 +69,6 @@ def prompt_yn(msg):
         return True
     else:
         return False
-
-
-def begin():
-    return BEGINNING_OF_TIME
 
 
 def valid_timeframe(t, exit=True):
