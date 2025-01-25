@@ -282,7 +282,12 @@ def store_indicator(ind_id: str,
         count_dps["unchanged"] = len(same_dps)
 
     # Insert all datapoints we identified for updates
-    eta_mins = round(len(new_dps)/620)
+    # Observations of storage speed:
+    # 220 docs/min
+    # 250 docs/min
+    # 300 docs/min
+    # 620 docs/min did I miscalc this one or does it just vary a lot?
+    eta_mins = round(len(new_dps)/250)
     eta_dt = dhu.dt_as_str(dt.now() + timedelta(minutes=eta_mins))
     print(f"{dhu.dt_as_str(dt.now())} - Storing {len(new_dps)} indicator "
           "datapoints"
