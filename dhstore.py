@@ -33,21 +33,48 @@ def drop_collection(collection: str):
     return dhm.drop_collection(collection=collection)
 
 
-def store_trades(trade_name: str,
-                 trade_version: str,
-                 trades: list,
-                 collection: str = COLL_TRADES):
-    """Store one or more trades in central storage"""
-    # TODO convert this to receive a Trade() object, possibly a list of them?
+def store_trades(trades: list,
+                 collection: str = COLL_TRADES,
+                 ):
+    """Store one or more dhtrades.Trade() objects in central storage"""
 
-    # make a working copy
+    # make a working copy to pass dicts
     working_trades = []
     for t in trades:
-        t.trade_version = trade_version
-        t.trade_name = trade_name
         working_trades.append(t.to_clean_dict())
     result = dhm.store_trades(trades=working_trades,
                               collection=collection)
+
+    return result
+
+
+def review_trades(symbol: str,
+                  collection: str = COLL_TRADES,
+                  ):
+    """Provides aggregate summary data about trades in central storage"""
+
+    return dhm.review_trades(symbol=symbol,
+                             collection=collection,
+                             )
+
+
+def delete_trades(symbol: str,
+                  field: str,
+                  value,
+                  collection: str = COLL_TRADES,
+                  ):
+    """Delete all trade records with 'field' matching 'value'.  Typically
+    used to delete by name, ts_id, or bt_id fields.
+
+    Example to delete all trade records with name=="DELETEME":
+        delete_trades(symbol="ES", field="name", value="DELETEME")
+    """
+    result = dhm.delete_trades(symbol=symbol,
+                               collection=collection,
+                               field=field,
+                               value=value,
+                               )
+
     return result
 
 

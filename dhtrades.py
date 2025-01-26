@@ -1,6 +1,7 @@
 import json
 from datetime import datetime as dt
 import dhutil as dhu
+import dhstore as dhs
 
 
 class Trade():
@@ -33,9 +34,11 @@ class Trade():
         contract_value (float): value per contract
         is_open (bool): True if trade has not yet been closed via .close()
         profitable (bool): True if trade made money
-        trade_name (str): Label for identifying groups of similar trades
+        name (str): Label for identifying groups of similar trades
             such as those run by the same backtester
-        trade_version (str): Version of trade (for future use)
+        version (str): Version of trade (for future use)
+        ts_id (str): unique id of associated TradeSeries this was created by
+        bt_id (str): unique id of associated Backtest this was created by
     """
     def __init__(self,
                  open_dt: str,
@@ -58,8 +61,10 @@ class Trade():
                  contract_value: float = float(50),
                  is_open: bool = True,
                  profitable: bool = None,
-                 trade_name: str = None,
-                 trade_version: str = "1.0.0",
+                 name: str = None,
+                 version: str = "1.0.0",
+                 ts_id: str = None,
+                 bt_id: str = None
                  ):
 
         # Passable attributes
@@ -91,8 +96,10 @@ class Trade():
         self.contract_value = contract_value
         self.is_open = is_open
         self.profitable = profitable
-        self.trade_name = trade_name
-        self.trade_version = trade_version
+        self.name = name
+        self.version = version
+        self.ts_id = ts_id
+        self.bt_id = bt_id
         # Calculated attributes
         if self.direction == "long":
             self.flipper = 1
@@ -104,7 +111,7 @@ class Trade():
         # related attributes that may not have been passed in are finalized
         if self.exit_price is not None:
             self.close(price=self.exit_price,
-                       time=self.close_dt,
+                       dt=self.close_dt,
                        )
 
     def __str__(self):
@@ -133,6 +140,11 @@ class Trade():
 
         return json.loads(self.to_json())
 
+    def store(self):
+        """Store this trade in central storage"""
+
+        return dhs.store_trades(trades=[self])
+
     def update_drawdown(self,
                         price_seen: float,
                         ):
@@ -148,13 +160,19 @@ class Trade():
         price_diff = (self.entry_price - price_seen) * self.flipper
         # Use the worst of the current and prior worse drawdown impact
         self.drawdown_impact = min(self.drawdown_impact, price_diff)
+        # If we update this after the trade is closed, reclose it to calculate
+        # any changes as well
+        if not self.is_open:
+            self.close(price=self.exit_price,
+                       dt=self.close_dt,
+                       )
 
     def close(self,
               price: float,
-              time,
+              dt,
               ):
         self.is_open = False
-        self.close_dt = dhu.dt_as_str(time)
+        self.close_dt = dhu.dt_as_str(dt)
         self.exit_price = price
         contract_multiplier = self.contracts * self.contract_value
         self.gain_loss = (((self.exit_price - self.entry_price)
@@ -223,6 +241,30 @@ class Trade():
         #       f"{self.drawdown_impact} close_drawdown {self.close_drawdown}")
 
 
+class TradeSeries():
+    def __init__(self,
+                 start_dt,
+                 end_dt,
+                 timeframe: str,
+                 symbol: str = "ES",
+                 name: str = None,
+                 ts_id: str = None,
+                 uses_drawdown: bool = False,
+                 parameters: dict = None,
+                 trades: list = None,
+                 ):
+
+        self.start_dt = dhu.dt_as_str(start_dt)
+        self.end_dt = dhu.dt_as_str(end_dt)
+        self.timeframe = timeframe
+        self.symbol = symbol
+        self.name = name
+        self.ts_id = ts_id
+        self.uses_drawdown = uses_drawdown
+        self.parameters = parameters
+        self.trades = trades
+
+
 def test_basics():
     """Basics tests used during development and to confirm simple functions
     working as expected"""
@@ -236,6 +278,7 @@ def test_basics():
               stop_target=4995,
               prof_target=5010,
               open_drawdown=1000,
+              name="DELETEME"
               )
     print(f"Created unclosed long test trade:\n{t}")
     print("\nUpdating drawdown_impact")
@@ -243,26 +286,48 @@ def test_basics():
     print(t)
     print("\nClosing long trade at a loss.  This should have gain_loss == "
           "-$325 and drawdown_impact == -700.")
-    t.close(price=4995, time="2025-01-02 12:45:00")
+    t.close(price=4995, dt="2025-01-02 12:45:00")
     print(t)
+    print("Storing trade")
+    print(t.store())
 
     print("------------------------------------------------------------------")
     t = Trade(open_dt="2025-01-02 12:00:00",
+              close_dt="2025-01-02 12:15:00",
               direction="short",
               entry_price=5001.50,
               stop_target=4995,
               prof_target=5010,
               open_drawdown=1000,
               exit_price=4995,
+              name="DELETEMEToo"
               )
-    print(f"Created closed short test trade:\n{t}")
+    print("Created closed short test trade with a gain.  This should have "
+          f"gain_loss == $325 and drawdown_impact == $325 (I think...)\n{t}")
     print("\nUpdating drawdown_impact")
     t.update_drawdown(price_seen=5009)
     print(t)
-    print("\nClosing long trade at a gain.  This should have gain_loss == "
-          "$325 and drawdown_impact == $325")
-    t.close(price=4995, time="2025-01-02 12:45:00")
-    print(t)
+    print("Storing trade")
+    t.store()
+
+    print("\n\nReviewing trades in storage:")
+    print(dhs.review_trades(symbol="ES"))
+
+    print("\nDeleting DELETEMEToo trades first")
+    print(dhs.delete_trades(symbol="ES",
+                            field="name",
+                            value="DELETEMEToo",
+                            ))
+    print("\nReviewing trades in storage to confirm deletion:")
+    print(dhs.review_trades(symbol="ES"))
+    print("\nDeleting DELETEME to finish cleanup")
+    print(dhs.delete_trades(symbol="ES",
+                            field="name",
+                            value="DELETEME",
+                            ))
+    print("\nReviewing trades in storage to confirm deletion:")
+    print(dhs.review_trades(symbol="ES"))
+
     # TradeSeries
 
     # Backtesters

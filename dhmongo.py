@@ -70,11 +70,62 @@ def drop_collection(collection: str):
     return result
 
 
-def store_trades(trades,
-                 collection: str = "trades"):
+def store_trades(trades: list,
+                 collection: str,
+                 ):
     """Store one or more trades in mongo"""
     c = db[collection]
-    result = c.insert_many(trades)
+    result = []
+    for t in trades:
+        r = c.find_one_and_replace({"open_dt": t["open_dt"],
+                                    "direction": t["direction"],
+                                    "name": t["name"],
+                                    "version": t["version"],
+                                    "symbol": t["symbol"],
+                                    "ts_id": t["ts_id"],
+                                    "bt_id": t["bt_id"],
+                                    },
+                                   t,
+                                   new=True,
+                                   upsert=True,
+                                   )
+        result.append(r)
+
+    return result
+
+
+def review_trades(symbol: str,
+                  collection: str,
+                  ):
+    """Provides aggregate summary data about trades in mongo"""
+    c = db[collection]
+    try:
+        trades = list(c.aggregate([{"$match": {"symbol": symbol}},
+                                   {"$group": {"_id": "$name",
+                                               "count": {"$sum": 1},
+                                               }}]))
+        for t in trades:
+            t["name"] = t.pop("_id")
+
+        return trades
+    # IndexError is raised if collection does not exist yet
+    except IndexError:
+        return None
+
+
+def delete_trades(symbol: str,
+                  field: str,
+                  value,
+                  collection: str,
+                  ):
+    """Delete all trade records with 'field' matching 'value'.  Typically
+    used to delete by name, ts_id, or bt_id fields.
+
+    Example to delete all trade records with name=="DELETEME":
+        delete_trades(symbol="ES", field="name", value="DELETEME")
+    """
+    c = db[collection]
+    result = c.delete_many({field: value})
 
     return result
 
