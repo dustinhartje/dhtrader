@@ -5,6 +5,10 @@ import dhutil as dhu
 import dhstore as dhs
 from statistics import fmean
 
+# TODO update docstrings in this and all other module files to google style:
+#      https://sphinxcontrib-napoleon.readthedocs.io/
+#          en/latest/example_google.html
+
 CANDLE_TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w']
 BEGINNING_OF_TIME = "2024-01-01 00:00:00"
 
@@ -133,38 +137,39 @@ class Chart():
         if not self.c_symbol == 'ES':
             raise ValueError(f"c_symbol {self.c_symbol} is not supported, "
                              "only 'ES' is currently allowed.")
-        self.c_start = dhu.dt_as_dt(c_start)
-        self.c_end = dhu.dt_as_dt(c_end)
+        self.c_start = dhu.dt_as_str(c_start)
+        self.c_end = dhu.dt_as_str(c_end)
         if c_candles is None:
             self.c_candles = []
         else:
             self.c_candles = c_candles
         self.autoload = autoload
         if self.autoload:
-            self.load_candles()
-
-    def __repr__(self):
-        if len(self.c_candles) > 0:
-            candles_count = len(self.c_candles)
-            earliest_candle = self.c_candles[0].c_datetime
-            latest_candle = self.c_candles[-1].c_datetime
+            self.load_candles()  # includes review_candles()
         else:
-            earliest_candle = None
-            latest_candle = None
-            candles_count = 0
-        this = {"c_timeframe": self.c_timeframe,
-                "c_symbol": self.c_symbol,
-                "c_start": self.c_start,
-                "c_end": self.c_end,
-                "autoload": self.autoload,
-                "candles_count": candles_count,
-                "earliest_candle": earliest_candle,
-                "latest_candle": latest_candle,
-                }
-        return str(this)
+            self.review_candles()
+
+    def to_json(self):
+        """returns a json version of this object while normalizing
+        custom types (like datetime to string)"""
+        working = self.__dict__.copy()
+        working["c_candles"] = "Redacted for sanity"
+        working["c_start"] = dhu.dt_as_str(self.c_start)
+        working["c_end"] = dhu.dt_as_str(self.c_end)
+        print(working)
+        return json.dumps(working)
+
+    def to_clean_dict(self):
+        """Converts to JSON string then back to a python dict.  This helps
+        to normalize types (I'm looking at YOU datetime) while ensuring
+        a portable python data structure"""
+        return json.loads(self.to_json())
 
     def __str__(self):
-        return str(self.__repr__)
+        return str(self.to_clean_dict())
+
+    def __repr__(self):
+        return str(self)
 
     def sort_candles(self):
         self.c_candles.sort(key=lambda c: c.c_datetime)
@@ -189,6 +194,7 @@ class Chart():
             self.c_end = max(self.c_end, new_candle.c_datetime)
         else:
             self.c_end = new_candle.c_datetime
+        self.review_candles()
 
     def load_candles(self):
         """Load candles from central storage based on current attributes"""
@@ -199,6 +205,22 @@ class Chart():
                 symbol=self.c_symbol,
                 )
         self.sort_candles()
+        self.review_candles()
+
+    def review_candles(self):
+        if len(self.c_candles) > 0:
+            self.candles_count = len(self.c_candles)
+            self.earliest_candle = dhu.dt_as_str(self.c_candles[0].c_datetime)
+            self.latest_candle = dhu.dt_as_str(self.c_candles[-1].c_datetime)
+        else:
+            self.candles_count = 0
+            self.earliest_candle = None
+            self.latest_candle = None
+
+        return {"candles_count": self.candles_count,
+                "earliest_candle": self.earliest_candle,
+                "latest_candle": self.latest_candle,
+                }
 
 
 class Event():
@@ -457,7 +479,6 @@ class IndicatorDataPoint():
     def to_json(self):
         """returns a json version of this object while normalizing
         custom types (like datetime to string)"""
-
         return json.dumps(self.__dict__)
 
     def to_clean_dict(self):
