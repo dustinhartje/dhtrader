@@ -32,9 +32,10 @@ class Trade():
         contracts (int): number of contracts traded
         contract_value (float): value per contract
         is_open (bool): True if trade has not yet been closed via .close()
-        successful (bool): True if trade was profitable (rename to profitable?)
-        trade_name (str): Human friendly (?) trade name
-        trade_version (str): Trade version if applicable
+        profitable (bool): True if trade made money
+        trade_name (str): Label for identifying groups of similar trades
+            such as those run by the same backtester
+        trade_version (str): Version of trade (for future use)
     """
     def __init__(self,
                  open_dt: str,
@@ -56,15 +57,24 @@ class Trade():
                  contracts: int = 1,
                  contract_value: float = float(50),
                  is_open: bool = True,
-                 successful: bool = None,
+                 profitable: bool = None,
                  trade_name: str = None,
-                 trade_version: str = None,
+                 trade_version: str = "1.0.0",
                  ):
 
+        # Passable attributes
         self.open_dt = open_dt
         self.close_dt = close_dt
-        self.created_dt = dhu.dt_as_str(dt.now())
-        self.direction = direction
+        if created_dt is None:
+            self.created_dt = dhu.dt_as_str(dt.now())
+        else:
+            self.created_dt = created_dt
+        if direction in ['long', 'short']:
+            self.direction = direction
+        else:
+            raise ValueError(f"invalid value for direction of {direction} "
+                             "received, must be in ['long', 'short'] only."
+                             )
         self.entry_price = entry_price
         self.stop_target = stop_target
         self.prof_target = prof_target
@@ -80,9 +90,22 @@ class Trade():
         self.contracts = contracts
         self.contract_value = contract_value
         self.is_open = is_open
-        self.successful = successful
+        self.profitable = profitable
         self.trade_name = trade_name
         self.trade_version = trade_version
+        # Calculated attributes
+        if self.direction == "long":
+            self.flipper = 1
+        elif self.direction == "short":
+            self.flipper = -1
+        else:
+            self.flipper = 0  # If this happens there's a bug somewhere
+        # If closing attributes were passed, run close() to ensure all
+        # related attributes that may not have been passed in are finalized
+        if self.exit_price is not None:
+            self.close(price=self.exit_price,
+                       time=self.close_dt,
+                       )
 
     def __str__(self):
         return str(self.to_clean_dict())
@@ -121,35 +144,73 @@ class Trade():
 
         # Represent drawdown_impact as negative unless/until the trade closes
         # in profit.  price_diff will be used to calculate it momentarily.
-        price_diff = self.entry_price - price_seen
-        # In case of a short trade this is reversed
-        if self.direction == 'short':
-            price_diff = price_diff * -1
+        # In case of a short trade this is inverted by self.flipper
+        price_diff = (self.entry_price - price_seen) * self.flipper
         # Use the worst of the current and prior worse drawdown impact
         self.drawdown_impact = min(self.drawdown_impact, price_diff)
 
     def close(self,
               price: float,
-              time: str,
+              time,
               ):
         self.is_open = False
-        self.close_dt = time
+        self.close_dt = dhu.dt_as_str(time)
         self.exit_price = price
         contract_multiplier = self.contracts * self.contract_value
-        self.gain_loss = ((self.exit_price - self.entry_price)
-                          * contract_multiplier)
-        # Invert if the trade was short rather than long
-        if self.direction == 'short':
-            self.gain_loss = self.gain_loss * -1
+        self.gain_loss = (((self.exit_price - self.entry_price)
+                          * contract_multiplier)) * self.flipper
         # Close as a profitable trade if we made money
+        # TODO I'm not sure if I have drawdown impacts calculating correctly
+        #      I may need to do some trades and check the direct impact
+        #      in apex to confirm my understanding of how they work.
+        #      Specifically when it closes in profit but not at the max
+        #      profit it could have seen i.e. it goes up 10pts but does not
+        #      reach my profit target and stops out after pulling back 5pts.
+        #      Is my drawdown balance left the same as before the trade
+        #      because I gained 5 from the profit but lost 5 from the pb?
+        #      or it it up 5 because I gained 10 then lost 5 on the drawdown?
+        #      In other words, is the drawdown impact always equal to the gain
+        #      on a winning trade
+        #      TODO can I pull some trades from apex history to check this
+        #           so I don't have to wait until sunday evening to test?
+        #      TODO I should rewrite tests at the bottom to reflect actual
+        #           trades I did so I can confirm all the results, including
+        #           drawdown impact, against real results vs theory
+        #      TODO be sure to test all scenarios:
+        #           * profitable trade hits profit target
+        #           * profitable trade with small pullback
+        #           * trade comes back to exit at breakeven
+        #           * exit at a loss after it goes green substantially first
+        #           * trade never sees price above entry just goes to stop
+        #           * loss but pulls back towards BE some before I exit
+        #           TODO write a unit test that checks each of these scenarios
+        #                and confirms all of them get the correct result
+        #                This one really does need to be a comprehensive test
+        #                I'm running regularly probably as a pipeline
+        #                because this has to be right or everything else is
+        #                untrustable.  It's worth putting an evening into
+        #                figuring out and then maybe if it's quick I can put
+        #                a few hours into updating others into unit tests
+        #                What do I want it to do on a test failure?  Can
+        #                it email me?  would prefer the commit goes through
+        #                either way I just want a notification.  Commit hook
+        #                testing locally might be an ok first step for now
+        #                if it doesn't take very long each time
+        #      TODO If I can't test with live trades today, go watch ATF vids
+        #           and get my best guess on how it works then test live
+        #           with MES sunday evening to confirm, this is not a
+        #           blocker to building on Trades yet I just can't trust the
+        #           any backtest trades until this is all confirmed and tested
         if self.gain_loss > 0:
-            self.successful = True
-            # On a successful trade, our drawdown_impact is equal to the
+            self.profitable = True
+            # TODO update this comment if I learn differently in testing
+            # On a profitable trade, our drawdown_impact is equal to the
             # profit made on the trade.
             self.drawdown_impact = self.gain_loss
         # Close as a losing trade if we lost money
         else:
-            self.successful = False
+            self.profitable = False
+            # TODO also update these comments based on real life testing
             # If the trade was a loss, our drawdown is negatively impacted
             # by the delta from the entry to the max profit it reached
             # (drawdown_impact) plus the stop target / amount lost in the trade
@@ -158,8 +219,8 @@ class Trade():
                                      * contract_multiplier)
                                     + self.gain_loss)
         self.close_drawdown = self.open_drawdown + self.drawdown_impact
-        print(f"open_drawdown {self.open_drawdown} drawdown_impact "
-              f"{self.drawdown_impact} close_drawdown {self.close_drawdown}")
+        # print(f"open_drawdown {self.open_drawdown} drawdown_impact "
+        #       f"{self.drawdown_impact} close_drawdown {self.close_drawdown}")
 
 
 def test_basics():
@@ -168,6 +229,7 @@ def test_basics():
     # TODO LOWPRI make these into unit tests some day
 
     # Trades
+    print("------------------------------------------------------------------")
     t = Trade(open_dt="2025-01-02 12:00:00",
               direction="long",
               entry_price=5001.50,
@@ -175,14 +237,32 @@ def test_basics():
               prof_target=5010,
               open_drawdown=1000,
               )
-    print(f"Created unclosed test trade:\n{t}")
-    print("Updating drawdown_impact")
+    print(f"Created unclosed long test trade:\n{t}")
+    print("\nUpdating drawdown_impact")
     t.update_drawdown(price_seen=5009)
     print(t)
-    print("Closing at a loss")
+    print("\nClosing long trade at a loss.  This should have gain_loss == "
+          "-$325 and drawdown_impact == -700.")
     t.close(price=4995, time="2025-01-02 12:45:00")
     print(t)
 
+    print("------------------------------------------------------------------")
+    t = Trade(open_dt="2025-01-02 12:00:00",
+              direction="short",
+              entry_price=5001.50,
+              stop_target=4995,
+              prof_target=5010,
+              open_drawdown=1000,
+              exit_price=4995,
+              )
+    print(f"Created closed short test trade:\n{t}")
+    print("\nUpdating drawdown_impact")
+    t.update_drawdown(price_seen=5009)
+    print(t)
+    print("\nClosing long trade at a gain.  This should have gain_loss == "
+          "$325 and drawdown_impact == $325")
+    t.close(price=4995, time="2025-01-02 12:45:00")
+    print(t)
     # TradeSeries
 
     # Backtesters
