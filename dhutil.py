@@ -102,6 +102,8 @@ def valid_event_category(c, exit=True):
         err_msg = "{c} is not a valid event category in {EVENT_CATEGORIES}"
         if exit:
             raise ValueError(err_msg)
+        else:
+            print(err_msg)
         return False
 
 
