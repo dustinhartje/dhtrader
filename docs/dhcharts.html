@@ -18,10 +18,11 @@
     
 <tr><td bgcolor="#aa55cc"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
 <td width="100%"><table width="100%" summary="list"><tr><td width="25%" valign=top><a href="dhstore.html">dhstore</a><br>
-</td><td width="25%" valign=top><a href="dhutil.html">dhutil</a><br>
+<a href="dhutil.html">dhutil</a><br>
 </td><td width="25%" valign=top><a href="datetime.html">datetime</a><br>
+<a href="json.html">json</a><br>
 </td><td width="25%" valign=top><a href="sys.html">sys</a><br>
-</td></tr></table></td></tr></table><p>
+</td><td width="25%" valign=top></td></tr></table></td></tr></table><p>
 <table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
 <tr bgcolor="#ee77aa">
 <td colspan=3 valign=bottom>&nbsp;<br>
@@ -36,6 +37,14 @@
 </font></dt><dt><font face="helvetica, arial"><a href="dhcharts.html#Chart">Chart</a>
 </font></dt><dt><font face="helvetica, arial"><a href="dhcharts.html#Day">Day</a>
 </font></dt><dt><font face="helvetica, arial"><a href="dhcharts.html#Event">Event</a>
+</font></dt><dt><font face="helvetica, arial"><a href="dhcharts.html#Indicator">Indicator</a>
+</font></dt><dd>
+<dl>
+<dt><font face="helvetica, arial"><a href="dhcharts.html#IndicatorEMA">IndicatorEMA</a>
+</font></dt><dt><font face="helvetica, arial"><a href="dhcharts.html#IndicatorSMA">IndicatorSMA</a>
+</font></dt></dl>
+</dd>
+<dt><font face="helvetica, arial"><a href="dhcharts.html#IndicatorDataPoint">IndicatorDataPoint</a>
 </font></dt><dt><font face="helvetica, arial"><a href="dhcharts.html#Symbol">Symbol</a>
 </font></dt></dl>
 </dd>
@@ -83,12 +92,12 @@ Data and other attributes defined here:<br>
 <font color="#000000" face="helvetica, arial"><a name="Chart">class <strong>Chart</strong></a>(<a href="builtins.html#object">builtins.object</a>)</font></td></tr>
     
 <tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
-<td colspan=2><tt><a href="#Chart">Chart</a>(c_timeframe:&nbsp;str,&nbsp;c_symbol:&nbsp;str,&nbsp;c_start=None,&nbsp;c_end=None,&nbsp;c_candles:&nbsp;list&nbsp;=&nbsp;None,&nbsp;autoload:&nbsp;bool&nbsp;=&nbsp;False)<br>
+<td colspan=2><tt><a href="#Chart">Chart</a>(c_timeframe:&nbsp;str,&nbsp;c_symbol:&nbsp;str,&nbsp;c_start:&nbsp;str&nbsp;=&nbsp;None,&nbsp;c_end:&nbsp;str&nbsp;=&nbsp;None,&nbsp;c_candles:&nbsp;list&nbsp;=&nbsp;None,&nbsp;autoload:&nbsp;bool&nbsp;=&nbsp;False)<br>
 &nbsp;<br>
 <br>&nbsp;</tt></td></tr>
 <tr><td>&nbsp;</td>
 <td width="100%">Methods defined here:<br>
-<dl><dt><a name="Chart-__init__"><strong>__init__</strong></a>(self, c_timeframe: str, c_symbol: str, c_start=None, c_end=None, c_candles: list = None, autoload: bool = False)</dt><dd><tt>Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</tt></dd></dl>
+<dl><dt><a name="Chart-__init__"><strong>__init__</strong></a>(self, c_timeframe: str, c_symbol: str, c_start: str = None, c_end: str = None, c_candles: list = None, autoload: bool = False)</dt><dd><tt>Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</tt></dd></dl>
 
 <dl><dt><a name="Chart-__repr__"><strong>__repr__</strong></a>(self)</dt><dd><tt>Return&nbsp;repr(self).</tt></dd></dl>
 
@@ -98,7 +107,16 @@ Data and other attributes defined here:<br>
 
 <dl><dt><a name="Chart-load_candles"><strong>load_candles</strong></a>(self)</dt><dd><tt>Load&nbsp;candles&nbsp;from&nbsp;central&nbsp;storage&nbsp;based&nbsp;on&nbsp;current&nbsp;attributes</tt></dd></dl>
 
+<dl><dt><a name="Chart-review_candles"><strong>review_candles</strong></a>(self)</dt></dl>
+
 <dl><dt><a name="Chart-sort_candles"><strong>sort_candles</strong></a>(self)</dt></dl>
+
+<dl><dt><a name="Chart-to_clean_dict"><strong>to_clean_dict</strong></a>(self)</dt><dd><tt>Converts&nbsp;to&nbsp;JSON&nbsp;string&nbsp;then&nbsp;back&nbsp;to&nbsp;a&nbsp;python&nbsp;dict.&nbsp;&nbsp;This&nbsp;helps<br>
+to&nbsp;normalize&nbsp;types&nbsp;(I'm&nbsp;looking&nbsp;at&nbsp;YOU&nbsp;datetime)&nbsp;while&nbsp;ensuring<br>
+a&nbsp;portable&nbsp;python&nbsp;data&nbsp;structure</tt></dd></dl>
+
+<dl><dt><a name="Chart-to_json"><strong>to_json</strong></a>(self)</dt><dd><tt>returns&nbsp;a&nbsp;json&nbsp;version&nbsp;of&nbsp;this&nbsp;<a href="builtins.html#object">object</a>&nbsp;while&nbsp;normalizing<br>
+custom&nbsp;types&nbsp;(like&nbsp;datetime&nbsp;to&nbsp;string)</tt></dd></dl>
 
 <hr>
 Data descriptors defined here:<br>
@@ -177,6 +195,174 @@ Data descriptors defined here:<br>
 <table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
 <tr bgcolor="#ffc8d8">
 <td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="Indicator">class <strong>Indicator</strong></a>(<a href="builtins.html#object">builtins.object</a>)</font></td></tr>
+    
+<tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
+<td colspan=2><tt><a href="#Indicator">Indicator</a>(name:&nbsp;str,&nbsp;description:&nbsp;str,&nbsp;timeframe:&nbsp;str,&nbsp;trading_hours:&nbsp;str,&nbsp;symbol:&nbsp;str,&nbsp;calc_version:&nbsp;str,&nbsp;calc_details:&nbsp;str,&nbsp;start_dt='2024-01-01&nbsp;00:00:00',&nbsp;end_dt=None,&nbsp;candle_chart=None,&nbsp;parameters={})<br>
+&nbsp;<br>
+<br>&nbsp;</tt></td></tr>
+<tr><td>&nbsp;</td>
+<td width="100%">Methods defined here:<br>
+<dl><dt><a name="Indicator-__init__"><strong>__init__</strong></a>(self, name: str, description: str, timeframe: str, trading_hours: str, symbol: str, calc_version: str, calc_details: str, start_dt='2024-01-01 00:00:00', end_dt=None, candle_chart=None, parameters={})</dt><dd><tt>Base&nbsp;class&nbsp;for&nbsp;indicators.&nbsp;&nbsp;Names&nbsp;should&nbsp;be&nbsp;short&nbsp;and&nbsp;simple<br>
+abbreviations&nbsp;as&nbsp;they&nbsp;are&nbsp;used&nbsp;in&nbsp;tagging&nbsp;and&nbsp;storage,&nbsp;think&nbsp;like<br>
+sma,&nbsp;hod,&nbsp;vwap,&nbsp;etc.&nbsp;&nbsp;This&nbsp;class&nbsp;won't&nbsp;be&nbsp;used&nbsp;directly,&nbsp;use&nbsp;it's<br>
+child&nbsp;classes&nbsp;which&nbsp;will&nbsp;be&nbsp;indicator&nbsp;type&nbsp;specific</tt></dd></dl>
+
+<dl><dt><a name="Indicator-__repr__"><strong>__repr__</strong></a>(self)</dt><dd><tt>Return&nbsp;repr(self).</tt></dd></dl>
+
+<dl><dt><a name="Indicator-__str__"><strong>__str__</strong></a>(self)</dt><dd><tt>Return&nbsp;str(self).</tt></dd></dl>
+
+<dl><dt><a name="Indicator-calculate"><strong>calculate</strong></a>(self)</dt><dd><tt>This&nbsp;method&nbsp;will&nbsp;be&nbsp;specific&nbsp;to&nbsp;each&nbsp;type&nbsp;of&nbsp;indicator.&nbsp;&nbsp;It&nbsp;should<br>
+accpet&nbsp;only&nbsp;a&nbsp;list&nbsp;of&nbsp;Candles,&nbsp;sort&nbsp;it,&nbsp;and&nbsp;calculate&nbsp;new&nbsp;indicator<br>
+datapoints&nbsp;from&nbsp;the&nbsp;candles.&nbsp;&nbsp;Copy&nbsp;and&nbsp;modify&nbsp;this&nbsp;method&nbsp;as&nbsp;needed<br>
+in&nbsp;subclasses.</tt></dd></dl>
+
+<dl><dt><a name="Indicator-get_info"><strong>get_info</strong></a>(self)</dt></dl>
+
+<dl><dt><a name="Indicator-load_underlying_chart"><strong>load_underlying_chart</strong></a>(self)</dt><dd><tt>Load&nbsp;the&nbsp;underlying&nbsp;candle&nbsp;chart&nbsp;from&nbsp;central&nbsp;storage</tt></dd></dl>
+
+<dl><dt><a name="Indicator-store"><strong>store</strong></a>(self)</dt><dd><tt>uses&nbsp;DHStore&nbsp;functionality&nbsp;to&nbsp;store&nbsp;metadata&nbsp;and&nbsp;time&nbsp;series<br>
+datapoints&nbsp;in&nbsp;the&nbsp;default&nbsp;storage&nbsp;system&nbsp;(probably&nbsp;mongo)</tt></dd></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><tt>dictionary&nbsp;for&nbsp;instance&nbsp;variables&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+</td></tr></table> <p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ffc8d8">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="IndicatorDataPoint">class <strong>IndicatorDataPoint</strong></a>(<a href="builtins.html#object">builtins.object</a>)</font></td></tr>
+    
+<tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
+<td colspan=2><tt><a href="#IndicatorDataPoint">IndicatorDataPoint</a>(dt:&nbsp;str,&nbsp;value:&nbsp;float,&nbsp;ind_id:&nbsp;str,&nbsp;epoch:&nbsp;int&nbsp;=&nbsp;None)<br>
+&nbsp;<br>
+<br>&nbsp;</tt></td></tr>
+<tr><td>&nbsp;</td>
+<td width="100%">Methods defined here:<br>
+<dl><dt><a name="IndicatorDataPoint-__init__"><strong>__init__</strong></a>(self, dt: str, value: float, ind_id: str, epoch: int = None)</dt><dd><tt>Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</tt></dd></dl>
+
+<dl><dt><a name="IndicatorDataPoint-__repr__"><strong>__repr__</strong></a>(self)</dt><dd><tt>Return&nbsp;repr(self).</tt></dd></dl>
+
+<dl><dt><a name="IndicatorDataPoint-__str__"><strong>__str__</strong></a>(self)</dt><dd><tt>Return&nbsp;str(self).</tt></dd></dl>
+
+<dl><dt><a name="IndicatorDataPoint-to_clean_dict"><strong>to_clean_dict</strong></a>(self)</dt><dd><tt>Converts&nbsp;to&nbsp;JSON&nbsp;string&nbsp;then&nbsp;back&nbsp;to&nbsp;a&nbsp;python&nbsp;dict.&nbsp;&nbsp;This&nbsp;helps<br>
+to&nbsp;normalize&nbsp;types&nbsp;(I'm&nbsp;looking&nbsp;at&nbsp;YOU&nbsp;datetime)&nbsp;while&nbsp;ensuring<br>
+a&nbsp;portable&nbsp;python&nbsp;data&nbsp;structure</tt></dd></dl>
+
+<dl><dt><a name="IndicatorDataPoint-to_json"><strong>to_json</strong></a>(self)</dt><dd><tt>returns&nbsp;a&nbsp;json&nbsp;version&nbsp;of&nbsp;this&nbsp;<a href="builtins.html#object">object</a>&nbsp;while&nbsp;normalizing<br>
+custom&nbsp;types&nbsp;(like&nbsp;datetime&nbsp;to&nbsp;string)</tt></dd></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><tt>dictionary&nbsp;for&nbsp;instance&nbsp;variables&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+</td></tr></table> <p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ffc8d8">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="IndicatorEMA">class <strong>IndicatorEMA</strong></a>(<a href="dhcharts.html#Indicator">Indicator</a>)</font></td></tr>
+    
+<tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
+<td colspan=2><tt><a href="#IndicatorEMA">IndicatorEMA</a>(description,&nbsp;timeframe,&nbsp;trading_hours,&nbsp;symbol,&nbsp;calc_version,&nbsp;calc_details,&nbsp;start_dt='2024-01-01&nbsp;00:00:00',&nbsp;end_dt=None,&nbsp;candle_chart=None,&nbsp;name='EMA',&nbsp;parameters={})<br>
+&nbsp;<br>
+<br>&nbsp;</tt></td></tr>
+<tr><td>&nbsp;</td>
+<td width="100%"><dl><dt>Method resolution order:</dt>
+<dd><a href="dhcharts.html#IndicatorEMA">IndicatorEMA</a></dd>
+<dd><a href="dhcharts.html#Indicator">Indicator</a></dd>
+<dd><a href="builtins.html#object">builtins.object</a></dd>
+</dl>
+<hr>
+Methods defined here:<br>
+<dl><dt><a name="IndicatorEMA-__init__"><strong>__init__</strong></a>(self, description, timeframe, trading_hours, symbol, calc_version, calc_details, start_dt='2024-01-01 00:00:00', end_dt=None, candle_chart=None, name='EMA', parameters={})</dt><dd><tt>Base&nbsp;class&nbsp;for&nbsp;indicators.&nbsp;&nbsp;Names&nbsp;should&nbsp;be&nbsp;short&nbsp;and&nbsp;simple<br>
+abbreviations&nbsp;as&nbsp;they&nbsp;are&nbsp;used&nbsp;in&nbsp;tagging&nbsp;and&nbsp;storage,&nbsp;think&nbsp;like<br>
+sma,&nbsp;hod,&nbsp;vwap,&nbsp;etc.&nbsp;&nbsp;This&nbsp;class&nbsp;won't&nbsp;be&nbsp;used&nbsp;directly,&nbsp;use&nbsp;it's<br>
+child&nbsp;classes&nbsp;which&nbsp;will&nbsp;be&nbsp;indicator&nbsp;type&nbsp;specific</tt></dd></dl>
+
+<dl><dt><a name="IndicatorEMA-calculate"><strong>calculate</strong></a>(self)</dt><dd><tt>Calculate&nbsp;an&nbsp;exponential&nbsp;simple&nbsp;moving&nbsp;average&nbsp;over&nbsp;time.&nbsp;&nbsp;Defaults<br>
+to&nbsp;using&nbsp;the&nbsp;'close'&nbsp;value&nbsp;of&nbsp;each&nbsp;candle&nbsp;and&nbsp;a&nbsp;smoothing&nbsp;factor&nbsp;of&nbsp;2.</tt></dd></dl>
+
+<hr>
+Methods inherited from <a href="dhcharts.html#Indicator">Indicator</a>:<br>
+<dl><dt><a name="IndicatorEMA-__repr__"><strong>__repr__</strong></a>(self)</dt><dd><tt>Return&nbsp;repr(self).</tt></dd></dl>
+
+<dl><dt><a name="IndicatorEMA-__str__"><strong>__str__</strong></a>(self)</dt><dd><tt>Return&nbsp;str(self).</tt></dd></dl>
+
+<dl><dt><a name="IndicatorEMA-get_info"><strong>get_info</strong></a>(self)</dt></dl>
+
+<dl><dt><a name="IndicatorEMA-load_underlying_chart"><strong>load_underlying_chart</strong></a>(self)</dt><dd><tt>Load&nbsp;the&nbsp;underlying&nbsp;candle&nbsp;chart&nbsp;from&nbsp;central&nbsp;storage</tt></dd></dl>
+
+<dl><dt><a name="IndicatorEMA-store"><strong>store</strong></a>(self)</dt><dd><tt>uses&nbsp;DHStore&nbsp;functionality&nbsp;to&nbsp;store&nbsp;metadata&nbsp;and&nbsp;time&nbsp;series<br>
+datapoints&nbsp;in&nbsp;the&nbsp;default&nbsp;storage&nbsp;system&nbsp;(probably&nbsp;mongo)</tt></dd></dl>
+
+<hr>
+Data descriptors inherited from <a href="dhcharts.html#Indicator">Indicator</a>:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><tt>dictionary&nbsp;for&nbsp;instance&nbsp;variables&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+</td></tr></table> <p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ffc8d8">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="IndicatorSMA">class <strong>IndicatorSMA</strong></a>(<a href="dhcharts.html#Indicator">Indicator</a>)</font></td></tr>
+    
+<tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
+<td colspan=2><tt><a href="#IndicatorSMA">IndicatorSMA</a>(description,&nbsp;timeframe,&nbsp;trading_hours,&nbsp;symbol,&nbsp;calc_version,&nbsp;calc_details,&nbsp;start_dt='2024-01-01&nbsp;00:00:00',&nbsp;end_dt=None,&nbsp;candle_chart=None,&nbsp;name='SMA',&nbsp;parameters={})<br>
+&nbsp;<br>
+<br>&nbsp;</tt></td></tr>
+<tr><td>&nbsp;</td>
+<td width="100%"><dl><dt>Method resolution order:</dt>
+<dd><a href="dhcharts.html#IndicatorSMA">IndicatorSMA</a></dd>
+<dd><a href="dhcharts.html#Indicator">Indicator</a></dd>
+<dd><a href="builtins.html#object">builtins.object</a></dd>
+</dl>
+<hr>
+Methods defined here:<br>
+<dl><dt><a name="IndicatorSMA-__init__"><strong>__init__</strong></a>(self, description, timeframe, trading_hours, symbol, calc_version, calc_details, start_dt='2024-01-01 00:00:00', end_dt=None, candle_chart=None, name='SMA', parameters={})</dt><dd><tt>Base&nbsp;class&nbsp;for&nbsp;indicators.&nbsp;&nbsp;Names&nbsp;should&nbsp;be&nbsp;short&nbsp;and&nbsp;simple<br>
+abbreviations&nbsp;as&nbsp;they&nbsp;are&nbsp;used&nbsp;in&nbsp;tagging&nbsp;and&nbsp;storage,&nbsp;think&nbsp;like<br>
+sma,&nbsp;hod,&nbsp;vwap,&nbsp;etc.&nbsp;&nbsp;This&nbsp;class&nbsp;won't&nbsp;be&nbsp;used&nbsp;directly,&nbsp;use&nbsp;it's<br>
+child&nbsp;classes&nbsp;which&nbsp;will&nbsp;be&nbsp;indicator&nbsp;type&nbsp;specific</tt></dd></dl>
+
+<dl><dt><a name="IndicatorSMA-calculate"><strong>calculate</strong></a>(self)</dt><dd><tt>Calculate&nbsp;a&nbsp;simple&nbsp;moving&nbsp;average&nbsp;over&nbsp;time.&nbsp;&nbsp;Defaults&nbsp;to&nbsp;using<br>
+the&nbsp;'close'&nbsp;value&nbsp;of&nbsp;each&nbsp;candle.</tt></dd></dl>
+
+<hr>
+Methods inherited from <a href="dhcharts.html#Indicator">Indicator</a>:<br>
+<dl><dt><a name="IndicatorSMA-__repr__"><strong>__repr__</strong></a>(self)</dt><dd><tt>Return&nbsp;repr(self).</tt></dd></dl>
+
+<dl><dt><a name="IndicatorSMA-__str__"><strong>__str__</strong></a>(self)</dt><dd><tt>Return&nbsp;str(self).</tt></dd></dl>
+
+<dl><dt><a name="IndicatorSMA-get_info"><strong>get_info</strong></a>(self)</dt></dl>
+
+<dl><dt><a name="IndicatorSMA-load_underlying_chart"><strong>load_underlying_chart</strong></a>(self)</dt><dd><tt>Load&nbsp;the&nbsp;underlying&nbsp;candle&nbsp;chart&nbsp;from&nbsp;central&nbsp;storage</tt></dd></dl>
+
+<dl><dt><a name="IndicatorSMA-store"><strong>store</strong></a>(self)</dt><dd><tt>uses&nbsp;DHStore&nbsp;functionality&nbsp;to&nbsp;store&nbsp;metadata&nbsp;and&nbsp;time&nbsp;series<br>
+datapoints&nbsp;in&nbsp;the&nbsp;default&nbsp;storage&nbsp;system&nbsp;(probably&nbsp;mongo)</tt></dd></dl>
+
+<hr>
+Data descriptors inherited from <a href="dhcharts.html#Indicator">Indicator</a>:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><tt>dictionary&nbsp;for&nbsp;instance&nbsp;variables&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+</td></tr></table> <p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ffc8d8">
+<td colspan=3 valign=bottom>&nbsp;<br>
 <font color="#000000" face="helvetica, arial"><a name="Symbol">class <strong>Symbol</strong></a>(<a href="builtins.html#object">builtins.object</a>)</font></td></tr>
     
 <tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
@@ -197,10 +383,22 @@ Data descriptors defined here:<br>
 </dl>
 </td></tr></table></td></tr></table><p>
 <table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#eeaa77">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Functions</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#eeaa77"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><dl><dt><a name="-bot"><strong>bot</strong></a>()</dt><dd><tt>Return&nbsp;universal&nbsp;beginning&nbsp;of&nbsp;time&nbsp;for&nbsp;this&nbsp;and&nbsp;other&nbsp;modules.&nbsp;&nbsp;This<br>
+represents&nbsp;the&nbsp;earliest&nbsp;time&nbsp;candles&nbsp;should&nbsp;be&nbsp;imported&nbsp;for&nbsp;among&nbsp;other<br>
+things,&nbsp;setting&nbsp;a&nbsp;limit&nbsp;on&nbsp;how&nbsp;far&nbsp;back&nbsp;these&nbsp;modules&nbsp;can&nbsp;look&nbsp;to&nbsp;keep<br>
+performance&nbsp;and&nbsp;resource&nbsp;needs&nbsp;reasonable.</tt></dd></dl>
+</td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
 <tr bgcolor="#55aa55">
 <td colspan=3 valign=bottom>&nbsp;<br>
 <font color="#ffffff" face="helvetica, arial"><big><strong>Data</strong></big></font></td></tr>
     
 <tr><td bgcolor="#55aa55"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
-<td width="100%"><strong>CANDLE_TIMEFRAMES</strong> = ['1m', '5m', '15m', '1h', '4h', '1d', '1w']</td></tr></table>
+<td width="100%"><strong>BEGINNING_OF_TIME</strong> = '2024-01-01 00:00:00'<br>
+<strong>CANDLE_TIMEFRAMES</strong> = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w']</td></tr></table>
 </body></html>

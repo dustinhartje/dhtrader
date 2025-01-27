@@ -18,9 +18,55 @@
     
 <tr><td bgcolor="#aa55cc"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
 <td width="100%"><table width="100%" summary="list"><tr><td width="25%" valign=top><a href="csv.html">csv</a><br>
-</td><td width="25%" valign=top><a href="dhcharts.html">dhcharts</a><br>
+<a href="dhcharts.html">dhcharts</a><br>
 </td><td width="25%" valign=top><a href="dhstore.html">dhstore</a><br>
+<a href="re.html">re</a><br>
 </td><td width="25%" valign=top><a href="sys.html">sys</a><br>
+</td><td width="25%" valign=top></td></tr></table></td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ee77aa">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Classes</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#ee77aa"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><dl>
+<dt><font face="helvetica, arial"><a href="builtins.html#object">builtins.object</a>
+</font></dt><dd>
+<dl>
+<dt><font face="helvetica, arial"><a href="dhutil.html#OperationTimer">OperationTimer</a>
+</font></dt></dl>
+</dd>
+</dl>
+ <p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ffc8d8">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="OperationTimer">class <strong>OperationTimer</strong></a>(<a href="builtins.html#object">builtins.object</a>)</font></td></tr>
+    
+<tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
+<td colspan=2><tt><a href="#OperationTimer">OperationTimer</a>(name:&nbsp;str,&nbsp;start_dt=None,&nbsp;end_dt=None,&nbsp;elapsed_dt=None,&nbsp;elapsed_str='',&nbsp;auto_start:&nbsp;bool&nbsp;=&nbsp;True)<br>
+&nbsp;<br>
+<br>&nbsp;</tt></td></tr>
+<tr><td>&nbsp;</td>
+<td width="100%">Methods defined here:<br>
+<dl><dt><a name="OperationTimer-__init__"><strong>__init__</strong></a>(self, name: str, start_dt=None, end_dt=None, elapsed_dt=None, elapsed_str='', auto_start: bool = True)</dt><dd><tt>Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</tt></dd></dl>
+
+<dl><dt><a name="OperationTimer-__repr__"><strong>__repr__</strong></a>(self)</dt><dd><tt>Return&nbsp;repr(self).</tt></dd></dl>
+
+<dl><dt><a name="OperationTimer-__str__"><strong>__str__</strong></a>(self)</dt><dd><tt>Return&nbsp;str(self).</tt></dd></dl>
+
+<dl><dt><a name="OperationTimer-start"><strong>start</strong></a>(self)</dt></dl>
+
+<dl><dt><a name="OperationTimer-stop"><strong>stop</strong></a>(self)</dt></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><tt>dictionary&nbsp;for&nbsp;instance&nbsp;variables&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
 </td></tr></table></td></tr></table><p>
 <table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
 <tr bgcolor="#eeaa77">
@@ -28,12 +74,12 @@
 <font color="#ffffff" face="helvetica, arial"><big><strong>Functions</strong></big></font></td></tr>
     
 <tr><td bgcolor="#eeaa77"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
-<td width="100%"><dl><dt><a name="-compare_candles_vs_csv"><strong>compare_candles_vs_csv</strong></a>(filepath, timeframe: str = '1m', symbol: str = 'ES', start_dt=None, end_dt=None)</dt><dd><tt>Check&nbsp;stored&nbsp;candles&nbsp;against&nbsp;a&nbsp;CSV&nbsp;source&nbsp;file,&nbsp;primarily&nbsp;used&nbsp;to<br>
+<td width="100%"><dl><dt><a name="-compare_candles_vs_csv"><strong>compare_candles_vs_csv</strong></a>(filepath, timeframe: str = '1m', symbol: str = 'ES', diff_threshold: float = 0.5, start_dt=None, end_dt=None)</dt><dd><tt>Check&nbsp;stored&nbsp;candles&nbsp;against&nbsp;a&nbsp;CSV&nbsp;source&nbsp;file,&nbsp;primarily&nbsp;used&nbsp;to<br>
 confirm&nbsp;calculated&nbsp;higher&nbsp;timeframes&nbsp;against&nbsp;data&nbsp;provider&nbsp;equivalents<br>
 where&nbsp;available&nbsp;to&nbsp;sanity&nbsp;check&nbsp;calculation&nbsp;process</tt></dd></dl>
- <dl><dt><a name="-dt_as_dt"><strong>dt_as_dt</strong></a>(d)</dt><dd><tt>return&nbsp;a&nbsp;datetime&nbsp;object&nbsp;regardless&nbsp;of&nbsp;datetime&nbsp;or&nbsp;string&nbsp;input</tt></dd></dl>
- <dl><dt><a name="-dt_as_str"><strong>dt_as_str</strong></a>(d)</dt><dd><tt>return&nbsp;a&nbsp;string&nbsp;object&nbsp;regardless&nbsp;of&nbsp;datetime&nbsp;or&nbsp;string&nbsp;input</tt></dd></dl>
- <dl><dt><a name="-dt_from_epoch"><strong>dt_from_epoch</strong></a>(d)</dt><dd><tt>return&nbsp;a&nbsp;datetime&nbsp;object&nbsp;from&nbsp;an&nbsp;epoch&nbsp;integer</tt></dd></dl>
+ <dl><dt><a name="-dt_as_dt"><strong>dt_as_dt</strong></a>(d)</dt><dd><tt>return&nbsp;a&nbsp;datetime&nbsp;<a href="builtins.html#object">object</a>&nbsp;regardless&nbsp;of&nbsp;datetime&nbsp;or&nbsp;string&nbsp;input</tt></dd></dl>
+ <dl><dt><a name="-dt_as_str"><strong>dt_as_str</strong></a>(d)</dt><dd><tt>return&nbsp;a&nbsp;string&nbsp;<a href="builtins.html#object">object</a>&nbsp;regardless&nbsp;of&nbsp;datetime&nbsp;or&nbsp;string&nbsp;input</tt></dd></dl>
+ <dl><dt><a name="-dt_from_epoch"><strong>dt_from_epoch</strong></a>(d)</dt><dd><tt>return&nbsp;a&nbsp;datetime&nbsp;<a href="builtins.html#object">object</a>&nbsp;from&nbsp;an&nbsp;epoch&nbsp;integer</tt></dd></dl>
  <dl><dt><a name="-dt_to_epoch"><strong>dt_to_epoch</strong></a>(d)</dt><dd><tt>return&nbsp;an&nbsp;epoch&nbsp;integer&nbsp;from&nbsp;a&nbsp;datetime&nbsp;or&nbsp;string</tt></dd></dl>
  <dl><dt><a name="-expected_candle_datetimes"><strong>expected_candle_datetimes</strong></a>(start_dt, end_dt, symbol: str, timeframe: str, exclude_categories: list = None)</dt><dd><tt>Return&nbsp;a&nbsp;sorted&nbsp;list&nbsp;of&nbsp;datetimes&nbsp;within&nbsp;the&nbsp;provided&nbsp;start_dt&nbsp;and<br>
 end_dt&nbsp;(inclusive&nbsp;of&nbsp;both)&nbsp;that&nbsp;should&nbsp;exist&nbsp;for&nbsp;the&nbsp;given&nbsp;symbol&nbsp;based&nbsp;on<br>
@@ -46,6 +92,9 @@ where&nbsp;data&nbsp;providers&nbsp;sometimes&nbsp;omit&nbsp;candles&nbsp;with&n
  <dl><dt><a name="-next_candle_start"><strong>next_candle_start</strong></a>(dt, timeframe: str = '1m')</dt><dd><tt>returns&nbsp;the&nbsp;next&nbsp;datetime&nbsp;that&nbsp;represents&nbsp;a&nbsp;proper&nbsp;candle&nbsp;start<br>
 for&nbsp;the&nbsp;given&nbsp;datetime.&nbsp;&nbsp;May&nbsp;return&nbsp;the&nbsp;same&nbsp;as&nbsp;input</tt></dd></dl>
  <dl><dt><a name="-prompt_yn"><strong>prompt_yn</strong></a>(msg)</dt></dl>
+ <dl><dt><a name="-rangify_candle_times"><strong>rangify_candle_times</strong></a>(times: list, timeframe: str)</dt><dd><tt>Takes&nbsp;a&nbsp;list&nbsp;of&nbsp;datetimes&nbsp;and&nbsp;returns&nbsp;a&nbsp;list&nbsp;of&nbsp;aggregated&nbsp;datetime<br>
+ranges.&nbsp;&nbsp;Primarily&nbsp;intended&nbsp;to&nbsp;make&nbsp;human&nbsp;review&nbsp;sane&nbsp;on&nbsp;large&nbsp;sets&nbsp;of<br>
+gap&nbsp;and&nbsp;unexpected&nbsp;candles&nbsp;during&nbsp;integrity&nbsp;checks</tt></dd></dl>
  <dl><dt><a name="-read_candles_from_csv"><strong>read_candles_from_csv</strong></a>(start_dt, end_dt, filepath: str, symbol: str = 'ES', timeframe: str = '1m')</dt><dd><tt>Reads&nbsp;lines&nbsp;from&nbsp;a&nbsp;csv&nbsp;file&nbsp;and&nbsp;returns&nbsp;them&nbsp;as&nbsp;a&nbsp;list&nbsp;of<br>
 dhcharts.Candle&nbsp;objects.&nbsp;&nbsp;Assumes&nbsp;format&nbsp;matches&nbsp;FirstRate&nbsp;data<br>
 standard&nbsp;of&nbsp;no&nbsp;header&nbsp;row&nbsp;the&nbsp;the&nbsp;following&nbsp;order&nbsp;of&nbsp;fields:<br>
@@ -70,6 +119,7 @@ for&nbsp;quick&nbsp;manual&nbsp;gap&nbsp;fill&nbsp;operations&nbsp;via&nbsp;pyth
  <dl><dt><a name="-summarize_candles"><strong>summarize_candles</strong></a>(timeframe: str, symbol: str = 'ES', candles: list = None)</dt></dl>
  <dl><dt><a name="-test_basics"><strong>test_basics</strong></a>()</dt><dd><tt>runs&nbsp;a&nbsp;few&nbsp;basics&nbsp;tests,&nbsp;mostly&nbsp;used&nbsp;during&nbsp;initial&nbsp;development<br>
 to&nbsp;confirm&nbsp;functionality&nbsp;as&nbsp;desired</tt></dd></dl>
+ <dl><dt><a name="-timeframe_delta"><strong>timeframe_delta</strong></a>(timeframe: str)</dt><dd><tt>return&nbsp;a&nbsp;timedelta&nbsp;<a href="builtins.html#object">object</a>&nbsp;based&nbsp;on&nbsp;the&nbsp;candle&nbsp;timeframe&nbsp;given</tt></dd></dl>
  <dl><dt><a name="-valid_event_category"><strong>valid_event_category</strong></a>(c, exit=True)</dt></dl>
  <dl><dt><a name="-valid_timeframe"><strong>valid_timeframe</strong></a>(t, exit=True)</dt></dl>
  <dl><dt><a name="-valid_trading_hours"><strong>valid_trading_hours</strong></a>(t, exit=True)</dt></dl>

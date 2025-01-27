@@ -30,22 +30,44 @@
 <font color="#ffffff" face="helvetica, arial"><big><strong>Functions</strong></big></font></td></tr>
     
 <tr><td bgcolor="#eeaa77"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
-<td width="100%"><dl><dt><a name="-drop_candles"><strong>drop_candles</strong></a>(timeframe: str, symbol: str, earliest_dt=None, latest_dt=None)</dt><dd><tt>Deletes&nbsp;candles&nbsp;from&nbsp;central&nbsp;storage</tt></dd></dl>
+<td width="100%"><dl><dt><a name="-delete_backtests"><strong>delete_backtests</strong></a>(symbol: str, field: str, value, collection: str = 'backtests')</dt><dd><tt>Delete&nbsp;all&nbsp;backtests&nbsp;records&nbsp;in&nbsp;central&nbsp;storage&nbsp;with&nbsp;'field'&nbsp;matching<br>
+'value'.&nbsp;&nbsp;Typically&nbsp;used&nbsp;to&nbsp;delete&nbsp;by&nbsp;bt_id&nbsp;field.</tt></dd></dl>
+ <dl><dt><a name="-delete_indicator"><strong>delete_indicator</strong></a>(ind_id: str, meta_collection: str = 'indicators_meta', dp_collection: str = 'indicators')</dt><dd><tt>Remove&nbsp;a&nbsp;single&nbsp;indicator&nbsp;and&nbsp;all&nbsp;of&nbsp;it's&nbsp;datapoints&nbsp;from&nbsp;central<br>
+storage&nbsp;based&nbsp;on&nbsp;it's&nbsp;ind_id&nbsp;attribute</tt></dd></dl>
+ <dl><dt><a name="-delete_trades"><strong>delete_trades</strong></a>(symbol: str, field: str, value, collection: str = 'trades')</dt><dd><tt>Delete&nbsp;all&nbsp;trade&nbsp;records&nbsp;with&nbsp;'field'&nbsp;matching&nbsp;'value'.&nbsp;&nbsp;Typically<br>
+used&nbsp;to&nbsp;delete&nbsp;by&nbsp;name,&nbsp;ts_id,&nbsp;or&nbsp;bt_id&nbsp;fields.<br>
+&nbsp;<br>
+Example&nbsp;to&nbsp;delete&nbsp;all&nbsp;trade&nbsp;records&nbsp;with&nbsp;name=="DELETEME":<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#-delete_trades">delete_trades</a>(symbol="ES",&nbsp;field="name",&nbsp;value="DELETEME")</tt></dd></dl>
+ <dl><dt><a name="-delete_tradeseries"><strong>delete_tradeseries</strong></a>(symbol: str, field: str, value, collection: str = 'tradeseries')</dt><dd><tt>Delete&nbsp;all&nbsp;tradeseries&nbsp;records&nbsp;in&nbsp;central&nbsp;storage&nbsp;with&nbsp;'field'&nbsp;matching<br>
+'value'.&nbsp;&nbsp;Typically&nbsp;used&nbsp;to&nbsp;delete&nbsp;by&nbsp;ts_id,&nbsp;or&nbsp;bt_id&nbsp;fields.</tt></dd></dl>
+ <dl><dt><a name="-drop_candles"><strong>drop_candles</strong></a>(timeframe: str, symbol: str, earliest_dt=None, latest_dt=None)</dt><dd><tt>Deletes&nbsp;candles&nbsp;from&nbsp;central&nbsp;storage&nbsp;either&nbsp;en&nbsp;masse&nbsp;or&nbsp;for&nbsp;a<br>
+specific&nbsp;datetime&nbsp;range.</tt></dd></dl>
+ <dl><dt><a name="-drop_collection"><strong>drop_collection</strong></a>(collection: str)</dt><dd><tt>Used&nbsp;for&nbsp;brute&nbsp;force&nbsp;cleanup&nbsp;of&nbsp;storage,&nbsp;it&nbsp;will&nbsp;wipe&nbsp;all&nbsp;data&nbsp;from&nbsp;the<br>
+named&nbsp;collection.&nbsp;&nbsp;WIELD&nbsp;THIS&nbsp;POWER&nbsp;CAREFULLY!!!</tt></dd></dl>
  <dl><dt><a name="-drop_events"><strong>drop_events</strong></a>(symbol: str, earliest_dt=None, latest_dt=None)</dt><dd><tt>Deletes&nbsp;events&nbsp;from&nbsp;central&nbsp;storage</tt></dd></dl>
  <dl><dt><a name="-get_candles"><strong>get_candles</strong></a>(start_epoch: int, end_epoch: int, timeframe: str, symbol: str)</dt><dd><tt>Returns&nbsp;a&nbsp;list&nbsp;of&nbsp;candle&nbsp;docs&nbsp;within&nbsp;the&nbsp;start&nbsp;and&nbsp;end&nbsp;epochs&nbsp;given<br>
 inclusive&nbsp;of&nbsp;both&nbsp;epochs</tt></dd></dl>
- <dl><dt><a name="-get_events"><strong>get_events</strong></a>(start_epoch: int, end_epoch: int, symbol: str, categories: list = None, tags: list = None)</dt><dd><tt>Returns&nbsp;a&nbsp;list&nbsp;of&nbsp;events&nbsp;starting&nbsp;within&nbsp;the&nbsp;start&nbsp;and&nbsp;end&nbsp;epochs&nbsp;given<br>
+ <dl><dt><a name="-get_events"><strong>get_events</strong></a>(symbol: str = 'ES', start_epoch: int = None, end_epoch: int = None, categories: list = None, tags: list = None)</dt><dd><tt>Returns&nbsp;a&nbsp;list&nbsp;of&nbsp;events&nbsp;starting&nbsp;within&nbsp;the&nbsp;start&nbsp;and&nbsp;end&nbsp;epochs&nbsp;given<br>
 inclusive&nbsp;of&nbsp;both&nbsp;epochs.&nbsp;&nbsp;Note&nbsp;this&nbsp;will&nbsp;return&nbsp;events&nbsp;that&nbsp;end&nbsp;after<br>
 end_epoch&nbsp;so&nbsp;long&nbsp;as&nbsp;they&nbsp;start&nbsp;before&nbsp;or&nbsp;on&nbsp;it.</tt></dd></dl>
- <dl><dt><a name="-get_indicator_datapoints"><strong>get_indicator_datapoints</strong></a>(indicator_id: str, dp_collection: str = 'indicators', earliest_dt: str = '', latest_dt: str = '')</dt></dl>
- <dl><dt><a name="-list_indicators"><strong>list_indicators</strong></a>(meta_collection: str = 'indicators_meta')</dt></dl>
+ <dl><dt><a name="-get_indicator_datapoints"><strong>get_indicator_datapoints</strong></a>(ind_id: str, dp_collection: str = 'indicators', earliest_dt: str = None, latest_dt: str = None)</dt></dl>
+ <dl><dt><a name="-list_indicators"><strong>list_indicators</strong></a>(meta_collection: str = 'indicators_meta')</dt><dd><tt>Return&nbsp;a&nbsp;simple&nbsp;list&nbsp;of&nbsp;indicators&nbsp;in&nbsp;storage</tt></dd></dl>
+ <dl><dt><a name="-list_indicators_names"><strong>list_indicators_names</strong></a>(meta_collection: str = 'indicators_meta')</dt><dd><tt>Return&nbsp;a&nbsp;simple&nbsp;list&nbsp;of&nbsp;indicators&nbsp;(ind_id&nbsp;only)&nbsp;in&nbsp;storage</tt></dd></dl>
+ <dl><dt><a name="-review_backtests"><strong>review_backtests</strong></a>(symbol: str, collection: str = 'backtests')</dt><dd><tt>Provides&nbsp;aggregate&nbsp;summary&nbsp;data&nbsp;about&nbsp;backtests&nbsp;in&nbsp;central&nbsp;storage</tt></dd></dl>
  <dl><dt><a name="-review_candles"><strong>review_candles</strong></a>(timeframe: str, symbol: str, check_integrity: bool = False, return_detail: bool = False)</dt><dd><tt>Provides&nbsp;aggregate&nbsp;summary&nbsp;data&nbsp;about&nbsp;candles&nbsp;in&nbsp;central&nbsp;storage<br>
 with&nbsp;options&nbsp;to&nbsp;further&nbsp;check&nbsp;completeness&nbsp;(integrity)&nbsp;of&nbsp;candle&nbsp;data&nbsp;and<br>
 provide&nbsp;remediation</tt></dd></dl>
+ <dl><dt><a name="-review_indicators"><strong>review_indicators</strong></a>(meta_collection: str = 'indicators_meta', dp_collection: str = 'indicators')</dt><dd><tt>Return&nbsp;a&nbsp;more&nbsp;detailed&nbsp;overview&nbsp;of&nbsp;indicators&nbsp;in&nbsp;storage</tt></dd></dl>
+ <dl><dt><a name="-review_trades"><strong>review_trades</strong></a>(symbol: str, collection: str = 'trades')</dt><dd><tt>Provides&nbsp;aggregate&nbsp;summary&nbsp;data&nbsp;about&nbsp;trades&nbsp;in&nbsp;central&nbsp;storage</tt></dd></dl>
+ <dl><dt><a name="-review_tradeseries"><strong>review_tradeseries</strong></a>(symbol: str, collection: str = 'tradeseries')</dt><dd><tt>Provides&nbsp;aggregate&nbsp;summary&nbsp;data&nbsp;about&nbsp;tradeseries&nbsp;in&nbsp;central&nbsp;storage</tt></dd></dl>
+ <dl><dt><a name="-store_backtests"><strong>store_backtests</strong></a>(backtests: list, collection: str = 'backtests')</dt><dd><tt>Store&nbsp;one&nbsp;or&nbsp;more&nbsp;Backtest()&nbsp;objects&nbsp;in&nbsp;central&nbsp;storage</tt></dd></dl>
  <dl><dt><a name="-store_candle"><strong>store_candle</strong></a>(candle)</dt><dd><tt>Write&nbsp;a&nbsp;single&nbsp;dhcharts.Candle()&nbsp;to&nbsp;central&nbsp;storage</tt></dd></dl>
  <dl><dt><a name="-store_event"><strong>store_event</strong></a>(event)</dt><dd><tt>Write&nbsp;a&nbsp;single&nbsp;dhcharts.Event()&nbsp;to&nbsp;central&nbsp;storage</tt></dd></dl>
- <dl><dt><a name="-store_indicator"><strong>store_indicator</strong></a>(indicator_id: str, short_name: str, long_name: str, description: str, timeframe: str, trading_hours: str, symbol: str, calc_version: str, calc_details: str, datapoints: list, meta_collection: str = 'indicators_meta', dp_collection: str = 'indicators')</dt><dd><tt>Store&nbsp;indicator&nbsp;meta&nbsp;and&nbsp;datapoints&nbsp;in&nbsp;central&nbsp;storage</tt></dd></dl>
- <dl><dt><a name="-store_trades"><strong>store_trades</strong></a>(trade_name: str, trade_version: str, trades: list, collection: str = 'trades')</dt><dd><tt>Store&nbsp;one&nbsp;or&nbsp;more&nbsp;trades&nbsp;in&nbsp;central&nbsp;storage</tt></dd></dl>
+ <dl><dt><a name="-store_indicator"><strong>store_indicator</strong></a>(ind_id: str, name: str, description: str, timeframe: str, trading_hours: str, symbol: str, calc_version: str, calc_details: str, parameters: dict, datapoints: list, meta_collection: str = 'indicators_meta', dp_collection: str = 'indicators', overwrite_dp: bool = False)</dt><dd><tt>Store&nbsp;indicator&nbsp;meta&nbsp;and&nbsp;datapoints&nbsp;in&nbsp;central&nbsp;storage.&nbsp;&nbsp;Does&nbsp;not<br>
+overwrite&nbsp;existing&nbsp;datapoints&nbsp;unless&nbsp;overwrite_dp&nbsp;==&nbsp;True</tt></dd></dl>
+ <dl><dt><a name="-store_trades"><strong>store_trades</strong></a>(trades: list, collection: str = 'trades')</dt><dd><tt>Store&nbsp;one&nbsp;or&nbsp;more&nbsp;dhtrades.Trade()&nbsp;objects&nbsp;in&nbsp;central&nbsp;storage</tt></dd></dl>
+ <dl><dt><a name="-store_tradeseries"><strong>store_tradeseries</strong></a>(series: list, collection: str = 'tradeseries')</dt><dd><tt>Store&nbsp;a&nbsp;list&nbsp;of&nbsp;TradeSeries()&nbsp;objects&nbsp;in&nbsp;central&nbsp;storage</tt></dd></dl>
  <dl><dt><a name="-test_basics"><strong>test_basics</strong></a>()</dt><dd><tt>runs&nbsp;a&nbsp;few&nbsp;basics&nbsp;tests,&nbsp;mostly&nbsp;used&nbsp;during&nbsp;initial&nbsp;development<br>
 to&nbsp;confirm&nbsp;functionality&nbsp;as&nbsp;desired</tt></dd></dl>
 </td></tr></table><p>
@@ -55,7 +77,9 @@ to&nbsp;confirm&nbsp;functionality&nbsp;as&nbsp;desired</tt></dd></dl>
 <font color="#ffffff" face="helvetica, arial"><big><strong>Data</strong></big></font></td></tr>
     
 <tr><td bgcolor="#55aa55"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
-<td width="100%"><strong>COLL_IND</strong> = 'indicators'<br>
+<td width="100%"><strong>COLL_BACKTESTS</strong> = 'backtests'<br>
+<strong>COLL_IND</strong> = 'indicators'<br>
 <strong>COLL_IND_META</strong> = 'indicators_meta'<br>
-<strong>COLL_TRADES</strong> = 'trades'</td></tr></table>
+<strong>COLL_TRADES</strong> = 'trades'<br>
+<strong>COLL_TRADESERIES</strong> = 'tradeseries'</td></tr></table>
 </body></html>

@@ -17,8 +17,11 @@
 <font color="#ffffff" face="helvetica, arial"><big><strong>Modules</strong></big></font></td></tr>
     
 <tr><td bgcolor="#aa55cc"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
-<td width="100%"><table width="100%" summary="list"><tr><td width="25%" valign=top><a href="json.html">json</a><br>
-</td><td width="25%" valign=top></td><td width="25%" valign=top></td><td width="25%" valign=top></td></tr></table></td></tr></table><p>
+<td width="100%"><table width="100%" summary="list"><tr><td width="25%" valign=top><a href="dhcharts.html">dhcharts</a><br>
+</td><td width="25%" valign=top><a href="dhstore.html">dhstore</a><br>
+</td><td width="25%" valign=top><a href="dhutil.html">dhutil</a><br>
+</td><td width="25%" valign=top><a href="json.html">json</a><br>
+</td></tr></table></td></tr></table><p>
 <table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
 <tr bgcolor="#ee77aa">
 <td colspan=3 valign=bottom>&nbsp;<br>
@@ -29,7 +32,9 @@
 <dt><font face="helvetica, arial"><a href="builtins.html#object">builtins.object</a>
 </font></dt><dd>
 <dl>
-<dt><font face="helvetica, arial"><a href="dhtrades.html#Trade">Trade</a>
+<dt><font face="helvetica, arial"><a href="dhtrades.html#Backtest">Backtest</a>
+</font></dt><dt><font face="helvetica, arial"><a href="dhtrades.html#Trade">Trade</a>
+</font></dt><dt><font face="helvetica, arial"><a href="dhtrades.html#TradeSeries">TradeSeries</a>
 </font></dt></dl>
 </dd>
 </dl>
@@ -37,31 +42,142 @@
 <table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
 <tr bgcolor="#ffc8d8">
 <td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="Backtest">class <strong>Backtest</strong></a>(<a href="builtins.html#object">builtins.object</a>)</font></td></tr>
+    
+<tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
+<td colspan=2><tt><a href="#Backtest">Backtest</a>(start_dt,&nbsp;end_dt,&nbsp;timeframe:&nbsp;str,&nbsp;symbol:&nbsp;str,&nbsp;name:&nbsp;str,&nbsp;parameters:&nbsp;dict,&nbsp;bt_id:&nbsp;str&nbsp;=&nbsp;None,&nbsp;chart_tf=None,&nbsp;chart_1m=None,&nbsp;autoload_charts:&nbsp;bool&nbsp;=&nbsp;True,&nbsp;tradeseries:&nbsp;list&nbsp;=&nbsp;None)<br>
+&nbsp;<br>
+Represents&nbsp;a&nbsp;backtest&nbsp;that&nbsp;can&nbsp;be&nbsp;run&nbsp;with&nbsp;specific&nbsp;parameters.&nbsp;&nbsp;This<br>
+is&nbsp;a&nbsp;parent&nbsp;class&nbsp;containing&nbsp;core&nbsp;functionality&nbsp;and&nbsp;likely&nbsp;won't&nbsp;be&nbsp;used<br>
+to&nbsp;run&nbsp;backtests&nbsp;directly.&nbsp;&nbsp;Subclasses&nbsp;should&nbsp;be&nbsp;created&nbsp;with&nbsp;updated<br>
+methods&nbsp;and&nbsp;parameters&nbsp;representing&nbsp;the&nbsp;specific&nbsp;rules&nbsp;of&nbsp;the&nbsp;backtests<br>
+being&nbsp;performed.<br>
+&nbsp;<br>
+Attributes:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;start_dt&nbsp;(str&nbsp;or&nbsp;datetime):&nbsp;Beginning&nbsp;of&nbsp;time&nbsp;period&nbsp;evaluated&nbsp;which<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;may&nbsp;be&nbsp;earlier&nbsp;than&nbsp;the&nbsp;first&nbsp;trade&nbsp;datetime<br>
+&nbsp;&nbsp;&nbsp;&nbsp;end_dt&nbsp;(str&nbsp;or&nbsp;datetime):&nbsp;End&nbsp;of&nbsp;time&nbsp;period&nbsp;evaluated<br>
+&nbsp;&nbsp;&nbsp;&nbsp;timeframe&nbsp;(str):&nbsp;timeframe&nbsp;of&nbsp;underlying&nbsp;chart&nbsp;trades&nbsp;were&nbsp;evaluated<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;on<br>
+&nbsp;&nbsp;&nbsp;&nbsp;symbol&nbsp;(str):&nbsp;The&nbsp;symbol&nbsp;or&nbsp;"ticker"&nbsp;being&nbsp;evaluated<br>
+&nbsp;&nbsp;&nbsp;&nbsp;name&nbsp;(str):&nbsp;Human&nbsp;friendly&nbsp;label&nbsp;representing&nbsp;this&nbsp;<a href="builtins.html#object">object</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;parameters&nbsp;(dict):&nbsp;<a href="#Backtest">Backtest</a>&nbsp;specific&nbsp;parameters&nbsp;needed&nbsp;to&nbsp;evaluate.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;These&nbsp;will&nbsp;vary&nbsp;and&nbsp;be&nbsp;handled&nbsp;by&nbsp;subclases&nbsp;typically.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;bt_id&nbsp;(str):&nbsp;unique&nbsp;ID&nbsp;used&nbsp;for&nbsp;storage&nbsp;and&nbsp;analysis&nbsp;purposes,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;can&nbsp;be&nbsp;used&nbsp;to&nbsp;link&nbsp;related&nbsp;<a href="#TradeSeries">TradeSeries</a>()&nbsp;and&nbsp;Analyzer()&nbsp;objects<br>
+&nbsp;&nbsp;&nbsp;&nbsp;chart_tf&nbsp;(dhcharts.Chart):&nbsp;Underlying&nbsp;chart&nbsp;used&nbsp;for&nbsp;evaluation&nbsp;at<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;same&nbsp;tf&nbsp;as&nbsp;<a href="#Backtest">Backtest</a>&nbsp;<a href="builtins.html#object">object</a>.&nbsp;&nbsp;This&nbsp;is&nbsp;typically&nbsp;used&nbsp;to&nbsp;evaluate<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;timeframe&nbsp;specific&nbsp;candle&nbsp;patterns&nbsp;and&nbsp;attributes&nbsp;that&nbsp;may&nbsp;be<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;needed&nbsp;by&nbsp;the&nbsp;specific&nbsp;backtest&nbsp;rules.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;chart_1m&nbsp;(dhcharts.Chart):&nbsp;underlying&nbsp;1m&nbsp;chart&nbsp;is&nbsp;tyipcally&nbsp;used&nbsp;in<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;combination&nbsp;with&nbsp;chart_tf&nbsp;to&nbsp;find&nbsp;specific&nbsp;entries&nbsp;and&nbsp;exits&nbsp;and<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;build&nbsp;<a href="#Trade">Trade</a>()&nbsp;objects.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;autoload_charts&nbsp;(bool):&nbsp;Whether&nbsp;to&nbsp;automatically&nbsp;load&nbsp;chart_tf&nbsp;and<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;chart_1m&nbsp;from&nbsp;central&nbsp;storage&nbsp;at&nbsp;creation<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;at&nbsp;creation&nbsp;(default&nbsp;True)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;tradeseries&nbsp;(list):&nbsp;List&nbsp;of&nbsp;<a href="#TradeSeries">TradeSeries</a>()&nbsp;objects&nbsp;which&nbsp;will&nbsp;be<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;created&nbsp;when&nbsp;the&nbsp;<a href="#Backtest">Backtest</a>&nbsp;is&nbsp;run<br>&nbsp;</tt></td></tr>
+<tr><td>&nbsp;</td>
+<td width="100%">Methods defined here:<br>
+<dl><dt><a name="Backtest-__init__"><strong>__init__</strong></a>(self, start_dt, end_dt, timeframe: str, symbol: str, name: str, parameters: dict, bt_id: str = None, chart_tf=None, chart_1m=None, autoload_charts: bool = True, tradeseries: list = None)</dt><dd><tt>Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</tt></dd></dl>
+
+<dl><dt><a name="Backtest-__repr__"><strong>__repr__</strong></a>(self)</dt><dd><tt>Return&nbsp;repr(self).</tt></dd></dl>
+
+<dl><dt><a name="Backtest-__str__"><strong>__str__</strong></a>(self)</dt><dd><tt>Return&nbsp;str(self).</tt></dd></dl>
+
+<dl><dt><a name="Backtest-add_tradeseries"><strong>add_tradeseries</strong></a>(self, ts)</dt><dd><tt>Add&nbsp;an&nbsp;existing&nbsp;tradeseries&nbsp;to&nbsp;this&nbsp;<a href="#Backtest">Backtest</a>,&nbsp;typically&nbsp;used<br>
+for&nbsp;pulling&nbsp;results&nbsp;in&nbsp;from&nbsp;previous&nbsp;runs&nbsp;to&nbsp;update&nbsp;with&nbsp;new&nbsp;data.</tt></dd></dl>
+
+<dl><dt><a name="Backtest-calculate"><strong>calculate</strong></a>(self)</dt><dd><tt>This&nbsp;class&nbsp;should&nbsp;be&nbsp;updated&nbsp;in&nbsp;subclasses&nbsp;to&nbsp;run&nbsp;whatever&nbsp;logic&nbsp;is<br>
+needed&nbsp;to&nbsp;transform&nbsp;the&nbsp;chart_*&nbsp;attributes&nbsp;into&nbsp;multiple&nbsp;<a href="#TradeSeries">TradeSeries</a><br>
+using&nbsp;parameters&nbsp;supplied.&nbsp;&nbsp;This&nbsp;will&nbsp;vary&nbsp;greatly&nbsp;from&nbsp;one&nbsp;type&nbsp;of<br>
+backtest&nbsp;to&nbsp;another.&nbsp;&nbsp;At&nbsp;the&nbsp;end&nbsp;of&nbsp;the&nbsp;run&nbsp;it&nbsp;will&nbsp;likely&nbsp;need&nbsp;to<br>
+also&nbsp;store&nbsp;the&nbsp;<a href="#Backtest">Backtest</a>&nbsp;<a href="builtins.html#object">object</a>&nbsp;along&nbsp;with&nbsp;it's&nbsp;child&nbsp;<a href="#TradeSeries">TradeSeries</a>&nbsp;and<br>
+grandchild&nbsp;Trades.</tt></dd></dl>
+
+<dl><dt><a name="Backtest-load_charts"><strong>load_charts</strong></a>(self)</dt><dd><tt>Load&nbsp;a&nbsp;Chart&nbsp;based&nbsp;on&nbsp;this&nbsp;<a href="builtins.html#object">object</a>'s&nbsp;datetimes,&nbsp;symbol,&nbsp;and<br>
+timeframe&nbsp;arguments.&nbsp;&nbsp;This&nbsp;will&nbsp;be&nbsp;the&nbsp;base&nbsp;data&nbsp;for&nbsp;calculating<br>
+trades.</tt></dd></dl>
+
+<dl><dt><a name="Backtest-store"><strong>store</strong></a>(self, store_tradeseries: bool = True, store_trades: bool = True)</dt></dl>
+
+<dl><dt><a name="Backtest-to_clean_dict"><strong>to_clean_dict</strong></a>(self)</dt><dd><tt>Converts&nbsp;to&nbsp;JSON&nbsp;string&nbsp;then&nbsp;back&nbsp;to&nbsp;a&nbsp;python&nbsp;dict.&nbsp;&nbsp;This&nbsp;helps<br>
+to&nbsp;normalize&nbsp;types&nbsp;(I'm&nbsp;looking&nbsp;at&nbsp;YOU&nbsp;datetime)&nbsp;while&nbsp;ensuring<br>
+a&nbsp;portable&nbsp;python&nbsp;data&nbsp;structure</tt></dd></dl>
+
+<dl><dt><a name="Backtest-to_json"><strong>to_json</strong></a>(self)</dt><dd><tt>returns&nbsp;a&nbsp;json&nbsp;version&nbsp;of&nbsp;this&nbsp;<a href="builtins.html#object">object</a>&nbsp;while&nbsp;normalizing<br>
+custom&nbsp;types&nbsp;(like&nbsp;datetime&nbsp;to&nbsp;string)</tt></dd></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><tt>dictionary&nbsp;for&nbsp;instance&nbsp;variables&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+</td></tr></table> <p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ffc8d8">
+<td colspan=3 valign=bottom>&nbsp;<br>
 <font color="#000000" face="helvetica, arial"><a name="Trade">class <strong>Trade</strong></a>(<a href="builtins.html#object">builtins.object</a>)</font></td></tr>
     
 <tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
-<td colspan=2><tt><a href="#Trade">Trade</a>(open_dt:&nbsp;str,&nbsp;direction:&nbsp;str,&nbsp;entry_price:&nbsp;float,&nbsp;stop_target:&nbsp;float,&nbsp;prof_target:&nbsp;float,&nbsp;open_drawdown:&nbsp;float,&nbsp;close_drawdown:&nbsp;float,&nbsp;max_drawdown:&nbsp;float,&nbsp;close_dt:&nbsp;str&nbsp;=&nbsp;None,&nbsp;evaluation_dt:&nbsp;str&nbsp;=&nbsp;None,&nbsp;exit_price:&nbsp;float&nbsp;=&nbsp;None,&nbsp;gain_loss:&nbsp;float&nbsp;=&nbsp;None,&nbsp;stop_ticks:&nbsp;float&nbsp;=&nbsp;0,&nbsp;prof_ticks:&nbsp;float&nbsp;=&nbsp;0,&nbsp;offset_ticks:&nbsp;float&nbsp;=&nbsp;0,&nbsp;drawdown_impact:&nbsp;float&nbsp;=&nbsp;0,&nbsp;ticker:&nbsp;str&nbsp;=&nbsp;'ES',&nbsp;contracts:&nbsp;int&nbsp;=&nbsp;1,&nbsp;contract_value:&nbsp;float&nbsp;=&nbsp;50,&nbsp;is_open:&nbsp;bool&nbsp;=&nbsp;True,&nbsp;successful:&nbsp;bool&nbsp;=&nbsp;None,&nbsp;trade_name:&nbsp;str&nbsp;=&nbsp;None,&nbsp;trade_version:&nbsp;str&nbsp;=&nbsp;None)<br>
+<td colspan=2><tt><a href="#Trade">Trade</a>(open_dt:&nbsp;str,&nbsp;direction:&nbsp;str,&nbsp;entry_price:&nbsp;float,&nbsp;stop_target:&nbsp;float,&nbsp;prof_target:&nbsp;float,&nbsp;open_drawdown:&nbsp;float,&nbsp;close_drawdown:&nbsp;float&nbsp;=&nbsp;None,&nbsp;close_dt:&nbsp;str&nbsp;=&nbsp;None,&nbsp;created_dt:&nbsp;str&nbsp;=&nbsp;None,&nbsp;open_epoch:&nbsp;int&nbsp;=&nbsp;None,&nbsp;exit_price:&nbsp;float&nbsp;=&nbsp;None,&nbsp;gain_loss:&nbsp;float&nbsp;=&nbsp;None,&nbsp;stop_ticks:&nbsp;float&nbsp;=&nbsp;0.0,&nbsp;prof_ticks:&nbsp;float&nbsp;=&nbsp;0.0,&nbsp;offset_ticks:&nbsp;float&nbsp;=&nbsp;0.0,&nbsp;drawdown_impact:&nbsp;float&nbsp;=&nbsp;0.0,&nbsp;symbol:&nbsp;str&nbsp;=&nbsp;'ES',&nbsp;contracts:&nbsp;int&nbsp;=&nbsp;1,&nbsp;contract_value:&nbsp;float&nbsp;=&nbsp;50.0,&nbsp;is_open:&nbsp;bool&nbsp;=&nbsp;True,&nbsp;profitable:&nbsp;bool&nbsp;=&nbsp;None,&nbsp;name:&nbsp;str&nbsp;=&nbsp;None,&nbsp;version:&nbsp;str&nbsp;=&nbsp;'1.0.0',&nbsp;ts_id:&nbsp;str&nbsp;=&nbsp;None,&nbsp;bt_id:&nbsp;str&nbsp;=&nbsp;None)<br>
 &nbsp;<br>
-<br>&nbsp;</tt></td></tr>
+Represents&nbsp;a&nbsp;single&nbsp;trade&nbsp;that&nbsp;could&nbsp;have&nbsp;been&nbsp;made.<br>
+&nbsp;<br>
+Attributes:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;open_dt&nbsp;(str):&nbsp;datetime&nbsp;trade&nbsp;was&nbsp;initiated<br>
+&nbsp;&nbsp;&nbsp;&nbsp;open_epoch&nbsp;(int):&nbsp;epoch&nbsp;time&nbsp;of&nbsp;open_dt&nbsp;for&nbsp;sorting&nbsp;(autocalculated)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;direction&nbsp;(str):&nbsp;'long'&nbsp;or&nbsp;'short'<br>
+&nbsp;&nbsp;&nbsp;&nbsp;entry_price&nbsp;(float):&nbsp;price&nbsp;at&nbsp;which&nbsp;trade&nbsp;was&nbsp;initiated<br>
+&nbsp;&nbsp;&nbsp;&nbsp;stop_target&nbsp;(float):&nbsp;price&nbsp;at&nbsp;which&nbsp;trade&nbsp;would&nbsp;auto&nbsp;exit&nbsp;at&nbsp;loss<br>
+&nbsp;&nbsp;&nbsp;&nbsp;prof_target&nbsp;(float):&nbsp;price&nbsp;at&nbsp;which&nbsp;trade&nbsp;would&nbsp;auto&nbsp;exit&nbsp;at&nbsp;profit<br>
+&nbsp;&nbsp;&nbsp;&nbsp;open_drawdown&nbsp;(float):&nbsp;account&nbsp;drawdown&nbsp;level&nbsp;at&nbsp;time&nbsp;of&nbsp;trade&nbsp;open<br>
+&nbsp;&nbsp;&nbsp;&nbsp;close_drawdown&nbsp;(float):&nbsp;account&nbsp;drawdown&nbsp;level&nbsp;after&nbsp;trade&nbsp;was&nbsp;closed<br>
+&nbsp;&nbsp;&nbsp;&nbsp;close_dt&nbsp;(str):&nbsp;datetime&nbsp;trade&nbsp;was&nbsp;closed<br>
+&nbsp;&nbsp;&nbsp;&nbsp;created_dt&nbsp;(str):&nbsp;datetime&nbsp;this&nbsp;<a href="builtins.html#object">object</a>&nbsp;was&nbsp;created<br>
+&nbsp;&nbsp;&nbsp;&nbsp;exit_price&nbsp;(float):&nbsp;price&nbsp;at&nbsp;which&nbsp;trade&nbsp;was&nbsp;closed<br>
+&nbsp;&nbsp;&nbsp;&nbsp;gain_loss&nbsp;(float):&nbsp;account&nbsp;balance&nbsp;gain&nbsp;or&nbsp;loss&nbsp;resulting&nbsp;from&nbsp;trade<br>
+&nbsp;&nbsp;&nbsp;&nbsp;stop_ticks&nbsp;(float):&nbsp;number&nbsp;of&nbsp;ticks&nbsp;to&nbsp;reach&nbsp;stop_target&nbsp;from&nbsp;entry,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;primarily&nbsp;used&nbsp;as&nbsp;trade&nbsp;rules&nbsp;identification&nbsp;during&nbsp;analysis<br>
+&nbsp;&nbsp;&nbsp;&nbsp;prof_ticks&nbsp;(float):&nbsp;number&nbsp;of&nbsp;ticks&nbsp;to&nbsp;reach&nbsp;prof_target&nbsp;from&nbsp;entry,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;primarily&nbsp;used&nbsp;as&nbsp;trade&nbsp;rules&nbsp;identification&nbsp;during&nbsp;analysis<br>
+&nbsp;&nbsp;&nbsp;&nbsp;offset_ticks&nbsp;(float):&nbsp;number&nbsp;of&nbsp;ticks&nbsp;away&nbsp;from&nbsp;target&nbsp;price&nbsp;that<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;this&nbsp;trade&nbsp;made&nbsp;entry,&nbsp;primarily&nbsp;used&nbsp;as&nbsp;trade&nbsp;rules<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;identification&nbsp;during&nbsp;analysis<br>
+&nbsp;&nbsp;&nbsp;&nbsp;drawdown_impact&nbsp;(float):&nbsp;potential&nbsp;impact&nbsp;on&nbsp;trailing&nbsp;drawdown&nbsp;from<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;entry_price&nbsp;to&nbsp;max&nbsp;unrealized&nbsp;profit&nbsp;seen.&nbsp;&nbsp;Added&nbsp;to&nbsp;gain_loss&nbsp;in<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;a&nbsp;losing&nbsp;trade&nbsp;to&nbsp;determine&nbsp;close_drawdown<br>
+&nbsp;&nbsp;&nbsp;&nbsp;symbol&nbsp;(str):&nbsp;ticker&nbsp;being&nbsp;traded<br>
+&nbsp;&nbsp;&nbsp;&nbsp;contracts&nbsp;(int):&nbsp;number&nbsp;of&nbsp;contracts&nbsp;traded<br>
+&nbsp;&nbsp;&nbsp;&nbsp;contract_value&nbsp;(float):&nbsp;value&nbsp;per&nbsp;contract<br>
+&nbsp;&nbsp;&nbsp;&nbsp;is_open&nbsp;(bool):&nbsp;True&nbsp;if&nbsp;trade&nbsp;has&nbsp;not&nbsp;yet&nbsp;been&nbsp;closed&nbsp;via&nbsp;.<a href="#Trade-close">close</a>()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;profitable&nbsp;(bool):&nbsp;True&nbsp;if&nbsp;trade&nbsp;made&nbsp;money<br>
+&nbsp;&nbsp;&nbsp;&nbsp;name&nbsp;(str):&nbsp;Label&nbsp;for&nbsp;identifying&nbsp;groups&nbsp;of&nbsp;similar&nbsp;trades<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;such&nbsp;as&nbsp;those&nbsp;run&nbsp;by&nbsp;the&nbsp;same&nbsp;backtester<br>
+&nbsp;&nbsp;&nbsp;&nbsp;version&nbsp;(str):&nbsp;Version&nbsp;of&nbsp;trade&nbsp;(for&nbsp;future&nbsp;use)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;ts_id&nbsp;(str):&nbsp;unique&nbsp;id&nbsp;of&nbsp;associated&nbsp;<a href="#TradeSeries">TradeSeries</a>&nbsp;this&nbsp;was&nbsp;created&nbsp;by<br>
+&nbsp;&nbsp;&nbsp;&nbsp;bt_id&nbsp;(str):&nbsp;unique&nbsp;id&nbsp;of&nbsp;associated&nbsp;<a href="#Backtest">Backtest</a>&nbsp;this&nbsp;was&nbsp;created&nbsp;by<br>&nbsp;</tt></td></tr>
 <tr><td>&nbsp;</td>
 <td width="100%">Methods defined here:<br>
-<dl><dt><a name="Trade-__init__"><strong>__init__</strong></a>(self, open_dt: str, direction: str, entry_price: float, stop_target: float, prof_target: float, open_drawdown: float, close_drawdown: float, max_drawdown: float, close_dt: str = None, evaluation_dt: str = None, exit_price: float = None, gain_loss: float = None, stop_ticks: float = 0, prof_ticks: float = 0, offset_ticks: float = 0, drawdown_impact: float = 0, ticker: str = 'ES', contracts: int = 1, contract_value: float = 50, is_open: bool = True, successful: bool = None, trade_name: str = None, trade_version: str = None)</dt><dd><tt>Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</tt></dd></dl>
+<dl><dt><a name="Trade-__init__"><strong>__init__</strong></a>(self, open_dt: str, direction: str, entry_price: float, stop_target: float, prof_target: float, open_drawdown: float, close_drawdown: float = None, close_dt: str = None, created_dt: str = None, open_epoch: int = None, exit_price: float = None, gain_loss: float = None, stop_ticks: float = 0.0, prof_ticks: float = 0.0, offset_ticks: float = 0.0, drawdown_impact: float = 0.0, symbol: str = 'ES', contracts: int = 1, contract_value: float = 50.0, is_open: bool = True, profitable: bool = None, name: str = None, version: str = '1.0.0', ts_id: str = None, bt_id: str = None)</dt><dd><tt>Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</tt></dd></dl>
 
-<dl><dt><a name="Trade-close"><strong>close</strong></a>(self, price: float, time: str)</dt></dl>
+<dl><dt><a name="Trade-__repr__"><strong>__repr__</strong></a>(self)</dt><dd><tt>Return&nbsp;repr(self).</tt></dd></dl>
 
-<dl><dt><a name="Trade-csv_header"><strong>csv_header</strong></a>(self)</dt></dl>
+<dl><dt><a name="Trade-__str__"><strong>__str__</strong></a>(self)</dt><dd><tt>Return&nbsp;str(self).</tt></dd></dl>
 
-<dl><dt><a name="Trade-csv_list"><strong>csv_list</strong></a>(self)</dt></dl>
+<dl><dt><a name="Trade-close"><strong>close</strong></a>(self, price: float, dt)</dt></dl>
 
-<dl><dt><a name="Trade-from_json"><strong>from_json</strong></a>(self, json_str: str = None, file_path: str = None)</dt><dd><tt>Loads&nbsp;data&nbsp;into&nbsp;this&nbsp;<a href="#Trade">Trade</a>&nbsp;<a href="builtins.html#object">object</a>&nbsp;from&nbsp;a&nbsp;json&nbsp;string&nbsp;or&nbsp;file</tt></dd></dl>
+<dl><dt><a name="Trade-store"><strong>store</strong></a>(self)</dt><dd><tt>Store&nbsp;this&nbsp;trade&nbsp;in&nbsp;central&nbsp;storage</tt></dd></dl>
 
 <dl><dt><a name="Trade-to_clean_dict"><strong>to_clean_dict</strong></a>(self)</dt><dd><tt>Converts&nbsp;to&nbsp;JSON&nbsp;string&nbsp;then&nbsp;back&nbsp;to&nbsp;a&nbsp;python&nbsp;dict.&nbsp;&nbsp;This&nbsp;helps<br>
 to&nbsp;normalize&nbsp;types&nbsp;(I'm&nbsp;looking&nbsp;at&nbsp;YOU&nbsp;datetime)&nbsp;while&nbsp;ensuring<br>
 a&nbsp;portable&nbsp;python&nbsp;data&nbsp;structure</tt></dd></dl>
 
-<dl><dt><a name="Trade-to_json"><strong>to_json</strong></a>(self, file_path: str = None)</dt><dd><tt>returns&nbsp;a&nbsp;json&nbsp;version&nbsp;of&nbsp;this&nbsp;<a href="#Trade">Trade</a>&nbsp;<a href="builtins.html#object">object</a>&nbsp;while&nbsp;normalizing<br>
-custom&nbsp;types&nbsp;(like&nbsp;datetime&nbsp;to&nbsp;string)&nbsp;and&nbsp;optionally&nbsp;writing&nbsp;the<br>
-result&nbsp;to&nbsp;a&nbsp;file&nbsp;as&nbsp;well</tt></dd></dl>
+<dl><dt><a name="Trade-to_json"><strong>to_json</strong></a>(self)</dt><dd><tt>returns&nbsp;a&nbsp;json&nbsp;version&nbsp;of&nbsp;this&nbsp;<a href="#Trade">Trade</a>&nbsp;<a href="builtins.html#object">object</a>&nbsp;while&nbsp;normalizing<br>
+custom&nbsp;types&nbsp;for&nbsp;json&nbsp;compatibility&nbsp;(i.e.&nbsp;datetime&nbsp;to&nbsp;string)</tt></dd></dl>
 
 <dl><dt><a name="Trade-update_drawdown"><strong>update_drawdown</strong></a>(self, price_seen: float)</dt><dd><tt>Takes&nbsp;a&nbsp;price,&nbsp;typically&nbsp;the&nbsp;candle&nbsp;high&nbsp;or&nbsp;low,&nbsp;and&nbsp;updates<br>
 the&nbsp;drawdown&nbsp;impact&nbsp;accordingly</tt></dd></dl>
@@ -74,5 +190,72 @@ Data descriptors defined here:<br>
 <dl><dt><strong>__weakref__</strong></dt>
 <dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
 </dl>
-</td></tr></table></td></tr></table>
+</td></tr></table> <p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#ffc8d8">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#000000" face="helvetica, arial"><a name="TradeSeries">class <strong>TradeSeries</strong></a>(<a href="builtins.html#object">builtins.object</a>)</font></td></tr>
+    
+<tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
+<td colspan=2><tt><a href="#TradeSeries">TradeSeries</a>(start_dt,&nbsp;end_dt,&nbsp;timeframe:&nbsp;str,&nbsp;symbol:&nbsp;str&nbsp;=&nbsp;'ES',&nbsp;name:&nbsp;str&nbsp;=&nbsp;'',&nbsp;params_str:&nbsp;str&nbsp;=&nbsp;'',&nbsp;ts_id:&nbsp;str&nbsp;=&nbsp;None,&nbsp;bt_id:&nbsp;str&nbsp;=&nbsp;None,&nbsp;trades:&nbsp;list&nbsp;=&nbsp;None)<br>
+&nbsp;<br>
+Represents&nbsp;a&nbsp;series&nbsp;of&nbsp;trades&nbsp;presumably&nbsp;following&nbsp;the&nbsp;same&nbsp;rules<br>
+&nbsp;<br>
+Attributes:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;start_dt&nbsp;(str&nbsp;or&nbsp;datetime):&nbsp;Beginning&nbsp;of&nbsp;time&nbsp;period&nbsp;evaluated&nbsp;which<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;may&nbsp;be&nbsp;earlier&nbsp;than&nbsp;the&nbsp;first&nbsp;trade&nbsp;datetime<br>
+&nbsp;&nbsp;&nbsp;&nbsp;end_dt&nbsp;(str&nbsp;or&nbsp;datetime):&nbsp;End&nbsp;of&nbsp;time&nbsp;period&nbsp;evaluated<br>
+&nbsp;&nbsp;&nbsp;&nbsp;timeframe&nbsp;(str):&nbsp;timeframe&nbsp;of&nbsp;underlying&nbsp;chart&nbsp;trades&nbsp;were&nbsp;evaluated<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;on<br>
+&nbsp;&nbsp;&nbsp;&nbsp;symbol&nbsp;(str):&nbsp;The&nbsp;symbol&nbsp;or&nbsp;"ticker"&nbsp;being&nbsp;evaluated<br>
+&nbsp;&nbsp;&nbsp;&nbsp;name&nbsp;(str):&nbsp;Human&nbsp;friendly&nbsp;label&nbsp;representing&nbsp;this&nbsp;<a href="builtins.html#object">object</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;params_str&nbsp;(str):&nbsp;Represents&nbsp;<a href="#Backtest">Backtest</a>&nbsp;or&nbsp;trade&nbsp;specific&nbsp;parameters<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;to&nbsp;be&nbsp;passed&nbsp;in&nbsp;by&nbsp;creating&nbsp;objects&nbsp;and&nbsp;functions.&nbsp;&nbsp;This&nbsp;is<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;used&nbsp;to&nbsp;generate&nbsp;a&nbsp;unique&nbsp;ts_id&nbsp;in&nbsp;backtesting&nbsp;strategies&nbsp;so&nbsp;that<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;multiple&nbsp;similar&nbsp;and&nbsp;related&nbsp;<a href="#TradeSeries">TradeSeries</a>&nbsp;can&nbsp;be&nbsp;differentiated,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;stored,&nbsp;and&nbsp;retrieved&nbsp;effectively&nbsp;where&nbsp;needed&nbsp;even&nbsp;if&nbsp;created<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;simultaneously&nbsp;with&nbsp;the&nbsp;same&nbsp;epoch&nbsp;value.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;ts_id&nbsp;(str):&nbsp;unique&nbsp;ID&nbsp;used&nbsp;for&nbsp;storage&nbsp;and&nbsp;analysis&nbsp;purposes,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;can&nbsp;be&nbsp;used&nbsp;to&nbsp;link&nbsp;related&nbsp;<a href="#Trade">Trade</a>()&nbsp;and&nbsp;<a href="#Backtest">Backtest</a>()&nbsp;objects<br>
+&nbsp;&nbsp;&nbsp;&nbsp;bt_id&nbsp;(str):&nbsp;bt_id&nbsp;of&nbsp;the&nbsp;<a href="#Backtest">Backtest</a>()&nbsp;<a href="builtins.html#object">object</a>&nbsp;that&nbsp;created&nbsp;this&nbsp;if&nbsp;any<br>
+&nbsp;&nbsp;&nbsp;&nbsp;trades&nbsp;(list):&nbsp;list&nbsp;of&nbsp;trades&nbsp;in&nbsp;the&nbsp;series<br>&nbsp;</tt></td></tr>
+<tr><td>&nbsp;</td>
+<td width="100%">Methods defined here:<br>
+<dl><dt><a name="TradeSeries-__init__"><strong>__init__</strong></a>(self, start_dt, end_dt, timeframe: str, symbol: str = 'ES', name: str = '', params_str: str = '', ts_id: str = None, bt_id: str = None, trades: list = None)</dt><dd><tt>Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</tt></dd></dl>
+
+<dl><dt><a name="TradeSeries-__repr__"><strong>__repr__</strong></a>(self)</dt><dd><tt>Return&nbsp;repr(self).</tt></dd></dl>
+
+<dl><dt><a name="TradeSeries-__str__"><strong>__str__</strong></a>(self)</dt><dd><tt>Return&nbsp;str(self).</tt></dd></dl>
+
+<dl><dt><a name="TradeSeries-add_trade"><strong>add_trade</strong></a>(self, trade)</dt></dl>
+
+<dl><dt><a name="TradeSeries-sort_trades"><strong>sort_trades</strong></a>(self)</dt></dl>
+
+<dl><dt><a name="TradeSeries-store"><strong>store</strong></a>(self, store_trades: bool = False)</dt></dl>
+
+<dl><dt><a name="TradeSeries-to_clean_dict"><strong>to_clean_dict</strong></a>(self)</dt><dd><tt>Converts&nbsp;to&nbsp;JSON&nbsp;string&nbsp;then&nbsp;back&nbsp;to&nbsp;a&nbsp;python&nbsp;dict.&nbsp;&nbsp;This&nbsp;helps<br>
+to&nbsp;normalize&nbsp;types&nbsp;(I'm&nbsp;looking&nbsp;at&nbsp;YOU&nbsp;datetime)&nbsp;while&nbsp;ensuring<br>
+a&nbsp;portable&nbsp;python&nbsp;data&nbsp;structure</tt></dd></dl>
+
+<dl><dt><a name="TradeSeries-to_json"><strong>to_json</strong></a>(self)</dt><dd><tt>returns&nbsp;a&nbsp;json&nbsp;version&nbsp;of&nbsp;this&nbsp;<a href="builtins.html#object">object</a>&nbsp;while&nbsp;normalizing<br>
+custom&nbsp;types&nbsp;(like&nbsp;datetime&nbsp;to&nbsp;string)</tt></dd></dl>
+
+<hr>
+Data descriptors defined here:<br>
+<dl><dt><strong>__dict__</strong></dt>
+<dd><tt>dictionary&nbsp;for&nbsp;instance&nbsp;variables&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+<dl><dt><strong>__weakref__</strong></dt>
+<dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
+</dl>
+</td></tr></table></td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#eeaa77">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Functions</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#eeaa77"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><dl><dt><a name="-test_basics"><strong>test_basics</strong></a>()</dt><dd><tt>Basics&nbsp;tests&nbsp;used&nbsp;during&nbsp;development&nbsp;and&nbsp;to&nbsp;confirm&nbsp;simple&nbsp;functions<br>
+working&nbsp;as&nbsp;expected</tt></dd></dl>
+</td></tr></table>
 </body></html>
