@@ -42,6 +42,8 @@ except Exception:
     sys.exit()
 
 
+##############################################################################
+# Non-class specific functions
 def review_database():
     """Quick function to gather useful information about the state of mongo"""
     raw = db.command("dbstats")
@@ -70,6 +72,8 @@ def drop_collection(collection: str):
     return result
 
 
+##############################################################################
+# Trades
 def store_trades(trades: list,
                  collection: str,
                  ):
@@ -124,11 +128,124 @@ def delete_trades(symbol: str,
     Example to delete all trade records with name=="DELETEME":
         delete_trades(symbol="ES", field="name", value="DELETEME")
     """
+    # TODO For now I mostly just need to wipe specific runs so this is enough
+    #      as I can specifiy a 'name', 'ts_id', or 'bt_id' in most of the
+    #      cases I can imagine to get it operational.
+    #      In the future I may need to do more complex queries both for
+    #      review and deletion as I expand.  Based on a few stackoverflow
+    #      hits it looks like I can build dictionaries with Mongo queries to
+    #      handle this but will need to do a fair amount of learning and
+    #      testing to get there, so deferring for now.  When needed though I
+    #      should be able to build queries using $match, $and, and other such
+    #      things to find and selectively delete and then pass those into
+    #      this function, or build them within the funtion based on arg flags.
+    #      A few simple query examples can be found in this file already to
+    #      build ideas off of when that day comes.
     c = db[collection]
     result = c.delete_many({field: value})
 
     return result
 
+
+##############################################################################
+# TradeSeries
+def store_tradeseries(series: dict,
+                      collection: str,
+                      ):
+    """Store one TradeSeries object in mongo"""
+    c = db[collection]
+    result = c.find_one_and_replace({"ts_id": series["ts_id"]},
+                                    series,
+                                    new=True,
+                                    upsert=True,
+                                    )
+
+    return list(result)
+
+
+def review_tradeseries(symbol: str,
+                       collection: str,
+                       ):
+    """Provides aggregate summary data about tradeseries in mongo"""
+    c = db[collection]
+    try:
+        tradeseries = list(c.aggregate([{"$match": {"symbol": symbol}},
+                                        {"$group": {"_id": "$ts_id",
+                                                    "count": {"$sum": 1},
+                                                    }}]))
+        for t in tradeseries:
+            t["ts_id"] = t.pop("_id")
+
+        return tradeseries
+    # IndexError is raised if collection does not exist yet
+    except IndexError:
+        return None
+
+
+def delete_tradeseries(symbol: str,
+                       field: str,
+                       value,
+                       collection: str,
+                       ):
+    """Delete all tradeseries records in mongo with 'field' matching 'value'.
+    Typically used to delete by ts_id, or bt_id fields.
+    """
+    c = db[collection]
+    result = c.delete_many({field: value})
+
+    return result
+
+
+##############################################################################
+# Backtests
+def store_backtest(backtest: dict,
+                   collection: str,
+                   ):
+    """Store one Backtest object in mongo"""
+    c = db[collection]
+    result = c.find_one_and_replace({"bt_id": backtest["bt_id"]},
+                                    backtest,
+                                    new=True,
+                                    upsert=True,
+                                    )
+    return list(result)
+
+
+def review_backtests(symbol: str,
+                     collection: str,
+                     ):
+    """Provides aggregate summary data about backtests in mongo"""
+    c = db[collection]
+    try:
+        backtests = list(c.aggregate([{"$match": {"symbol": symbol}},
+                                      {"$group": {"_id": "$bt_id",
+                                                  "count": {"$sum": 1},
+                                                  }}]))
+        for b in backtests:
+            b["bt_id"] = b.pop("_id")
+
+        return backtests
+    # IndexError is raised if collection does not exist yet
+    except IndexError:
+        return None
+
+
+def delete_backtests(symbol: str,
+                     field: str,
+                     value,
+                     collection: str,
+                     ):
+    """Delete all backtests records in mongo with 'field' matching 'value'.
+    Typically used to delete by bt_id field.
+    """
+    c = db[collection]
+    result = c.delete_many({field: value})
+
+    return result
+
+
+##############################################################################
+# Candles
 
 def store_candle(c_datetime,
                  c_timeframe: str,
@@ -223,6 +340,8 @@ def drop_candles(timeframe: str,
     return result
 
 
+##############################################################################
+# Indicators
 def list_indicators(meta_collection: str):
     """Lists all available indicators in mongo based on metadata"""
     c = db[meta_collection]
@@ -417,6 +536,8 @@ def delete_indicator(ind_id: str,
             }
 
 
+##############################################################################
+# Events
 def store_event(start_dt,
                 end_dt,
                 symbol: str,
@@ -464,6 +585,8 @@ def get_events(symbol: str,
     return list(result)
 
 
+##############################################################################
+# Tests
 def test_basics():
     """runs a few basics tests, mostly used during initial development
        to confirm functionality as desired.  Also dumps a basic summary

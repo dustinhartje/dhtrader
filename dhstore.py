@@ -23,16 +23,22 @@ import dhmongo as dhm
 #      this will require a bit of refactoring within functions below
 
 COLL_TRADES = "trades"
+COLL_TRADESERIES = "tradeseries"
+COLL_BACKTESTS = "backtests"
 COLL_IND_META = "indicators_meta"
 COLL_IND = "indicators"
 
 
+##############################################################################
+# Non-class specific functions
 def drop_collection(collection: str):
     """Used for brute force cleanup of storage, it will wipe all data from the
     named collection.  WIELD THIS POWER CAREFULLY!!!"""
     return dhm.drop_collection(collection=collection)
 
 
+##############################################################################
+# Trades
 def store_trades(trades: list,
                  collection: str = COLL_TRADES,
                  ):
@@ -78,6 +84,92 @@ def delete_trades(symbol: str,
     return result
 
 
+##############################################################################
+# TradeSeries
+def store_tradeseries(series: list,
+                      collection: str = COLL_TRADESERIES,
+                      ):
+    """Store a list of TradeSeries() objects in central storage"""
+    result = []
+    for ts in series:
+        result.append(dhm.store_tradeseries(ts.to_clean_dict(),
+                                            collection=collection,
+                                            ))
+
+    return result
+
+
+def review_tradeseries(symbol: str,
+                       collection: str = COLL_TRADESERIES,
+                       ):
+    """Provides aggregate summary data about tradeseries in central storage"""
+
+    return dhm.review_tradeseries(symbol=symbol,
+                                  collection=collection,
+                                  )
+
+
+def delete_tradeseries(symbol: str,
+                       field: str,
+                       value,
+                       collection: str = COLL_TRADESERIES,
+                       ):
+    """Delete all tradeseries records in central storage with 'field' matching
+    'value'.  Typically used to delete by ts_id, or bt_id fields.
+    """
+    result = dhm.delete_tradeseries(symbol=symbol,
+                                    collection=collection,
+                                    field=field,
+                                    value=value,
+                                    )
+
+    return result
+
+
+##############################################################################
+# Backtests
+def store_backtests(backtests: list,
+                    collection: str = COLL_BACKTESTS,
+                    ):
+    """Store one or more Backtest() objects in central storage"""
+    result = []
+    for bt in backtests:
+        result.append(dhm.store_backtest(bt.to_clean_dict(),
+                                         collection=collection,
+                                         ))
+
+    return result
+
+
+def review_backtests(symbol: str,
+                     collection: str = COLL_BACKTESTS,
+                     ):
+    """Provides aggregate summary data about backtests in central storage"""
+
+    return dhm.review_backtests(symbol=symbol,
+                                collection=collection,
+                                )
+
+
+def delete_backtests(symbol: str,
+                     field: str,
+                     value,
+                     collection: str = COLL_BACKTESTS,
+                     ):
+    """Delete all backtests records in central storage with 'field' matching
+    'value'.  Typically used to delete by bt_id field.
+    """
+    result = dhm.delete_backtests(symbol=symbol,
+                                  collection=collection,
+                                  field=field,
+                                  value=value,
+                                  )
+
+    return result
+
+
+##############################################################################
+# Indicators
 def list_indicators(meta_collection: str = COLL_IND_META):
     """Return a simple list of indicators in storage"""
     result = dhm.list_indicators(meta_collection=meta_collection)
@@ -179,6 +271,8 @@ def delete_indicator(ind_id: str,
                                 )
 
 
+##############################################################################
+# Candles
 def store_candle(candle):
     """Write a single dhcharts.Candle() to central storage"""
     if not isinstance(candle, dhc.Candle):
@@ -409,6 +503,8 @@ def drop_candles(timeframe: str,
                                 )
 
 
+##############################################################################
+# Events
 def store_event(event):
     """Write a single dhcharts.Event() to central storage"""
     if not isinstance(event, dhc.Event):
@@ -472,6 +568,8 @@ def drop_events(symbol: str,
         return "Sorry, Dusty hasn't written code for select timeframes yet"
 
 
+##############################################################################
+# Tests
 def test_basics():
     """runs a few basics tests, mostly used during initial development
        to confirm functionality as desired"""

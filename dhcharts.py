@@ -156,7 +156,6 @@ class Chart():
         working["c_candles"] = "Redacted for sanity"
         working["c_start"] = dhu.dt_as_str(self.c_start)
         working["c_end"] = dhu.dt_as_str(self.c_end)
-        print(working)
         return json.dumps(working)
 
     def to_clean_dict(self):

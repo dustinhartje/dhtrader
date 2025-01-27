@@ -2,6 +2,7 @@ import json
 from datetime import datetime as dt
 import dhutil as dhu
 import dhstore as dhs
+import dhcharts as dhc
 
 
 class Trade():
@@ -9,6 +10,7 @@ class Trade():
 
     Attributes:
         open_dt (str): datetime trade was initiated
+        open_epoch (int): epoch time of open_dt for sorting (autocalculated)
         direction (str): 'long' or 'short'
         entry_price (float): price at which trade was initiated
         stop_target (float): price at which trade would auto exit at loss
@@ -50,6 +52,7 @@ class Trade():
                  close_drawdown: float = None,
                  close_dt: str = None,
                  created_dt: str = None,
+                 open_epoch: int = None,
                  exit_price: float = None,
                  gain_loss: float = None,
                  stop_ticks: float = float(0),
@@ -113,6 +116,7 @@ class Trade():
             self.close(price=self.exit_price,
                        dt=self.close_dt,
                        )
+        self.open_epoch = dhu.dt_to_epoch(self.open_dt)
 
     def __str__(self):
         return str(self.to_clean_dict())
@@ -242,15 +246,36 @@ class Trade():
 
 
 class TradeSeries():
+    """Represents a series of trades presumably following the same rules
+
+    Attributes:
+        start_dt (str or datetime): Beginning of time period evaluated which
+            may be earlier than the first trade datetime
+        end_dt (str or datetime): End of time period evaluated
+        timeframe (str): timeframe of underlying chart trades were evaluated
+            on
+        symbol (str): The symbol or "ticker" being evaluated
+        name (str): Human friendly label representing this object
+        params_str (str): Represents Backtest or trade specific parameters
+            to be passed in by creating objects and functions.  This is
+            used to generate a unique ts_id in backtesting strategies so that
+            multiple similar and related TradeSeries can be differentiated,
+            stored, and retrieved effectively where needed even if created
+            simultaneously with the same epoch value.
+        ts_id (str): unique ID used for storage and analysis purposes,
+            can be used to link related Trade() and Backtest() objects
+        bt_id (str): bt_id of the Backtest() object that created this if any
+        trades (list): list of trades in the series
+    """
     def __init__(self,
                  start_dt,
                  end_dt,
                  timeframe: str,
                  symbol: str = "ES",
-                 name: str = None,
+                 name: str = "",
+                 params_str: str = "",
                  ts_id: str = None,
-                 uses_drawdown: bool = False,
-                 parameters: dict = None,
+                 bt_id: str = None,
                  trades: list = None,
                  ):
 
@@ -259,10 +284,228 @@ class TradeSeries():
         self.timeframe = timeframe
         self.symbol = symbol
         self.name = name
-        self.ts_id = ts_id
-        self.uses_drawdown = uses_drawdown
+        self.params_str = params_str
+        if ts_id is None:
+            self.ts_id = "_".join([self.name,
+                                   self.params_str,
+                                   str(dhu.dt_to_epoch(dt.now())),
+                                   ])
+        else:
+            self.ts_id = ts_id
+        self.bt_id = bt_id
+        if trades is None:
+            self.trades = []
+        else:
+            self.trades = trades.copy()
+
+    def to_json(self):
+        """returns a json version of this object while normalizing
+        custom types (like datetime to string)"""
+        working = self.__dict__.copy()
+        working["trades"] = []
+        if self.trades is not None:
+            for t in self.trades:
+                working["trades"].append(str(t))
+        return json.dumps(working)
+
+    def to_clean_dict(self):
+        """Converts to JSON string then back to a python dict.  This helps
+        to normalize types (I'm looking at YOU datetime) while ensuring
+        a portable python data structure"""
+        return json.loads(self.to_json())
+
+    def __str__(self):
+        return str(self.to_clean_dict())
+
+    def __repr__(self):
+        return str(self)
+
+    def store(self,
+              store_trades: bool = False
+              ):
+        result = {"tradeseries": dhs.store_tradeseries(series=[self]),
+                  "trades": [],
+                  }
+        if store_trades and self.trades is not None:
+            for t in self.trades:
+                result["trades"].append(t.store())
+
+        return result
+
+    def add_trade(self,
+                  trade,
+                  ):
+        if not isinstance(trade, Trade):
+            raise TypeError(f"trade {trade} must be a dhtrades.Trade() obj,"
+                            f"got a {type(trade)} instead"
+                            )
+        if self.trades is None:
+            self.trades = []
+        # Associate this Trade with this Backtest
+        trade.ts_id = self.ts_id
+        self.trades.append(trade)
+
+    def sort_trades(self):
+        self.trades.sort(key=lambda t: t.open_epoch)
+
+
+class Backtest():
+    """Represents a backtest that can be run with specific parameters.  This
+    is a parent class containing core functionality and likely won't be used
+    to run backtests directly.  Subclasses should be created with updated
+    methods and parameters representing the specific rules of the backtests
+    being performed.
+
+    Attributes:
+        start_dt (str or datetime): Beginning of time period evaluated which
+            may be earlier than the first trade datetime
+        end_dt (str or datetime): End of time period evaluated
+        timeframe (str): timeframe of underlying chart trades were evaluated
+            on
+        symbol (str): The symbol or "ticker" being evaluated
+        name (str): Human friendly label representing this object
+        parameters (dict): Backtest specific parameters needed to evaluate.
+            These will vary and be handled by subclases typically.
+        bt_id (str): unique ID used for storage and analysis purposes,
+            can be used to link related TradeSeries() and Analyzer() objects
+        chart_tf (dhcharts.Chart): Underlying chart used for evaluation at
+            same tf as Backtest object.  This is typically used to evaluate
+            timeframe specific candle patterns and attributes that may be
+            needed by the specific backtest rules.
+        chart_1m (dhcharts.Chart): underlying 1m chart is tyipcally used in
+            combination with chart_tf to find specific entries and exits and
+            build Trade() objects.
+        autoload_charts (bool): Whether to automatically load chart_tf and
+            chart_1m from central storage at creation
+            at creation (default True)
+        tradeseries (list): List of TradeSeries() objects which will be
+            created when the Backtest is run
+    """
+    def __init__(self,
+                 start_dt,
+                 end_dt,
+                 timeframe: str,
+                 symbol: str,
+                 name: str,
+                 parameters: dict,
+                 bt_id: str = None,
+                 chart_tf=None,
+                 chart_1m=None,
+                 autoload_charts: bool = True,
+                 tradeseries: list = None,
+                 ):
+        self.start_dt = dhu.dt_as_str(start_dt)
+        self.end_dt = dhu.dt_as_str(end_dt)
+        if dhu.valid_timeframe(timeframe):
+            self.timeframe = timeframe
+        self.symbol = symbol
+        self.name = name
+        if bt_id is None:
+            self.bt_id = "_".join([name, str(dhu.dt_to_epoch(dt.now()))])
+        else:
+            self.bt_id = bt_id
         self.parameters = parameters
-        self.trades = trades
+        self.chart_tf = chart_tf
+        self.chart_1m = chart_1m
+        if tradeseries is None:
+            self.tradeseries = []
+        else:
+            self.tradeseries = tradeseries.copy()
+        self.autoload_charts = autoload_charts
+        if self.autoload_charts:
+            self.load_charts()
+
+    def to_json(self):
+        """returns a json version of this object while normalizing
+        custom types (like datetime to string)"""
+        working = self.__dict__.copy()
+        if self.chart_tf is not None:
+            working["chart_tf"] = self.chart_tf.to_clean_dict()
+        if self.chart_1m is not None:
+            working["chart_1m"] = self.chart_1m.to_clean_dict()
+        working["tradeseries"] = []
+        for t in self.tradeseries:
+            working["tradeseries"].append(t.ts_id)
+        return json.dumps(working)
+
+    def to_clean_dict(self):
+        """Converts to JSON string then back to a python dict.  This helps
+        to normalize types (I'm looking at YOU datetime) while ensuring
+        a portable python data structure"""
+        return json.loads(self.to_json())
+
+    def __str__(self):
+        return str(self.to_clean_dict())
+
+    def __repr__(self):
+        return str(self)
+
+    def load_charts(self):
+        """Load a Chart based on this object's datetimes, symbol, and
+        timeframe arguments.  This will be the base data for calculating
+        trades."""
+        self.chart_tf = dhc.Chart(c_timeframe=self.timeframe,
+                                  c_symbol=self.symbol,
+                                  c_start=self.start_dt,
+                                  c_end=self.end_dt,
+                                  autoload=True,
+                                  )
+        self.chart_1m = dhc.Chart(c_timeframe="1m",
+                                  c_symbol=self.symbol,
+                                  c_start=self.start_dt,
+                                  c_end=self.end_dt,
+                                  autoload=True,
+                                  )
+
+    def store(self,
+              store_tradeseries: bool = True,
+              store_trades: bool = True,
+              ):
+        result = {"backtest": dhs.store_backtests(backtests=[self]),
+                  "tradeseries": [],
+                  }
+        st = store_trades
+        if store_tradeseries and self.tradeseries is not None:
+            for s in self.tradeseries:
+                result["tradeseries"].append(s.store(store_trades=st))
+
+        return result
+
+    def add_tradeseries(self,
+                        ts,
+                        ):
+        """Add an existing tradeseries to this Backtest, typically used
+        for pulling results in from previous runs to update with new data."""
+        if not isinstance(ts, TradeSeries):
+            raise TypeError(f"ts {ts} must be a dhtrades.TradeSeries() obj, "
+                            f"got a {type(ts)} instead!"
+                            )
+        if self.tradeseries is None:
+            self.tradeseries = []
+        # Associate this TradeSeries with this Backtest
+        ts.bt_id = self.bt_id
+        self.tradeseries.append(ts)
+
+    def calculate(self):
+        """This class should be updated in subclasses to run whatever logic is
+        needed to transform the chart_* attributes into multiple TradeSeries
+        using parameters supplied.  This will vary greatly from one type of
+        backtest to another.  At the end of the run it will likely need to
+        also store the Backtest object along with it's child TradeSeries and
+        grandchild Trades."""
+        # TODO consider adding something like calculated_dt and elapsed time
+        #      data to the Backtest as well before storing, this might be
+        #      useful information later
+        pass
+
+    # TODO method to check status of this backtest by bt_id
+    #      --what did I mean by this?!?  status in storage maybe, like the
+    #        range of it's parameters and tradeseries dates?
+    # TODO method or update to calc method which will retrieve results
+    #      from prior runs and then update them.  Since there may be
+    #      many trade series involved this might get tricky, start by just
+    #      getting it working on a wipe-and-start-over-each-time basis
+    #      then I'll have to work through saving/retrieving/updating carefully
 
 
 def test_basics():
@@ -270,8 +513,8 @@ def test_basics():
     working as expected"""
     # TODO LOWPRI make these into unit tests some day
 
+    print("============================ TRADES ==============================")
     # Trades
-    print("------------------------------------------------------------------")
     t = Trade(open_dt="2025-01-02 12:00:00",
               direction="long",
               entry_price=5001.50,
@@ -313,14 +556,14 @@ def test_basics():
     print("\n\nReviewing trades in storage:")
     print(dhs.review_trades(symbol="ES"))
 
-    print("\nDeleting DELETEMEToo trades first")
+    print("\nDeleting name=DELETEMEToo trades first")
     print(dhs.delete_trades(symbol="ES",
                             field="name",
                             value="DELETEMEToo",
                             ))
     print("\nReviewing trades in storage to confirm deletion:")
     print(dhs.review_trades(symbol="ES"))
-    print("\nDeleting DELETEME to finish cleanup")
+    print("\nDeleting trades with name=DELETEME to finish cleanup")
     print(dhs.delete_trades(symbol="ES",
                             field="name",
                             value="DELETEME",
@@ -329,8 +572,167 @@ def test_basics():
     print(dhs.review_trades(symbol="ES"))
 
     # TradeSeries
+    print("========================== TRADESERIES ===========================")
+    print("Creating a TradeSeries")
+    ts = TradeSeries(start_dt="2025-01-02 00:00:00",
+                     end_dt="2025-01-05 17:59:00",
+                     timeframe="5m",
+                     symbol="ES",
+                     name="DELETEME_Testing",
+                     params_str="1p_2s",
+                     trades=None,
+                     )
+    # TODO remove static ts_ids from early testing from this list after
+    #      they get deleted, should just be the new ts_id
+    ts_id_to_delete = [ts.ts_id]
+    print(ts)
+    print("\nAdding two trades out of order")
+    ts.add_trade(Trade(open_dt="2025-01-03 12:00:00",
+                       close_dt="2025-01-03 12:15:00",
+                       direction="short",
+                       entry_price=5001.50,
+                       stop_target=4995,
+                       prof_target=5010,
+                       open_drawdown=1000,
+                       exit_price=4995,
+                       name="DELETEME",
+                       ))
+    ts.add_trade(Trade(open_dt="2025-01-02 14:10:00",
+                       close_dt="2025-01-02 15:35:00",
+                       direction="short",
+                       entry_price=5001.50,
+                       stop_target=4995,
+                       prof_target=5010,
+                       open_drawdown=1000,
+                       exit_price=4995,
+                       name="DELETEME"
+                       ))
+    print(ts.trades)
+    print("\nCurrent order of trade open_dt fields")
+    for t in ts.trades:
+        print(t.open_dt)
+    print("\nrunning .sort_trades() to fix the ordering:")
+    ts.sort_trades()
+    for t in ts.trades:
+        print(t.open_dt)
+
+    print("\nStoring TradeSeries and child Trades")
+    ts.store(store_trades=True)
+    print("\n\nReviewing tradeseries in storage:")
+    print(dhs.review_tradeseries(symbol="ES"))
+    print("\n\nReviewing trades in storage:")
+    print(dhs.review_trades(symbol="ES"))
+
+    print("\nDeleting TradeSeries objects from mongo using ts_id")
+    for t in ts_id_to_delete:
+        print(dhs.delete_tradeseries(symbol="ES",
+                                     field="ts_id",
+                                     value=t
+                                     ))
+    print("\nDeleting Trade objects from mongo using ts_id")
+    print(dhs.delete_trades(symbol="ES",
+                            field="ts_id",
+                            value=ts.ts_id,
+                            ))
+    print("\nReviewing again to confirm deletion")
+    print("\n\nReviewing tradeseries in storage:")
+    print(dhs.review_tradeseries(symbol="ES"))
+    print("\n\nReviewing trades in storage:")
+    print(dhs.review_trades(symbol="ES"))
 
     # Backtesters
+    print("======================== BACKTESTS================================")
+    print("Creating a Backtest object")
+    b = Backtest(start_dt="2025-01-02 00:00:00",
+                 end_dt="2025-01-04 00:00:00",
+                 symbol="ES",
+                 timeframe="e1h",
+                 name="DELETEME_Testing",
+                 parameters={},
+                 autoload_charts=True,
+                 )
+    print(b)
+    print("\nAdding the previous test TradeSeries to this test Backtest")
+    b.add_tradeseries(ts)
+    print(b)
+    print("\nLet's make sure our Backtest has turtles all the way down")
+    stuff = {"tradeseries": 0,
+             "trades": 0,
+             "charts": 0,
+             "tf_candles": 0,
+             "1m_candles": 0,
+             }
+    things = {"tradeseries": 1,
+              "trades": 2,
+              "charts": 2,
+              "tf_candles": 40,
+              "1m_candles": 2400,
+              }
+    if b.chart_tf is not None:
+        stuff["charts"] += 1
+        stuff["tf_candles"] += len(b.chart_tf.c_candles)
+    if b.chart_1m is not None:
+        stuff["charts"] += 1
+        stuff["1m_candles"] += len(b.chart_1m.c_candles)
+    if b.tradeseries is not None:
+        stuff["tradeseries"] += len(b.tradeseries)
+        for ts in b.tradeseries:
+            if ts.trades is not None:
+                stuff["trades"] += len(ts.trades)
+    print(f"Expected: {things}")
+    print(f"Received: {stuff}")
+    if stuff == things:
+        print("OK: They match!")
+    else:
+        print("ERROR: They don't match...")
+
+    print("------------------------------------------------------------------")
+    print("\nReviewing before storing all this junk:")
+    print("\nReviewing backtests in storage")
+    print(dhs.review_backtests(symbol="ES"))
+    print("Reviewing tradeseries in storage:")
+    print(dhs.review_tradeseries(symbol="ES"))
+    print("Reviewing trades in storage:")
+    print(dhs.review_trades(symbol="ES"))
+
+    print("\nStoring the backtest and it's child objects")
+    b.store(store_tradeseries=True,
+            store_trades=True,
+            )
+
+    print("\nReviewing after storing all this junk, we should see 1 Backtest, "
+          "1 TradeSeries, and 2 Trades all with 'DELETEME' in their names"
+          )
+    print("\nReviewing backtests in storage")
+    print(dhs.review_backtests(symbol="ES"))
+    print("Reviewing tradeseries in storage:")
+    print(dhs.review_tradeseries(symbol="ES"))
+    print("Reviewing trades in storage:")
+    print(dhs.review_trades(symbol="ES"))
+
+    print("\nAnd now we'll try to delete them all through the bt_id and ts_id "
+          "fields")
+    print(dhs.delete_backtests(symbol="ES",
+                               field="bt_id",
+                               value=b.bt_id,
+                               ))
+    for t in b.tradeseries:
+        print(dhs.delete_tradeseries(symbol="ES",
+                                     field="ts_id",
+                                     value=t.ts_id,
+                                     ))
+        print(dhs.delete_trades(symbol="ES",
+                                field="ts_id",
+                                value=t.ts_id,
+                                ))
+
+    print("\nReviewing after deletion, no 'DELETEME' objects should exist")
+    print("\nReviewing backtests in storage")
+    print(dhs.review_backtests(symbol="ES"))
+    print("Reviewing tradeseries in storage:")
+    print(dhs.review_tradeseries(symbol="ES"))
+    print("Reviewing trades in storage:")
+    print(dhs.review_trades(symbol="ES"))
 
 
 if __name__ == '__main__':
