@@ -23,6 +23,10 @@ def bot():
 
 
 class Symbol():
+    # TODO LOWPRI - go through all module files and convert everything to use
+    #      the Symbol() class.  There will be cases where I measure tick
+    #      sizes and other things that should also reference this class instead
+    #      of hardcoded values.
     def __init__(self,
                  ticker: str,
                  name: str,
@@ -50,7 +54,7 @@ class Candle():
                  c_time: str = None
                  ):
 
-        self.c_datetime = dhu.dt_as_dt(c_datetime)
+        self.c_datetime = dhu.dt_as_str(c_datetime)
         self.c_timeframe = c_timeframe
         dhu.valid_timeframe(self.c_timeframe)
         self.c_open = float(c_open)
@@ -93,11 +97,30 @@ class Candle():
         else:
             self.c_direction = 'unchanged'
 
+    def to_json(self):
+        """returns a json version of this object while normalizing
+        custom types (like datetime to string)"""
+        return json.dumps(self.__dict__)
+
+    def to_clean_dict(self):
+        """Converts to JSON string then back to a python dict.  This helps
+        to normalize types (I'm looking at YOU datetime) while ensuring
+        a portable python data structure"""
+        return json.loads(self.to_json())
+
     def __str__(self):
         return str(self.__dict__)
 
     def __repr__(self):
         return str(self.__dict__)
+
+    def pretty(self):
+        """Attempts to return an indented multiline version of this object,
+        meant to provide an easy to read output for console or other purposes.
+        """
+        return json.dumps(self.to_clean_dict(),
+                          indent=4,
+                          )
 
     def __eq__(self, other):
         if not isinstance(other, Candle):
@@ -149,26 +172,45 @@ class Chart():
         else:
             self.review_candles()
 
-    def to_json(self):
+    def to_json(self,
+                suppress_candles: bool = True,
+                ):
         """returns a json version of this object while normalizing
         custom types (like datetime to string)"""
         working = self.__dict__.copy()
-        working["c_candles"] = "Redacted for sanity"
-        working["c_start"] = dhu.dt_as_str(self.c_start)
-        working["c_end"] = dhu.dt_as_str(self.c_end)
+        if suppress_candles:
+            clean_cans = ["Candles suppressed for output sanity"]
+        else:
+            clean_cans = []
+            for c in working["c_candles"]:
+                clean_cans.append(c.to_clean_dict())
+        working["c_candles"] = clean_cans
         return json.dumps(working)
 
-    def to_clean_dict(self):
+    def to_clean_dict(self,
+                      suppress_candles: bool = True,
+                      ):
         """Converts to JSON string then back to a python dict.  This helps
         to normalize types (I'm looking at YOU datetime) while ensuring
         a portable python data structure"""
-        return json.loads(self.to_json())
+        return json.loads(self.to_json(suppress_candles=suppress_candles))
 
     def __str__(self):
         return str(self.to_clean_dict())
 
     def __repr__(self):
         return str(self)
+
+    def pretty(self,
+               suppress_candles: bool = True,
+               ):
+        """Attempts to return an indented multiline version of this object,
+        meant to provide an easy to read output for console or other purposes.
+        """
+        return json.dumps(self.to_clean_dict(
+            suppress_candles=suppress_candles),
+            indent=4,
+            )
 
     def sort_candles(self):
         self.c_candles.sort(key=lambda c: c.c_datetime)
@@ -239,8 +281,8 @@ class Event():
                  tags: list = None,
                  notes: str = "",
                  ):
-        self.start_dt = dhu.dt_as_dt(start_dt)
-        self.end_dt = dhu.dt_as_dt(end_dt)
+        self.start_dt = dhu.dt_as_str(start_dt)
+        self.end_dt = dhu.dt_as_str(end_dt)
         self.symbol = symbol
         if self.symbol != "ES":
             raise ValueError("Only ES is currently supported for Event.symbol")
@@ -252,11 +294,30 @@ class Event():
         self.start_epoch = dhu.dt_to_epoch(self.start_dt)
         self.end_epoch = dhu.dt_to_epoch(self.end_dt)
 
+    def to_json(self):
+        """returns a json version of this object while normalizing
+        custom types (like datetime to string)"""
+        return json.dumps(self.__dict__)
+
+    def to_clean_dict(self):
+        """Converts to JSON string then back to a python dict.  This helps
+        to normalize types (I'm looking at YOU datetime) while ensuring
+        a portable python data structure"""
+        return json.loads(self.to_json())
+
     def __str__(self):
-        return str(self.__dict__)
+        return str(self.to_clean_dict())
 
     def __repr__(self):
         return str(self)
+
+    def pretty(self):
+        """Attempts to return an indented multiline version of this object,
+        meant to provide an easy to read output for console or other purposes.
+        """
+        return json.dumps(self.to_clean_dict(),
+                          indent=4,
+                          )
 
     def store(self):
         return dhs.store_event(self)
@@ -354,6 +415,31 @@ class Day():
 
         # Run through the 1m chart to further develop attributes
         self.recalc_from_1m()
+
+    def to_json(self):
+        """returns a json version of this object while normalizing
+        custom types (like datetime to string)"""
+        return json.dumps(self.__dict__)
+
+    def to_clean_dict(self):
+        """Converts to JSON string then back to a python dict.  This helps
+        to normalize types (I'm looking at YOU datetime) while ensuring
+        a portable python data structure"""
+        return json.loads(self.to_json())
+
+    def __str__(self):
+        return str(self.to_clean_dict())
+
+    def __repr__(self):
+        return str(self)
+
+    def pretty(self):
+        """Attempts to return an indented multiline version of this object,
+        meant to provide an easy to read output for console or other purposes.
+        """
+        return json.dumps(self.to_clean_dict(),
+                          indent=4,
+                          )
 
     def recalc_from_1m(self):
         # Ensure we have a 1m chart or fail out
@@ -486,6 +572,14 @@ class IndicatorDataPoint():
     def __repr__(self):
         return str(self)
 
+    def pretty(self):
+        """Attempts to return an indented multiline version of this object,
+        meant to provide an easy to read output for console or other purposes.
+        """
+        return json.dumps(self.to_clean_dict(),
+                          indent=4,
+                          )
+
     def __eq__(self, other):
         # Testing isinstance fails due to namespace differences when running
         # this as a script and it's a rabbithole to fix.  Since other types
@@ -562,24 +656,55 @@ class Indicator():
             self.ind_id = ind_id
         self.class_name = "Indicator"
 
-    def to_json(self):
+    def to_json(self,
+                suppress_datapoints: bool = True,
+                suppress_chart_candles: bool = True,
+                ):
         """returns a json version of this object while normalizing
         custom types (like datetime to string).
         """
         working = self.__dict__.copy()
-        working["candle_chart"] = working["candle_chart"].to_clean_dict()
-        if working["datapoints"] is not None:
-            clean_datapoints = []
+        working["candle_chart"] = working["candle_chart"].to_clean_dict(
+                suppress_candles=suppress_chart_candles,
+                )
+        if suppress_datapoints:
+            clean_dps = ["Datapoints suppressed for output sanity"]
+        else:
+            clean_dps = []
             for d in working["datapoints"]:
-                clean_datapoints.append(d.to_clean_dict())
-            working["datapoints"] = clean_datapoints
+                clean_dps.append(d.to_clean_dict())
+        working["datapoints"] = clean_dps
+
         return json.dumps(working)
 
-    def to_clean_dict(self):
+    def to_clean_dict(self,
+                      suppress_datapoints: bool = True,
+                      suppress_chart_candles: bool = True,
+                      ):
         """Converts to JSON string then back to a python dict.  This helps
         to normalize types (I'm looking at YOU datetime) while ensuring
         a portable python data structure"""
-        return json.loads(self.to_json())
+        return json.loads(self.to_json(
+                          suppress_datapoints=suppress_datapoints,
+                          suppress_chart_candles=suppress_chart_candles,
+                          ))
+
+    def pretty(self,
+               suppress_datapoints: bool = True,
+               suppress_chart_candles: bool = True,
+               ):
+        """Attempts to return an indented multiline version of this object,
+        meant to provide an easy to read output for console or other purposes.
+        Optionally suppress_datapoints to reduce output size when not needed.
+        """
+        working = self.to_clean_dict(
+                suppress_datapoints=suppress_datapoints,
+                suppress_chart_candles=suppress_chart_candles,
+                )
+
+        return json.dumps(working,
+                          indent=4,
+                          )
 
     def __str__(self):
         return str(self.get_info())
@@ -587,22 +712,31 @@ class Indicator():
     def __repr__(self):
         return str(self)
 
-    def get_info(self):
+    def get_info(self,
+                 pretty: bool = False,
+                 ):
         # TODO add earliest and latest datapoints info to this
         #      see dhmongo review_candles() for example
-        return {"ind_id": self.ind_id,
-                "name": self.name,
-                "description": self.description,
-                "timeframe": self.timeframe,
-                "trading_hours": self.trading_hours,
-                "symbol": self.symbol,
-                "calc_version": self.calc_version,
-                "calc_details": self.calc_details,
-                "start_dt": self.start_dt,
-                "end_dt": self.end_dt,
-                "parameters": self.parameters,
-                "datapoints": len(self.datapoints)
-                }
+
+        output = {"ind_id": self.ind_id,
+                  "name": self.name,
+                  "description": self.description,
+                  "timeframe": self.timeframe,
+                  "trading_hours": self.trading_hours,
+                  "symbol": self.symbol,
+                  "calc_version": self.calc_version,
+                  "calc_details": self.calc_details,
+                  "start_dt": self.start_dt,
+                  "end_dt": self.end_dt,
+                  "parameters": self.parameters,
+                  "datapoints_count": len(self.datapoints)
+                  }
+        if pretty:
+            return json.dumps(output,
+                              indent=4,
+                              )
+        else:
+            return output
 
     def load_underlying_chart(self):
         """Load the underlying candle chart from central storage"""
@@ -907,8 +1041,77 @@ class IndicatorEMA(Indicator):
 if __name__ == '__main__':
     # TODO LOWPRI these should be unit tests or something similar eventually
     # Run a few tests to confirm desired functionality
-    # Testing subclass mechanics and retrieval of real data
-    print("\n################################################")
+
+    # Test pretty output which also confirms json and clean_dict working
+
+    print("\n######################### OUTPUTS ###########################")
+    print("All objects should print 'pretty' which confirms .to_json(), "
+          ".to_clean_dict(), and .pretty() methods all work properly"
+          )
+    print("\n---------------------------- CANDLE ---------------------------")
+    out_candle = Candle(c_datetime="2025-01-02 12:00:00",
+                        c_timeframe="1m",
+                        c_open=5000,
+                        c_high=5007.75,
+                        c_low=4995.5,
+                        c_close=5002,
+                        c_volume=1501,
+                        c_symbol="ES",
+                        )
+    print(out_candle.pretty())
+    print("\n----------------------------- CHART ----------------------------")
+    out_chart = Chart(c_timeframe="1m",
+                      c_symbol="ES",
+                      c_start="2025-01-02 12:00:00",
+                      c_end="2025-01-02 12:10:00",
+                      autoload=False,
+                      )
+    out_chart.add_candle(out_candle)
+    print("Without chart candles")
+    print(out_chart.pretty())
+    print("With candles")
+    print(out_chart.pretty(suppress_candles=False))
+    print("\n----------------------------- EVENT ----------------------------")
+    out_event = Event(start_dt="2025-01-02 12:00:00",
+                      end_dt="2025-01-02 18:00:00",
+                      symbol="ES",
+                      category="Closed",
+                      tags=["holiday"],
+                      notes="Test Holiday",
+                      )
+    print(out_event.pretty())
+    print("\n------------------- INDICATOR DATAPOINT ------------------------")
+    out_dp = IndicatorDataPoint(dt="2025-01-02 12:00:00",
+                                value=100,
+                                ind_id="ES1mTESTSMA-DELETEME9",
+                                )
+    print(out_dp.pretty())
+    print("\n------------------------- INDICATOR ----------------------------")
+    out_ind = IndicatorSMA(name="TestSMA-DELETEME",
+                           timeframe="5m",
+                           trading_hours="eth",
+                           symbol="ES",
+                           description="yadda",
+                           calc_version="yoda",
+                           calc_details="yeeta",
+                           start_dt="2025-01-08 09:30:00",
+                           end_dt="2025-01-08 11:30:00",
+                           parameters={"length": 9,
+                                       "method": "close"
+                                       },
+                           candle_chart=out_chart,
+                           )
+    out_ind.datapoints = [out_dp]
+    print("Without chart candles or datapoints")
+    print(out_ind.pretty())
+    print("With chart candles and datapoints")
+    print(out_ind.pretty(suppress_datapoints=False,
+                         suppress_chart_candles=False,
+                         ))
+    print("\nIndicator.get_info(pretty=True):")
+    print(out_ind.get_info(pretty=True))
+    # Indicators
+    print("\n######################### INDICATORS ###########################")
     print("Building 5m9sma for 2025-01-08 9:30am-11:30am")
     itest = IndicatorSMA(name="TestSMA-DELETEME",
                          timeframe="5m",
@@ -948,7 +1151,9 @@ if __name__ == '__main__':
                          )
     itest.load_underlying_chart()
     itest.calculate()
-    print(itest.get_info())
+    print("\n.get_info():")
+    print("\n------------------------------------------------")
+    print("Validate candles as expected")
     print(f"length of candle_chart: {len(itest.candle_chart.c_candles)}")
     expected = [{'dt': '2025-01-10 15:00:00', 'value': 5890.25,
                  'ind_id': 'ESethe1hTestEMA-DELETEME', 'epoch': 1736539200},

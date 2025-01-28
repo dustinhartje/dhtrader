@@ -144,6 +144,15 @@ class Trade():
 
         return json.loads(self.to_json())
 
+    def pretty(self):
+        """Attempts to return an indented multiline version of this object,
+        meant to provide an easy to read output for console or other purposes.
+        Optionally suppress_datapoints to reduce output size when not needed.
+        """
+        return json.dumps(self.to_clean_dict(),
+                          indent=4,
+                          )
+
     def store(self):
         """Store this trade in central storage"""
 
@@ -298,27 +307,46 @@ class TradeSeries():
         else:
             self.trades = trades.copy()
 
-    def to_json(self):
+    def to_json(self,
+                suppress_trades: bool = True,
+                ):
         """returns a json version of this object while normalizing
         custom types (like datetime to string)"""
         working = self.__dict__.copy()
-        working["trades"] = []
-        if self.trades is not None:
+        clean_trades = []
+        if suppress_trades:
+            clean_trades = ["Trades suppressed for output sanity"]
+        else:
             for t in self.trades:
-                working["trades"].append(str(t))
+                clean_trades.append(t.to_clean_dict())
+        working["trades"] = clean_trades
+
         return json.dumps(working)
 
-    def to_clean_dict(self):
+    def to_clean_dict(self,
+                      suppress_trades: bool = True,
+                      ):
         """Converts to JSON string then back to a python dict.  This helps
         to normalize types (I'm looking at YOU datetime) while ensuring
         a portable python data structure"""
-        return json.loads(self.to_json())
+        return json.loads(self.to_json(suppress_trades=suppress_trades))
 
     def __str__(self):
         return str(self.to_clean_dict())
 
     def __repr__(self):
         return str(self)
+
+    def pretty(self,
+               suppress_trades: bool = True,
+               ):
+        """Attempts to return an indented multiline version of this object,
+        meant to provide an easy to read output for console or other purposes.
+        Optionally suppress_datapoints to reduce output size when not needed.
+        """
+        return json.dumps(self.to_clean_dict(suppress_trades=suppress_trades),
+                          indent=4,
+                          )
 
     def store(self,
               store_trades: bool = False
@@ -339,8 +367,6 @@ class TradeSeries():
             raise TypeError(f"trade {trade} must be a dhtrades.Trade() obj,"
                             f"got a {type(trade)} instead"
                             )
-        if self.trades is None:
-            self.trades = []
         # Associate this Trade with this Backtest
         trade.ts_id = self.ts_id
         self.trades.append(trade)
@@ -415,30 +441,79 @@ class Backtest():
         if self.autoload_charts:
             self.load_charts()
 
-    def to_json(self):
+    def to_json(self,
+                suppress_tradeseries: bool = True,
+                suppress_trades: bool = True,
+                suppress_charts: bool = True,
+                suppress_chart_candles: bool = True,
+                ):
         """returns a json version of this object while normalizing
         custom types (like datetime to string)"""
         working = self.__dict__.copy()
-        if self.chart_tf is not None:
-            working["chart_tf"] = self.chart_tf.to_clean_dict()
-        if self.chart_1m is not None:
-            working["chart_1m"] = self.chart_1m.to_clean_dict()
-        working["tradeseries"] = []
-        for t in self.tradeseries:
-            working["tradeseries"].append(t.ts_id)
+        if suppress_charts:
+            working["chart_tf"] = "Charts suppressed for output sanity"
+            working["chart_1m"] = "Charts suppressed for output sanity"
+        else:
+            if self.chart_tf is not None:
+                working["chart_tf"] = self.chart_tf.to_clean_dict(
+                        suppress_candles=suppress_chart_candles,
+                        )
+            if self.chart_1m is not None:
+                working["chart_1m"] = self.chart_1m.to_clean_dict(
+                        suppress_candles=suppress_chart_candles,
+                        )
+        if suppress_tradeseries:
+            clean_tradeseries = ["Tradeseries suppress for output sanity"]
+        else:
+            clean_tradeseries = []
+            for t in self.tradeseries:
+                clean_tradeseries.append(t.to_clean_dict(
+                    suppress_trades=suppress_trades,
+                    ))
+        working["tradeseries"] = clean_tradeseries
+
         return json.dumps(working)
 
-    def to_clean_dict(self):
+    def to_clean_dict(self,
+                      suppress_tradeseries: bool = True,
+                      suppress_trades: bool = True,
+                      suppress_charts: bool = True,
+                      suppress_chart_candles: bool = True,
+                      ):
         """Converts to JSON string then back to a python dict.  This helps
         to normalize types (I'm looking at YOU datetime) while ensuring
         a portable python data structure"""
-        return json.loads(self.to_json())
+        return json.loads(self.to_json(
+            suppress_tradeseries=suppress_tradeseries,
+            suppress_trades=suppress_trades,
+            suppress_charts=suppress_charts,
+            suppress_chart_candles=suppress_chart_candles,
+            ))
 
     def __str__(self):
         return str(self.to_clean_dict())
 
     def __repr__(self):
         return str(self)
+
+    def pretty(self,
+               suppress_tradeseries: bool = True,
+               suppress_trades: bool = True,
+               suppress_charts: bool = True,
+               suppress_chart_candles: bool = True,
+               ):
+        """Attempts to return an indented multiline version of this object,
+        meant to provide an easy to read output for console or other purposes.
+        Optionally suppress_datapoints to reduce output size when not needed.
+        """
+        return json.dumps(self.to_clean_dict(
+            suppress_tradeseries=suppress_tradeseries,
+            suppress_trades=suppress_trades,
+            suppress_charts=suppress_charts,
+            suppress_chart_candles=suppress_chart_candles,
+            ),
+            indent=4,
+            )
 
     def load_charts(self):
         """Load a Chart based on this object's datetimes, symbol, and
@@ -512,7 +587,52 @@ def test_basics():
     """Basics tests used during development and to confirm simple functions
     working as expected"""
     # TODO LOWPRI make these into unit tests some day
-
+    print("\n========================= OUTPUTS ===========================")
+    print("All objects should print 'pretty' which confirms .to_json(), "
+          ".to_clean_dict(), and .pretty() methods all work properly"
+          )
+    print("\n---------------------------- TRADE ---------------------------")
+    out_trade = Trade(open_dt="2025-01-02 12:00:00",
+                      direction="long",
+                      entry_price=5001.50,
+                      stop_target=4995,
+                      prof_target=5010,
+                      open_drawdown=1000,
+                      name="DELETEME"
+                      )
+    print(out_trade.pretty())
+    print("\n-------------------------- TRADESERIES -------------------------")
+    out_ts = TradeSeries(start_dt="2025-01-02 00:00:00",
+                         end_dt="2025-01-05 17:59:00",
+                         timeframe="5m",
+                         symbol="ES",
+                         name="DELETEME_Testing",
+                         params_str="1p_2s",
+                         trades=None,
+                         )
+    out_ts.add_trade(out_trade)
+    print("Without trades")
+    print(out_ts.pretty())
+    print("With trades")
+    print(out_ts.pretty(suppress_trades=False))
+    print("\n--------------------------- BACKTEST --------------------------")
+    out_bt = Backtest(start_dt="2025-01-02 12:00:00",
+                      end_dt="2025-01-02 12:01:00",
+                      symbol="ES",
+                      timeframe="1m",
+                      name="DELETEME_Testing",
+                      parameters={},
+                      autoload_charts=True,
+                      )
+    out_bt.add_tradeseries(out_ts)
+    print("Without tradeseries, trades, charts, and candles")
+    print(out_bt.pretty())
+    print("With tradeseries, trades, charts, and candles")
+    print(out_bt.pretty(suppress_tradeseries=False,
+                        suppress_trades=False,
+                        suppress_charts=False,
+                        suppress_chart_candles=False,
+                        ))
     print("============================ TRADES ==============================")
     # Trades
     t = Trade(open_dt="2025-01-02 12:00:00",
@@ -531,11 +651,11 @@ def test_basics():
           "-$325 and drawdown_impact == -700.")
     t.close(price=4995, dt="2025-01-02 12:45:00")
     print(t)
-    print("Storing trade")
+    print("\nStoring trade")
     print(t.store())
 
     print("------------------------------------------------------------------")
-    t = Trade(open_dt="2025-01-02 12:00:00",
+    t = Trade(open_dt="2025-01-02 12:01:00",
               close_dt="2025-01-02 12:15:00",
               direction="short",
               entry_price=5001.50,
@@ -550,8 +670,8 @@ def test_basics():
     print("\nUpdating drawdown_impact")
     t.update_drawdown(price_seen=5009)
     print(t)
-    print("Storing trade")
-    t.store()
+    print("\nStoring trade")
+    print(t.store())
 
     print("\n\nReviewing trades in storage:")
     print(dhs.review_trades(symbol="ES"))
@@ -582,8 +702,6 @@ def test_basics():
                      params_str="1p_2s",
                      trades=None,
                      )
-    # TODO remove static ts_ids from early testing from this list after
-    #      they get deleted, should just be the new ts_id
     ts_id_to_delete = [ts.ts_id]
     print(ts)
     print("\nAdding two trades out of order")
@@ -617,7 +735,7 @@ def test_basics():
         print(t.open_dt)
 
     print("\nStoring TradeSeries and child Trades")
-    ts.store(store_trades=True)
+    print(ts.store(store_trades=True))
     print("\n\nReviewing tradeseries in storage:")
     print(dhs.review_tradeseries(symbol="ES"))
     print("\n\nReviewing trades in storage:")
@@ -655,7 +773,9 @@ def test_basics():
     print("\nAdding the previous test TradeSeries to this test Backtest")
     b.add_tradeseries(ts)
     print(b)
-    print("\nLet's make sure our Backtest has turtles all the way down")
+    print("\nLet's make sure our Backtest has turtles all the way down, "
+          "i.e. complete set of child objects"
+          )
     stuff = {"tradeseries": 0,
              "trades": 0,
              "charts": 0,
