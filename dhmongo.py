@@ -375,6 +375,26 @@ def get_indicator_datapoints(ind_id: str,
     return list(result)
 
 
+def store_indicator_datapoints(datapoints: list,
+                               collection: str,
+                               ):
+    """Store one or more IndicatorDatapoint objects in mongo"""
+    c = db[collection]
+    result = []
+    for d in datapoints:
+        r = c.find_one_and_replace({"ind_id": d["ind_id"],
+                                    "dt": d["dt"],
+                                    "epoch": d["epoch"],
+                                    },
+                                   d,
+                                   new=True,
+                                   upsert=True,
+                                   )
+        result.append(r)
+
+    return result
+
+
 def review_indicators(meta_collection: str,
                       dp_collection: str,
                       ):
@@ -408,114 +428,17 @@ def review_indicators(meta_collection: str,
     return result
 
 
-def store_indicator(ind_id: str,
-                    name: str,
-                    description: str,
-                    timeframe: str,
-                    trading_hours: str,
-                    symbol: str,
-                    calc_version: str,
-                    calc_details: str,
-                    parameters: dict,
-                    datapoints: list,
+def store_indicator(indicator: dict,
                     meta_collection: str,
-                    dp_collection: str,
-                    overwrite_dp: bool = False,
                     ):
-    """Store indicator meta and datapoints in mongo.  overwrite_dp (default
-    false) forces wipe and recreation of all stored datapoints.  This can take
-    2+ hours for a year of data at 5 minute granularity so use only for new
-    indicators or in dire circumstances."""
-    # Insert the datapoints per last entry in
-    # https://stackoverflow.com/questions/18371351/python-pymongo-
-    # insert-and-update-documents
-    c = db[dp_collection]
-    result_dps = []
-    op_timer = dhu.OperationTimer(name="Indicator Storage Job")
-    count_dps = {"written": 0, "unchanged": 0}
-    if overwrite_dp:
-        # Delete any existing datapoints and meta record
-        delete_indicator(ind_id=ind_id,
-                         meta_collection=meta_collection,
-                         dp_collection=dp_collection,
-                         )
-        # We'll insert all datapoints
-        new_dps = datapoints
-    else:
-        # Pull all stored datapoints and put them in a dict so we can
-        # reference a key for comparison to isolate new and changed only
-        stored_dps = get_indicator_datapoints(ind_id=ind_id,
-                                              dp_collection=dp_collection,
-                                              )
-        prev_dps = {}
-        for d in stored_dps:
-            prev_dps[d["dt"]] = d
-            # remove the _id field added by mongo or they fail comparison
-            prev_dps[d["dt"]].pop("_id")
-        # Build a list of only those that are new or different to be stored
-        # and a list that we're keeping unchanged
-        new_dps = []
-        same_dps = []
-        for d in datapoints:
-            if d["dt"] in prev_dps.keys():
-                if d == prev_dps[d["dt"]]:
-                    same_dps.append(d)
-                else:
-                    new_dps.append(d)
-            else:
-                new_dps.append(d)
-        count_dps["unchanged"] = len(same_dps)
-
-    # Insert all datapoints we identified for updates
-    # Observations of storage speed:
-    # 220 docs/min
-    # 250 docs/min
-    # 300 docs/min
-    # 620 docs/min did I miscalc this one or does it just vary a lot?
-    eta_mins = round(len(new_dps)/250)
-    eta_dt = dhu.dt_as_str(dt.now() + timedelta(minutes=eta_mins))
-    print(f"{dhu.dt_as_str(dt.now())} - Storing {len(new_dps)} indicator "
-          "datapoints"
-          )
-    print(f"Estimating completion in {eta_mins} minutes at {eta_dt}")
-    for d in new_dps:
-        # TODO LOWPRI review and test with find_one_and_replace, not sure why
-        #      I did update_many here?  Is it possible to do update_many
-        #      and still maintain upsert and list of unique fields to match
-        #      when providing an iterable instead of looping through each?
-        #      Low priority as it's working this way, it's probably slow
-        #      but update_many hasn't been obviously faster elsewhere
-        r = c.update_many({'ind_id': d['ind_id'],
-                           'dt': d['dt'],
-                           'epoch': d['epoch']},
-                          {"$set": {"value": d['value']}},
-                          upsert=True)
-        result_dps.append(r)
-    count_dps["written"] = len(result_dps)
-
-    # Now update or create the meta record for this unique ind_id
-    meta_doc = {"ind_id": ind_id,
-                "name": name,
-                "description": description,
-                "timeframe": timeframe,
-                "trading_hours": trading_hours,
-                "symbol": symbol,
-                "calc_version": calc_version,
-                "calc_details": calc_details,
-                "parameters": parameters,
-                }
+    """Store indicator meta in mongo"""
     c = db[meta_collection]
     # upsert=True updates existing or creates new if not found
-    result_meta = c.find_one_and_replace({"ind_id": ind_id},
-                                         meta_doc,
-                                         new=True,
-                                         upsert=True)
-    op_timer.stop()
-    result = {"meta": result_meta,
-              "datapoints": result_dps,
-              "datapoints_count": count_dps,
-              "elapsed": op_timer,
-              }
+    result = c.find_one_and_replace({"ind_id": indicator["ind_id"]},
+                                    indicator,
+                                    new=True,
+                                    upsert=True,
+                                    )
 
     return result
 

@@ -197,11 +197,34 @@ def review_indicators(meta_collection: str = COLL_IND_META,
     return result
 
 
+def get_indicator(ind_id: str,
+                  meta_collection: str = COLL_IND_META,
+                  autoload_datapoints: bool = True,
+                  ):
+    """Returns an indicator based on ind_id (which should be unique) and
+    optionally (default=True) autoloads it's datapoints for the given range
+    of earliest_dt to latest_dt
+    """
+    i = dhm.get_indicator(ind_id=ind_id,
+                          meta_collection=meta_collection,
+                          )
+    print(i)
+    # TODO update class_name for existing records in mongo
+    # TODO use class_name to determine which subclass to load into
+    result = dhc.Indicator()
+    if autoload_datapoints:
+        result.load_datapoints()
+
+    return result
+
+
 def get_indicator_datapoints(ind_id: str,
                              dp_collection: str = COLL_IND,
                              earliest_dt: str = None,
                              latest_dt: str = None,
                              ):
+    """Returns a list of IndicatorDatapoint() objects for the given timeframe
+    and ind_id"""
     working = dhm.get_indicator_datapoints(ind_id=ind_id,
                                            dp_collection=dp_collection,
                                            earliest_dt=earliest_dt,
@@ -218,43 +241,83 @@ def get_indicator_datapoints(ind_id: str,
     return result
 
 
-def store_indicator(ind_id: str,
-                    name: str,
-                    description: str,
-                    timeframe: str,
-                    trading_hours: str,
-                    symbol: str,
-                    calc_version: str,
-                    calc_details: str,
-                    parameters: dict,
-                    datapoints: list,
+def store_indicator_datapoints(datapoints: list,
+                               collection: str = COLL_IND,
+                               skip_dupes: bool = True,
+                               ):
+    """Store one or more IndicatorDatapoint() objects in central storage"""
+    store_dps = []
+    r_skipped = []
+    for d in datapoints:
+        if skip_dupes:
+            stored = get_indicator_datapoints(ind_id=d.ind_id,
+                                              earliest_dt=d.dt,
+                                              latest_dt=d.dt,
+                                              )
+            # If all is well we should get 0 or 1 result in the list
+            if len(stored) == 0:
+                checker = stored
+            elif len(stored) == 1:
+                checker = stored[0]
+            else:
+                msg = ("Possible duplicate found, needs a human to review."
+                       "There should be 0 or 1 result per dt or these can't "
+                       f"be trusted!  Looking for {d} and found {stored}"
+                       )
+                raise Exception(msg)
+            # If the stored datapoint is the same we can skip it, else store it
+            if d == checker:
+                r_skipped.append(d.to_clean_dict())
+            else:
+                store_dps.append(d.to_clean_dict())
+        else:
+            store_dps.append(d.to_clean_dict())
+
+    op_timer = dhu.OperationTimer(name="Indicator Datapoints Storage Job")
+    r_stored = dhm.store_indicator_datapoints(datapoints=store_dps,
+                                              collection=collection,
+                                              )
+    op_timer.stop()
+    result = {"skipped": r_skipped,
+              "stored": r_stored,
+              "elapsed": op_timer,
+              }
+
+    return result
+
+
+def store_indicator(indicator,
                     meta_collection: str = COLL_IND_META,
                     dp_collection: str = COLL_IND,
-                    overwrite_dp: bool = False,
+                    store_datapoints: bool = True,
                     ):
     """Store indicator meta and datapoints in central storage.  Does not
     overwrite existing datapoints unless overwrite_dp == True"""
-    # TODO I really should set this up to receive an Indicator object
-    #      and break it down rather than indivdiual params.  That was the
-    #      whole point of having two files...
+    op_timer = dhu.OperationTimer(name="Indicator Storage Job")
+    # First store/replace the indicator meta doc itself
+    i = indicator.to_clean_dict()
+    i["datapoints"] = len(i["datapoints"])
+    result_ind = dhm.store_indicator(i,
+                                     meta_collection=meta_collection,
+                                     )
+    # Then work on datapoints if asked
+    if store_datapoints:
+        result_dps = []
+        dps_skipped = 0
+        dps_stored = 0
+        for d in indicator.datapoints:
+            s = d.store()
+            result_dps.append(s)
+            dps_skipped += len(s["skipped"])
+            dps_stored += len(s["stored"])
+    op_timer.stop()
 
-    # make a working copy to contain jsonified datapoints
-    working_datapoints = []
-    for d in datapoints:
-        working_datapoints.append(d.to_clean_dict())
-    result = dhm.store_indicator(ind_id=ind_id,
-                                 name=name,
-                                 description=description,
-                                 timeframe=timeframe,
-                                 trading_hours=trading_hours,
-                                 symbol=symbol,
-                                 calc_version=calc_version,
-                                 calc_details=calc_details,
-                                 parameters=parameters,
-                                 datapoints=working_datapoints,
-                                 meta_collection=meta_collection,
-                                 dp_collection=dp_collection,
-                                 )
+    result = {"indicator": result_ind,
+              "datapoints_stored": dps_stored,
+              "datapoints_skipped": dps_skipped,
+              "elapsed": op_timer,
+              "datapoints": result_dps,
+              }
 
     return result
 
@@ -576,6 +639,7 @@ def test_basics():
     # TODO consider converting these into unit tests some day
     # https://docs.python.org/3/library/unittest.html
 
+    print("=========================== CANDLES ==============================")
     # Test basic candle storing functionality
     print("\nStoring 2 test candles")
     tc1 = dhc.Candle(c_datetime="2024-02-10 09:20:00",
@@ -662,6 +726,7 @@ def test_basics():
     for k, v in integrity["missing_count_by_hour"].items():
         print(k, v)
 
+    print("============================ EVENTS ==============================")
     # Test event storage and retrieval
     print("\n----------------------------------------------------------------")
     print("\nTesting event retrieval, assumes some ES events in storage")
@@ -697,7 +762,10 @@ def test_basics():
                                        )
             print(integrity)
 
+    print("========================== INDICATORS ============================")
     # Review indicators in storage
+    # NOTE - There are a number of comprehensive Indicators tests in dhcharts,
+    #        no need to duplicate them here
     print("\n----------------------------------------------------------------")
     print("Reviewing stored indicators:\n\n")
     indicators = review_indicators()

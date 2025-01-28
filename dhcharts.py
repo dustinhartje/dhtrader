@@ -458,7 +458,7 @@ class IndicatorDataPoint():
                  ind_id: str,
                  epoch: int = None
                  ):
-        self.dt = dt
+        self.dt = dhu.dt_as_str(dt)
         self.value = value
         self.ind_id = ind_id
         if epoch is None:
@@ -468,12 +468,6 @@ class IndicatorDataPoint():
     """Simple class to handle time series datapoints for indicators.  I might
     swap this out for an even more generic TSDataPoint or similar if I find
     more uses for time series beyond this."""
-    # TODO LOWPRI consider a store() method for these objects directly instead
-    #      of the methodology currently used which is done through the
-    #      Indicator().store() method by looping through them during dhstore
-    #      and dhmongo functions.  Doing this within the datapoint objects
-    #      would match conventions elsewhere better, though insert_many in the
-    #      containing Indicator would probably be best performance so... hmmm
 
     def to_json(self):
         """returns a json version of this object while normalizing
@@ -492,6 +486,32 @@ class IndicatorDataPoint():
     def __repr__(self):
         return str(self)
 
+    def __eq__(self, other):
+        # Testing isinstance fails due to namespace differences when running
+        # this as a script and it's a rabbithole to fix.  Since other types
+        # are very unlikely to have these same attributes it's reasonably safe
+        # to just treat any non-Exception result with matching values as good.
+        # For example it gets an Exception when comparing to an empty list
+        # which is returned from storage when there is no matching datapoint.
+        # TODO this can likely be restored if and when I move tests out of
+        # __main__ in favor of unit tests, and stop running this as a script.
+        # if not isinstance(other, IndicatorDataPoint):
+        #     print("wrong type")
+        #     return False
+        try:
+            return (self.dt == other.dt and
+                    self.value == other.value and
+                    self.ind_id == other.ind_id and
+                    self.epoch == other.epoch)
+        except Exception:
+            return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def store(self):
+        return dhs.store_indicator_datapoints(datapoints=[self])
+
 
 class Indicator():
     def __init__(self,
@@ -505,7 +525,8 @@ class Indicator():
                  start_dt=bot(),
                  end_dt=None,
                  candle_chart=None,
-                 parameters={}
+                 datapoints: list = None,
+                 parameters={},
                  ):
         """Base class for indicators.  Names should be short and simple
         abbreviations as they are used in tagging and storage, think like
@@ -530,8 +551,27 @@ class Indicator():
         if self.candle_chart is None:
             self.load_underlying_chart()
         self.parameters = parameters
-        self.datapoints = None
         self.ind_id = (f"{self.symbol}{self.timeframe}{self.name}")
+        self.class_name = "Indicator"
+
+    def to_json(self):
+        """returns a json version of this object while normalizing
+        custom types (like datetime to string).
+        """
+        working = self.__dict__.copy()
+        working["candle_chart"] = working["candle_chart"].to_clean_dict()
+        if working["datapoints"] is not None:
+            clean_datapoints = []
+            for d in working["datapoints"]:
+                clean_datapoints.append(d.to_clean_dict())
+            working["datapoints"] = clean_datapoints
+        return json.dumps(working)
+
+    def to_clean_dict(self):
+        """Converts to JSON string then back to a python dict.  This helps
+        to normalize types (I'm looking at YOU datetime) while ensuring
+        a portable python data structure"""
+        return json.loads(self.to_json())
 
     def __str__(self):
         return str(self.get_info())
@@ -582,20 +622,15 @@ class Indicator():
 
         return result
 
-    def store(self):
+    def store(self,
+              store_datapoints: bool = True,
+              ):
         """uses DHStore functionality to store metadata and time series
-        datapoints in the default storage system (probably mongo)"""
-        result = dhs.store_indicator(ind_id=self.ind_id,
-                                     name=self.name,
-                                     description=self.description,
-                                     timeframe=self.timeframe,
-                                     trading_hours=self.trading_hours,
-                                     symbol=self.symbol,
-                                     calc_version=self.calc_version,
-                                     calc_details=self.calc_details,
-                                     parameters=self.parameters,
-                                     datapoints=self.datapoints,
-                                     )
+        datapoints into central storage
+        """
+        return dhs.store_indicator(self,
+                                   store_datapoints=store_datapoints,
+                                   )
 
         return result
         # TODO method to populate datapoints from storage, which should then
@@ -628,6 +663,7 @@ class IndicatorSMA(Indicator):
                  end_dt=None,
                  candle_chart=None,
                  name="SMA",
+                 datapoints=None,
                  parameters={},
                  ):
         super().__init__(name=name,
@@ -640,6 +676,7 @@ class IndicatorSMA(Indicator):
                          start_dt=start_dt,
                          end_dt=end_dt,
                          candle_chart=candle_chart,
+                         datapoints=datapoints,
                          parameters=parameters,
                          )
         """Subclass of Indicator() specifically used for simple moving avg"""
@@ -660,6 +697,7 @@ class IndicatorSMA(Indicator):
                             f"must be one of: f{supported_methods}"
                             )
         self.ind_id += str(self.length)
+        self.class_name = "IndicatorSMA"
 
     def calculate(self):
         """Calculate a simple moving average over time.  Defaults to using
@@ -712,6 +750,7 @@ class IndicatorEMA(Indicator):
                  end_dt=None,
                  candle_chart=None,
                  name="EMA",
+                 datapoints=None,
                  parameters={},
                  ):
         super().__init__(name=name,
@@ -724,6 +763,7 @@ class IndicatorEMA(Indicator):
                          start_dt=start_dt,
                          end_dt=end_dt,
                          candle_chart=candle_chart,
+                         datapoints=datapoints,
                          parameters=parameters,
                          )
         """Sublcass of Indicator() used for exponential moving averages.
@@ -756,6 +796,7 @@ class IndicatorEMA(Indicator):
         else:
             self.smoothing = 2
         self.ind_id += str(self.length)
+        self.class_name = "IndicatorEMA"
 
     def calculate(self):
         """Calculate an exponential simple moving average over time.  Defaults
@@ -901,15 +942,43 @@ if __name__ == '__main__':
 
     # Testing storage and retrieval
     result = itest.store()
-    print("Indicators storage result:")
-    print(f"Elapsed {result['elapsed'].elapsed_str}")
-    print(result)
+    print(f"Actual completion time: {result['elapsed'].elapsed_str}")
+    print("\nIndicators storage result:")
+    print(result["indicator"])
+    print(result.keys())
+    print(f"Skipped datapoints: {result['datapoints_skipped']}")
+    print(f"Stored datapoints: {result['datapoints_stored']}")
     print("\n------------------------------------------------")
     print(f"Listing all indicators in storage, should include {itest.ind_id}")
     indicators = dhs.list_indicators()
     for i in indicators:
         print(f"* {i['ind_id']} {i['description']}")
     print(f"\nRetrieving stored datapoints for {itest.ind_id}\n")
+    datapoints = dhs.get_indicator_datapoints(
+            ind_id=itest.ind_id)
+    for d in datapoints:
+        print(d)
+    print("\n------------------------------------------------")
+    print("Updating TestEMA-DELETEME to add another day then storing again")
+    print("We should see 23 datapoints skipped and 46 stored here")
+    itest.end_dt = "2025-01-14 20:00:00"
+    itest.load_underlying_chart()
+    itest.calculate()
+    result = itest.store()
+    print(f"Actual completion time: {result['elapsed'].elapsed_str}")
+    print("\nIndicators storage result:")
+    print(result["indicator"])
+    print(result.keys())
+    print(f"Skipped datapoints: {result['datapoints_skipped']}")
+    print(f"Stored datapoints: {result['datapoints_stored']}")
+    if (result["datapoints_skipped"] == 23
+            and result["datapoints_stored"] == 46):
+        print("OK: 23 skipped and 46 stored are the expected results!")
+    else:
+        print("ERROR: 23 skipped and 46 stored are the expected results...")
+    print("\n------------------------------------------------")
+    print(f"\nRetrieving stored datapoints for {itest.ind_id}, confirm "
+          "there are no duplicate 'dt' datetimes.\n")
     datapoints = dhs.get_indicator_datapoints(
             ind_id=itest.ind_id)
     for d in datapoints:
@@ -927,5 +996,5 @@ if __name__ == '__main__':
             ind_id=itest.ind_id)
     for d in datapoints:
         print(d)
-
+    print("\n------------------------------------------------")
     print("We're done here.")
