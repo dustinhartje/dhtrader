@@ -207,11 +207,35 @@ def get_indicator(ind_id: str,
     """
     i = dhm.get_indicator(ind_id=ind_id,
                           meta_collection=meta_collection,
-                          )
-    print(i)
-    # TODO update class_name for existing records in mongo
-    # TODO use class_name to determine which subclass to load into
-    result = dhc.Indicator()
+                          autoload_datapoints=autoload_datapoints,
+                          )[0]
+    # The stored class_name attribute tells us which object class to return
+    if i["class_name"] == "IndicatorSMA":
+        result = dhc.IndicatorSMA(description=i["description"],
+                                  timeframe=i["timeframe"],
+                                  trading_hours=i["trading_hours"],
+                                  symbol=i["symbol"],
+                                  calc_version=i["calc_version"],
+                                  calc_details=i["calc_details"],
+                                  ind_id=i["ind_id"],
+                                  name=i["name"],
+                                  parameters=i["parameters"],
+                                  )
+    elif i["class_name"] == "IndicatorEMA":
+        result = dhc.IndicatorEMA(description=i["description"],
+                                  timeframe=i["timeframe"],
+                                  trading_hours=i["trading_hours"],
+                                  symbol=i["symbol"],
+                                  calc_version=i["calc_version"],
+                                  calc_details=i["calc_details"],
+                                  ind_id=i["ind_id"],
+                                  name=i["name"],
+                                  parameters=i["parameters"],
+                                  )
+    else:
+        raise ValueError(f"Unable to match class_name of {i['class_name']} "
+                         "with a known Indicator() subclass."
+                         )
     if autoload_datapoints:
         result.load_datapoints()
 

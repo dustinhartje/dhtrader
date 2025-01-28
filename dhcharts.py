@@ -524,6 +524,7 @@ class Indicator():
                  calc_details: str,
                  start_dt=bot(),
                  end_dt=None,
+                 ind_id=None,
                  candle_chart=None,
                  datapoints: list = None,
                  parameters={},
@@ -550,8 +551,15 @@ class Indicator():
         self.candle_chart = candle_chart
         if self.candle_chart is None:
             self.load_underlying_chart()
+        if datapoints is None:
+            self.datapoints = []
+        else:
+            self.datapoints = datapoints
         self.parameters = parameters
-        self.ind_id = (f"{self.symbol}{self.timeframe}{self.name}")
+        if ind_id is None:
+            self.ind_id = (f"{self.symbol}{self.timeframe}{self.name}")
+        else:
+            self.ind_id = ind_id
         self.class_name = "Indicator"
 
     def to_json(self):
@@ -592,7 +600,8 @@ class Indicator():
                 "calc_details": self.calc_details,
                 "start_dt": self.start_dt,
                 "end_dt": self.end_dt,
-                "paramters": self.parameters,
+                "parameters": self.parameters,
+                "datapoints": len(self.datapoints)
                 }
 
     def load_underlying_chart(self):
@@ -603,6 +612,16 @@ class Indicator():
                                   c_end=self.end_dt,
                                   autoload=True,
                                   )
+
+    def load_datapoints(self):
+        """Load any datapoints available from central storage by ind_id,
+        start_dt, and end_dt.
+        """
+        self.datapoints = dhs.get_indicator_datapoints(
+                ind_id=self.ind_id,
+                earliest_dt=self.start_dt,
+                latest_dt=self.end_dt,
+                )
 
     def calculate(self):
         """This method will be specific to each type of indicator.  It should
@@ -661,6 +680,7 @@ class IndicatorSMA(Indicator):
                  calc_details,
                  start_dt=bot(),
                  end_dt=None,
+                 ind_id=None,
                  candle_chart=None,
                  name="SMA",
                  datapoints=None,
@@ -675,6 +695,7 @@ class IndicatorSMA(Indicator):
                          calc_details=calc_details,
                          start_dt=start_dt,
                          end_dt=end_dt,
+                         ind_id=ind_id,
                          candle_chart=candle_chart,
                          datapoints=datapoints,
                          parameters=parameters,
@@ -696,7 +717,10 @@ class IndicatorSMA(Indicator):
             raise TypeError(f"Method {parameters['method']} not supported, "
                             f"must be one of: f{supported_methods}"
                             )
-        self.ind_id += str(self.length)
+        # Only update ind_id if it still matches the Parent class format
+        # otherwise we likely loaded from storage and already have this
+        if self.ind_id == (f"{self.symbol}{self.timeframe}{self.name}"):
+            self.ind_id += str(self.length)
         self.class_name = "IndicatorSMA"
 
     def calculate(self):
@@ -748,6 +772,7 @@ class IndicatorEMA(Indicator):
                  calc_details,
                  start_dt=bot(),
                  end_dt=None,
+                 ind_id=None,
                  candle_chart=None,
                  name="EMA",
                  datapoints=None,
@@ -762,6 +787,7 @@ class IndicatorEMA(Indicator):
                          calc_details=calc_details,
                          start_dt=start_dt,
                          end_dt=end_dt,
+                         ind_id=ind_id,
                          candle_chart=candle_chart,
                          datapoints=datapoints,
                          parameters=parameters,
@@ -795,7 +821,10 @@ class IndicatorEMA(Indicator):
             self.smoothing = int(parameters["smoothing"])
         else:
             self.smoothing = 2
-        self.ind_id += str(self.length)
+        # Only update ind_id if it still matches the Parent class format
+        # otherwise we likely loaded from storage and already have this
+        if self.ind_id == (f"{self.symbol}{self.timeframe}{self.name}"):
+            self.ind_id += str(self.length)
         self.class_name = "IndicatorEMA"
 
     def calculate(self):
@@ -984,6 +1013,21 @@ if __name__ == '__main__':
     for d in datapoints:
         print(d)
     print("\n------------------------------------------------")
+    print("Attempting to load the stored Indicator and it's Datapoints "
+          "into a new variable from storage.  This should match the existing.")
+    itoo = dhs.get_indicator(ind_id=itest.ind_id)
+    prev_info = itest.get_info()
+    new_info = itoo.get_info()
+    # adjusting dates to allow comparison as they don't get stored
+    new_info["start_dt"] = "2025-01-08 00:00:00"
+    new_info["end_dt"] = "2025-01-14 20:00:00"
+    print(f"Source var:\n{itest.get_info()}")
+    print(f"New var:\n{itoo.get_info()}")
+    if prev_info == new_info:
+        print("\nOK: Everything matches!")
+    else:
+        print("\nERROR: Something doesn't look right")
+    print("\n\n------------------------------------------------")
     print("\nRemoving test documents from storage\n")
     print(dhs.delete_indicator(itest.ind_id))
     print(f"\nListing stored indicators; should NOT include {itest.ind_id}")

@@ -428,6 +428,18 @@ def review_indicators(meta_collection: str,
     return result
 
 
+def get_indicator(ind_id: str,
+                  meta_collection: str,
+                  autoload_datapoints: bool,
+                  ):
+    """Returns an indicator based on ind_id"""
+    c = db[meta_collection]
+    result = c.find({"ind_id": ind_id},
+                    )
+
+    return list(result)
+
+
 def store_indicator(indicator: dict,
                     meta_collection: str,
                     ):
