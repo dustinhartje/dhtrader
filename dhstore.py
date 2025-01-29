@@ -448,7 +448,8 @@ def review_candles(timeframe: str,
                     status = "ERROR"
                     if err_msg != "":
                         err_msg += " || "
-                    err_msg += f"{k} summary data does not match expected"
+                    err_msg += f"{k} summary data does not match expected: "
+                    err_msg += f"{summary_data[k]} != {v}"
         else:
             status = "UNKNOWN"
             err_msg = f"Expected data not defined for timeframe: {timeframe}"
