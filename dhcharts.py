@@ -669,7 +669,7 @@ class Indicator():
                 suppress_candles=suppress_chart_candles,
                 )
         if suppress_datapoints:
-            num = self.datapoints
+            num = len(self.datapoints)
             clean_dps = [f"{num} Datapoints suppressed for output sanity"]
         else:
             clean_dps = []
