@@ -464,7 +464,9 @@ class Backtest():
                         suppress_candles=suppress_chart_candles,
                         )
         if suppress_tradeseries:
-            clean_tradeseries = ["Tradeseries suppress for output sanity"]
+            num = len(self.tradeseries)
+            m = f"{num} Tradeseries suppressed for output sanity"
+            clean_tradeseries = [m]
         else:
             clean_tradeseries = []
             for t in self.tradeseries:
