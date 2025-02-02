@@ -23,6 +23,9 @@ def bot():
 
 
 class Symbol():
+    """Represents basic mechanics of a tradeable symbol a.k.a. ticker.  This
+    might be a specific stock or future.
+    """
     # TODO LOWPRI - go through all module files and convert everything to use
     #      the Symbol() class.  There will be cases where I measure tick
     #      sizes and other things that should also reference this class instead
@@ -31,11 +34,92 @@ class Symbol():
                  ticker: str,
                  name: str,
                  leverage_ratio: float,
+                 tick_size: float,
                  ):
 
         self.ticker = ticker
         self.name = name
-        self.leverage_ratio = leverage_ratio
+        self.leverage_ratio = float(leverage_ratio)
+        self.tick_size = float(tick_size)
+
+    def to_json(self):
+        """returns a json version of this object while normalizing
+        custom types (like datetime to string)"""
+        return json.dumps(self.__dict__)
+
+    def to_clean_dict(self):
+        """Converts to JSON string then back to a python dict.  This helps
+        to normalize types (I'm looking at YOU datetime) while ensuring
+        a portable python data structure"""
+        return json.loads(self.to_json())
+
+    def __str__(self):
+        return str(self.__dict__)
+
+    def __repr__(self):
+        return str(self.__dict__)
+
+    def pretty(self):
+        """Attempts to return an indented multiline version of this object,
+        meant to provide an easy to read output for console or other purposes.
+        """
+        return json.dumps(self.to_clean_dict(),
+                          indent=4,
+                          )
+
+    def next_tick_up(self, f: float):
+        """Returns the next tick available at or above the provided value"""
+        # Ensure there's no more than 2 decimal places
+        if str(f)[::-1].find('.') > 2:
+            raise ValueError("More than 2 decimal places is not supported as "
+                             f"input for this method, got f={str(f)}"
+                             )
+        r = f
+        counter = 0
+        # Increment by 0.01 until we reach a tick_size multiple
+        while r % self.tick_size != 0:
+            counter += 1
+            if counter > (self.tick_size * 100):
+                raise Exception("Error attempting to round up, too many loops "
+                                "occurred which probably means a float math "
+                                f"issue occurred.  Stopping after {counter} "
+                                f"increments of {f} by 0.01 while trying to "
+                                f"find a multiple of {self.tick_size}.  Value "
+                                "at exit was {r}."
+                                )
+            r += 0.01
+            # Rounding is needed because float math is imperfect and sometimes
+            # adds numerous decimal places in simple arithmetic
+            r = round(r, 2)
+
+        return r
+
+    def next_tick_down(self, f: float):
+        """Returns the next tick available at or below the provided value"""
+        # Ensure there's no more than 2 decimal places
+        if str(f)[::-1].find('.') > 2:
+            raise ValueError("More than 2 decimal places is not supported as "
+                             f"input for this method, got f={str(f)}"
+                             )
+        r = f
+        counter = 0
+        # Increment by 0.01 until we reach a tick_size multiple
+        while r % self.tick_size != 0:
+            counter += 1
+            if counter > (self.tick_size * 100):
+                raise Exception("Error attempting to round up, too many loops "
+                                "occurred which probably means a float math "
+                                f"issue occurred.  Stopping after {counter} "
+                                f"increments of {f} by 0.01 while trying to "
+                                f"find a multiple of {self.tick_size}.  Value "
+                                "at exit was {r}."
+                                )
+            r -= 0.01
+            # Rounding is needed because float math is imperfect and sometimes
+            # adds numerous decimal places in simple arithmetic
+            r = round(r, 2)
+
+        return r
 
 
 class Candle():
