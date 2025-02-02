@@ -1,4 +1,5 @@
 import datetime as dt
+from datetime import timedelta
 import sys
 import json
 import dhutil as dhu
@@ -41,6 +42,7 @@ class Symbol():
         self.name = name
         self.leverage_ratio = float(leverage_ratio)
         self.tick_size = float(tick_size)
+        self.set_times()
 
     def to_json(self):
         """returns a json version of this object while normalizing
@@ -67,7 +69,27 @@ class Symbol():
                           indent=4,
                           )
 
-    def next_tick_up(self, f: float):
+    def set_times(self):
+        """Sets times for known Symbol objects."""
+        # TODO this is a rough hack that should be revisited later.  Perhaps
+        #      it should be a json file or something which I can provide an
+        #      example to be stored and retrieved from storage rather than
+        #      hard coding?
+        if self.ticker == "ES":
+            self.eth_open_time = dt.datetime.strptime("18:00:00",
+                                                      "%H:%M:%S").time()
+            self.eth_close_time = dt.datetime.strptime("17:00:00",
+                                                       "%H:%M:%S").time()
+            self.rth_open_time = dt.datetime.strptime("09:30:00",
+                                                      "%H:%M:%S").time()
+            self.rth_close_time = dt.datetime.strptime("16:00:00",
+                                                       "%H:%M:%S").time()
+        else:
+            raise ValueError(f"Ticker {self.ticker} times have not yet been "
+                             "defined, unable to calculate set_times()."
+                             )
+
+    def get_next_tick_up(self, f: float):
         """Returns the next tick available at or above the provided value"""
         # Ensure there's no more than 2 decimal places
         if str(f)[::-1].find('.') > 2:
@@ -94,7 +116,7 @@ class Symbol():
 
         return r
 
-    def next_tick_down(self, f: float):
+    def get_next_tick_down(self, f: float):
         """Returns the next tick available at or below the provided value"""
         # Ensure there's no more than 2 decimal places
         if str(f)[::-1].find('.') > 2:
@@ -118,6 +140,119 @@ class Symbol():
             # Rounding is needed because float math is imperfect and sometimes
             # adds numerous decimal places in simple arithmetic
             r = round(r, 2)
+
+        return r
+
+    def get_next_eth_open(self,
+                          target_dt,
+                          adjust_for_events: bool = True,
+                          events: list = None,
+                          ):
+        """Returns the next opening datetime at or after the provided datetime
+        (dt) which can be a datetime.datetime or a str object.  Returns a
+        datetime.datetime object.  By default this accounts for any passed
+        events by checking if the calculated next open falls within them and
+        then proceeding to the next available calculated open in these cases.
+        Note that this may not catch non-standard opens if the event does not
+        span the entire gap to them, however these are quite rare and very
+        unlikely to substantially impact long term results if traded.  Work
+        to account for them has been deferred unless/until it becomes clear
+        that they are meaningful enough to figure out.
+        """
+        # TODO LOWPRI As noted in docstring, rare valid trading timeframes may
+        #             be skipped due to events beginning or ending inside of
+        #             standars market hours.  If this becomes problematic
+        #             revisit and try to account for them in this and the other
+        #             related _eth/rth_open/close methods.  I don't expect
+        #             I'll actually trade within them though.
+        if events is None:
+            events = []
+        if self.ticker == "ES":
+            this_date = dhu.dt_as_dt(target_dt).date()
+            this_time = dhu.dt_as_dt(target_dt).time()
+            # Set Target Time
+            tt = self.eth_open_time
+            # If before standard ETH open time, Target Date starts at today
+            if this_time < tt:
+                td = this_date
+            # Otherwise start at tomorrow
+            else:
+                td = this_date + timedelta(days=1)
+            # Due to weekend closures, Fridays (4) and Saturdays (5) need to
+            # be advanced to Sunday (6) now
+            while td.weekday() in [4, 5]:
+                td = td + timedelta(days=1)
+            # Combine target date and target time into a datetime candidate
+            r = dt.datetime.combine(td, tt)
+            # Adjust for any closure events this might fall into by recursing
+            # based on the end of any including event
+            if adjust_for_events:
+                for e in events:
+                    if e.contains_datetime(r):
+                        r = self.get_next_eth_open(
+                                e.end_dt,
+                                adjust_for_events=adjust_for_events,
+                                events=events,
+                                )
+        else:
+            raise ValueError(f"Ticker {self.ticker} times have not yet been "
+                             "defined, unable to calculate the open or close "
+                             "datetime requested."
+                             )
+
+        return r
+
+    def get_next_eth_close(self,
+                           target_dt,
+                           adjust_for_events: bool = True,
+                           events: list = None,
+                           ):
+        """Returns the next closing datetime at or after the provided datetime
+        (dt) which can be a datetime.datetime or a str object.  Returns a
+        datetime.datetime object.  See .get_next_eth_open() docstring for
+        Events related notes that are applied similarly here as well.
+        """
+        if events is None:
+            events = []
+        if self.ticker == "ES":
+            this_date = dhu.dt_as_dt(target_dt).date()
+            this_time = dhu.dt_as_dt(target_dt).time()
+            # Set Target Time
+            tt = self.eth_close_time
+            # If before standard ETH close time, Target Date starts at today
+            if this_time < tt:
+                td = this_date
+            # Otherwise start at tomorrow
+            else:
+                td = this_date + timedelta(days=1)
+            # Due to weekend closures, Fridays (4) and Saturdays (5) need to
+            # be advanced to Sunday (6) now
+            while td.weekday() in [4, 5]:
+                td = td + timedelta(days=1)
+            # Combine target date and target time into a datetime candidate
+            r = dt.datetime.combine(td, tt)
+            # Adjust for any closure events this might fall into by recursing
+            # based on the end of any including event
+            if adjust_for_events:
+                for e in events:
+                    if e.contains_datetime(r):
+                        # If our target_dt is not inside the event that our
+                        # calculated close falls into we should use the events
+                        # start_dt as our next close
+                        if not e.contains_datetime(target_dt):
+                            r = dhu.dt_as_dt(e.start_dt)
+                        # Otherwise recurse from the end of the event
+                        else:
+                            r = self.get_next_eth_close(
+                                    e.end_dt,
+                                    adjust_for_events=adjust_for_events,
+                                    events=events,
+                                    )
+        else:
+            raise ValueError(f"Ticker {self.ticker} times have not yet been "
+                             "defined, unable to calculate the open or close "
+                             "datetime requested."
+                             )
 
         return r
 
@@ -406,6 +541,20 @@ class Event():
 
     def store(self):
         return dhs.store_event(self)
+
+    def contains_datetime(self,
+                          dt,
+                          ):
+        """Determine if the given datetime (dt) falls within this Event's
+        timeframe, returning True or False.
+        """
+        start = dhu.dt_as_dt(self.start_dt)
+        end = dhu.dt_as_dt(self.end_dt)
+        this = dhu.dt_as_dt(dt)
+        if start <= this <= end:
+            return True
+        else:
+            return False
 
 
 class Day():
