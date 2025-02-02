@@ -47,7 +47,12 @@ class Symbol():
     def to_json(self):
         """returns a json version of this object while normalizing
         custom types (like datetime to string)"""
-        return json.dumps(self.__dict__)
+        working = self.__dict__.copy()
+        working["eth_open_time"] = str(working["eth_open_time"])
+        working["eth_close_time"] = str(working["eth_close_time"])
+        working["rth_open_time"] = str(working["rth_open_time"])
+        working["rth_close_time"] = str(working["rth_close_time"])
+        return json.dumps(working)
 
     def to_clean_dict(self):
         """Converts to JSON string then back to a python dict.  This helps
@@ -78,11 +83,11 @@ class Symbol():
         if self.ticker == "ES":
             self.eth_open_time = dt.datetime.strptime("18:00:00",
                                                       "%H:%M:%S").time()
-            self.eth_close_time = dt.datetime.strptime("17:00:00",
+            self.eth_close_time = dt.datetime.strptime("16:59:00",
                                                        "%H:%M:%S").time()
             self.rth_open_time = dt.datetime.strptime("09:30:00",
                                                       "%H:%M:%S").time()
-            self.rth_close_time = dt.datetime.strptime("16:00:00",
+            self.rth_close_time = dt.datetime.strptime("15:59:00",
                                                        "%H:%M:%S").time()
         else:
             raise ValueError(f"Ticker {self.ticker} times have not yet been "
@@ -143,21 +148,29 @@ class Symbol():
 
         return r
 
-    def get_next_eth_open(self,
-                          target_dt,
-                          adjust_for_events: bool = True,
-                          events: list = None,
-                          ):
-        """Returns the next opening datetime at or after the provided datetime
-        (dt) which can be a datetime.datetime or a str object.  Returns a
-        datetime.datetime object.  By default this accounts for any passed
-        events by checking if the calculated next open falls within them and
-        then proceeding to the next available calculated open in these cases.
-        Note that this may not catch non-standard opens if the event does not
-        span the entire gap to them, however these are quite rare and very
-        unlikely to substantially impact long term results if traded.  Work
-        to account for them has been deferred unless/until it becomes clear
-        that they are meaningful enough to figure out.
+    def get_market_boundary(self,
+                            target_dt,
+                            trading_hours: str,
+                            boundary: str,
+                            order: str,
+                            adjust_for_events: bool = True,
+                            events: list = None,
+                            ):
+        """Returns the previous or next market open or close datetime for
+        either regular trading hours (rth) or extended/globex trading hours
+        (eth).  Optionally factors in events passed in to skip ahead or back
+        when an Event (such as a market closure) would impact the datetime
+        returned.
+
+        Typically this method does not need to be called directly, instead
+        reference it via the wrapper methods below that provide better context
+        and auto-include most of the parameters needed for streamlined code.
+
+        Note that the current iteration only skips ahead to the next standard
+        open or close if an event overlaps rather than evaluating the
+        boundaries of the event itself.  This should have minimal impact on
+        backtest results over meaningful periods of time and it's presumed
+        one would probably not want to trade these periods anyways.
         """
         # TODO LOWPRI As noted in docstring, rare valid trading timeframes may
         #             be skipped due to events beginning or ending inside of
@@ -165,32 +178,95 @@ class Symbol():
         #             revisit and try to account for them in this and the other
         #             related _eth/rth_open/close methods.  I don't expect
         #             I'll actually trade within them though.
+
+        # Prep vars
         if events is None:
             events = []
+        allowed_hours = ["eth", "rth"]
+        if trading_hours not in allowed_hours:
+            raise ValueError(f"trading_hours must be in {allowed_hours}, got "
+                             f"{trading_hours}")
+        allowed_boundary = ["open", "close"]
+        if boundary not in allowed_boundary:
+            raise ValueError(f"boundary must be in {allowed_boundary}, got "
+                             f"{boundary}")
+        allowed_order = ["previous", "next"]
+        if order not in allowed_order:
+            raise ValueError(f"order must be in {allowed_order}, got "
+                             f"{order}")
+
+        # Evaluate requested boundary
         if self.ticker == "ES":
             this_date = dhu.dt_as_dt(target_dt).date()
             this_time = dhu.dt_as_dt(target_dt).time()
-            # Set Target Time
-            tt = self.eth_open_time
-            # If before standard ETH open time, Target Date starts at today
-            if this_time < tt:
-                td = this_date
-            # Otherwise start at tomorrow
-            else:
-                td = this_date + timedelta(days=1)
-            # Due to weekend closures, Fridays (4) and Saturdays (5) need to
-            # be advanced to Sunday (6) now
-            while td.weekday() in [4, 5]:
-                td = td + timedelta(days=1)
+            # Set Target Time based on standard hours
+            if trading_hours == "eth" and boundary == "open":
+                tt = self.eth_open_time
+            if trading_hours == "eth" and boundary == "close":
+                tt = self.eth_close_time
+            if trading_hours == "rth" and boundary == "open":
+                tt = self.rth_open_time
+            if trading_hours == "rth" and boundary == "close":
+                tt = self.rth_close_time
+            # Set Target Date based on time of input target_dt vs standard hrs
+            if order == "next":
+                # Target date is today if time before target, else tomorrow
+                if this_time < tt:
+                    td = this_date
+                else:
+                    td = this_date + timedelta(days=1)
+                # Bump ahead for weekends
+                if trading_hours == "eth":
+                    if boundary == "open":
+                        # Friday(4) and Saturdays(5) bump to Sunday(6)
+                        while td.weekday() in [4, 5]:
+                            td = td + timedelta(days=1)
+                    if boundary == "close":
+                        # Saturdays(5) and Sunday(6) bump to Monday(0)
+                        while td.weekday() in [5, 6]:
+                            td = td + timedelta(days=1)
+                # for RTH Saturdays (5) and Sundays (6) bump to Monday (0)
+                if trading_hours == "rth":
+                    while td.weekday() in [5, 6]:
+                        td = td + timedelta(days=1)
+            if order == "previous":
+                # Target date is today if time after target, else yesterday
+                if this_time > tt:
+                    td = this_date
+                else:
+                    td = this_date - timedelta(days=1)
+                # Bump back for weekends
+                if trading_hours == "eth":
+                    if boundary == "open":
+                        # Fridays(4) and Saturdays(5) fall back to Thursday(3)
+                        while td.weekday() in [4, 5]:
+                            td = td - timedelta(days=1)
+                    if boundary == "close":
+                        # Saturdays(5) and Sundays(6) fall back to Friday(4)
+                        while td.weekday() in [5, 6]:
+                            td = td - timedelta(days=1)
+                if trading_hours == "rth":
+                    # Saturdays(5) and Sundays(6) fall back to Friday(4)
+                    while td.weekday() in [5, 6]:
+                        td = td - timedelta(days=1)
+
             # Combine target date and target time into a datetime candidate
             r = dt.datetime.combine(td, tt)
+
             # Adjust for any closure events this might fall into by recursing
             # based on the end of any including event
             if adjust_for_events:
                 for e in events:
                     if e.contains_datetime(r):
-                        r = self.get_next_eth_open(
-                                e.end_dt,
+                        if order == "next":
+                            new_target = e.end_dt
+                        if order == "previous":
+                            new_target = e.start_dt
+                        r = self.get_market_boundary(
+                                target_dt=new_target,
+                                trading_hours=trading_hours,
+                                boundary=boundary,
+                                order=order,
                                 adjust_for_events=adjust_for_events,
                                 events=events,
                                 )
@@ -202,59 +278,117 @@ class Symbol():
 
         return r
 
+    def get_next_eth_open(self,
+                          target_dt,
+                          adjust_for_events: bool = True,
+                          events: list = None,
+                          ):
+        """Simple wrapper for get_market_boundary()"""
+        return self.get_market_boundary(target_dt=target_dt,
+                                        trading_hours="eth",
+                                        boundary="open",
+                                        order="next",
+                                        adjust_for_events=adjust_for_events,
+                                        events=events,
+                                        )
+
+    def get_previous_eth_open(self,
+                              target_dt,
+                              adjust_for_events: bool = True,
+                              events: list = None,
+                              ):
+        """Simple wrapper for get_market_boundary()"""
+        return self.get_market_boundary(target_dt=target_dt,
+                                        trading_hours="eth",
+                                        boundary="open",
+                                        order="previous",
+                                        adjust_for_events=adjust_for_events,
+                                        events=events,
+                                        )
+
     def get_next_eth_close(self,
                            target_dt,
                            adjust_for_events: bool = True,
                            events: list = None,
                            ):
-        """Returns the next closing datetime at or after the provided datetime
-        (dt) which can be a datetime.datetime or a str object.  Returns a
-        datetime.datetime object.  See .get_next_eth_open() docstring for
-        Events related notes that are applied similarly here as well.
-        """
-        if events is None:
-            events = []
-        if self.ticker == "ES":
-            this_date = dhu.dt_as_dt(target_dt).date()
-            this_time = dhu.dt_as_dt(target_dt).time()
-            # Set Target Time
-            tt = self.eth_close_time
-            # If before standard ETH close time, Target Date starts at today
-            if this_time < tt:
-                td = this_date
-            # Otherwise start at tomorrow
-            else:
-                td = this_date + timedelta(days=1)
-            # Due to weekend closures, Fridays (4) and Saturdays (5) need to
-            # be advanced to Sunday (6) now
-            while td.weekday() in [4, 5]:
-                td = td + timedelta(days=1)
-            # Combine target date and target time into a datetime candidate
-            r = dt.datetime.combine(td, tt)
-            # Adjust for any closure events this might fall into by recursing
-            # based on the end of any including event
-            if adjust_for_events:
-                for e in events:
-                    if e.contains_datetime(r):
-                        # If our target_dt is not inside the event that our
-                        # calculated close falls into we should use the events
-                        # start_dt as our next close
-                        if not e.contains_datetime(target_dt):
-                            r = dhu.dt_as_dt(e.start_dt)
-                        # Otherwise recurse from the end of the event
-                        else:
-                            r = self.get_next_eth_close(
-                                    e.end_dt,
-                                    adjust_for_events=adjust_for_events,
-                                    events=events,
-                                    )
-        else:
-            raise ValueError(f"Ticker {self.ticker} times have not yet been "
-                             "defined, unable to calculate the open or close "
-                             "datetime requested."
-                             )
+        """Simple wrapper for get_market_boundary()"""
+        return self.get_market_boundary(target_dt=target_dt,
+                                        trading_hours="eth",
+                                        boundary="close",
+                                        order="next",
+                                        adjust_for_events=adjust_for_events,
+                                        events=events,
+                                        )
 
-        return r
+    def get_previous_eth_close(self,
+                               target_dt,
+                               adjust_for_events: bool = True,
+                               events: list = None,
+                               ):
+        """Simple wrapper for get_market_boundary()"""
+        return self.get_market_boundary(target_dt=target_dt,
+                                        trading_hours="eth",
+                                        boundary="close",
+                                        order="previous",
+                                        adjust_for_events=adjust_for_events,
+                                        events=events,
+                                        )
+
+    def get_next_rth_open(self,
+                          target_dt,
+                          adjust_for_events: bool = True,
+                          events: list = None,
+                          ):
+        """Simple wrapper for get_market_boundary()"""
+        return self.get_market_boundary(target_dt=target_dt,
+                                        trading_hours="rth",
+                                        boundary="open",
+                                        order="next",
+                                        adjust_for_events=adjust_for_events,
+                                        events=events,
+                                        )
+
+    def get_previous_rth_open(self,
+                              target_dt,
+                              adjust_for_events: bool = True,
+                              events: list = None,
+                              ):
+        """Simple wrapper for get_market_boundary()"""
+        return self.get_market_boundary(target_dt=target_dt,
+                                        trading_hours="rth",
+                                        boundary="open",
+                                        order="previous",
+                                        adjust_for_events=adjust_for_events,
+                                        events=events,
+                                        )
+
+    def get_next_rth_close(self,
+                           target_dt,
+                           adjust_for_events: bool = True,
+                           events: list = None,
+                           ):
+        """Simple wrapper for get_market_boundary()"""
+        return self.get_market_boundary(target_dt=target_dt,
+                                        trading_hours="rth",
+                                        boundary="close",
+                                        order="next",
+                                        adjust_for_events=adjust_for_events,
+                                        events=events,
+                                        )
+
+    def get_previous_rth_close(self,
+                               target_dt,
+                               adjust_for_events: bool = True,
+                               events: list = None,
+                               ):
+        """Simple wrapper for get_market_boundary()"""
+        return self.get_market_boundary(target_dt=target_dt,
+                                        trading_hours="rth",
+                                        boundary="close",
+                                        order="previous",
+                                        adjust_for_events=adjust_for_events,
+                                        events=events,
+                                        )
 
 
 class Candle():
@@ -1273,12 +1407,23 @@ class IndicatorEMA(Indicator):
 #      to just calculate new datapoints or wipe and recalc from beginning
 
 
+def test_boundary(name, actual, expected):
+    """Quick function to streamline repetitive output in testing below"""
+    global boundaries_all_ok
+    if actual == expected:
+        print(f"OK: ({name})   {actual} (actual) == {expected} (expected)")
+        return True
+    else:
+        print(f"ERROR: ({name})   {actual} (actual) != {expected} (expected)")
+        boundaries_all_ok = False
+        return False
+
+
 if __name__ == '__main__':
     # TODO LOWPRI these should be unit tests or something similar eventually
     # Run a few tests to confirm desired functionality
 
     # Test pretty output which also confirms json and clean_dict working
-
     print("\n######################### OUTPUTS ###########################")
     print("All objects should print 'pretty' which confirms .to_json(), "
           ".to_clean_dict(), and .pretty() methods all work properly"
@@ -1345,8 +1490,309 @@ if __name__ == '__main__':
                          ))
     print("\nIndicator.get_info(pretty=True):")
     print(out_ind.get_info(pretty=True))
-    # Indicators
+
+    print("\n######################### SYMBOLS ###########################")
+    print("Creating an ES symbol:")
+
+    sym = Symbol(ticker="ES",
+                 name="ES",
+                 leverage_ratio=50.0,
+                 tick_size=0.25,
+                 )
+    print(sym.pretty())
+    print("Confirming get_market_boundary wrappers working as expected")
+    boundaries_all_ok = True
+    print("All results will be displayed as Expected then Actual")
+    print("\nTesting All boundaries mid-week Wednesday noon datetime: "
+          "2024-03-20 12:00:00")
+    print("This confirms non-weekend mechanics all work properly")
+    t = dhu.dt_as_dt("2024-03-20 12:00:00")
+    print(f"{str(t)}\n")
+    # Next ETH Open
+    actual = dhu.dt_as_str(sym.get_next_eth_open(t))
+    test_boundary("next_eth_open", actual, "2024-03-20 18:00:00")
+    # Next ETH Close
+    actual = dhu.dt_as_str(sym.get_next_eth_close(t))
+    test_boundary("next_eth_close", actual, "2024-03-20 16:59:00")
+    # Previous ETH Open
+    actual = dhu.dt_as_str(sym.get_previous_eth_open(t))
+    test_boundary("previous_eth_open", actual, "2024-03-19 18:00:00")
+    # Previous ETH Close
+    actual = dhu.dt_as_str(sym.get_previous_eth_close(t))
+    test_boundary("previous_eth_close", actual, "2024-03-19 16:59:00")
+    # Next RTH Open
+    actual = dhu.dt_as_str(sym.get_next_rth_open(t))
+    test_boundary("next_rth_open", actual, "2024-03-21 09:30:00")
+    # Next RTH Close
+    actual = dhu.dt_as_str(sym.get_next_rth_close(t))
+    test_boundary("next_rth_close", actual, "2024-03-20 15:59:00")
+    # Previous RTH Open
+    actual = dhu.dt_as_str(sym.get_previous_rth_open(t))
+    test_boundary("previous_rth_open", actual, "2024-03-20 09:30:00")
+    # Previous RTH Close
+    actual = dhu.dt_as_str(sym.get_previous_rth_close(t))
+    test_boundary("previous_rth_close", actual, "2024-03-19 15:59:00")
+    print("-----------------------------------------------------------------")
+    print("\nTesting Next boundaries from Thursday noon 2024-03-21 12:00:00 "
+          "(should hit Thursday/Friday)")
+    print("This confirms we don't accidentally slip into or over the weekend "
+          "due to miscalculations")
+    t = dhu.dt_as_dt("2024-03-21 12:00:00")
+    print(f"{str(t)}\n")
+    # Next ETH Open
+    actual = dhu.dt_as_str(sym.get_next_eth_open(t))
+    test_boundary("next_eth_open", actual, "2024-03-21 18:00:00")
+    # Next RTH Open
+    actual = dhu.dt_as_str(sym.get_next_rth_open(t))
+    test_boundary("next_rth_open", actual, "2024-03-22 09:30:00")
+    # Next ETH Close
+    actual = dhu.dt_as_str(sym.get_next_eth_close(t))
+    test_boundary("next_eth_close", actual, "2024-03-21 16:59:00")
+    # Next RTH Close
+    actual = dhu.dt_as_str(sym.get_next_rth_close(t))
+    test_boundary("next_rth_close", actual, "2024-03-21 15:59:00")
+    print("-----------------------------------------------------------------")
+    print("\nTesting Next boundaries from Friday noon 2024-03-22 12:00:00 "
+          "(should hit Sunday/Monday)")
+    print("This confirms we span the weekend as expected when appropriate")
+    t = dhu.dt_as_dt("2024-03-22 12:00:00")
+    print(f"{str(t)}\n")
+    # Next ETH Open
+    actual = dhu.dt_as_str(sym.get_next_eth_open(t))
+    test_boundary("next_eth_open", actual, "2024-03-24 18:00:00")
+    # Next RTH Open
+    actual = dhu.dt_as_str(sym.get_next_rth_open(t))
+    test_boundary("next_rth_open", actual, "2024-03-25 09:30:00")
+    # Next ETH Close
+    actual = dhu.dt_as_str(sym.get_next_eth_close(t))
+    test_boundary("next_eth_close", actual, "2024-03-22 16:59:00")
+    # Next RTH Close
+    actual = dhu.dt_as_str(sym.get_next_rth_close(t))
+    test_boundary("next_rth_close", actual, "2024-03-22 15:59:00")
+    print("-----------------------------------------------------------------")
+    print("\nTesting Previous boundaries from Tuesday noon 2024-03-19 "
+          "12:00:00 (should hit Monday/Tuesday)")
+    print("This confirms we don't accidentally slip into or over the weekend "
+          "due to miscalculations")
+    t = dhu.dt_as_dt("2024-03-19 12:00:00")
+    print(f"{str(t)}\n")
+    # Previous ETH Open
+    actual = dhu.dt_as_str(sym.get_previous_eth_open(t))
+    test_boundary("previous_eth_open", actual, "2024-03-18 18:00:00")
+    # Previous RTH Open
+    actual = dhu.dt_as_str(sym.get_previous_rth_open(t))
+    test_boundary("previous_rth_open", actual, "2024-03-19 09:30:00")
+    # Previous ETH Close
+    actual = dhu.dt_as_str(sym.get_previous_eth_close(t))
+    test_boundary("previous_eth_close", actual, "2024-03-18 16:59:00")
+    # Previous RTH Close
+    actual = dhu.dt_as_str(sym.get_previous_rth_close(t))
+    test_boundary("previous_rth_close", actual, "2024-03-18 15:59:00")
+    print("-----------------------------------------------------------------")
+    print("\nTesting Previous boundaries from Monday noon 2024-03-18 "
+          "12:00:00 (should hit Friday/Sunday)")
+    print("This confirms we span the weekend as expected when appropriate")
+    t = dhu.dt_as_dt("2024-03-18 12:00:00")
+    print(f"{str(t)}\n")
+    # Previous ETH Open
+    actual = dhu.dt_as_str(sym.get_previous_eth_open(t))
+    test_boundary("previous_eth_open", actual, "2024-03-17 18:00:00")
+    # Previous RTH Open
+    actual = dhu.dt_as_str(sym.get_previous_rth_open(t))
+    test_boundary("previous_rth_open", actual, "2024-03-18 09:30:00")
+    # Previous ETH Close
+    actual = dhu.dt_as_str(sym.get_previous_eth_close(t))
+    test_boundary("previous_eth_close", actual, "2024-03-15 16:59:00")
+    # Previous RTH Close
+    actual = dhu.dt_as_str(sym.get_previous_rth_close(t))
+    test_boundary("previous_rth_close", actual, "2024-03-15 15:59:00")
+    print("-----------------------------------------------------------------")
+    print("Setting up a few events to test that boundary mechanics respect")
+    events = [Event(start_dt="2024-03-28 17:00:00",
+                    end_dt="2024-03-31 17:59:00",
+                    symbol="ES",
+                    category="Closed",
+                    notes="Good Friday Closed",
+                    ),
+              Event(start_dt="2024-03-18 00:00:00",
+                    end_dt="2024-03-19 23:59:00",
+                    symbol="ES",
+                    category="Closed",
+                    notes="Tues-Wed Full days closure",
+                    ),
+              Event(start_dt="2024-03-18 13:00:00",
+                    end_dt="2024-03-18 17:59:00",
+                    symbol="ES",
+                    category="Closed",
+                    notes="Tues early closure",
+                    ),
+              ]
+    for ev in events:
+        print(ev.pretty())
+    print("\nTesting Next against Good Friday closure starting Thursday "
+          "2024-03-28 17:00:00 through Sunday 2024-03-31 17:59:00")
+    print("Checking from noon on Thursday 2024-03-28 12:00:00")
+    print("This confirms we cross the event and weekend where appropriate.")
+    t = dhu.dt_as_dt("2024-03-28 12:00:00")
+    print(f"{str(t)}\n")
+    # Next ETH Open
+    actual = dhu.dt_as_str(sym.get_next_eth_open(t, events=events))
+    test_boundary("next_eth_open", actual, "2024-03-31 18:00:00")
+    # Next RTH Open
+    actual = dhu.dt_as_str(sym.get_next_rth_open(t, events=events))
+    test_boundary("next_rth_open", actual, "2024-04-01 09:30:00")
+    # Next ETH Close
+    actual = dhu.dt_as_str(sym.get_next_eth_close(t, events=events))
+    test_boundary("next_eth_close", actual, "2024-03-28 16:59:00")
+    # Next RTH Close
+    actual = dhu.dt_as_str(sym.get_next_rth_close(t, events=events))
+    test_boundary("next_rth_close", actual, "2024-03-28 15:59:00")
+
+    print("\nTesting same closure window from within using Friday at Noon "
+          "2024-03-29 12:00:00")
+    print("This confirms times inside a closure are moved outside of it in "
+          "both direction")
+    t = dhu.dt_as_dt("2024-03-29 12:00:00")
+    print(f"{str(t)}\n")
+    # Next ETH Close
+    actual = dhu.dt_as_str(sym.get_next_eth_close(t, events=events))
+    test_boundary("next_eth_close", actual, "2024-04-01 16:59:00")
+    # Next RTH Close
+    actual = dhu.dt_as_str(sym.get_next_rth_close(t, events=events))
+    test_boundary("next_rth_close", actual, "2024-04-01 15:59:00")
+    # Previous ETH Close
+    actual = dhu.dt_as_str(sym.get_previous_eth_close(t, events=events))
+    test_boundary("previous_eth_close", actual, "2024-03-28 16:59:00")
+    # Previous RTH Close
+    actual = dhu.dt_as_str(sym.get_previous_rth_close(t, events=events))
+    test_boundary("previous_rth_close", actual, "2024-03-28 15:59:00")
+    # Next ETH Open
+    actual = dhu.dt_as_str(sym.get_next_eth_open(t, events=events))
+    test_boundary("next_eth_open", actual, "2024-03-31 18:00:00")
+    # Next RTH Open
+    actual = dhu.dt_as_str(sym.get_next_rth_open(t, events=events))
+    test_boundary("next_rth_open", actual, "2024-04-01 09:30:00")
+    # Previous ETH Open
+    actual = dhu.dt_as_str(sym.get_previous_eth_open(t, events=events))
+    test_boundary("previous_eth_open", actual, "2024-03-27 18:00:00")
+    # Previous RTH Open
+    actual = dhu.dt_as_str(sym.get_previous_rth_open(t, events=events))
+    test_boundary("previous_rth_open", actual, "2024-03-28 09:30:00")
+
+    print("\nTesting same closure window from the following Monday at Noon "
+          "2024-04-01 12:00:00")
+    print("This confirms Previous crosses the event to the prior week.")
+    t = dhu.dt_as_dt("2024-04-01 12:00:00")
+    print(f"{str(t)}\n")
+    # Previous ETH Open
+    actual = dhu.dt_as_str(sym.get_previous_eth_open(t, events=events))
+    test_boundary("previous_eth_open", actual, "2024-03-31 18:00:00")
+    # Previous RTH Open
+    actual = dhu.dt_as_str(sym.get_previous_rth_open(t, events=events))
+    test_boundary("previous_rth_open", actual, "2024-04-01 09:30:00")
+    # Previous ETH Close
+    actual = dhu.dt_as_str(sym.get_previous_eth_close(t, events=events))
+    test_boundary("previous_eth_close", actual, "2024-03-28 16:59:00")
+    # Previous RTH Close
+    actual = dhu.dt_as_str(sym.get_previous_rth_close(t, events=events))
+    test_boundary("previous_rth_close", actual, "2024-03-28 15:59:00")
+    print("\nTesting nested closure window from within both using "
+          "2024-03-18 14:00:00")
+    print("This confirms that multiple overlapping events don't muck it up.")
+    t = dhu.dt_as_dt("2024-03-18 14:00:00")
+    print(f"{str(t)}\n")
+    # Next ETH Close
+    actual = dhu.dt_as_str(sym.get_next_eth_close(t, events=events))
+    test_boundary("next_eth_close", actual, "2024-03-20 16:59:00")
+    # Next RTH Close
+    actual = dhu.dt_as_str(sym.get_next_rth_close(t, events=events))
+    test_boundary("next_rth_close", actual, "2024-03-20 15:59:00")
+    # Previous ETH Close
+    actual = dhu.dt_as_str(sym.get_previous_eth_close(t, events=events))
+    test_boundary("previous_eth_close", actual, "2024-03-15 16:59:00")
+    # Previous RTH Close
+    actual = dhu.dt_as_str(sym.get_previous_rth_close(t, events=events))
+    test_boundary("previous_rth_close", actual, "2024-03-15 15:59:00")
+    # Next ETH Open
+    actual = dhu.dt_as_str(sym.get_next_eth_open(t, events=events))
+    test_boundary("next_eth_open", actual, "2024-03-20 18:00:00")
+    # Next RTH Open
+    actual = dhu.dt_as_str(sym.get_next_rth_open(t, events=events))
+    test_boundary("next_rth_open", actual, "2024-03-20 09:30:00")
+    # Previous ETH Open
+    actual = dhu.dt_as_str(sym.get_previous_eth_open(t, events=events))
+    test_boundary("previous_eth_open", actual, "2024-03-17 18:00:00")
+    # Previous RTH Open
+    actual = dhu.dt_as_str(sym.get_previous_rth_open(t, events=events))
+    test_boundary("previous_rth_open", actual, "2024-03-15 09:30:00")
+    # TODO test nested from inside only 1
+    print("\nTesting nested closure window from within outer only using "
+          "2024-03-18 10:00:00")
+    print("This confirms that multiple overlapping events don't muck it up.")
+    t = dhu.dt_as_dt("2024-03-18 10:00:00")
+    print(f"{str(t)}\n")
+    # Next ETH Close
+    actual = dhu.dt_as_str(sym.get_next_eth_close(t, events=events))
+    test_boundary("next_eth_close", actual, "2024-03-20 16:59:00")
+    # Next RTH Close
+    actual = dhu.dt_as_str(sym.get_next_rth_close(t, events=events))
+    test_boundary("next_rth_close", actual, "2024-03-20 15:59:00")
+    # Previous ETH Close
+    actual = dhu.dt_as_str(sym.get_previous_eth_close(t, events=events))
+    test_boundary("previous_eth_close", actual, "2024-03-15 16:59:00")
+    # Previous RTH Close
+    actual = dhu.dt_as_str(sym.get_previous_rth_close(t, events=events))
+    test_boundary("previous_rth_close", actual, "2024-03-15 15:59:00")
+    # Next ETH Open
+    actual = dhu.dt_as_str(sym.get_next_eth_open(t, events=events))
+    test_boundary("next_eth_open", actual, "2024-03-20 18:00:00")
+    # Next RTH Open
+    actual = dhu.dt_as_str(sym.get_next_rth_open(t, events=events))
+    test_boundary("next_rth_open", actual, "2024-03-20 09:30:00")
+    # Previous ETH Open
+    actual = dhu.dt_as_str(sym.get_previous_eth_open(t, events=events))
+    test_boundary("previous_eth_open", actual, "2024-03-17 18:00:00")
+    # Previous RTH Open
+    actual = dhu.dt_as_str(sym.get_previous_rth_open(t, events=events))
+    test_boundary("previous_rth_open", actual, "2024-03-15 09:30:00")
+    print("\nTesting nested closure window from within outer only using "
+          "2024-03-19 06:00:00")
+    print("This confirms that multiple overlapping events don't muck it up.")
+    t = dhu.dt_as_dt("2024-03-19 06:00:00")
+    print(f"{str(t)}\n")
+    # Next ETH Close
+    actual = dhu.dt_as_str(sym.get_next_eth_close(t, events=events))
+    test_boundary("next_eth_close", actual, "2024-03-20 16:59:00")
+    # Next RTH Close
+    actual = dhu.dt_as_str(sym.get_next_rth_close(t, events=events))
+    test_boundary("next_rth_close", actual, "2024-03-20 15:59:00")
+    # Previous ETH Close
+    actual = dhu.dt_as_str(sym.get_previous_eth_close(t, events=events))
+    test_boundary("previous_eth_close", actual, "2024-03-15 16:59:00")
+    # Previous RTH Close
+    actual = dhu.dt_as_str(sym.get_previous_rth_close(t, events=events))
+    test_boundary("previous_rth_close", actual, "2024-03-15 15:59:00")
+    # Next ETH Open
+    actual = dhu.dt_as_str(sym.get_next_eth_open(t, events=events))
+    test_boundary("next_eth_open", actual, "2024-03-20 18:00:00")
+    # Next RTH Open
+    actual = dhu.dt_as_str(sym.get_next_rth_open(t, events=events))
+    test_boundary("next_rth_open", actual, "2024-03-20 09:30:00")
+    # Previous ETH Open
+    actual = dhu.dt_as_str(sym.get_previous_eth_open(t, events=events))
+    test_boundary("previous_eth_open", actual, "2024-03-17 18:00:00")
+    # Previous RTH Open
+    actual = dhu.dt_as_str(sym.get_previous_rth_open(t, events=events))
+    test_boundary("previous_rth_open", actual, "2024-03-15 09:30:00")
+    print("-----------------------------------------------------------------")
+    print("-----------------------------------------------------------------")
+    if boundaries_all_ok:
+        print("OK: All boundary tests were successful")
+    else:
+        print("ERROR: Some boundary tests failed, please review.")
+
     print("\n######################### INDICATORS ###########################")
+    # Indicators
     print("Building 5m9sma for 2025-01-08 9:30am-11:30am")
     itest = IndicatorSMA(name="TestSMA-DELETEME",
                          timeframe="5m",
@@ -1387,6 +1833,7 @@ if __name__ == '__main__':
     itest.load_underlying_chart()
     itest.calculate()
     print("\n.get_info():")
+    print(itest.get_info())
     print("\n------------------------------------------------")
     print("Validate candles as expected")
     print(f"length of candle_chart: {len(itest.candle_chart.c_candles)}")
