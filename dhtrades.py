@@ -315,7 +315,8 @@ class TradeSeries():
         working = self.__dict__.copy()
         clean_trades = []
         if suppress_trades:
-            clean_trades = ["Trades suppressed for output sanity"]
+            num = len(self.trades)
+            clean_trades = [f"{num} Trades suppressed for output sanity"]
         else:
             for t in self.trades:
                 clean_trades.append(t.to_clean_dict())
@@ -451,8 +452,8 @@ class Backtest():
         custom types (like datetime to string)"""
         working = self.__dict__.copy()
         if suppress_charts:
-            working["chart_tf"] = "Charts suppressed for output sanity"
-            working["chart_1m"] = "Charts suppressed for output sanity"
+            working["chart_tf"] = "Chart suppressed for output sanity"
+            working["chart_1m"] = "Chart suppressed for output sanity"
         else:
             if self.chart_tf is not None:
                 working["chart_tf"] = self.chart_tf.to_clean_dict(
@@ -567,10 +568,8 @@ class Backtest():
         using parameters supplied.  This will vary greatly from one type of
         backtest to another.  At the end of the run it will likely need to
         also store the Backtest object along with it's child TradeSeries and
-        grandchild Trades."""
-        # TODO consider adding something like calculated_dt and elapsed time
-        #      data to the Backtest as well before storing, this might be
-        #      useful information later
+        grandchild Trades.
+        """
         pass
 
     # TODO method to check status of this backtest by bt_id

@@ -179,7 +179,8 @@ class Chart():
         custom types (like datetime to string)"""
         working = self.__dict__.copy()
         if suppress_candles:
-            clean_cans = ["Candles suppressed for output sanity"]
+            num = len(self.c_candles)
+            clean_cans = [f"{num} Candles suppressed for output sanity"]
         else:
             clean_cans = []
             for c in working["c_candles"]:
@@ -668,7 +669,8 @@ class Indicator():
                 suppress_candles=suppress_chart_candles,
                 )
         if suppress_datapoints:
-            clean_dps = ["Datapoints suppressed for output sanity"]
+            num = self.datapoints
+            clean_dps = [f"{num} Datapoints suppressed for output sanity"]
         else:
             clean_dps = []
             for d in working["datapoints"]:

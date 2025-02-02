@@ -451,7 +451,6 @@ def review_candles(timeframe: str,
                     err_msg += f"{k} summary data does not match expected: "
                     err_msg += f"ACTUAL {summary_data[k]} != EXPECTED {v}"
         else:
-            status = "UNKNOWN"
             err_msg = f"Expected data not defined for timeframe: {timeframe}"
 
         # Perform a detailed analysis of actual vs expected timestamps
