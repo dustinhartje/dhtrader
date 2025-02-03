@@ -5,6 +5,7 @@ import json
 import dhutil as dhu
 import dhstore as dhs
 from statistics import fmean
+from copy import deepcopy
 
 # TODO update docstrings in this and all other module files to google style:
 #      https://sphinxcontrib-napoleon.readthedocs.io/
@@ -47,12 +48,16 @@ class Symbol():
     def to_json(self):
         """returns a json version of this object while normalizing
         custom types (like datetime to string)"""
-        working = self.__dict__.copy()
-        working["eth_open_time"] = str(working["eth_open_time"])
-        working["eth_close_time"] = str(working["eth_close_time"])
-        working["rth_open_time"] = str(working["rth_open_time"])
-        working["rth_close_time"] = str(working["rth_close_time"])
-        return json.dumps(working)
+        w = deepcopy(self.__dict__)
+        w["eth_open_time"] = str(w["eth_open_time"])
+        w["eth_close_time"] = str(w["eth_close_time"])
+        w["rth_open_time"] = str(w["rth_open_time"])
+        w["rth_close_time"] = str(w["rth_close_time"])
+        w["eth_week_open"]["time"] = str(w["eth_week_open"]["time"])
+        w["eth_week_close"]["time"] = str(w["eth_week_close"]["time"])
+        w["rth_week_open"]["time"] = str(w["rth_week_open"]["time"])
+        w["rth_week_close"]["time"] = str(w["rth_week_close"]["time"])
+        return json.dumps(w)
 
     def to_clean_dict(self):
         """Converts to JSON string then back to a python dict.  This helps
@@ -89,6 +94,15 @@ class Symbol():
                                                       "%H:%M:%S").time()
             self.rth_close_time = dt.datetime.strptime("15:59:00",
                                                        "%H:%M:%S").time()
+            self.eth_week_open = {"day_of_week": 6,
+                                  "time": self.eth_open_time}
+            self.eth_week_close = {"day_of_week": 4,
+                                   "time": self.eth_close_time}
+            self.rth_week_open = {"day_of_week": 0,
+                                  "time": self.rth_open_time}
+            self.rth_week_close = {"day_of_week": 4,
+                                   "time": self.rth_close_time}
+
         else:
             raise ValueError(f"Ticker {self.ticker} times have not yet been "
                              "defined, unable to calculate set_times()."
@@ -148,6 +162,79 @@ class Symbol():
 
         return r
 
+    def market_is_open(self,
+                       trading_hours: str,
+                       target_dt,
+                       check_closed_events: bool = True,
+                       ):
+        """Returns True if target_dt is within market hours and no Events with
+        category 'Closed' overlap as pulled from central storage
+        """
+        # Set vars needed to evaluate
+        d = dhu.dt_as_dt(target_dt)
+        if trading_hours == "eth":
+            open_dow = self.eth_week_open["day_of_week"]
+            open_time = self.eth_week_open["time"]
+            close_dow = self.eth_week_close["day_of_week"]
+            close_time = self.eth_week_close["time"]
+        elif trading_hours == "rth":
+            open_dow = self.rth_week_open["day_of_week"]
+            open_time = self.rth_week_open["time"]
+            close_dow = self.rth_week_close["day_of_week"]
+            close_time = self.rth_week_close["time"]
+        else:
+            raise ValueError(f"trading_hours: {trading_hours} not supported")
+
+        # Test against weekly and daily time boundaries
+        dow = d.weekday()
+        time = d.time()
+        # Check if we fall in the weekly closure window
+        if open_dow > close_dow:
+            # Week spans the weekend, fail days after close & before open dows
+            if dow < open_dow and dow > close_dow:
+                return False
+        else:
+            # Does not span weekend, fail days before open or after close dows
+            if dow < open_dow or dow > close_dow:
+                return False
+        # For all other days that are at least partially open
+        # Weekly opening day has no prior close to worry about this week
+        # Fail on opening day before the bell rings
+        if dow == open_dow:
+            if time < open_time:
+                return False
+        # Weekly closing day has no subsequent open to worry about this week
+        # Fail on closing day after the bell rings
+        elif dow == close_dow:
+            if time > close_time:
+                return False
+        # Deal with all other mid-week days where opens and closes both exist
+        else:
+            # Days that span overnight open after they close on the same day
+            # Fail if time falls between them
+            if open_time > close_time:
+                if close_time < time < open_time:
+                    return False
+            # Days that do not span overnight open before they close
+            # Fail if time falls before open or after close
+            else:
+                if time < open_time or time > close_time:
+                    return False
+
+        # Test against closure events
+        if check_closed_events:
+            events = dhs.get_events(symbol=self.ticker,
+                                    categories=["Closed"],
+                                    )
+            for e in events:
+                if e.contains_datetime(d):
+                    # Datetime falls inside a closure event
+                    return False
+                pass
+
+        # If we got this far it must be inside market hours, right?
+        return True
+
     def get_market_boundary(self,
                             target_dt,
                             trading_hours: str,
@@ -160,7 +247,8 @@ class Symbol():
         either regular trading hours (rth) or extended/globex trading hours
         (eth).  Optionally factors in events passed in to skip ahead or back
         when an Event (such as a market closure) would impact the datetime
-        returned.
+        returned.  This requires the caller to determine event criteria and
+        build the list rather than making assumptions.
 
         Typically this method does not need to be called directly, instead
         reference it via the wrapper methods below that provide better context
@@ -530,7 +618,7 @@ class Chart():
                 ):
         """returns a json version of this object while normalizing
         custom types (like datetime to string)"""
-        working = self.__dict__.copy()
+        working = deepcopy(self.__dict__)
         if suppress_candles:
             num = len(self.c_candles)
             clean_cans = [f"{num} Candles suppressed for output sanity"]
@@ -1031,7 +1119,7 @@ class Indicator():
         """returns a json version of this object while normalizing
         custom types (like datetime to string).
         """
-        working = self.__dict__.copy()
+        working = deepcopy(self.__dict__)
         working["candle_chart"] = working["candle_chart"].to_clean_dict(
                 suppress_candles=suppress_chart_candles,
                 )
@@ -1500,6 +1588,122 @@ if __name__ == '__main__':
                  tick_size=0.25,
                  )
     print(sym.pretty())
+
+    print("\n----------------------------------------------------------------")
+    print("Testing market_is_open method\n")
+    # Sunday 2024-03-17
+    # Monday 2024-03-18
+    # Wednesday 2024-03-20
+    # Friday 2024-03-22
+    # Saturday 2024-03-23
+
+    # ETH
+    h = "eth"
+    print(f"\n{h}\n")
+    # Saturday should fail at 4am, 5:30pm, and 9pm
+    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-23 04:00:00")
+    s = "OK" if r is False else "ERROR"
+    print(f"{s} {h}  Market open Saturday at 4am - {r}")
+    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-23 17:30:00")
+    s = "OK" if r is False else "ERROR"
+    print(f"{s} {h}  Market open Saturday at 5:30pm - {r}")
+    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-23 21:00:00")
+    s = "OK" if r is False else "ERROR"
+    print(f"{s} {h}  Market open Saturday at 9pm - {r}")
+    # Friday should succeed at noon, fail after 5pm
+    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-22 12:00:00")
+    s = "OK" if r is True else "ERROR"
+    print(f"{s} {h}  Market open Friday at 12pm - {r}")
+    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-22 17:30:00")
+    s = "OK" if r is False else "ERROR"
+    print(f"{s} {h}  Market open Friday at 5:30pm - {r}")
+    # Sunday should fail at noon, succeed after 6pm
+    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-17 12:00:00")
+    s = "OK" if r is False else "ERROR"
+    print(f"{s} {h}  Market open Sunday at 12pm - {r}")
+    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-17 19:30:00")
+    s = "OK" if r is True else "ERROR"
+    print(f"{s} {h}  Market open Sunday at 7:30pm - {r}")
+    # Wednesday should succeed at noon and 8pm, fail at 5:30pm
+    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-20 12:00:00")
+    s = "OK" if r is True else "ERROR"
+    print(f"{s} {h}  Market open Wednesday at 12pm - {r}")
+    # TODO why is this one failing? ######################
+    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-20 17:30:00")
+    s = "OK" if r is False else "ERROR"
+    print(f"{s} {h}  Market open Wednesday at 5:30pm - {r}")
+    ######################################################
+    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-20 20:00:00")
+    s = "OK" if r is True else "ERROR"
+    print(f"{s} {h}  Market open Wednesday at 8pm - {r}")
+
+    # RTH
+    h = "rth"
+    print(f"\n{h}\n")
+    # Saturday should fail at 4am, 5:30pm, and 9pm
+    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-16 04:00:00")
+    s = "OK" if r is False else "ERROR"
+    print(f"{s} {h}  Market open Saturday at 4am - {r}")
+    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-16 17:30:00")
+    s = "OK" if r is False else "ERROR"
+    print(f"{s} {h}  Market open Saturday at 5:30pm - {r}")
+    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-16 21:00:00")
+    s = "OK" if r is False else "ERROR"
+    print(f"{s} {h}  Market open Saturday at 9pm - {r}")
+    # Sunday should fail at 4am, 5:30pm, and 9pm
+    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-17 04:00:00")
+    s = "OK" if r is False else "ERROR"
+    print(f"{s} {h}  Market open Sunday at 4am - {r}")
+    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-17 17:30:00")
+    s = "OK" if r is False else "ERROR"
+    print(f"{s} {h}  Market open Sunday at 5:30pm - {r}")
+    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-17 21:00:00")
+    s = "OK" if r is False else "ERROR"
+    print(f"{s} {h}  Market open Sunday at 9pm - {r}")
+    # Monday should fail at 8am, succeed after 2pm
+    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-18 08:00:00")
+    s = "OK" if r is False else "ERROR"
+    print(f"{s} {h}  Market open Monday at 8am - {r}")
+    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-18 14:00:00")
+    s = "OK" if r is True else "ERROR"
+    print(f"{s} {h}  Market open Monday at 2pm - {r}")
+    # Friday should succeed at noon, fail after 4pm
+    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-22 12:00:00")
+    s = "OK" if r is True else "ERROR"
+    print(f"{s} {h}  Market open Friday at 12pm - {r}")
+    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-22 17:00:00")
+    s = "OK" if r is False else "ERROR"
+    print(f"{s} {h}  Market open Friday at 5pm - {r}")
+    # Wednesday should fail at 4am, succeed at noon, and fail at 8pm
+    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-20 04:00:00")
+    s = "OK" if r is False else "ERROR"
+    print(f"{s} {h}  Market open Wednesday at 4am - {r}")
+    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-20 12:00:00")
+    s = "OK" if r is True else "ERROR"
+    print(f"{s} {h}  Market open Wednesday at 12pm - {r}")
+    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-20 20:00:00")
+    s = "OK" if r is False else "ERROR"
+    print(f"{s} {h}  Market open Wednesday at 8pm - {r}")
+
+    # Events should also indicate market closed
+    print(f"\nTesting that datetime inside a holiday closure fails using "
+          "2024-03-29 12:00:00 which is noon on Good Friday\n")
+    h = "rth"
+    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-29 12:00:00")
+    s = "OK" if r is False else "ERROR"
+    print(f"{s} {h}  Market open on Good Friday at 12pm - {r}")
+    h = "eth"
+    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-29 12:00:00")
+    s = "OK" if r is False else "ERROR"
+    print(f"{s} {h}  Market open on Good Friday at 12pm - {r}")
+    print("\nand just to be sure it's not going to flip somehow test during "
+          "daily eth closure window on the same holiday\n")
+    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-29 17:30:00")
+    s = "OK" if r is False else "ERROR"
+    print(f"{s} {h}  Market open on Good Friday at 5:30pm - {r}")
+
+    print("\n----------------------------------------------------------------")
+    print("-----------------------------------------------------------------")
     print("Confirming get_market_boundary wrappers working as expected")
     boundaries_all_ok = True
     print("All results will be displayed as Expected then Actual")

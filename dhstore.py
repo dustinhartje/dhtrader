@@ -619,7 +619,6 @@ def get_events(symbol: str = "ES",
     """Returns a list of events starting within the start and end epochs given
     inclusive of both epochs.  Note this will return events that end after
     end_epoch so long as they start before or on it."""
-    # TODO add ability to further filter by categories and tags if passed
     if start_epoch is None:
         start_epoch = dhu.dt_to_epoch("1900-01-01 00:00:00")
     if end_epoch is None:

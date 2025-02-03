@@ -512,12 +512,30 @@ def get_events(symbol: str,
     """Returns a list of events starting within the start and end epochs given
     inclusive of both epochs.  Note this will return events that end after
     end_epoch so long as they start before or on it."""
-    # TODO add ability to further filter by categories and tags if passed
     c = db[f"events_{symbol}"]
-    result = c.find({"$and": [{"start_epoch": {"$gte": start_epoch}},
-                    {"start_epoch": {"$lte": end_epoch}}]})
+    events = list(c.find({"$and": [{"start_epoch": {"$gte": start_epoch}},
+                         {"start_epoch": {"$lte": end_epoch}}]}))
+    if categories is not None:
+        filtered_by_cat = []
+        for e in events:
+            if e["category"] in categories:
+                filtered_by_cat.append(e)
+    else:
+        filtered_by_cat = events
 
-    return list(result)
+    if tags is not None:
+        filtered_by_tag = []
+        for e in filtered_by_cat:
+            for t in tags:
+                if t in e["tags"]:
+                    filtered_by_tag.append(e)
+                    break
+    else:
+        filtered_by_tag = filtered_by_cat
+
+    result = filtered_by_tag
+
+    return result
 
 
 ##############################################################################

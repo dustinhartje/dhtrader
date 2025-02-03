@@ -1,5 +1,6 @@
 import json
 from datetime import datetime as dt
+from copy import deepcopy
 import dhutil as dhu
 import dhstore as dhs
 import dhcharts as dhc
@@ -312,7 +313,7 @@ class TradeSeries():
                 ):
         """returns a json version of this object while normalizing
         custom types (like datetime to string)"""
-        working = self.__dict__.copy()
+        working = deepcopy(self.__dict__)
         clean_trades = []
         if suppress_trades:
             num = len(self.trades)
@@ -450,7 +451,7 @@ class Backtest():
                 ):
         """returns a json version of this object while normalizing
         custom types (like datetime to string)"""
-        working = self.__dict__.copy()
+        working = deepcopy(self.__dict__)
         if suppress_charts:
             working["chart_tf"] = "Chart suppressed for output sanity"
             working["chart_1m"] = "Chart suppressed for output sanity"
