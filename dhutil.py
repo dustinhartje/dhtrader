@@ -95,6 +95,25 @@ def valid_trading_hours(t, exit=True):
         return False
 
 
+def check_tf_th_compatibility(tf, th, exit=True):
+    """Confirm that a given timeframe (tf) and trading hours (th) are
+    compatible.  Usually we want to exit if this is not so as data cannot be
+    trusted otherwise.
+    """
+    result = True
+    if th == "eth":
+        if tf in ["r1h", "r1d", "r1w"]:
+            result = False
+    if th == "rth":
+        if tf in ["e1h", "e1d", "e1w"]:
+            result = False
+    if exit and not result:
+        raise ValueError(f"timeframe {tf} and trading_hours {th} cannot "
+                         "coexist, please change one of them.")
+
+    return result
+
+
 def valid_event_category(c, exit=True):
     if c in EVENT_CATEGORIES:
         return True

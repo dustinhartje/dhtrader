@@ -390,6 +390,8 @@ class Backtest():
         end_dt (str or datetime): End of time period evaluated
         timeframe (str): timeframe of underlying chart trades were evaluated
             on
+        trading_hours (str): whether to run trades during regular trading
+            hours only ('rth') or include extended/globex hours ('eth')
         symbol (str): The symbol or "ticker" being evaluated
         name (str): Human friendly label representing this object
         parameters (dict): Backtest specific parameters needed to evaluate.
@@ -413,6 +415,7 @@ class Backtest():
                  start_dt,
                  end_dt,
                  timeframe: str,
+                 trading_hours: str,
                  symbol: str,
                  name: str,
                  parameters: dict,
@@ -426,6 +429,8 @@ class Backtest():
         self.end_dt = dhu.dt_as_str(end_dt)
         if dhu.valid_timeframe(timeframe):
             self.timeframe = timeframe
+        if dhu.valid_trading_hours(trading_hours):
+            self.trading_hours = trading_hours
         self.symbol = symbol
         self.name = name
         if bt_id is None:
@@ -627,6 +632,7 @@ def test_basics():
                       end_dt="2025-01-02 12:01:00",
                       symbol="ES",
                       timeframe="1m",
+                      trading_hours="eth",
                       name="DELETEME_Testing",
                       parameters={},
                       autoload_charts=True,
@@ -772,6 +778,7 @@ def test_basics():
                  end_dt="2025-01-04 00:00:00",
                  symbol="ES",
                  timeframe="e1h",
+                 trading_hours="eth",
                  name="DELETEME_Testing",
                  parameters={},
                  autoload_charts=True,
