@@ -476,7 +476,12 @@ class Backtest():
                     ))
         working["tradeseries"] = clean_tradeseries
 
-        return json.dumps(working)
+        return json.dumps(self.to_json_subs(working))
+
+    def to_json_subs(self, working):
+        """Placeholder for subclasses to normalize any additional attributes
+        they may have added to make them also JSON serializable."""
+        return working
 
     def to_clean_dict(self,
                       suppress_tradeseries: bool = True,
