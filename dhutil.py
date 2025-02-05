@@ -211,7 +211,6 @@ def next_candle_start(dt,
                 next_dt = next_dt + min_delta
         else:
             raise ValueError(f"timeframe: {timeframe} not supported")
-        print(next_dt)
         done = sym.market_is_open(trading_hours=trading_hours,
                                   target_dt=next_dt,
                                   check_closed_events=True,

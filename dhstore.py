@@ -12,6 +12,7 @@
 #      and be more shim-ish in nature
 
 import csv
+import sys
 from collections import Counter, defaultdict
 from datetime import datetime as dt
 from datetime import timedelta
@@ -205,10 +206,15 @@ def get_indicator(ind_id: str,
     optionally (default=True) autoloads it's datapoints for the given range
     of earliest_dt to latest_dt
     """
-    i = dhm.get_indicator(ind_id=ind_id,
-                          meta_collection=meta_collection,
-                          autoload_datapoints=autoload_datapoints,
-                          )[0]
+    try:
+        i = dhm.get_indicator(ind_id=ind_id,
+                              meta_collection=meta_collection,
+                              autoload_datapoints=autoload_datapoints,
+                              )[0]
+    except IndexError as e:
+        f = type(e)(str(e) + f"; ind_id={ind_id} was not found")
+        raise f.with_traceback(sys.exc_info()[2])
+
     # The stored class_name attribute tells us which object class to return
     if i["class_name"] == "IndicatorSMA":
         result = dhc.IndicatorSMA(description=i["description"],
