@@ -495,6 +495,7 @@ class Candle():
                  c_time: str = None
                  ):
 
+        # Passable attributes
         self.c_datetime = dhu.dt_as_str(c_datetime)
         self.c_timeframe = c_timeframe
         dhu.valid_timeframe(self.c_timeframe)
@@ -518,6 +519,9 @@ class Candle():
             c_time = dhu.dt_as_str(c_datetime).split()[1]
         self.c_time = c_time
 
+        # Calculated attributes
+        delta = dhu.timeframe_delta(self.c_timeframe)
+        self.c_end_datetime = dhu.dt_as_dt(self.c_datetime) + delta
         self.c_size = abs(self.c_high - self.c_low)
         self.c_body_size = abs(self.c_open - self.c_close)
         self.c_upper_wick_size = self.c_high - max(self.c_open, self.c_close)
@@ -580,7 +584,17 @@ class Candle():
         return not self.__eq__(other)
 
     def store(self):
-        dhs.store_candle(self)
+        return dhs.store_candle(self)
+
+    def contains_datetime(self, d):
+        """Return True if the datetime provided occurs in this candle"""
+        return (dhu.dt_as_dt(self.c_datetime) < dhu.dt_as_dt(d) and
+                dhu.dt_as_dt(d) < dhu.dt_as_dt(self.c_end_datetime))
+
+    def contains_price(self, p):
+        """Return True if the price provided falls at or between the high and
+        low of this candle"""
+        return self.c_low <= p <= self.c_high
 
 
 class Chart():
