@@ -150,35 +150,67 @@ def timeframe_delta(timeframe: str):
 
 
 def next_candle_start(dt, timeframe: str = "1m"):
-    """returns the next datetime that represents a proper candle start
+    """Returns the next datetime that represents a proper candle start
     for the given datetime.  May return the same as input"""
     # TODO factor in market closures and events
     #      be sure to test regression when I do though to make sure this
     #      doesn't break things already using this function
     next_dt = dt_as_dt(dt)
-    add_min = timedelta(minutes=1)
+    min_delta = timedelta(minutes=1)
     # Start by rounding up to the next minute if we have secs or microsecs
     if (next_dt.second > 0) or (next_dt.microsecond > 0):
-        next_dt = next_dt.replace(microsecond=0, second=0) + add_min
+        next_dt = next_dt.replace(microsecond=0, second=0) + min_delta
     # Now bump by a minute at a time to reach the timeframe correct minute
     if timeframe == "1m":
         pass
     elif timeframe == "5m":
         while next_dt.minute % 5 != 0:
-            next_dt = next_dt + add_min
+            next_dt = next_dt + min_delta
     elif timeframe == "15m":
         while next_dt.minute % 15 != 0:
-            next_dt = next_dt + add_min
+            next_dt = next_dt + min_delta
     elif timeframe == "r1h":
         while next_dt.minute != 30:
-            next_dt = next_dt + add_min
+            next_dt = next_dt + min_delta
     elif timeframe == "e1h":
         while next_dt.minute != 0:
-            next_dt = next_dt + add_min
+            next_dt = next_dt + min_delta
     else:
         raise ValueError(f"timeframe: {timeframe} not supported")
 
     return next_dt
+
+
+def this_candle_start(dt, timeframe: str = "1m"):
+    """Returns the datetime that represents a proper candle start
+    in which the given datetime would exit in this timeframe.  May return the
+    same as input.
+    """
+    # TODO factor in market closures and events
+    this_dt = dt_as_dt(dt)
+    min_delta = timedelta(minutes=1)
+    # Start by removing secs and microsecs to get to the whole minute
+    if (this_dt.second > 0) or (this_dt.microsecond > 0):
+        this_dt = this_dt.replace(microsecond=0, second=0)
+    # Now drop back 1 minute at a time to reach the timeframe correct start
+    if timeframe == "1m":
+        pass
+    elif timeframe == "5m":
+        while this_dt.minute % 5 != 0:
+            this_dt = this_dt - min_delta
+    elif timeframe == "15m":
+        while this_dt.minute % 15 != 0:
+            this_dt = this_dt - min_delta
+    elif timeframe == "r1h":
+        while this_dt.minute != 30:
+            this_dt = this_dt - min_delta
+    elif timeframe == "e1h":
+        while this_dt.minute != 0:
+            this_dt = this_dt - min_delta
+    else:
+        raise ValueError(f"timeframe: {timeframe} not supported")
+
+    return this_dt
 
 
 def rangify_candle_times(times: list,
