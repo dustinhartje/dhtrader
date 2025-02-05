@@ -431,7 +431,7 @@ class Backtest():
             self.timeframe = timeframe
         if dhu.valid_trading_hours(trading_hours):
             self.trading_hours = trading_hours
-        dhu.check_tf_th_compatibility()
+        dhu.check_tf_th_compatibility(tf=timeframe, th=trading_hours)
         self.symbol = symbol
         self.name = name
         if bt_id is None:

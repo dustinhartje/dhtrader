@@ -233,8 +233,7 @@ def this_candle_start(dt, timeframe: str = "1m"):
     this_dt = dt_as_dt(dt)
     min_delta = timedelta(minutes=1)
     # Start by removing secs and microsecs to get to the whole minute
-    if (this_dt.second > 0) or (this_dt.microsecond > 0):
-        this_dt = this_dt.replace(microsecond=0, second=0)
+    this_dt = this_dt.replace(microsecond=0, second=0)
     # Now drop back 1 minute at a time to reach the timeframe correct start
     if timeframe == "1m":
         pass
