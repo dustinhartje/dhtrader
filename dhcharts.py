@@ -1083,6 +1083,28 @@ class Indicator():
         abbreviations as they are used in tagging and storage, think like
         sma, hod, vwap, etc.  This class won't be used directly, use it's
         child classes which will be indicator type specific"""
+        # TODO method to populate datapoints from storage, which should then
+        #      possibly also calculate anything missing based on underlying
+        #      candles' timestamps.  Or maybe just trigger a full recalc
+        #      if anything seems amiss?
+        #      TODO note earliest and latest timestamps then use expected
+        #      candle functionality to check for missing datapoints.  Will
+        #      need to account somehow for things like the first 8 bars of a
+        #      9 bar ema/sma not being included, that's gonna get tricky
+        #      if I don't want to write this to be indicator specific.  Maybe
+        #      I can include leading and trailing gap parameters with default
+        #      zero in the base class then adjust to be indicator specific
+        #      in the subclasses, that should work!
+        # TODO need some functions to review and cleanup both indicator meta
+        #      and datapoints stuff
+        # TODO create a calculations versions changelog for indicators as
+        #      a separate text/md file with a section for each indicator
+        # TODO Review get_info(), is it still needed after creation of
+        #      .pretty()?
+        #      If so, add earliest and latest datapoints to get_info()
+        #      see dhmongo review_candles() for example
+        #      If ditching it maybe add them as attributes?  be sure to recalc
+        #      them whenever I adjust datapoints if I do
         self.name = name
         self.description = description
         if not dhu.valid_timeframe(timeframe):
@@ -1172,9 +1194,7 @@ class Indicator():
     def get_info(self,
                  pretty: bool = False,
                  ):
-        # TODO add earliest and latest datapoints info to this
-        #      see dhmongo review_candles() for example
-
+        """Provide a basic overview of this object"""
         output = {"ind_id": self.ind_id,
                   "name": self.name,
                   "description": self.description,
@@ -1243,22 +1263,35 @@ class Indicator():
                                    )
 
         return result
-        # TODO method to populate datapoints from storage, which should then
-        #      possibly also calculate anything missing based on underlying
-        #      candles' timestamps.  Or maybe just trigger a full recalc
-        #      if anything seems amiss?
-        #      TODO note earliest and latest timestamps then use expected
-        #      candle functionality to check for missing datapoints.  Will
-        #      need to account somehow for things like the first 8 bars of a
-        #      9 bar ema/sma not being included, that's gonna get tricky
-        #      if I don't want to write this to be indicator specific.  Maybe
-        #      I can include leading and trailing gap parameters with default
-        #      zero in the base class then adjust to be indicator specific
-        #      in the subclasses, that should work!
-        # TODO need some functions to review and cleanup both indicator meta
-        #      and datapoints stuff
-        # TODO create a calculations versions changelog for indicators as
-        #      a separate text/md file with a section for each indicator
+
+    def get_datapoint(self,
+                      dt,
+                      offset: int = 0,
+                      ):
+        """Returns a single datapoint based on datetime provided.  Because
+        this is typically based on candle close, we often want the previous
+        datapoint from the candle we are working through in a backtest so
+        offset is allowed to go back or forward in the list by the provided
+        value.  Wrapper methods assist with the most common previous and
+        next requests.
+        """
+        index = next((i for i, dp in enumerate(self.datapoints)
+                      if dhu.dt_as_dt(dp.dt) == dhu.dt_as_dt(dt)), None)
+        index += offset
+
+        return self.datapoints[index]
+
+    def next_datapoint(self,
+                       dt,
+                       ):
+        """Wrapper for get_datapoint"""
+        return self.get_datapoint(dt=dt, offset=1)
+
+    def prev_datapoint(self,
+                       dt,
+                       ):
+        """Wrapper for get_datapoint"""
+        return self.get_datapoint(dt=dt, offset=-1)
 
 
 class IndicatorSMA(Indicator):
@@ -2058,9 +2091,19 @@ if __name__ == '__main__':
         print(f"E: {expected[i]}")
         print(f"C: {calculated[i]}")
     print("If expected and calculated don't match above, something is broken")
+    print("\n------------------------------------------------")
+    print("\nTesting getting datapoints by dt using 2025-01-12 18:00:00")
+    dp_dt = "2025-01-12 18:00:00"
+    print("\nCurrent 2025-01-12 18:00:00 is expected (Sunday 6pm)")
+    print(itest.get_datapoint(dt=dp_dt))
+    print("\nNext    2025-01-12 19:00:00 is expected (7pm / 1hr later)")
+    print(itest.next_datapoint(dt=dp_dt))
+    print("\nPrev    2025-01-10 16:00:00 is expected (last candle on Friday)")
+    print(itest.prev_datapoint(dt=dp_dt))
     print("\n################################################")
 
     # Testing storage and retrieval
+    print("Testing indicator storage and retrieval")
     result = itest.store()
     print(f"Actual completion time: {result['elapsed'].elapsed_str}")
     print("\nIndicators storage result:")
