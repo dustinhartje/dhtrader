@@ -168,34 +168,58 @@ def timeframe_delta(timeframe: str):
         raise ValueError(f"timeframe: {timeframe} not supported")
 
 
-def next_candle_start(dt, timeframe: str = "1m"):
+def next_candle_start(dt,
+                      trading_hours: str,
+                      symbol: str = "ES",
+                      timeframe: str = "1m",
+                      ):
     """Returns the next datetime that represents a proper candle start
     for the given datetime.  May return the same as input"""
-    # TODO factor in market closures and events
-    #      be sure to test regression when I do though to make sure this
-    #      doesn't break things already using this function
+    if symbol == "ES":
+        sym = dhc.Symbol(ticker="ES",
+                         name="ES",
+                         leverage_ratio=float(50),
+                         tick_size=0.25,
+                         )
+    else:
+        raise ValueError("Only ES is supported for symbol at this time")
+
+    valid_trading_hours(trading_hours)
+    check_tf_th_compatibility(tf=timeframe, th=trading_hours)
     next_dt = dt_as_dt(dt)
     min_delta = timedelta(minutes=1)
-    # Start by rounding up to the next minute if we have secs or microsecs
-    if (next_dt.second > 0) or (next_dt.microsecond > 0):
-        next_dt = next_dt.replace(microsecond=0, second=0) + min_delta
-    # Now bump by a minute at a time to reach the timeframe correct minute
-    if timeframe == "1m":
-        pass
-    elif timeframe == "5m":
-        while next_dt.minute % 5 != 0:
+
+    done = False
+    while not done:
+        # Start by rounding off any seconds or microseconds
+        next_dt = next_dt.replace(microsecond=0, second=0)
+        # Now bump by a minute at a time until the next multiple of the
+        # timeframe is found.  For 1m timeframe this always increments once.
+        if timeframe == "1m":
             next_dt = next_dt + min_delta
-    elif timeframe == "15m":
-        while next_dt.minute % 15 != 0:
+        elif timeframe == "5m":
+            while next_dt.minute % 5 != 0:
+                next_dt = next_dt + min_delta
+        elif timeframe == "15m":
+            while next_dt.minute % 15 != 0:
+                next_dt = next_dt + min_delta
+        elif timeframe == "r1h":
+            while next_dt.minute != 30:
+                next_dt = next_dt + min_delta
+        elif timeframe == "e1h":
+            while next_dt.minute != 0:
+                next_dt = next_dt + min_delta
+        else:
+            raise ValueError(f"timeframe: {timeframe} not supported")
+        print(next_dt)
+        done = sym.market_is_open(trading_hours=trading_hours,
+                                  target_dt=next_dt,
+                                  check_closed_events=True,
+                                  )
+        # If we're not in market hours and not in 1m timeframe, add a minute
+        # to ensure the next loop doesn't spit out the same value
+        if not timeframe == "1m" and not done:
             next_dt = next_dt + min_delta
-    elif timeframe == "r1h":
-        while next_dt.minute != 30:
-            next_dt = next_dt + min_delta
-    elif timeframe == "e1h":
-        while next_dt.minute != 0:
-            next_dt = next_dt + min_delta
-    else:
-        raise ValueError(f"timeframe: {timeframe} not supported")
 
     return next_dt
 
@@ -203,9 +227,9 @@ def next_candle_start(dt, timeframe: str = "1m"):
 def this_candle_start(dt, timeframe: str = "1m"):
     """Returns the datetime that represents a proper candle start
     in which the given datetime would exit in this timeframe.  May return the
-    same as input.
+    same as input.  This does not confirm market open like next_candle_start()
+    since it may not be able to provide an answer in some cases..
     """
-    # TODO factor in market closures and events
     this_dt = dt_as_dt(dt)
     min_delta = timedelta(minutes=1)
     # Start by removing secs and microsecs to get to the whole minute

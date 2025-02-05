@@ -56,9 +56,9 @@ class Trade():
                  open_epoch: int = None,
                  exit_price: float = None,
                  gain_loss: float = None,
-                 stop_ticks: float = float(0),
-                 prof_ticks: float = float(0),
-                 offset_ticks: float = float(0),
+                 stop_ticks: int = 0,
+                 prof_ticks: int = 0,
+                 offset_ticks: int = 0,
                  drawdown_impact: float = float(0),
                  symbol: str = 'ES',
                  contracts: int = 1,
@@ -431,6 +431,7 @@ class Backtest():
             self.timeframe = timeframe
         if dhu.valid_trading_hours(trading_hours):
             self.trading_hours = trading_hours
+        dhu.check_tf_th_compatibility()
         self.symbol = symbol
         self.name = name
         if bt_id is None:
