@@ -13,6 +13,7 @@
 
 import csv
 import sys
+import progressbar
 from collections import Counter, defaultdict
 from datetime import datetime as dt
 from datetime import timedelta
@@ -320,6 +321,7 @@ def store_indicator(indicator,
                     meta_collection: str = COLL_IND_META,
                     dp_collection: str = COLL_IND,
                     store_datapoints: bool = True,
+                    show_progress: bool = False,
                     ):
     """Store indicator meta and datapoints in central storage.  Does not
     overwrite existing datapoints unless overwrite_dp == True"""
@@ -335,12 +337,33 @@ def store_indicator(indicator,
         result_dps = []
         dps_skipped = 0
         dps_stored = 0
+        if show_progress:
+            progress = 0
+            bar_total = len(indicator.datapoints)
+            bar_label = (f"%(value)d of {bar_total} stored in %(elapsed)s ")
+            bar_eta = progressbar.ETA(format_not_started='--:--:--',
+                                      format_finished='Time: %(elapsed)8s',
+                                      format='Remaining: %(eta)8s',
+                                      format_zero='Remaining: 00:00:00',
+                                      format_na='Remaining: N/A',
+                                      )
+            widgets = [progressbar.Percentage(),
+                       progressbar.Bar(),
+                       progressbar.FormatLabel(bar_label),
+                       bar_eta,
+                       ]
+            bar = progressbar.ProgressBar(widgets=widgets,
+                                          max_value=bar_total).start()
         for d in indicator.datapoints:
             s = d.store()
             result_dps.append(s)
             dps_skipped += len(s["skipped"])
             dps_stored += len(s["stored"])
+            if show_progress:
+                progress += 1
+                bar.update(progress)
     op_timer.stop()
+    bar.finish()
 
     result = {"indicator": result_ind,
               "datapoints_stored": dps_stored,
