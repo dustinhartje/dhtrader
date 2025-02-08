@@ -1271,12 +1271,14 @@ class Indicator():
 
     def store(self,
               store_datapoints: bool = True,
+              show_progress: bool = False,
               ):
         """uses DHStore functionality to store metadata and time series
         datapoints into central storage
         """
         return dhs.store_indicator(self,
                                    store_datapoints=store_datapoints,
+                                   show_progress=show_progress,
                                    )
 
         return result
