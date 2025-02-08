@@ -166,6 +166,7 @@ class Symbol():
                        trading_hours: str,
                        target_dt,
                        check_closed_events: bool = True,
+                       events: list = None,
                        ):
         """Returns True if target_dt is within market hours and no Events with
         category 'Closed' overlap as pulled from central storage
@@ -223,9 +224,11 @@ class Symbol():
 
         # Test against closure events
         if check_closed_events:
-            events = dhs.get_events(symbol=self.ticker,
-                                    categories=["Closed"],
-                                    )
+            # If list of events was not passed, retrieve them from storage
+            if events is None:
+                events = dhs.get_events(symbol=self.ticker,
+                                        categories=["Closed"],
+                                        )
             for e in events:
                 if e.contains_datetime(d):
                     # Datetime falls inside a closure event

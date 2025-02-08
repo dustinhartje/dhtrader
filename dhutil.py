@@ -340,6 +340,7 @@ def expected_candle_datetimes(start_dt,
             week_open = {"day": 0, "hour": 9, "minute": 30, "second": 0}
             # Market closes for the week Friday evening
             week_close = {"day": 4, "hour": 15, "minute": 59, "second": 0}
+            trading_hours = "rth"
         else:
             weekday_open = {"hour": 18, "minute": 0, "second": 0}
             weekday_close = {"hour": 16, "minute": 59, "second": 0}
@@ -347,12 +348,16 @@ def expected_candle_datetimes(start_dt,
             week_open = {"day": 6, "hour": 18, "minute": 0, "second": 0}
             # Market closes for the week Friday evening
             week_close = {"day": 4, "hour": 16, "minute": 59, "second": 0}
+            trading_hours = "eth"
     else:
         raise ValueError("Only ES is currently supported as symbol for now")
     # Build a list of possible candles within standard market hours
     result_std = []
     adder = timeframe_delta(timeframe)
-    this = next_candle_start(dt=start_dt, timeframe=timeframe)
+    this = next_candle_start(dt=start_dt,
+                             timeframe=timeframe,
+                             trading_hours=trading_hours,
+                             )
     ender = dt_as_dt(end_dt)
     while this <= ender:
         include = True
