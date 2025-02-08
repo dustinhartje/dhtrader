@@ -172,6 +172,7 @@ def next_candle_start(dt,
                       trading_hours: str,
                       symbol: str = "ES",
                       timeframe: str = "1m",
+                      events: list = None,
                       ):
     """Returns the next datetime that represents a proper candle start
     for the given datetime.  May return the same as input"""
@@ -214,6 +215,7 @@ def next_candle_start(dt,
         done = sym.market_is_open(trading_hours=trading_hours,
                                   target_dt=next_dt,
                                   check_closed_events=True,
+                                  events=events,
                                   )
         # If we're not in market hours and not in 1m timeframe, add a minute
         # to ensure the next loop doesn't spit out the same value
