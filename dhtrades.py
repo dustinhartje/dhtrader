@@ -601,6 +601,11 @@ def test_basics():
     working as expected"""
     # TODO LOWPRI make these into unit tests some day
     print("\n========================= OUTPUTS ===========================")
+    # TODO in lieu of real unit tests, start a test_results empty list and
+    #      record a quick oneliner for each easily confirmable test as it
+    #      finishes, something like "OK - Trade() Storage and retrieval"
+    #      then print them all at the end.  For non-easily-confirmed could
+    #      add a note like "UNKNOWN - Visual confirm needed for Trade.pretty()
     print("All objects should print 'pretty' which confirms .to_json(), "
           ".to_clean_dict(), and .pretty() methods all work properly"
           )

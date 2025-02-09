@@ -547,6 +547,11 @@ def test_basics():
     # TODO consider converting these into unit tests some day
     # https://docs.python.org/3/library/unittest.html
 
+    # TODO in lieu of real unit tests, start a test_results empty list and
+    #      record a quick oneliner for each easily confirmable test as it
+    #      finishes, something like "OK - Trade() Storage and retrieval"
+    #      then print them all at the end.  For non-easily-confirmed could
+    #      add a note like "UNKNOWN - Visual confirm needed for Trade.pretty()
     print("\nListing current collections before we make changes")
     print(list_collections())
 

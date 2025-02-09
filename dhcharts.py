@@ -1015,7 +1015,7 @@ class IndicatorDataPoint():
                  dt: str,
                  value: float,
                  ind_id: str,
-                 epoch: int = None
+                 epoch: int = None,
                  ):
         self.dt = dhu.dt_as_str(dt)
         self.value = value
@@ -1076,8 +1076,25 @@ class IndicatorDataPoint():
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def store(self):
-        return dhs.store_indicator_datapoints(datapoints=[self])
+    def store(self, checker=None):
+        """Optionally provide an IndicatorDataPoint as 'checker' if you want
+        a test for this to compare, before running the storage operation as
+        many queries slow down large batches.  This is meant to be provided by
+        a wrapper performing periodic updates that may be attempting to store
+        duplicate already in central storage.  The wrapper should retrieve all
+        datapoints that might match from storage first and provide them for
+        comparison to help this method avoid extra work.  There's probably
+        a more elegant way to do this, but this will work and is easy enough.
+        """
+        if checker == self:
+            # Return an object similar to what dhs.store_indicator would
+            # provide on a skip if no checker had been provided.
+            return {"skipped": 1,
+                    "stored": 0,
+                    "elapsed": None,
+                    }
+        else:
+            return dhs.store_indicator_datapoints(datapoints=[self])
 
 
 class Indicator():
@@ -1564,6 +1581,11 @@ if __name__ == '__main__':
     # Run a few tests to confirm desired functionality
 
     # Test pretty output which also confirms json and clean_dict working
+    # TODO in lieu of real unit tests, start a test_results empty list and
+    #      record a quick oneliner for each easily confirmable test as it
+    #      finishes, something like "OK - Trade() Storage and retrieval"
+    #      then print them all at the end.  For non-easily-confirmed could
+    #      add a note like "UNKNOWN - Visual confirm needed for Trade.pretty()
     print("\n######################### OUTPUTS ###########################")
     print("All objects should print 'pretty' which confirms .to_json(), "
           ".to_clean_dict(), and .pretty() methods all work properly"

@@ -354,8 +354,41 @@ def store_indicator(indicator,
                        ]
             bar = progressbar.ProgressBar(widgets=widgets,
                                           max_value=bar_total).start()
+
+        # To prevent each datapoint from running queries individually, we'll
+        # retrieve all potentially relevant stored datapoints for comparison
+        # in a single storage query first and then provide them.  In theory
+        # this should be faster than many queries during the storage loop.
+
+        # Determine earliest and latest datapoints in indicator
+        earliest = dhu.dt_to_epoch(dt.now())
+        latest = 0
         for d in indicator.datapoints:
-            s = d.store()
+            earliest = min(d.epoch, earliest)
+            latest = max(d.epoch, latest)
+        earliest_stored = dhu.dt_from_epoch(earliest)
+        latest_stored = dhu.dt_from_epoch(latest)
+
+        # Retrieve all stored datapoints for this timeframe
+        dps_in_storage = get_indicator_datapoints(ind_id=indicator.ind_id,
+                                                  earliest_dt=earliest_stored,
+                                                  latest_dt=latest_stored,
+                                                  )
+
+        # Put them in a dict for easier comparison to each datapoint
+        checkers = {}
+        for d in dps_in_storage:
+            checkers[d.epoch] = d
+
+        # Loop through all datapoints, providing the stored version if avail
+        # to compare.  This avoids spend time storing duplicates.
+        for d in indicator.datapoints:
+            # If we found a stored datapoint with the same epoch, provide it
+            if d.epoch in checkers.keys():
+                s = d.store(checker=d.epoch)
+            # Otherwise run datapoints store() without it's usual self check
+            else:
+                s = d.store(skip_dupes=False)
             result_dps.append(s)
             dps_skipped += len(s["skipped"])
             dps_stored += len(s["stored"])
@@ -691,6 +724,11 @@ def test_basics():
     # TODO consider converting these into unit tests some day
     # https://docs.python.org/3/library/unittest.html
 
+    # TODO in lieu of real unit tests, start a test_results empty list and
+    #      record a quick oneliner for each easily confirmable test as it
+    #      finishes, something like "OK - Trade() Storage and retrieval"
+    #      then print them all at the end.  For non-easily-confirmed could
+    #      add a note like "UNKNOWN - Visual confirm needed for Trade.pretty()
     print("=========================== CANDLES ==============================")
     # Test basic candle storing functionality
     print("\nStoring 2 test candles")
