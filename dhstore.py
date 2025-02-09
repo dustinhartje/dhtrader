@@ -340,21 +340,14 @@ def store_indicator(indicator,
         dps_stored = 0
         if show_progress:
             progress = 0
+            bar_started = False
             bar_total = len(indicator.datapoints)
-            bar_label = (f"%(value)d of {bar_total} stored in %(elapsed)s ")
             bar_eta = progressbar.ETA(format_not_started='--:--:--',
                                       format_finished='Time: %(elapsed)8s',
                                       format='Remaining: %(eta)8s',
                                       format_zero='Remaining: 00:00:00',
                                       format_na='Remaining: N/A',
                                       )
-            widgets = [progressbar.Percentage(),
-                       progressbar.Bar(),
-                       progressbar.FormatLabel(bar_label),
-                       bar_eta,
-                       ]
-            bar = progressbar.ProgressBar(widgets=widgets,
-                                          max_value=bar_total).start()
 
         # To prevent each datapoint from running it's own query, we'll
         # retrieve all potentially relevant stored datapoints to compare
@@ -395,15 +388,42 @@ def store_indicator(indicator,
                 # This is the high speed but less robust mode, useful for
                 # daily updates but may leave issues or gaps
                 if d.epoch > latest_stored:
+                    if show_progress and not bar_started:
+                        # Once we find something new enough to store, start the
+                        # progress bar up
+                        bar_label = (f"%(value)d of {bar_total} stored in "
+                                     "%(elapsed)s ")
+                        widgets = [progressbar.Percentage(),
+                                   progressbar.Bar(),
+                                   progressbar.FormatLabel(bar_label),
+                                   bar_eta,
+                                   ]
+                        bar = progressbar.ProgressBar(
+                                widgets=widgets,
+                                max_value=bar_total).start()
+                        bar_started = True
                     s = d.store()
                 else:
                     s = {"skipped": [d], "stored": [], "elapsed": None}
+                    bar_total -= 1
 
             else:
                 # Slower mode that verifies each datapoint vs those stored
                 # and only writes if it's missing or different
                 # If we found a stored datapoint with the same epoch, pass it
                 # to it's .store() method to compare and store on diffs
+                if show_progress and not bar_started:
+                    bar_label = (f"%(value)d of {bar_total} stored in "
+                                 "%(elapsed)s ")
+                    widgets = [progressbar.Percentage(),
+                               progressbar.Bar(),
+                               progressbar.FormatLabel(bar_label),
+                               bar_eta,
+                               ]
+                    bar = progressbar.ProgressBar(
+                            widgets=widgets,
+                            max_value=bar_total).start()
+                    bar_started = True
                 if d.epoch in checkers.keys():
                     s = d.store(checker=d.epoch)
                 # Otherwise just store it, overwriting any existing
@@ -412,11 +432,12 @@ def store_indicator(indicator,
             result_dps.append(s)
             dps_skipped += len(s["skipped"])
             dps_stored += len(s["stored"])
-            if show_progress:
+            if show_progress and bar_started:
                 progress += 1
                 bar.update(progress)
     op_timer.stop()
-    bar.finish()
+    if show_progress and bar_started:
+        bar.finish()
 
     result = {"indicator": result_ind,
               "datapoints_stored": dps_stored,
