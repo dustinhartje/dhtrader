@@ -1288,6 +1288,7 @@ class Indicator():
 
     def store(self,
               store_datapoints: bool = True,
+              fast_dps_check: bool = False,
               show_progress: bool = False,
               ):
         """uses DHStore functionality to store metadata and time series
@@ -1295,6 +1296,7 @@ class Indicator():
         """
         return dhs.store_indicator(self,
                                    store_datapoints=store_datapoints,
+                                   fast_dps_check=fast_dps_check,
                                    show_progress=show_progress,
                                    )
 

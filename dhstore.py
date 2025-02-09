@@ -321,6 +321,7 @@ def store_indicator(indicator,
                     meta_collection: str = COLL_IND_META,
                     dp_collection: str = COLL_IND,
                     store_datapoints: bool = True,
+                    fast_dps_check: bool = False,
                     show_progress: bool = False,
                     ):
     """Store indicator meta and datapoints in central storage.  Does not
@@ -355,10 +356,11 @@ def store_indicator(indicator,
             bar = progressbar.ProgressBar(widgets=widgets,
                                           max_value=bar_total).start()
 
-        # To prevent each datapoint from running queries individually, we'll
-        # retrieve all potentially relevant stored datapoints for comparison
-        # in a single storage query first and then provide them.  In theory
+        # To prevent each datapoint from running it's own query, we'll
+        # retrieve all potentially relevant stored datapoints to compare
+        # in a single query first and then provide the by epoch.  In theory
         # this should be faster than many queries during the storage loop.
+        # Update - it really isn't significantly faster.  Sad face.
 
         # Determine earliest and latest datapoints in indicator
         earliest = dhu.dt_to_epoch(dt.now())
@@ -366,29 +368,47 @@ def store_indicator(indicator,
         for d in indicator.datapoints:
             earliest = min(d.epoch, earliest)
             latest = max(d.epoch, latest)
-        earliest_stored = dhu.dt_from_epoch(earliest)
-        latest_stored = dhu.dt_from_epoch(latest)
+        earliest_to_store = dhu.dt_from_epoch(earliest)
+        latest_to_store = dhu.dt_from_epoch(latest)
 
         # Retrieve all stored datapoints for this timeframe
-        dps_in_storage = get_indicator_datapoints(ind_id=indicator.ind_id,
-                                                  earliest_dt=earliest_stored,
-                                                  latest_dt=latest_stored,
-                                                  )
+        dps_in_storage = get_indicator_datapoints(
+                ind_id=indicator.ind_id,
+                earliest_dt=earliest_to_store,
+                latest_dt=latest_to_store,
+                )
 
         # Put them in a dict for easier comparison to each datapoint
         checkers = {}
+        earliest = dhu.dt_to_epoch(dt.now())
+        latest = 0
         for d in dps_in_storage:
             checkers[d.epoch] = d
+            latest = max(d.epoch, latest)
+        latest_stored = latest
 
         # Loop through all datapoints, providing the stored version if avail
         # to compare.  This avoids spend time storing duplicates.
         for d in indicator.datapoints:
-            # If we found a stored datapoint with the same epoch, provide it
-            if d.epoch in checkers.keys():
-                s = d.store(checker=d.epoch)
-            # Otherwise run datapoints store() without it's usual self check
+            if fast_dps_check:
+                # Only attempt to store if newer than the latest found
+                # This is the high speed but less robust mode, useful for
+                # daily updates but may leave issues or gaps
+                if d.epoch > latest_stored:
+                    s = d.store()
+                else:
+                    s = {"skipped": [d], "stored": [], "elapsed": None}
+
             else:
-                s = d.store(skip_dupes=False)
+                # Slower mode that verifies each datapoint vs those stored
+                # and only writes if it's missing or different
+                # If we found a stored datapoint with the same epoch, pass it
+                # to it's .store() method to compare and store on diffs
+                if d.epoch in checkers.keys():
+                    s = d.store(checker=d.epoch)
+                # Otherwise just store it, overwriting any existing
+                else:
+                    s = d.store(skip_dupes=False)
             result_dps.append(s)
             dps_skipped += len(s["skipped"])
             dps_stored += len(s["stored"])
