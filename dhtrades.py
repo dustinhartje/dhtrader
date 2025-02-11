@@ -376,6 +376,15 @@ class TradeSeries():
     def sort_trades(self):
         self.trades.sort(key=lambda t: t.open_epoch)
 
+    def get_trade_by_open_dt(self, dt):
+        """Return the first trade found with open_dt matching the provided
+        datetime, or None if nothing matches."""
+        for t in self.trades:
+            if dhu.dt_as_dt(t.open_dt) == dhu.dt_as_dt(dt):
+                return t
+
+        return None
+
 
 class Backtest():
     """Represents a backtest that can be run with specific parameters.  This
@@ -745,6 +754,12 @@ def test_basics():
                        name="DELETEME"
                        ))
     print(ts.trades)
+    print("\nTesting .get_trade_by_open_dt() method returns a trade for "
+          "2025-01-02 14:10:00")
+    print(ts.get_trade_by_open_dt("2025-01-02 14:10:00"))
+    print("\nTesting .get_trade_by_open_dt() method returns a None for "
+          "2025-01-02 15:10:00")
+    print(ts.get_trade_by_open_dt("2025-01-02 15:10:00"))
     print("\nCurrent order of trade open_dt fields")
     for t in ts.trades:
         print(t.open_dt)

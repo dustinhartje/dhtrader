@@ -524,7 +524,8 @@ class Candle():
 
         # Calculated attributes
         delta = dhu.timeframe_delta(self.c_timeframe)
-        self.c_end_datetime = dhu.dt_as_dt(self.c_datetime) + delta
+        self.c_end_datetime = dhu.dt_as_str(
+                dhu.dt_as_dt(self.c_datetime) + delta)
         self.c_size = abs(self.c_high - self.c_low)
         self.c_body_size = abs(self.c_open - self.c_close)
         self.c_upper_wick_size = self.c_high - max(self.c_open, self.c_close)
