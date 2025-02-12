@@ -1317,6 +1317,10 @@ class Indicator():
         index = next((i for i, dp in enumerate(self.datapoints)
                       if dhu.dt_as_dt(dp.dt) == dhu.dt_as_dt(dt)), None)
         index += offset
+        if index < 0:
+            raise ValueError(f"index cannot be < 0, we got {index}.  "
+                             "Something has gone terribly awry!",
+                             )
 
         return self.datapoints[index]
 
