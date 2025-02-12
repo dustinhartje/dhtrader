@@ -447,7 +447,7 @@ class Backtest():
             self.bt_id = "_".join([name, str(dhu.dt_to_epoch(dt.now()))])
         else:
             self.bt_id = bt_id
-        self.parameters = parameters
+        self.parameters = deepcopy(parameters)
         self.chart_tf = chart_tf
         self.chart_1m = chart_1m
         if tradeseries is None:
