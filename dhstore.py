@@ -56,7 +56,7 @@ def store_trades(trades: list,
     return result
 
 
-def review_trades(symbol: str,
+def review_trades(symbol: str = "ES",
                   collection: str = COLL_TRADES,
                   ):
     """Provides aggregate summary data about trades in central storage"""
@@ -101,7 +101,7 @@ def store_tradeseries(series: list,
     return result
 
 
-def review_tradeseries(symbol: str,
+def review_tradeseries(symbol: str = "ES",
                        collection: str = COLL_TRADESERIES,
                        ):
     """Provides aggregate summary data about tradeseries in central storage"""
@@ -143,7 +143,7 @@ def store_backtests(backtests: list,
     return result
 
 
-def review_backtests(symbol: str,
+def review_backtests(symbol: str = "ES",
                      collection: str = COLL_BACKTESTS,
                      ):
     """Provides aggregate summary data about backtests in central storage"""
@@ -486,7 +486,7 @@ def store_candle(candle):
 def get_candles(start_epoch: int,
                 end_epoch: int,
                 timeframe: str,
-                symbol: str,
+                symbol: str = "ES",
                 ):
     """Returns a list of candle docs within the start and end epochs given
     inclusive of both epochs"""
@@ -513,7 +513,7 @@ def get_candles(start_epoch: int,
 
 
 def review_candles(timeframe: str,
-                   symbol: str,
+                   symbol: str = "ES",
                    check_integrity: bool = False,
                    return_detail: bool = False,
                    ):
