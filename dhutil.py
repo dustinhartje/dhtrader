@@ -175,7 +175,8 @@ def next_candle_start(dt,
                       events: list = None,
                       ):
     """Returns the next datetime that represents a proper candle start
-    for the given datetime.  May return the same as input"""
+    after the given datetime (dt).  Will not return given datetime even if
+    it starts a candle."""
     if symbol == "ES":
         sym = dhc.Symbol(ticker="ES",
                          name="ES",
@@ -187,18 +188,18 @@ def next_candle_start(dt,
 
     valid_trading_hours(trading_hours)
     check_tf_th_compatibility(tf=timeframe, th=trading_hours)
+    # Start with a rounded minute, no seconds or ms supported
     next_dt = dt_as_dt(dt)
+    next_dt = next_dt.replace(microsecond=0, second=0)
     min_delta = timedelta(minutes=1)
 
     done = False
     while not done:
-        # Start by rounding off any seconds or microseconds
-        next_dt = next_dt.replace(microsecond=0, second=0)
-        # Now bump by a minute at a time until the next multiple of the
-        # timeframe is found.  For 1m timeframe this always increments once.
-        if timeframe == "1m":
-            next_dt = next_dt + min_delta
-        elif timeframe == "5m":
+        # All timeframes add at least 1 minute each loop
+        next_dt = next_dt + min_delta
+        # Then each timeframe other than 1m keeps adding minutes until it
+        # reaches a minute representing it's appropriate candle start time.
+        if timeframe == "5m":
             while next_dt.minute % 5 != 0:
                 next_dt = next_dt + min_delta
         elif timeframe == "15m":
@@ -212,15 +213,12 @@ def next_candle_start(dt,
                 next_dt = next_dt + min_delta
         else:
             raise ValueError(f"timeframe: {timeframe} not supported")
+        # Ensure the market is open at the dt found, otherwise keep looping
         done = sym.market_is_open(trading_hours=trading_hours,
                                   target_dt=next_dt,
                                   check_closed_events=True,
                                   events=events,
                                   )
-        # If we're not in market hours and not in 1m timeframe, add a minute
-        # to ensure the next loop doesn't spit out the same value
-        if not timeframe == "1m" and not done:
-            next_dt = next_dt + min_delta
 
     return next_dt
 
@@ -356,13 +354,23 @@ def expected_candle_datetimes(start_dt,
     # Build a list of possible candles within standard market hours
     result_std = []
     adder = timeframe_delta(timeframe)
-    this = next_candle_start(dt=start_dt,
+    # Start with the start_dt if it is a valid candle start
+    this = this_candle_start(dt=start_dt,
                              timeframe=timeframe,
-                             trading_hours=trading_hours,
                              )
+    # Otherwise start with the next valid candle
+    if not this == dt_as_dt(start_dt):
+        this = next_candle_start(dt=start_dt,
+                                 timeframe=timeframe,
+                                 trading_hours=trading_hours,
+                                 )
     ender = dt_as_dt(end_dt)
     while this <= ender:
         include = True
+        # TODO revisit this now that I've got Symbol.market_is_open() avail
+        #      it may be possible to integrate that method to simplify?
+        #      In fact, also integrating next_candle_start() might turn this
+        #      into about a 3 line loop...?
         # Check if this candle falls in the weekday closure window
         this_weekday_close = this.replace(hour=weekday_close["hour"],
                                           minute=weekday_close["minute"],
