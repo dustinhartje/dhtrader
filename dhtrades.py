@@ -415,6 +415,26 @@ class TradeSeries():
 
         return result
 
+    def delete_from_storage(self,
+                            include_trades: bool = True,
+                            ):
+        """Delete this object from central storage if it exists by ts_id.
+        Optionally (default=True) also remove all Trade objects
+        matching this object's ts_id."""
+        result = {"tradeseries": None, "trades": []}
+
+        result["tradeseries"] = dhs.delete_tradeseries(symbol=self.symbol,
+                                                       field="ts_id",
+                                                       value=self.ts_id,
+                                                       )
+        if include_trades:
+            result["trades"] = dhs.delete_trades(symbol=self.symbol,
+                                                 field="ts_id",
+                                                 value=self.ts_id,
+                                                 )
+
+        return result
+
     def add_trade(self,
                   trade,
                   ):
@@ -625,6 +645,27 @@ class Backtest():
         if store_tradeseries and self.tradeseries is not None:
             for s in self.tradeseries:
                 result["tradeseries"].append(s.store(store_trades=st))
+
+        return result
+
+    def delete_from_storage(self,
+                            include_tradeseries: bool = True,
+                            include_trades: bool = True,
+                            ):
+        """Delete this object from central storage if it exists by bt_id.
+        Optionally (default=True) also remove all TradeSeries and Trade objects
+        matching this object's bt_id."""
+        result = {"backtest": None, "tradeseries": []}
+
+        result["backtest"] = dhs.delete_backtests(symbol=self.symbol,
+                                                  field="bt_id",
+                                                  value=self.bt_id,
+                                                  )
+        if include_tradeseries:
+            for ts in self.tradeseries:
+                result["tradeseries"].append(ts.delete_from_storage(
+                    include_trades=include_trades,
+                    ))
 
         return result
 
