@@ -18,6 +18,7 @@ from collections import Counter, defaultdict
 from datetime import datetime as dt
 from datetime import timedelta
 import dhcharts as dhc
+import dhtrades as dht
 import dhutil as dhu
 import dhmongo as dhm
 
@@ -41,6 +42,47 @@ def drop_collection(collection: str):
 
 ##############################################################################
 # Trades
+
+def get_trades_by_ts_id(ts_id: str,
+                        collection: str = COLL_TRADES,
+                        ):
+    "Get all trades matching the provided ts_id and return as a list"""
+    result = []
+    r = dhm.get_trades_by_ts_id(ts_id=ts_id,
+                                collection=collection,
+                                )
+    for t in r:
+        trade = dht.Trade(open_dt=t["open_dt"],
+                          direction=t["direction"],
+                          entry_price=t["entry_price"],
+                          stop_target=t["stop_target"],
+                          prof_target=t["prof_target"],
+                          open_drawdown=t["open_drawdown"],
+                          close_drawdown=t["close_drawdown"],
+                          close_dt=t["close_dt"],
+                          created_dt=t["created_dt"],
+                          open_epoch=t["open_epoch"],
+                          exit_price=t["exit_price"],
+                          gain_loss=t["gain_loss"],
+                          stop_ticks=t["stop_ticks"],
+                          prof_ticks=t["prof_ticks"],
+                          offset_ticks=t["offset_ticks"],
+                          drawdown_impact=t["drawdown_impact"],
+                          symbol=t["symbol"],
+                          contracts=t["contracts"],
+                          contract_value=t["contract_value"],
+                          is_open=t["is_open"],
+                          profitable=t["profitable"],
+                          name=t["name"],
+                          version=t["version"],
+                          ts_id=t["ts_id"],
+                          bt_id=t["bt_id"],
+                          )
+        result.append(trade)
+
+    return result
+
+
 def store_trades(trades: list,
                  collection: str = COLL_TRADES,
                  ):
@@ -88,6 +130,66 @@ def delete_trades(symbol: str,
 
 ##############################################################################
 # TradeSeries
+
+def get_tradeseries_by_ts_id(ts_id: str,
+                             collection: str = COLL_TRADESERIES,
+                             collection_trades: str = COLL_TRADES,
+                             include_trades: bool = True,
+                             ):
+    """Returns the first TradeSeries matching the ts_id provided."""
+    r = dhm.get_tradeseries_by_ts_id(ts_id=ts_id,
+                                     collection=collection,
+                                     )
+    ts = dht.TradeSeries(start_dt=r["start_dt"],
+                         end_dt=r["end_dt"],
+                         timeframe=r["timeframe"],
+                         symbol=r["symbol"],
+                         name=r["name"],
+                         params_str=r["params_str"],
+                         ts_id=r["ts_id"],
+                         bt_id=r["bt_id"],
+                         trades=[],
+                         )
+    if include_trades:
+        ts.trades = get_trades_by_ts_id(ts_id=ts_id,
+                                        collection=collection_trades,
+                                        )
+        ts.sort_trades()
+
+    return ts
+
+
+def get_tradeseries_by_bt_id(bt_id: str,
+                             collection: str = COLL_TRADESERIES,
+                             collection_trades: str = COLL_TRADES,
+                             include_trades: bool = True,
+                             ):
+    """Returns a list of all TradeSeries matching the bt_id provided."""
+    result = []
+    r = dhm.get_tradeseries_by_bt_id(bt_id=bt_id,
+                                     collection=collection,
+                                     )
+    for t in r:
+        ts = dht.TradeSeries(start_dt=t["start_dt"],
+                             end_dt=t["end_dt"],
+                             timeframe=t["timeframe"],
+                             symbol=t["symbol"],
+                             name=t["name"],
+                             params_str=t["params_str"],
+                             ts_id=t["ts_id"],
+                             bt_id=t["bt_id"],
+                             trades=[],
+                             )
+        if include_trades:
+            ts.trades = get_trades_by_ts_id(ts_id=ts.ts_id,
+                                            collection=collection_trades,
+                                            )
+            ts.sort_trades()
+        result.append(ts)
+
+    return result
+
+
 def store_tradeseries(series: list,
                       collection: str = COLL_TRADESERIES,
                       ):
@@ -131,13 +233,37 @@ def delete_tradeseries(symbol: str,
 ##############################################################################
 # Backtests
 
-def get_backtest_by_id(bt_id: str,
-                       collection: str = COLL_BACKTESTS,
-                       ):
-    """Returns the first Backtest matching the bt_id provided."""
-    return dhm.get_backtest_by_id(bt_id=bt_id,
-                                  collection=collection,
-                                  )
+def get_backtest_by_bt_id(bt_id: str,
+                          collection: str = COLL_BACKTESTS,
+                          # collection_ts: str = COLL_TRADESERIES,
+                          # collection_trades: str = COLL_TRADES,
+                          # include_tradeseries: bool = True,
+                          # include_trades: bool = True,
+                          ):
+    """Returns the first Backtest matching the bt_id provided.  Optionally
+    retrieve and attach any linked TradeSeries and their linked Trades."""
+    bt = dhm.get_backtest_by_bt_id(bt_id=bt_id,
+                                   collection=collection,
+                                   )
+    # TODO I need to rethink this at some point.  In theory I should be
+    #      returning a Backtest() object here but that class is not meant
+    #      to be used directly.  Ideally I'd be checking the 'class_name'
+    #      attribute and building an object based on the subclass it represents
+    #      however those are kept outside of this library so they are not
+    #      available.  I'm going to leave this function in place for now and
+    #      use it to just get the dict with the repo I'm building the subclass
+    #      in and build the object over there.  Perhaps at some point if this
+    #      bothers me enough I'll go googling or ask StackOverflow if there's
+    #      a better way to handle this more elegantly.
+    # if include_tradeseries:
+    #     bt.tradeseries = get_tradeseries_by_bt_id(
+    #             bt_id=bt_id,
+    #             collection=collection_ts,
+    #             collection_trades=collection_trades,
+    #             include_trades=include_trades,
+    #             )
+
+    return bt
 
 
 def store_backtests(backtests: list,
