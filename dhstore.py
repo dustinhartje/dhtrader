@@ -130,6 +130,16 @@ def delete_tradeseries(symbol: str,
 
 ##############################################################################
 # Backtests
+
+def get_backtest_by_id(bt_id: str,
+                       collection: str = COLL_BACKTESTS,
+                       ):
+    """Returns the first Backtest matching the bt_id provided."""
+    return dhm.get_backtest_by_id(bt_id=bt_id,
+                                  collection=collection,
+                                  )
+
+
 def store_backtests(backtests: list,
                     collection: str = COLL_BACKTESTS,
                     ):

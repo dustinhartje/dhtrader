@@ -198,6 +198,18 @@ def delete_tradeseries(symbol: str,
 
 ##############################################################################
 # Backtests
+
+
+def get_backtest_by_id(bt_id: str,
+                       collection: str,
+                       ):
+    """Returns the first Backtest matching the bt_id provided."""
+    c = db[collection]
+    result = c.find_one({"bt_id": bt_id})
+
+    return result
+
+
 def store_backtest(backtest: dict,
                    collection: str,
                    ):

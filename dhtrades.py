@@ -403,6 +403,9 @@ class Backtest():
             hours only ('rth') or include extended/globex hours ('eth')
         symbol (str): The symbol or "ticker" being evaluated
         name (str): Human friendly label representing this object
+        class_name (str): attrib to identify subclass, primarily used by
+            storage functions to reassemble retrieved data into the correct
+            object type
         parameters (dict): Backtest specific parameters needed to evaluate.
             These will vary and be handled by subclases typically.
         bt_id (str): unique ID used for storage and analysis purposes,
@@ -429,6 +432,7 @@ class Backtest():
                  name: str,
                  parameters: dict,
                  bt_id: str = None,
+                 class_name: str = "Backtest",
                  chart_tf=None,
                  chart_1m=None,
                  autoload_charts: bool = True,
@@ -447,6 +451,7 @@ class Backtest():
             self.bt_id = "_".join([name, str(dhu.dt_to_epoch(dt.now()))])
         else:
             self.bt_id = bt_id
+        self.class_name = class_name
         self.parameters = deepcopy(parameters)
         self.chart_tf = chart_tf
         self.chart_1m = chart_1m
