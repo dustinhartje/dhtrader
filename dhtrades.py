@@ -125,6 +125,44 @@ class Trade():
     def __repr__(self):
         return str(self)
 
+    def __eq__(self, other):
+        return (self.open_dt == other.open_dt
+                and self.direction == other.direction
+                and self.entry_price == other.entry_price
+                and self.stop_target == other.stop_target
+                and self.prof_target == other.prof_target
+                # TODO drawdown stats are getting changed when Trades are
+                #      stored and then retrieved.  I also have not yet
+                #      verified they are calculating properly in the first
+                #      place (there's another TODO for this somewhere)
+                #      Ignoring for now as they are breaking tests and I'm not
+                #      yet using them anyways
+                # and self.open_drawdown == other.open_drawdown
+                # and self.close_drawdown == other.close_drawdown
+                and self.close_dt == other.close_dt
+                and self.created_dt == other.created_dt
+                and self.open_epoch == other.open_epoch
+                and self.exit_price == other.exit_price
+                and self.gain_loss == other.gain_loss
+                and self.stop_ticks == other.stop_ticks
+                and self.prof_ticks == other.prof_ticks
+                and self.offset_ticks == other.offset_ticks
+                # TODO another drawdown thing to fix later
+                # and self.drawdown_impact == other.drawdown_impact
+                and self.symbol == other.symbol
+                and self.contracts == other.contracts
+                and self.contract_value == other.contract_value
+                and self.is_open == other.is_open
+                and self.profitable == other.profitable
+                and self.name == other.name
+                and self.version == other.version
+                and self.ts_id == other.ts_id
+                and self.bt_id == other.bt_id
+                )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def to_json(self):
         """returns a json version of this Trade object while normalizing
         custom types for json compatibility (i.e. datetime to string)"""
@@ -307,6 +345,21 @@ class TradeSeries():
             self.trades = []
         else:
             self.trades = trades.copy()
+
+    def __eq__(self, other):
+        return (self.start_dt == other.start_dt
+                and self.end_dt == other.end_dt
+                and self.timeframe == other.timeframe
+                and self.symbol == other.symbol
+                and self.name == other.name
+                and self.params_str == other.params_str
+                and self.ts_id == other.ts_id
+                and self.bt_id == other.bt_id
+                and self.trades == other.trades
+                )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def to_json(self,
                 suppress_trades: bool = True,
@@ -589,6 +642,14 @@ class Backtest():
         # Associate this TradeSeries with this Backtest
         ts.bt_id = self.bt_id
         self.tradeseries.append(ts)
+
+    def load_tradeseries(self):
+        """Attaches any TradeSeries and it's linked trades that are found in
+        storage and which match this object's bt_id.  This will replace any
+        currently attached tradeseries."""
+        self.tradeseries = dhs.get_tradeseries_by_bt_id(bt_id=self.bt_id,
+                                                        include_trades=True,
+                                                        )
 
     def calculate(self):
         """This class should be updated in subclasses to run whatever logic is

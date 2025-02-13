@@ -572,8 +572,6 @@ class Candle():
                           )
 
     def __eq__(self, other):
-        if not isinstance(other, Candle):
-            return False
         return (self.c_datetime == other.c_datetime
                 and self.c_timeframe == other.c_timeframe
                 and self.c_open == other.c_open
@@ -632,8 +630,6 @@ class Chart():
             self.review_candles()
 
     def __eq__(self, other):
-        if not isinstance(other, Chart):
-            return False
         return (self.c_timeframe == other.c_timeframe
                 and self.c_symbol == other.c_symbol
                 and self.c_start == other.c_start
@@ -1076,9 +1072,6 @@ class IndicatorDataPoint():
         # which is returned from storage when there is no matching datapoint.
         # TODO this can likely be restored if and when I move tests out of
         # __main__ in favor of unit tests, and stop running this as a script.
-        # if not isinstance(other, IndicatorDataPoint):
-        #     print("wrong type")
-        #     return False
         try:
             return (self.dt == other.dt and
                     self.value == other.value and
