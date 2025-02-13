@@ -160,7 +160,7 @@ def store_tradeseries(series: dict,
                                     upsert=True,
                                     )
 
-    return list(result)
+    return result
 
 
 def review_tradeseries(symbol: str,
@@ -208,7 +208,7 @@ def store_backtest(backtest: dict,
                                     new=True,
                                     upsert=True,
                                     )
-    return list(result)
+    return result
 
 
 def review_backtests(symbol: str,
