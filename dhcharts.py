@@ -573,16 +573,16 @@ class Candle():
 
     def __eq__(self, other):
         if not isinstance(other, Candle):
-            print("wrong type")
             return False
-        return (self.c_datetime == other.c_datetime and
-                self.c_timeframe == other.c_timeframe and
-                self.c_open == other.c_open and
-                self.c_high == other.c_high and
-                self.c_low == other.c_low and
-                self.c_close == other.c_close and
-                self.c_volume == other.c_volume and
-                self.c_symbol == other.c_symbol)
+        return (self.c_datetime == other.c_datetime
+                and self.c_timeframe == other.c_timeframe
+                and self.c_open == other.c_open
+                and self.c_high == other.c_high
+                and self.c_low == other.c_low
+                and self.c_close == other.c_close
+                and self.c_volume == other.c_volume
+                and self.c_symbol == other.c_symbol
+                )
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -630,6 +630,19 @@ class Chart():
             self.load_candles()  # includes review_candles()
         else:
             self.review_candles()
+
+    def __eq__(self, other):
+        if not isinstance(other, Chart):
+            return False
+        return (self.c_timeframe == other.c_timeframe
+                and self.c_symbol == other.c_symbol
+                and self.c_start == other.c_start
+                and self.c_end == other.c_end
+                and self.c_candles == other.c_candles
+                )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def to_json(self,
                 suppress_candles: bool = True,
