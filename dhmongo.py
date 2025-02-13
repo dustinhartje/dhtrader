@@ -75,12 +75,14 @@ def drop_collection(collection: str):
 ##############################################################################
 # Trades
 
-def get_trades_by_ts_id(ts_id: str,
+
+def get_trades_by_field(field: str,
+                        value,
                         collection: str,
                         ):
-    "Get all trades matching the provided ts_id and return as a list"""
+    """Returns all Trade() objects matching the field=value provided."""
     c = db[collection]
-    result = c.find({"ts_id": ts_id})
+    result = c.find({field: value})
 
     return list(result)
 
@@ -161,22 +163,13 @@ def delete_trades(symbol: str,
 ##############################################################################
 # TradeSeries
 
-def get_tradeseries_by_ts_id(ts_id: str,
+def get_tradeseries_by_field(field: str,
+                             value,
                              collection: str,
                              ):
-    """Returns the first TradeSeries matching the ts_id provided."""
+    """Returns a list of TradeSeries() matching the field=value provided."""
     c = db[collection]
-    result = c.find_one({"ts_id": ts_id})
-
-    return result
-
-
-def get_tradeseries_by_bt_id(bt_id: str,
-                             collection: str,
-                             ):
-    """Returns a list of all TradeSeries matching the bt_id provided."""
-    c = db[collection]
-    result = c.find({"bt_id": bt_id})
+    result = c.find({field: value})
 
     return list(result)
 
@@ -232,14 +225,15 @@ def delete_tradeseries(symbol: str,
 # Backtests
 
 
-def get_backtest_by_bt_id(bt_id: str,
-                          collection: str,
-                          ):
-    """Returns the first Backtest matching the bt_id provided."""
+def get_backtests_by_field(field: str,
+                           value,
+                           collection: str,
+                           ):
+    """Returns a list of Backtest() matching the field=value provided."""
     c = db[collection]
-    result = c.find_one({"bt_id": bt_id})
+    result = c.find({field: value})
 
-    return result
+    return list(result)
 
 
 def store_backtest(backtest: dict,

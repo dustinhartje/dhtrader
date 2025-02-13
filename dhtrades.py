@@ -647,7 +647,8 @@ class Backtest():
         """Attaches any TradeSeries and it's linked trades that are found in
         storage and which match this object's bt_id.  This will replace any
         currently attached tradeseries."""
-        self.tradeseries = dhs.get_tradeseries_by_bt_id(bt_id=self.bt_id,
+        self.tradeseries = dhs.get_tradeseries_by_field(field="bt_id",
+                                                        value=self.bt_id,
                                                         include_trades=True,
                                                         )
 
@@ -911,9 +912,9 @@ def test_basics():
     print("\nReviewing before storing all this junk:")
     print("\nReviewing backtests in storage")
     print(dhs.review_backtests(symbol="ES"))
-    print("Reviewing tradeseries in storage:")
+    print("\nReviewing tradeseries in storage:")
     print(dhs.review_tradeseries(symbol="ES"))
-    print("Reviewing trades in storage:")
+    print("\nReviewing trades in storage:")
     print(dhs.review_trades(symbol="ES"))
 
     print("\nStoring the backtest and it's child objects")
@@ -926,9 +927,9 @@ def test_basics():
           )
     print("\nReviewing backtests in storage")
     print(dhs.review_backtests(symbol="ES"))
-    print("Reviewing tradeseries in storage:")
+    print("\nReviewing tradeseries in storage:")
     print(dhs.review_tradeseries(symbol="ES"))
-    print("Reviewing trades in storage:")
+    print("\nReviewing trades in storage:")
     print(dhs.review_trades(symbol="ES"))
 
     print("\nAnd now we'll try to delete them all through the bt_id and ts_id "
@@ -950,9 +951,9 @@ def test_basics():
     print("\nReviewing after deletion, no 'DELETEME' objects should exist")
     print("\nReviewing backtests in storage")
     print(dhs.review_backtests(symbol="ES"))
-    print("Reviewing tradeseries in storage:")
+    print("\nReviewing tradeseries in storage:")
     print(dhs.review_tradeseries(symbol="ES"))
-    print("Reviewing trades in storage:")
+    print("\nReviewing trades in storage:")
     print(dhs.review_trades(symbol="ES"))
 
 

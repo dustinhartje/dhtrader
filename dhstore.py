@@ -43,12 +43,14 @@ def drop_collection(collection: str):
 ##############################################################################
 # Trades
 
-def get_trades_by_ts_id(ts_id: str,
+def get_trades_by_field(field: str,
+                        value,
                         collection: str = COLL_TRADES,
                         ):
     "Get all trades matching the provided ts_id and return as a list"""
     result = []
-    r = dhm.get_trades_by_ts_id(ts_id=ts_id,
+    r = dhm.get_trades_by_field(field=field,
+                                value=value,
                                 collection=collection,
                                 )
     for t in r:
@@ -131,42 +133,17 @@ def delete_trades(symbol: str,
 ##############################################################################
 # TradeSeries
 
-def get_tradeseries_by_ts_id(ts_id: str,
-                             collection: str = COLL_TRADESERIES,
-                             collection_trades: str = COLL_TRADES,
-                             include_trades: bool = True,
-                             ):
-    """Returns the first TradeSeries matching the ts_id provided."""
-    r = dhm.get_tradeseries_by_ts_id(ts_id=ts_id,
-                                     collection=collection,
-                                     )
-    ts = dht.TradeSeries(start_dt=r["start_dt"],
-                         end_dt=r["end_dt"],
-                         timeframe=r["timeframe"],
-                         symbol=r["symbol"],
-                         name=r["name"],
-                         params_str=r["params_str"],
-                         ts_id=r["ts_id"],
-                         bt_id=r["bt_id"],
-                         trades=[],
-                         )
-    if include_trades:
-        ts.trades = get_trades_by_ts_id(ts_id=ts_id,
-                                        collection=collection_trades,
-                                        )
-        ts.sort_trades()
 
-    return ts
-
-
-def get_tradeseries_by_bt_id(bt_id: str,
+def get_tradeseries_by_field(field: str,
+                             value,
                              collection: str = COLL_TRADESERIES,
                              collection_trades: str = COLL_TRADES,
                              include_trades: bool = True,
                              ):
     """Returns a list of all TradeSeries matching the bt_id provided."""
     result = []
-    r = dhm.get_tradeseries_by_bt_id(bt_id=bt_id,
+    r = dhm.get_tradeseries_by_field(field=field,
+                                     value=value,
                                      collection=collection,
                                      )
     for t in r:
@@ -181,7 +158,8 @@ def get_tradeseries_by_bt_id(bt_id: str,
                              trades=[],
                              )
         if include_trades:
-            ts.trades = get_trades_by_ts_id(ts_id=ts.ts_id,
+            ts.trades = get_trades_by_field(field="ts_id",
+                                            value=ts.ts_id,
                                             collection=collection_trades,
                                             )
             ts.sort_trades()
@@ -233,18 +211,16 @@ def delete_tradeseries(symbol: str,
 ##############################################################################
 # Backtests
 
-def get_backtest_by_bt_id(bt_id: str,
-                          collection: str = COLL_BACKTESTS,
-                          # collection_ts: str = COLL_TRADESERIES,
-                          # collection_trades: str = COLL_TRADES,
-                          # include_tradeseries: bool = True,
-                          # include_trades: bool = True,
-                          ):
-    """Returns the first Backtest matching the bt_id provided.  Optionally
-    retrieve and attach any linked TradeSeries and their linked Trades."""
-    bt = dhm.get_backtest_by_bt_id(bt_id=bt_id,
-                                   collection=collection,
-                                   )
+def get_backtests_by_field(field: str,
+                           value,
+                           collection: str = COLL_BACKTESTS,
+                           ):
+    """Returns a list of Backtest() objects (as dictionaries), matching the
+    field=value provided."""
+    result = dhm.get_backtests_by_field(field=field,
+                                        value=value,
+                                        collection=collection,
+                                        )
     # TODO I need to rethink this at some point.  In theory I should be
     #      returning a Backtest() object here but that class is not meant
     #      to be used directly.  Ideally I'd be checking the 'class_name'
@@ -256,14 +232,15 @@ def get_backtest_by_bt_id(bt_id: str,
     #      bothers me enough I'll go googling or ask StackOverflow if there's
     #      a better way to handle this more elegantly.
     # if include_tradeseries:
-    #     bt.tradeseries = get_tradeseries_by_bt_id(
-    #             bt_id=bt_id,
+    #     bt.tradeseries = get_tradeseries_by_field(
+    #             field="bt_id",
+    #             value=bt_id,
     #             collection=collection_ts,
     #             collection_trades=collection_trades,
     #             include_trades=include_trades,
     #             )
 
-    return bt
+    return result
 
 
 def store_backtests(backtests: list,
@@ -564,7 +541,7 @@ def store_indicator(indicator,
                     s = d.store(checker=d.epoch)
                 # Otherwise just store it, overwriting any existing
                 else:
-                    s = d.store(skip_dupes=False)
+                    s = d.store()
             result_dps.append(s)
             dps_skipped += len(s["skipped"])
             dps_stored += len(s["stored"])
