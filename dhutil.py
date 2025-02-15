@@ -142,6 +142,19 @@ def dt_as_str(d):
         return d.strftime("%Y-%m-%d %H:%M:%S")
 
 
+def dt_as_time(time: str):
+    """Return a datetime.time object for the given %H:%M:%S string"""
+    return dt_as_dt(f"2000-01-01 {time}").time()
+
+
+def dow_name(dow: int):
+    """Return the human name for a day of the week given it's index as
+    represented in datetime.weekday()"""
+    names = {0: "Monday", 1: "Tuesday", 2: "Wednesday", 3: "Thursday",
+             4: "Friday", 5: "Saturday", 6: "Sunday"}
+    return names[dow]
+
+
 def dt_to_epoch(d):
     """return an epoch integer from a datetime or string"""
     return int(dt_as_dt(d).strftime('%s'))

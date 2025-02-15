@@ -173,54 +173,60 @@ class Symbol():
         """
         # Set vars needed to evaluate
         d = dhu.dt_as_dt(target_dt)
+        dow = d.weekday()
+        time = d.time()
+        # Hours vary per day and overnight/weekends get tricky so
+        # build a cheatsheet (0 = Monday)
         if trading_hours == "eth":
-            open_dow = self.eth_week_open["day_of_week"]
-            open_time = self.eth_week_open["time"]
-            close_dow = self.eth_week_close["day_of_week"]
-            close_time = self.eth_week_close["time"]
+            closed = {0: [{"close": dhu.dt_as_time("17:00:00"),
+                           "open": dhu.dt_as_time("18:00:00")}],
+                      1: [{"close": dhu.dt_as_time("17:00:00"),
+                           "open": dhu.dt_as_time("18:00:00")}],
+                      2: [{"close": dhu.dt_as_time("17:00:00"),
+                           "open": dhu.dt_as_time("18:00:00")}],
+                      3: [{"close": dhu.dt_as_time("17:00:00"),
+                           "open": dhu.dt_as_time("18:00:00")}],
+                      4: [{"close": dhu.dt_as_time("17:00:00"),
+                           "open": dhu.dt_as_time("23:59:59")}],
+                      5: [{"close": dhu.dt_as_time("00:00:00"),
+                           "open": dhu.dt_as_time("23:59:59")}],
+                      6: [{"close": dhu.dt_as_time("00:00:00"),
+                           "open": dhu.dt_as_time("18:00:00")}]
+                      }
         elif trading_hours == "rth":
-            open_dow = self.rth_week_open["day_of_week"]
-            open_time = self.rth_week_open["time"]
-            close_dow = self.rth_week_close["day_of_week"]
-            close_time = self.rth_week_close["time"]
+            closed = {0: [{"close": dhu.dt_as_time("00:00:00"),
+                           "open": dhu.dt_as_time("09:30:00")},
+                          {"close": dhu.dt_as_time("16:00:00"),
+                           "open": dhu.dt_as_time("23:59:59")}],
+                      1: [{"close": dhu.dt_as_time("00:00:00"),
+                           "open": dhu.dt_as_time("09:30:00")},
+                          {"close": dhu.dt_as_time("16:00:00"),
+                           "open": dhu.dt_as_time("23:59:59")}],
+                      2: [{"close": dhu.dt_as_time("00:00:00"),
+                           "open": dhu.dt_as_time("09:30:00")},
+                          {"close": dhu.dt_as_time("16:00:00"),
+                           "open": dhu.dt_as_time("23:59:59")}],
+                      3: [{"close": dhu.dt_as_time("00:00:00"),
+                           "open": dhu.dt_as_time("09:30:00")},
+                          {"close": dhu.dt_as_time("16:00:00"),
+                           "open": dhu.dt_as_time("23:59:59")}],
+                      4: [{"close": dhu.dt_as_time("00:00:00"),
+                           "open": dhu.dt_as_time("09:30:00")},
+                          {"close": dhu.dt_as_time("16:00:00"),
+                           "open": dhu.dt_as_time("23:59:59")}],
+                      5: [{"close": dhu.dt_as_time("00:00:00"),
+                           "open": dhu.dt_as_time("23:59:59")}],
+                      6: [{"close": dhu.dt_as_time("00:00:00"),
+                           "open": dhu.dt_as_time("23:59:59")}]
+                      }
         else:
             raise ValueError(f"trading_hours: {trading_hours} not supported")
 
-        # Test against weekly and daily time boundaries
-        dow = d.weekday()
-        time = d.time()
-        # Check if we fall in the weekly closure window
-        if open_dow > close_dow:
-            # Week spans the weekend, fail days after close & before open dows
-            if dow < open_dow and dow > close_dow:
+        # Test open_times ranges based on weekday, returning False if time
+        # falls inside any of them
+        for c in closed[dow]:
+            if c["close"] <= time < c["open"]:
                 return False
-        else:
-            # Does not span weekend, fail days before open or after close dows
-            if dow < open_dow or dow > close_dow:
-                return False
-        # For all other days that are at least partially open
-        # Weekly opening day has no prior close to worry about this week
-        # Fail on opening day before the bell rings
-        if dow == open_dow:
-            if time < open_time:
-                return False
-        # Weekly closing day has no subsequent open to worry about this week
-        # Fail on closing day after the bell rings
-        elif dow == close_dow:
-            if time > close_time:
-                return False
-        # Deal with all other mid-week days where opens and closes both exist
-        else:
-            # Days that span overnight open after they close on the same day
-            # Fail if time falls between them
-            if open_time > close_time:
-                if close_time < time < open_time:
-                    return False
-            # Days that do not span overnight open before they close
-            # Fail if time falls before open or after close
-            else:
-                if time < open_time or time > close_time:
-                    return False
 
         # Test against closure events
         if check_closed_events:
