@@ -1176,7 +1176,8 @@ class Indicator():
             self.datapoints = datapoints
         self.parameters = parameters
         if ind_id is None:
-            self.ind_id = (f"{self.symbol}{self.timeframe}{self.name}")
+            self.ind_id = (f"{self.trading_hours}{self.symbol}"
+                           f"{self.timeframe}{self.name}")
         else:
             self.ind_id = ind_id
         self.class_name = "Indicator"
@@ -2135,15 +2136,15 @@ if __name__ == '__main__':
     print("Validate candles as expected")
     print(f"length of candle_chart: {len(itest.candle_chart.c_candles)}")
     expected = [{'dt': '2025-01-10 15:00:00', 'value': 5890.25,
-                 'ind_id': 'ESethe1hTestEMA-DELETEME', 'epoch': 1736539200},
+                 'ind_id': 'ethESe1hTestEMA-DELETEME', 'epoch': 1736539200},
                 {'dt': '2025-01-10 16:00:00', 'value': 5884.5,
-                 'ind_id': 'ESethe1hTestEMA-DELETEME', 'epoch': 1736542800},
+                 'ind_id': 'ethESe1hTestEMA-DELETEME', 'epoch': 1736542800},
                 {'dt': '2025-01-12 18:00:00', 'value': 5879.6,
-                 'ind_id': 'ESethe1hTestEMA-DELETEME', 'epoch': 1736722800},
+                 'ind_id': 'ethESe1hTestEMA-DELETEME', 'epoch': 1736722800},
                 {'dt': '2025-01-12 19:00:00', 'value': 5875.38,
-                 'ind_id': 'ESethe1hTestEMA-DELETEME', 'epoch': 1736726400},
+                 'ind_id': 'ethESe1hTestEMA-DELETEME', 'epoch': 1736726400},
                 {'dt': '2025-01-12 20:00:00', 'value': 5869.3,
-                 'ind_id': 'ESethe1hTestEMA-DELETEME', 'epoch': 1736730000},
+                 'ind_id': 'ethESe1hTestEMA-DELETEME', 'epoch': 1736730000},
                 ]
     calculated = itest.datapoints[-5:]
     print("(E)xpected vs (C)alculated last 5 datapoints:")
