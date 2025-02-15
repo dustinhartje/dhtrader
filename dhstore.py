@@ -56,6 +56,8 @@ def get_trades_by_field(field: str,
     for t in r:
         trade = dht.Trade(open_dt=t["open_dt"],
                           direction=t["direction"],
+                          timeframe=t["timeframe"],
+                          trading_hours=t["trading_hours"],
                           entry_price=t["entry_price"],
                           stop_target=t["stop_target"],
                           prof_target=t["prof_target"],

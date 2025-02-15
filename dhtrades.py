@@ -13,6 +13,9 @@ class Trade():
         open_dt (str): datetime trade was initiated
         open_epoch (int): epoch time of open_dt for sorting (autocalculated)
         direction (str): 'long' or 'short'
+        timeframe (str): timeframe of the chart the Trade was created from
+        trading_hours (str): regular trading hours (rth)
+            or extended/globex (eth) of the underlying chart
         entry_price (float): price at which trade was initiated
         stop_target (float): price at which trade would auto exit at loss
         prof_target (float): price at which trade would auto exit at profit
@@ -46,6 +49,8 @@ class Trade():
     def __init__(self,
                  open_dt: str,
                  direction: str,
+                 timeframe: str,
+                 trading_hours: str,
                  entry_price: float,
                  stop_target: float,
                  prof_target: float,
@@ -84,6 +89,10 @@ class Trade():
             raise ValueError(f"invalid value for direction of {direction} "
                              "received, must be in ['long', 'short'] only."
                              )
+        if dhu.valid_timeframe(timeframe):
+            self.timeframe = timeframe
+        if dhu.valid_trading_hours(trading_hours):
+            self.trading_hours = trading_hours
         self.entry_price = entry_price
         self.stop_target = stop_target
         self.prof_target = prof_target
@@ -729,6 +738,8 @@ def test_basics():
     print("\n---------------------------- TRADE ---------------------------")
     out_trade = Trade(open_dt="2025-01-02 12:00:00",
                       direction="long",
+                      timeframe="5m",
+                      trading_hours="rth",
                       entry_price=5001.50,
                       stop_target=4995,
                       prof_target=5010,
@@ -773,6 +784,8 @@ def test_basics():
     # Trades
     t = Trade(open_dt="2025-01-02 12:00:00",
               direction="long",
+              timeframe="5m",
+              trading_hours="rth",
               entry_price=5001.50,
               stop_target=4995,
               prof_target=5010,
@@ -794,6 +807,8 @@ def test_basics():
     t = Trade(open_dt="2025-01-02 12:01:00",
               close_dt="2025-01-02 12:15:00",
               direction="short",
+              timeframe="5m",
+              trading_hours="rth",
               entry_price=5001.50,
               stop_target=4995,
               prof_target=5010,
@@ -844,6 +859,8 @@ def test_basics():
     ts.add_trade(Trade(open_dt="2025-01-03 12:00:00",
                        close_dt="2025-01-03 12:15:00",
                        direction="short",
+                       timeframe="5m",
+                       trading_hours="rth",
                        entry_price=5001.50,
                        stop_target=4995,
                        prof_target=5010,
@@ -854,6 +871,8 @@ def test_basics():
     ts.add_trade(Trade(open_dt="2025-01-02 14:10:00",
                        close_dt="2025-01-02 15:35:00",
                        direction="short",
+                       timeframe="5m",
+                       trading_hours="rth",
                        entry_price=5001.50,
                        stop_target=4995,
                        prof_target=5010,
