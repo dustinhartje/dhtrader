@@ -29,7 +29,7 @@ COLL_TRADES = "trades"
 COLL_TRADESERIES = "tradeseries"
 COLL_BACKTESTS = "backtests"
 COLL_IND_META = "indicators_meta"
-COLL_IND = "indicators"
+COLL_IND_DPS = "indicators_datapoints"
 
 
 ##############################################################################
@@ -305,7 +305,7 @@ def list_indicators_names(meta_collection: str = COLL_IND_META):
 
 
 def review_indicators(meta_collection: str = COLL_IND_META,
-                      dp_collection: str = COLL_IND):
+                      dp_collection: str = COLL_IND_DPS):
     """Return a more detailed overview of indicators in storage"""
     result = dhm.review_indicators(meta_collection=meta_collection,
                                    dp_collection=dp_collection,
@@ -365,7 +365,7 @@ def get_indicator(ind_id: str,
 
 
 def get_indicator_datapoints(ind_id: str,
-                             dp_collection: str = COLL_IND,
+                             dp_collection: str = COLL_IND_DPS,
                              earliest_dt: str = None,
                              latest_dt: str = None,
                              ):
@@ -388,7 +388,7 @@ def get_indicator_datapoints(ind_id: str,
 
 
 def store_indicator_datapoints(datapoints: list,
-                               collection: str = COLL_IND,
+                               collection: str = COLL_IND_DPS,
                                skip_dupes: bool = True,
                                ):
     """Store one or more IndicatorDatapoint() objects in central storage"""
@@ -434,7 +434,7 @@ def store_indicator_datapoints(datapoints: list,
 
 def store_indicator(indicator,
                     meta_collection: str = COLL_IND_META,
-                    dp_collection: str = COLL_IND,
+                    dp_collection: str = COLL_IND_DPS,
                     store_datapoints: bool = True,
                     fast_dps_check: bool = False,
                     show_progress: bool = False,
@@ -566,7 +566,7 @@ def store_indicator(indicator,
 
 def delete_indicator(ind_id: str,
                      meta_collection: str = COLL_IND_META,
-                     dp_collection: str = COLL_IND,
+                     dp_collection: str = COLL_IND_DPS,
                      ):
     """Remove a single indicator and all of it's datapoints from central
     storage based on it's ind_id attribute"""

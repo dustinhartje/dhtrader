@@ -1559,8 +1559,6 @@ class IndicatorEMA(Indicator):
 
 # TODO -----CURRENT PRIORITIES JAN 2025-----
 # TODO add low hanging fruit like HOD/LOD/YRHI/YRLO/OOD/GXHI/GXLO/YRCL
-# TODO create a script and possibly .json file that creates/updates all the
-#      indicators I'm going to maintain (starting with 9 and 20 sma
 # TODO add subclass of Inidicators class for each type of indicator I want
 #      9 & 20 EMAs, HOD, LOD, OOD, GXLO, GXHI should all be easy to do now
 #      when I get around to adding 1d timeframes also do 20/50/100/200dSMA
