@@ -1176,8 +1176,8 @@ class Indicator():
             self.datapoints = datapoints
         self.parameters = parameters
         if ind_id is None:
-            self.ind_id = (f"{self.trading_hours}{self.symbol}"
-                           f"{self.timeframe}{self.name}")
+            self.ind_id = (f"{self.symbol}_{self.trading_hours}_"
+                           f"{self.timeframe}_{self.name}")
         else:
             self.ind_id = ind_id
         self.class_name = "Indicator"
@@ -1381,6 +1381,15 @@ class IndicatorSMA(Indicator):
                          parameters=parameters,
                          )
         """Subclass of Indicator() specifically used for simple moving avg"""
+        # TODO Need to revisit before using this class.  I've made further
+        #      refinements to IndicatorEMA that should be reflected here as
+        #      well, particularly around name, description, and ind_id attribs.
+        #      Also go through all the methods too though and catch up any
+        #      other changes I've made since these should be pretty much the
+        #      same other than the calculation formula.  In fact maybe they
+        #      can be merged into a single IndicatorMA class with EMA/SMA as
+        #      a parameter?
+
         # Confirm that parameters includes the subclass specific arguments
         # needed for this type of indicator
         # For simple SMA we just need a length and a method/value to use
@@ -1397,10 +1406,11 @@ class IndicatorSMA(Indicator):
             raise TypeError(f"Method {parameters['method']} not supported, "
                             f"must be one of: f{supported_methods}"
                             )
-        # Only update ind_id if it still matches the Parent class format
-        # otherwise we likely loaded from storage and already have this
-        if self.ind_id == (f"{self.symbol}{self.timeframe}{self.name}"):
-            self.ind_id += str(self.length)
+        # Ensure ind_id has all optional parameters needed for this subclass
+        # These may already be appended if this was retrieved from storage
+        ind_id_suffix = f"_{self.method}_l{str(self.length)}"
+        if ind_id_suffix not in self.ind_id:
+            self.ind_id += ind_id_suffix
         self.class_name = "IndicatorSMA"
 
     def calculate(self):
@@ -1501,10 +1511,12 @@ class IndicatorEMA(Indicator):
             self.smoothing = int(parameters["smoothing"])
         else:
             self.smoothing = 2
-        # Only update ind_id if it still matches the Parent class format
-        # otherwise we likely loaded from storage and already have this
-        if self.ind_id == (f"{self.symbol}{self.timeframe}{self.name}"):
-            self.ind_id += str(self.length)
+        # Ensure ind_id has all optional parameters needed for this subclass
+        # These may already be appended if this was retrieved from storage
+        ind_id_suffix = (f"_{self.method}_l{str(self.length)}"
+                         f"_s{str(self.smoothing)}")
+        if ind_id_suffix not in self.ind_id:
+            self.ind_id += ind_id_suffix
         self.class_name = "IndicatorEMA"
 
     def calculate(self):
