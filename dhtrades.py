@@ -560,6 +560,30 @@ class Backtest():
         if self.autoload_charts:
             self.load_charts()
 
+    def __eq__(self, other):
+        return (self.start_dt == other.start_dt
+                and self.end_dt == other.end_dt
+                and self.timeframe == other.timeframe
+                and self.trading_hours == other.trading_hours
+                and self.symbol == other.symbol
+                and self.name == other.name
+                and self.parameters == other.parameters
+                and self.bt_id == other.bt_id
+                and self.class_name == other.class_name
+                and self.chart_tf == other.chart_tf
+                and self.chart_1m == other.chart_1m
+                and self.tradeseries == other.tradeseries
+                and self.eq_subs(other)
+                )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def eq_subs(self, other):
+        """Placeholder method for subclasses to add additional attributes
+        or conditions required to evaluate equality"""
+        return True
+
     def to_json(self,
                 suppress_tradeseries: bool = True,
                 suppress_trades: bool = True,
