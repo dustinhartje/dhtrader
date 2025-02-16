@@ -567,22 +567,28 @@ class Backtest():
                 and self.trading_hours == other.trading_hours
                 and self.symbol == other.symbol
                 and self.name == other.name
-                and self.parameters == other.parameters
                 and self.bt_id == other.bt_id
                 and self.class_name == other.class_name
                 and self.chart_tf == other.chart_tf
                 and self.chart_1m == other.chart_1m
                 and self.tradeseries == other.tradeseries
-                and self.eq_subs(other)
+                and self.sub_eq(other)
                 )
 
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def eq_subs(self, other):
+    def sub_eq(self, other):
         """Placeholder method for subclasses to add additional attributes
-        or conditions required to evaluate equality"""
-        return True
+        or conditions required to evaluate __eq__ for this class.  Any
+        comparison of parameters should be done here as they are subclass
+        specific."""
+        return self.parameters == other.parameters
+
+    def sub_to_json(self, working):
+        """Placeholder for subclasses to normalize any additional attributes
+        they may have added to make them also JSON serializable."""
+        return working
 
     def to_json(self,
                 suppress_tradeseries: bool = True,
@@ -618,12 +624,7 @@ class Backtest():
                     ))
         working["tradeseries"] = clean_tradeseries
 
-        return json.dumps(self.to_json_subs(working))
-
-    def to_json_subs(self, working):
-        """Placeholder for subclasses to normalize any additional attributes
-        they may have added to make them also JSON serializable."""
-        return working
+        return json.dumps(self.sub_to_json(working))
 
     def to_clean_dict(self,
                       suppress_tradeseries: bool = True,
