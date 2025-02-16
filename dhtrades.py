@@ -65,7 +65,7 @@ class Trade():
                  prof_ticks: int = 0,
                  offset_ticks: int = 0,
                  drawdown_impact: float = float(0),
-                 symbol: str = 'ES',
+                 symbol="ES",
                  contracts: int = 1,
                  contract_value: float = float(50),
                  is_open: bool = True,
@@ -104,7 +104,10 @@ class Trade():
         self.prof_ticks = prof_ticks
         self.offset_ticks = offset_ticks
         self.drawdown_impact = drawdown_impact
-        self.symbol = symbol
+        if isinstance(symbol, str):
+            self.symbol = dhs.get_symbol_by_ticker(ticker=symbol)
+        else:
+            self.symbol = symbol
         self.contracts = contracts
         self.contract_value = contract_value
         self.is_open = is_open
@@ -176,14 +179,17 @@ class Trade():
         """returns a json version of this Trade object while normalizing
         custom types for json compatibility (i.e. datetime to string)"""
         # Make sure dates are strings not datetimes
+        working = deepcopy(self.__dict__)
         if self.open_dt is not None:
-            self.open_dt = dhu.dt_as_str(self.open_dt)
+            working["open_dt"] = dhu.dt_as_str(self.open_dt)
         if self.close_dt is not None:
-            self.close_dt = dhu.dt_as_str(self.close_dt)
+            working["close_dt"] = dhu.dt_as_str(self.close_dt)
         if self.created_dt is not None:
-            self.created_dt = dhu.dt_as_str(self.created_dt)
+            working["created_dt"] = dhu.dt_as_str(self.created_dt)
+        # Change symbol to string of ticker
+        working["symbol"] = working["symbol"].ticker
 
-        return json.dumps(self.__dict__)
+        return json.dumps(working)
 
     def to_clean_dict(self):
         """Converts to JSON string then back to a python dict.  This helps
@@ -328,7 +334,7 @@ class TradeSeries():
                  start_dt,
                  end_dt,
                  timeframe: str,
-                 symbol: str = "ES",
+                 symbol="ES",
                  name: str = "",
                  params_str: str = "",
                  ts_id: str = None,
@@ -339,7 +345,10 @@ class TradeSeries():
         self.start_dt = dhu.dt_as_str(start_dt)
         self.end_dt = dhu.dt_as_str(end_dt)
         self.timeframe = timeframe
-        self.symbol = symbol
+        if isinstance(symbol, str):
+            self.symbol = dhs.get_symbol_by_ticker(ticker=symbol)
+        else:
+            self.symbol = symbol
         self.name = name
         self.params_str = params_str
         if ts_id is None:
@@ -384,6 +393,7 @@ class TradeSeries():
             for t in self.trades:
                 clean_trades.append(t.to_clean_dict())
         working["trades"] = clean_trades
+        working["symbol"] = working["symbol"].ticker
 
         return json.dumps(working)
 
@@ -483,7 +493,9 @@ class Backtest():
             on
         trading_hours (str): whether to run trades during regular trading
             hours only ('rth') or include extended/globex hours ('eth')
-        symbol (str): The symbol or "ticker" being evaluated
+        symbol (str or dhcharts.Symbol): The symbol or "ticker" being
+            evaluated.  If passed as a str, the object will fetch the symbol
+            with a matching 'name'.
         name (str): Human friendly label representing this object
         class_name (str): attrib to identify subclass, primarily used by
             storage functions to reassemble retrieved data into the correct
@@ -510,7 +522,7 @@ class Backtest():
                  end_dt,
                  timeframe: str,
                  trading_hours: str,
-                 symbol: str,
+                 symbol,
                  name: str,
                  parameters: dict,
                  bt_id: str = None,
@@ -527,7 +539,10 @@ class Backtest():
         if dhu.valid_trading_hours(trading_hours):
             self.trading_hours = trading_hours
         dhu.check_tf_th_compatibility(tf=timeframe, th=trading_hours)
-        self.symbol = symbol
+        if isinstance(symbol, str):
+            self.symbol = dhs.get_symbol_by_ticker(ticker=symbol)
+        else:
+            self.symbol = symbol
         self.name = name
         if bt_id is None:
             self.bt_id = "_".join([name, str(dhu.dt_to_epoch(dt.now()))])
@@ -554,6 +569,7 @@ class Backtest():
         """returns a json version of this object while normalizing
         custom types (like datetime to string)"""
         working = deepcopy(self.__dict__)
+        working["symbol"] = working["symbol"].ticker
         if suppress_charts:
             working["chart_tf"] = "Chart suppressed for output sanity"
             working["chart_1m"] = "Chart suppressed for output sanity"
@@ -709,6 +725,14 @@ class Backtest():
         backtest to another.  At the end of the run it will likely need to
         also store the Backtest object along with it's child TradeSeries and
         grandchild Trades.
+        """
+        pass
+
+    def incorporate_parameters(self):
+        """This class should be updated in subclasses to run whatever logic is
+        needed to validate any subclass-specific parameters and set them up
+        as attributes on the object. This will vary greatly from one type of
+        backtest to another.
         """
         pass
 

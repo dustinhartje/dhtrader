@@ -577,6 +577,26 @@ def delete_indicator(ind_id: str,
 
 
 ##############################################################################
+# Symbols
+
+def get_symbol_by_ticker(ticker: str):
+    """Temp function to help other objects get symbols by name.  This should
+    be replaced by proper storage and retrieval functions eventually but since
+    I don't forsee working with any symbol other than ES for the forseeable
+    future I'm deprioritizing that work."""
+    # TODO LOWPRI replace this with dhstore/dhmongo storage/retrieval functions
+    if ticker in ["ES", "DELETEME"]:
+        return dhc.Symbol(ticker=ticker,
+                          name=ticker,
+                          leverage_ratio=50,
+                          tick_size=0.25,
+                          )
+    else:
+        raise ValueError("Only ['ES', 'DELETEME'] is currently supported as "
+                         f"Symbol ticker, we got {ticker}")
+
+
+##############################################################################
 # Candles
 def store_candle(candle):
     """Write a single dhcharts.Candle() to central storage"""
@@ -591,7 +611,7 @@ def store_candle(candle):
                      c_low=candle.c_low,
                      c_close=candle.c_close,
                      c_volume=candle.c_volume,
-                     c_symbol=candle.c_symbol,
+                     c_symbol=candle.c_symbol.ticker,
                      c_epoch=candle.c_epoch,
                      c_date=candle.c_date,
                      c_time=candle.c_time,

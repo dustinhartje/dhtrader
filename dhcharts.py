@@ -28,10 +28,6 @@ class Symbol():
     """Represents basic mechanics of a tradeable symbol a.k.a. ticker.  This
     might be a specific stock or future.
     """
-    # TODO LOWPRI - go through all module files and convert everything to use
-    #      the Symbol() class.  There will be cases where I measure tick
-    #      sizes and other things that should also reference this class instead
-    #      of hardcoded values.
     def __init__(self,
                  ticker: str,
                  name: str,
@@ -85,7 +81,9 @@ class Symbol():
         #      it should be a json file or something which I can provide an
         #      example to be stored and retrieved from storage rather than
         #      hard coding?
-        if self.ticker == "ES":
+        # DELETEME mimics ES and is used for testing storage to avoid polluting
+        # actual ES related data
+        if self.ticker in ["ES", "DELETEME"]:
             self.eth_open_time = dt.datetime.strptime("18:00:00",
                                                       "%H:%M:%S").time()
             self.eth_close_time = dt.datetime.strptime("16:59:00",
@@ -497,7 +495,7 @@ class Candle():
                  c_low: float,
                  c_close: float,
                  c_volume: int,
-                 c_symbol: str,
+                 c_symbol,
                  c_tags: list = None,
                  c_epoch: int = None,
                  c_date: str = None,
@@ -513,7 +511,10 @@ class Candle():
         self.c_low = float(c_low)
         self.c_close = float(c_close)
         self.c_volume = int(c_volume)
-        self.c_symbol = c_symbol
+        if isinstance(c_symbol, Symbol):
+            self.c_symbol = c_symbol
+        else:
+            self.c_symbol = dhs.get_symbol_by_ticker(ticker=c_symbol)
         if c_tags is None:
             c_tags = []
         else:
@@ -555,7 +556,10 @@ class Candle():
     def to_json(self):
         """returns a json version of this object while normalizing
         custom types (like datetime to string)"""
-        return json.dumps(self.__dict__)
+        working = deepcopy(self.__dict__)
+        working["c_symbol"] = working["c_symbol"].ticker
+
+        return json.dumps(working)
 
     def to_clean_dict(self):
         """Converts to JSON string then back to a python dict.  This helps
@@ -608,7 +612,7 @@ class Candle():
 class Chart():
     def __init__(self,
                  c_timeframe: str,
-                 c_symbol: str,
+                 c_symbol,
                  c_start: str = None,
                  c_end: str = None,
                  c_candles: list = None,
@@ -619,10 +623,10 @@ class Chart():
         if self.c_timeframe not in CANDLE_TIMEFRAMES:
             raise ValueError(f"c_timeframe of {c_timeframe} is not in the "
                              "known list {CANDLE_TIMEFRAMES}")
-        self.c_symbol = c_symbol
-        if not self.c_symbol == 'ES':
-            raise ValueError(f"c_symbol {self.c_symbol} is not supported, "
-                             "only 'ES' is currently allowed.")
+        if isinstance(c_symbol, str):
+            self.c_symbol = dhs.get_symbol_by_ticker(ticker=c_symbol)
+        else:
+            self.c_symbol = c_symbol
         self.c_start = dhu.dt_as_str(c_start)
         self.c_end = dhu.dt_as_str(c_end)
         if c_candles is None:
@@ -660,6 +664,8 @@ class Chart():
             for c in working["c_candles"]:
                 clean_cans.append(c.to_clean_dict())
         working["c_candles"] = clean_cans
+        working["c_symbol"] = working["c_symbol"].ticker
+
         return json.dumps(working)
 
     def to_clean_dict(self,
@@ -718,7 +724,7 @@ class Chart():
                 start_epoch=dhu.dt_to_epoch(self.c_start),
                 end_epoch=dhu.dt_to_epoch(self.c_end),
                 timeframe=self.c_timeframe,
-                symbol=self.c_symbol,
+                symbol=self.c_symbol.ticker,
                 )
         self.sort_candles()
         self.review_candles()
@@ -751,16 +757,17 @@ class Event():
     def __init__(self,
                  start_dt,
                  end_dt,
-                 symbol: str,
+                 symbol,
                  category: str,
                  tags: list = None,
                  notes: str = "",
                  ):
         self.start_dt = dhu.dt_as_str(start_dt)
         self.end_dt = dhu.dt_as_str(end_dt)
-        self.symbol = symbol
-        if self.symbol != "ES":
-            raise ValueError("Only ES is currently supported for Event.symbol")
+        if isinstance(symbol, Symbol):
+            self.symbol = symbol
+        else:
+            self.symbol = dhs.get_symbol_by_ticker(ticker=symbol)
         self.category = category
         self.tags = tags
         if tags is None:
@@ -772,7 +779,10 @@ class Event():
     def to_json(self):
         """returns a json version of this object while normalizing
         custom types (like datetime to string)"""
-        return json.dumps(self.__dict__)
+        working = deepcopy(self.__dict__)
+        working["symbol"] = working["symbol"].ticker
+
+        return json.dumps(working)
 
     def to_clean_dict(self):
         """Converts to JSON string then back to a python dict.  This helps
@@ -1116,7 +1126,7 @@ class Indicator():
                  description: str,
                  timeframe: str,
                  trading_hours: str,
-                 symbol: str,
+                 symbol,
                  calc_version: str,
                  calc_details: str,
                  start_dt=bot(),
@@ -1160,7 +1170,10 @@ class Indicator():
         if not dhu.valid_trading_hours(trading_hours):
             raise ValueError(f"{trading_hours} not valid for trading_hours")
         self.trading_hours = trading_hours
-        self.symbol = symbol
+        if isinstance(symbol, Symbol):
+            self.symbol = symbol
+        else:
+            self.symbol = dhs.get_symbol_by_ticker(ticker=symbol)
         self.calc_version = calc_version
         self.calc_details = calc_details
         self.start_dt = start_dt
@@ -1176,7 +1189,7 @@ class Indicator():
             self.datapoints = datapoints
         self.parameters = parameters
         if ind_id is None:
-            self.ind_id = (f"{self.symbol}_{self.trading_hours}_"
+            self.ind_id = (f"{self.symbol.ticker}_{self.trading_hours}_"
                            f"{self.timeframe}_{self.name}")
         else:
             self.ind_id = ind_id
@@ -1201,6 +1214,7 @@ class Indicator():
             for d in working["datapoints"]:
                 clean_dps.append(d.to_clean_dict())
         working["datapoints"] = clean_dps
+        working["symbol"] = working["symbol"].ticker
 
         return json.dumps(working)
 
@@ -1248,7 +1262,7 @@ class Indicator():
                   "description": self.description,
                   "timeframe": self.timeframe,
                   "trading_hours": self.trading_hours,
-                  "symbol": self.symbol,
+                  "symbol": self.symbol.ticker,
                   "calc_version": self.calc_version,
                   "calc_details": self.calc_details,
                   "start_dt": self.start_dt,
