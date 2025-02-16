@@ -41,6 +41,16 @@ class Symbol():
         self.tick_size = float(tick_size)
         self.set_times()
 
+    def __eq__(self, other):
+        return (self.ticker == other.ticker
+                and self.name == other.name
+                and self.leverage_ratio == other.leverage_ratio
+                and self.tick_size == other.tick_size
+                )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def to_json(self):
         """returns a json version of this object while normalizing
         custom types (like datetime to string)"""
