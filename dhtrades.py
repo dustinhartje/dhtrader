@@ -1,9 +1,33 @@
 import json
 from datetime import datetime as dt
 from copy import deepcopy
+import logging
 import dhutil as dhu
 import dhstore as dhs
 import dhcharts as dhc
+
+log = logging.getLogger(__name__)
+log.addHandler(logging.NullHandler())
+
+
+def logi(msg: str):
+    log.info(msg)
+
+
+def logw(msg: str):
+    log.warning(msg)
+
+
+def loge(msg: str):
+    log.error(msg)
+
+
+def logc(msg: str):
+    log.critical(msg)
+
+
+def logd(msg: str):
+    log.debug(msg)
 
 
 class Trade():

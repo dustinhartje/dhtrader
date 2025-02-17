@@ -3,6 +3,7 @@ from datetime import timedelta, date
 import csv
 import sys
 import re
+import logging
 from tabulate import tabulate
 import dhcharts as dhc
 import dhstore as dhs
@@ -10,6 +11,29 @@ import dhstore as dhs
 TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w', '1mo']
 TRADING_HOURS = ['rth', 'eth']
 EVENT_CATEGORIES = ['Closed', 'Data', 'Unplanned', 'LowVolume', 'Rollover']
+
+log = logging.getLogger(__name__)
+log.addHandler(logging.NullHandler())
+
+
+def logi(msg: str):
+    log.info(msg)
+
+
+def logw(msg: str):
+    log.warning(msg)
+
+
+def loge(msg: str):
+    log.error(msg)
+
+
+def logc(msg: str):
+    log.critical(msg)
+
+
+def logd(msg: str):
+    log.debug(msg)
 
 
 # TODO review all functions in this file.  Some may make sense to move to

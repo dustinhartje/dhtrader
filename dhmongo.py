@@ -11,12 +11,37 @@
 import os
 import sys
 import pymongo
+import logging
 from dotenv import load_dotenv, find_dotenv
 from operator import itemgetter
 from datetime import datetime as dt
 from datetime import timedelta
 import dhutil as dhu
 import dhcharts as dhc
+
+log = logging.getLogger(__name__)
+log.addHandler(logging.NullHandler())
+
+
+def logi(msg: str):
+    log.info(msg)
+
+
+def logw(msg: str):
+    log.warning(msg)
+
+
+def loge(msg: str):
+    log.error(msg)
+
+
+def logc(msg: str):
+    log.critical(msg)
+
+
+def logd(msg: str):
+    log.debug(msg)
+
 
 # Establish mongo connection parameters and client
 MONGO_ENV_FILE = 'mongo.env'

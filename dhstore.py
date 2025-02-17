@@ -17,6 +17,7 @@ import progressbar
 from collections import Counter, defaultdict
 from datetime import datetime as dt
 from datetime import timedelta
+import logging
 import dhcharts as dhc
 import dhtrades as dht
 import dhutil as dhu
@@ -30,6 +31,29 @@ COLL_TRADESERIES = "tradeseries"
 COLL_BACKTESTS = "backtests"
 COLL_IND_META = "indicators_meta"
 COLL_IND_DPS = "indicators_datapoints"
+
+log = logging.getLogger(__name__)
+log.addHandler(logging.NullHandler())
+
+
+def logi(msg: str):
+    log.info(msg)
+
+
+def logw(msg: str):
+    log.warning(msg)
+
+
+def loge(msg: str):
+    log.error(msg)
+
+
+def logc(msg: str):
+    log.critical(msg)
+
+
+def logd(msg: str):
+    log.debug(msg)
 
 
 ##############################################################################
