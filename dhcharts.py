@@ -1351,8 +1351,12 @@ class Indicator():
         value.  Wrapper methods assist with the most common previous and
         next requests.
         """
+        can_dt = dhu.this_candle_start(dt=dt, timeframe=self.timeframe)
         index = next((i for i, dp in enumerate(self.datapoints)
-                      if dhu.dt_as_dt(dp.dt) == dhu.dt_as_dt(dt)), None)
+                      if dhu.dt_as_dt(dp.dt) == dhu.dt_as_dt(can_dt)), None)
+        # If no datapoints was found, return None
+        if index is None:
+            return None
         index += offset
         if index < 0:
             raise ValueError(f"index cannot be < 0, we got {index}.  "
