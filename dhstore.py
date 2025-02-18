@@ -243,28 +243,15 @@ def get_backtests_by_field(field: str,
                            ):
     """Returns a list of Backtest() objects (as dictionaries), matching the
     field=value provided."""
+    # Note that a Backtest() object is not returned in this case because
+    # the class is meant to be subclassed outside of the library, not to be
+    # directly used.  Since we can't predict what subclass will be needed
+    # we return the dictionary and leave it to the caller to instantiate
+    # their subclass with it.
     result = dhm.get_backtests_by_field(field=field,
                                         value=value,
                                         collection=collection,
                                         )
-    # TODO I need to rethink this at some point.  In theory I should be
-    #      returning a Backtest() object here but that class is not meant
-    #      to be used directly.  Ideally I'd be checking the 'class_name'
-    #      attribute and building an object based on the subclass it represents
-    #      however those are kept outside of this library so they are not
-    #      available.  I'm going to leave this function in place for now and
-    #      use it to just get the dict with the repo I'm building the subclass
-    #      in and build the object over there.  Perhaps at some point if this
-    #      bothers me enough I'll go googling or ask StackOverflow if there's
-    #      a better way to handle this more elegantly.
-    # if include_tradeseries:
-    #     bt.tradeseries = get_tradeseries_by_field(
-    #             field="bt_id",
-    #             value=bt_id,
-    #             collection=collection_ts,
-    #             collection_trades=collection_trades,
-    #             include_trades=include_trades,
-    #             )
 
     return result
 
@@ -351,9 +338,8 @@ def get_indicator(ind_id: str,
                               meta_collection=meta_collection,
                               autoload_datapoints=autoload_datapoints,
                               )[0]
-    except IndexError as e:
-        f = type(e)(str(e) + f"; ind_id={ind_id} was not found")
-        raise f.with_traceback(sys.exc_info()[2])
+    except IndexError:
+        return None
 
     # The stored class_name attribute tells us which object class to return
     if i["class_name"] == "IndicatorSMA":

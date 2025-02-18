@@ -8,6 +8,30 @@ from statistics import fmean
 from copy import deepcopy
 import logging
 
+
+# TODO -----CURRENT PRIORITIES JAN 2025-----
+# TODO add low hanging fruit like HOD/LOD/YRHI/YRLO/OOD/GXHI/GXLO/YRCL
+# TODO add subclass of Inidicators class for each type of indicator I want
+#      9 & 20 EMAs, HOD, LOD, OOD, GXLO, GXHI should all be easy to do now
+#      when I get around to adding 1d timeframes also do 20/50/100/200dSMA
+#      later maybe do VWAP, RSI, what else?
+# TODO get a backtester and analyzer built for EMAs as a framework that can
+#      be used for other indicators.  Should spit out raw "best" as well as
+#      things like running-last-week, running-lastX as the first version.
+#      Other more complex scenarios can be added later per-idea, including
+#      stuff like what the opening range or daily chart looks like as triggers
+#      --------------------------------------
+
+# TODO add function to update some or all indicators based on incoming candles
+#      this should accept a list of indicators to loop through by short_name,
+#      with "all" being the default only item in the list.  For each indicator
+#      if it's in the list or all is in the list go ahead and run it.  Each of
+#      the indicators gets built as an object then it's store method is run
+#      by default
+#      --really the looper should go in either dhutility.py or refreshdata.py.
+#      the method on each indicator should just be able to update itself
+#      using the latest candles avail in storage.  It should have options
+#      to just calculate new datapoints or wipe and recalc from beginning
 # TODO update docstrings in this and all other module files to google style:
 #      https://sphinxcontrib-napoleon.readthedocs.io/
 #          en/latest/example_google.html
@@ -988,7 +1012,6 @@ class Day():
             sys.exit('No 1m chart found, cannot recalc Day object')
         else:
             for candle in base_chart.c_candles:
-                # TODO need to factor in day of week here, no weekends!
                 if (candle.c_datetime >= self.rth_start
                         and candle.c_datetime <= self.rth_end):
                     in_rth = True
@@ -1041,7 +1064,6 @@ class Day():
                             "<class dhcharts.Chart> object")
         chart_exists = False
         for c in self.d_charts:
-            # TODO need to test this stuff
             if c.c_timeframe == new_chart.c_timeframe:
                 chart_exists = True
         if not chart_exists:
@@ -1052,14 +1074,10 @@ class Day():
                   ' using this timeframe.  Use update_chart() to overwrite.')
 
     def update_chart(self, new_chart):
-        # TODO I need to test this function thoroughly, does it actually remove
-        #      and then update what I want it to?  should it output?
         if not isinstance(new_chart, Chart):
             raise TypeError(f"new_chart {type(new_chart)} must be a "
                             "<class dhcharts.Chart> object")
         to_remove = []
-        # TODO need to test this stuff, I think it should be like c.c_timeframe
-        #      rather than c['c_timeframe'] right?
         for c in self.d_charts:
             if c.c_timeframe == new_chart.c_timeframe:
                 to_remove.append(self.d_charts.index(c))
@@ -1127,8 +1145,6 @@ class IndicatorDataPoint():
         # to just treat any non-Exception result with matching values as good.
         # For example it gets an Exception when comparing to an empty list
         # which is returned from storage when there is no matching datapoint.
-        # TODO this can likely be restored if and when I move tests out of
-        # __main__ in favor of unit tests, and stop running this as a script.
         try:
             return (self.dt == other.dt and
                     self.value == other.value and
@@ -1193,10 +1209,6 @@ class Indicator():
         #      I can include leading and trailing gap parameters with default
         #      zero in the base class then adjust to be indicator specific
         #      in the subclasses, that should work!
-        # TODO need some functions to review and cleanup both indicator meta
-        #      and datapoints stuff
-        # TODO create a calculations versions changelog for indicators as
-        #      a separate text/md file with a section for each indicator
         # TODO Review get_info(), is it still needed after creation of
         #      .pretty()?
         #      If so, add earliest and latest datapoints to get_info()
@@ -1235,6 +1247,32 @@ class Indicator():
         else:
             self.ind_id = ind_id
         self.class_name = "Indicator"
+
+    def __eq__(self, other):
+        return (self.name == other.name
+                and self.description == other.description
+                and self.timeframe == other.timeframe
+                and self.trading_hours == other.trading_hours
+                and self.symbol == other.symbol
+                and self.calc_version == other.calc_version
+                and self.calc_details == other.calc_details
+                and self.start_dt == other.start_dt
+                and self.end_dt == other.end_dt
+                and self.ind_id == other.ind_id
+                and self.candle_chart == other.candle_chart
+                and self.datapoints == other.datapoints
+                and self.sub_eq(other)
+                )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def sub_eq(self, other):
+        """Placeholder method for subclasses to add additional attributes
+        or conditions required to evaluate __eq__ for this class.  Any
+        comparison of parameters should be done here as they are subclass
+        specific."""
+        return self.parameters == other.parameters
 
     def to_json(self,
                 suppress_datapoints: bool = True,
@@ -1389,8 +1427,6 @@ class Indicator():
                                    fast_dps_check=fast_dps_check,
                                    show_progress=show_progress,
                                    )
-
-        return result
 
     def get_datapoint(self,
                       dt,
@@ -1648,683 +1684,3 @@ class IndicatorEMA(Indicator):
                 # Update vars for next candle
                 prior_ema = this_ema
                 counter += 1
-
-# TODO -----CURRENT PRIORITIES JAN 2025-----
-# TODO add low hanging fruit like HOD/LOD/YRHI/YRLO/OOD/GXHI/GXLO/YRCL
-# TODO add subclass of Inidicators class for each type of indicator I want
-#      9 & 20 EMAs, HOD, LOD, OOD, GXLO, GXHI should all be easy to do now
-#      when I get around to adding 1d timeframes also do 20/50/100/200dSMA
-#      later maybe do VWAP, RSI, what else?
-# TODO get a backtester and analyzer built for EMAs as a framework that can
-#      be used for other indicators.  Should spit out raw "best" as well as
-#      things like running-last-week, running-lastX as the first version.
-#      Other more complex scenarios can be added later per-idea, including
-#      stuff like what the opening range or daily chart looks like as triggers
-#      --------------------------------------
-
-# TODO add function to update some or all indicators based on incoming candles
-#      this should accept a list of indicators to loop through by short_name,
-#      with "all" being the default only item in the list.  For each indicator
-#      if it's in the list or all is in the list go ahead and run it.  Each of
-#      the indicators gets built as an object then it's store method is run
-#      by default
-#      --really the looper should go in either dhutility.py or refreshdata.py.
-#      the method on each indicator should just be able to update itself
-#      using the latest candles avail in storage.  It should have options
-#      to just calculate new datapoints or wipe and recalc from beginning
-
-
-def test_boundary(name, actual, expected):
-    """Quick function to streamline repetitive output in testing below"""
-    global boundaries_all_ok
-    if actual == expected:
-        print(f"OK: ({name})   {actual} (actual) == {expected} (expected)")
-        return True
-    else:
-        print(f"ERROR: ({name})   {actual} (actual) != {expected} (expected)")
-        boundaries_all_ok = False
-        return False
-
-
-if __name__ == '__main__':
-    # TODO LOWPRI these should be unit tests or something similar eventually
-    # Run a few tests to confirm desired functionality
-
-    # Test pretty output which also confirms json and clean_dict working
-    # TODO in lieu of real unit tests, start a test_results empty list and
-    #      record a quick oneliner for each easily confirmable test as it
-    #      finishes, something like "OK - Trade() Storage and retrieval"
-    #      then print them all at the end.  For non-easily-confirmed could
-    #      add a note like "UNKNOWN - Visual confirm needed for Trade.pretty()
-    print("\n######################### OUTPUTS ###########################")
-    print("All objects should print 'pretty' which confirms .to_json(), "
-          ".to_clean_dict(), and .pretty() methods all work properly"
-          )
-    print("\n---------------------------- CANDLE ---------------------------")
-    out_candle = Candle(c_datetime="2025-01-02 12:00:00",
-                        c_timeframe="1m",
-                        c_open=5000,
-                        c_high=5007.75,
-                        c_low=4995.5,
-                        c_close=5002,
-                        c_volume=1501,
-                        c_symbol="ES",
-                        )
-    print(out_candle.pretty())
-    print("\n----------------------------- CHART ----------------------------")
-    out_chart = Chart(c_timeframe="1m",
-                      c_trading_hours="rth",
-                      c_symbol="ES",
-                      c_start="2025-01-02 12:00:00",
-                      c_end="2025-01-02 12:10:00",
-                      autoload=False,
-                      )
-    out_chart.add_candle(out_candle)
-    print("Without chart candles")
-    print(out_chart.pretty())
-    print("With candles")
-    print(out_chart.pretty(suppress_candles=False))
-    print("\n----------------------------- EVENT ----------------------------")
-    out_event = Event(start_dt="2025-01-02 12:00:00",
-                      end_dt="2025-01-02 18:00:00",
-                      symbol="ES",
-                      category="Closed",
-                      tags=["holiday"],
-                      notes="Test Holiday",
-                      )
-    print(out_event.pretty())
-    print("\n------------------- INDICATOR DATAPOINT ------------------------")
-    out_dp = IndicatorDataPoint(dt="2025-01-02 12:00:00",
-                                value=100,
-                                ind_id="ES1mTESTSMA-DELETEME9",
-                                )
-    print(out_dp.pretty())
-    print("\n------------------------- INDICATOR ----------------------------")
-    out_ind = IndicatorSMA(name="TestSMA-DELETEME",
-                           timeframe="5m",
-                           trading_hours="eth",
-                           symbol="ES",
-                           description="yadda",
-                           calc_version="yoda",
-                           calc_details="yeeta",
-                           start_dt="2025-01-08 09:30:00",
-                           end_dt="2025-01-08 11:30:00",
-                           parameters={"length": 9,
-                                       "method": "close"
-                                       },
-                           candle_chart=out_chart,
-                           )
-    out_ind.datapoints = [out_dp]
-    print("Without chart candles or datapoints")
-    print(out_ind.pretty())
-    print("With chart candles and datapoints")
-    print(out_ind.pretty(suppress_datapoints=False,
-                         suppress_chart_candles=False,
-                         ))
-    print("\nIndicator.get_info(pretty=True):")
-    print(out_ind.get_info(pretty=True))
-
-    print("\n######################### SYMBOLS ###########################")
-    print("Creating an ES symbol:")
-
-    sym = Symbol(ticker="ES",
-                 name="ES",
-                 leverage_ratio=50.0,
-                 tick_size=0.25,
-                 )
-    print(sym.pretty())
-
-    print("\n----------------------------------------------------------------")
-    print("Testing market_is_open method\n")
-    # Sunday 2024-03-17
-    # Monday 2024-03-18
-    # Wednesday 2024-03-20
-    # Friday 2024-03-22
-    # Saturday 2024-03-23
-
-    # ETH
-    h = "eth"
-    print(f"\n{h}\n")
-    # Saturday should fail at 4am, 5:30pm, and 9pm
-    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-23 04:00:00")
-    s = "OK" if r is False else "ERROR"
-    print(f"{s} {h}  Market open Saturday at 4am - {r}")
-    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-23 17:30:00")
-    s = "OK" if r is False else "ERROR"
-    print(f"{s} {h}  Market open Saturday at 5:30pm - {r}")
-    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-23 21:00:00")
-    s = "OK" if r is False else "ERROR"
-    print(f"{s} {h}  Market open Saturday at 9pm - {r}")
-    # Friday should succeed at noon, fail after 5pm
-    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-22 12:00:00")
-    s = "OK" if r is True else "ERROR"
-    print(f"{s} {h}  Market open Friday at 12pm - {r}")
-    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-22 17:30:00")
-    s = "OK" if r is False else "ERROR"
-    print(f"{s} {h}  Market open Friday at 5:30pm - {r}")
-    # Sunday should fail at noon, succeed after 6pm
-    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-17 12:00:00")
-    s = "OK" if r is False else "ERROR"
-    print(f"{s} {h}  Market open Sunday at 12pm - {r}")
-    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-17 19:30:00")
-    s = "OK" if r is True else "ERROR"
-    print(f"{s} {h}  Market open Sunday at 7:30pm - {r}")
-    # Wednesday should succeed at noon and 8pm, fail at 5:30pm
-    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-20 12:00:00")
-    s = "OK" if r is True else "ERROR"
-    print(f"{s} {h}  Market open Wednesday at 12pm - {r}")
-    # TODO why is this one failing? ######################
-    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-20 17:30:00")
-    s = "OK" if r is False else "ERROR"
-    print(f"{s} {h}  Market open Wednesday at 5:30pm - {r}")
-    ######################################################
-    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-20 20:00:00")
-    s = "OK" if r is True else "ERROR"
-    print(f"{s} {h}  Market open Wednesday at 8pm - {r}")
-
-    # RTH
-    h = "rth"
-    print(f"\n{h}\n")
-    # Saturday should fail at 4am, 5:30pm, and 9pm
-    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-16 04:00:00")
-    s = "OK" if r is False else "ERROR"
-    print(f"{s} {h}  Market open Saturday at 4am - {r}")
-    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-16 17:30:00")
-    s = "OK" if r is False else "ERROR"
-    print(f"{s} {h}  Market open Saturday at 5:30pm - {r}")
-    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-16 21:00:00")
-    s = "OK" if r is False else "ERROR"
-    print(f"{s} {h}  Market open Saturday at 9pm - {r}")
-    # Sunday should fail at 4am, 5:30pm, and 9pm
-    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-17 04:00:00")
-    s = "OK" if r is False else "ERROR"
-    print(f"{s} {h}  Market open Sunday at 4am - {r}")
-    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-17 17:30:00")
-    s = "OK" if r is False else "ERROR"
-    print(f"{s} {h}  Market open Sunday at 5:30pm - {r}")
-    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-17 21:00:00")
-    s = "OK" if r is False else "ERROR"
-    print(f"{s} {h}  Market open Sunday at 9pm - {r}")
-    # Monday should fail at 8am, succeed after 2pm
-    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-18 08:00:00")
-    s = "OK" if r is False else "ERROR"
-    print(f"{s} {h}  Market open Monday at 8am - {r}")
-    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-18 14:00:00")
-    s = "OK" if r is True else "ERROR"
-    print(f"{s} {h}  Market open Monday at 2pm - {r}")
-    # Friday should succeed at noon, fail after 4pm
-    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-22 12:00:00")
-    s = "OK" if r is True else "ERROR"
-    print(f"{s} {h}  Market open Friday at 12pm - {r}")
-    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-22 17:00:00")
-    s = "OK" if r is False else "ERROR"
-    print(f"{s} {h}  Market open Friday at 5pm - {r}")
-    # Wednesday should fail at 4am, succeed at noon, and fail at 8pm
-    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-20 04:00:00")
-    s = "OK" if r is False else "ERROR"
-    print(f"{s} {h}  Market open Wednesday at 4am - {r}")
-    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-20 12:00:00")
-    s = "OK" if r is True else "ERROR"
-    print(f"{s} {h}  Market open Wednesday at 12pm - {r}")
-    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-20 20:00:00")
-    s = "OK" if r is False else "ERROR"
-    print(f"{s} {h}  Market open Wednesday at 8pm - {r}")
-
-    # Events should also indicate market closed
-    print(f"\nTesting that datetime inside a holiday closure fails using "
-          "2024-03-29 12:00:00 which is noon on Good Friday\n")
-    h = "rth"
-    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-29 12:00:00")
-    s = "OK" if r is False else "ERROR"
-    print(f"{s} {h}  Market open on Good Friday at 12pm - {r}")
-    h = "eth"
-    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-29 12:00:00")
-    s = "OK" if r is False else "ERROR"
-    print(f"{s} {h}  Market open on Good Friday at 12pm - {r}")
-    print("\nand just to be sure it's not going to flip somehow test during "
-          "daily eth closure window on the same holiday\n")
-    r = sym.market_is_open(trading_hours=h, target_dt="2024-03-29 17:30:00")
-    s = "OK" if r is False else "ERROR"
-    print(f"{s} {h}  Market open on Good Friday at 5:30pm - {r}")
-
-    print("\n----------------------------------------------------------------")
-    print("-----------------------------------------------------------------")
-    print("Confirming get_market_boundary wrappers working as expected")
-    boundaries_all_ok = True
-    print("All results will be displayed as Expected then Actual")
-    print("\nTesting All boundaries mid-week Wednesday noon datetime: "
-          "2024-03-20 12:00:00")
-    print("This confirms non-weekend mechanics all work properly")
-    t = dhu.dt_as_dt("2024-03-20 12:00:00")
-    print(f"{str(t)}\n")
-    # Next ETH Open
-    actual = dhu.dt_as_str(sym.get_next_eth_open(t))
-    test_boundary("next_eth_open", actual, "2024-03-20 18:00:00")
-    # Next ETH Close
-    actual = dhu.dt_as_str(sym.get_next_eth_close(t))
-    test_boundary("next_eth_close", actual, "2024-03-20 16:59:00")
-    # Previous ETH Open
-    actual = dhu.dt_as_str(sym.get_previous_eth_open(t))
-    test_boundary("previous_eth_open", actual, "2024-03-19 18:00:00")
-    # Previous ETH Close
-    actual = dhu.dt_as_str(sym.get_previous_eth_close(t))
-    test_boundary("previous_eth_close", actual, "2024-03-19 16:59:00")
-    # Next RTH Open
-    actual = dhu.dt_as_str(sym.get_next_rth_open(t))
-    test_boundary("next_rth_open", actual, "2024-03-21 09:30:00")
-    # Next RTH Close
-    actual = dhu.dt_as_str(sym.get_next_rth_close(t))
-    test_boundary("next_rth_close", actual, "2024-03-20 16:14:00")
-    # Previous RTH Open
-    actual = dhu.dt_as_str(sym.get_previous_rth_open(t))
-    test_boundary("previous_rth_open", actual, "2024-03-20 09:30:00")
-    # Previous RTH Close
-    actual = dhu.dt_as_str(sym.get_previous_rth_close(t))
-    test_boundary("previous_rth_close", actual, "2024-03-19 16:14:00")
-    print("-----------------------------------------------------------------")
-    print("\nTesting Next boundaries from Thursday noon 2024-03-21 12:00:00 "
-          "(should hit Thursday/Friday)")
-    print("This confirms we don't accidentally slip into or over the weekend "
-          "due to miscalculations")
-    t = dhu.dt_as_dt("2024-03-21 12:00:00")
-    print(f"{str(t)}\n")
-    # Next ETH Open
-    actual = dhu.dt_as_str(sym.get_next_eth_open(t))
-    test_boundary("next_eth_open", actual, "2024-03-21 18:00:00")
-    # Next RTH Open
-    actual = dhu.dt_as_str(sym.get_next_rth_open(t))
-    test_boundary("next_rth_open", actual, "2024-03-22 09:30:00")
-    # Next ETH Close
-    actual = dhu.dt_as_str(sym.get_next_eth_close(t))
-    test_boundary("next_eth_close", actual, "2024-03-21 16:59:00")
-    # Next RTH Close
-    actual = dhu.dt_as_str(sym.get_next_rth_close(t))
-    test_boundary("next_rth_close", actual, "2024-03-21 16:14:00")
-    print("-----------------------------------------------------------------")
-    print("\nTesting Next boundaries from Friday noon 2024-03-22 12:00:00 "
-          "(should hit Sunday/Monday)")
-    print("This confirms we span the weekend as expected when appropriate")
-    t = dhu.dt_as_dt("2024-03-22 12:00:00")
-    print(f"{str(t)}\n")
-    # Next ETH Open
-    actual = dhu.dt_as_str(sym.get_next_eth_open(t))
-    test_boundary("next_eth_open", actual, "2024-03-24 18:00:00")
-    # Next RTH Open
-    actual = dhu.dt_as_str(sym.get_next_rth_open(t))
-    test_boundary("next_rth_open", actual, "2024-03-25 09:30:00")
-    # Next ETH Close
-    actual = dhu.dt_as_str(sym.get_next_eth_close(t))
-    test_boundary("next_eth_close", actual, "2024-03-22 16:59:00")
-    # Next RTH Close
-    actual = dhu.dt_as_str(sym.get_next_rth_close(t))
-    test_boundary("next_rth_close", actual, "2024-03-22 16:14:00")
-    print("-----------------------------------------------------------------")
-    print("\nTesting Previous boundaries from Tuesday noon 2024-03-19 "
-          "12:00:00 (should hit Monday/Tuesday)")
-    print("This confirms we don't accidentally slip into or over the weekend "
-          "due to miscalculations")
-    t = dhu.dt_as_dt("2024-03-19 12:00:00")
-    print(f"{str(t)}\n")
-    # Previous ETH Open
-    actual = dhu.dt_as_str(sym.get_previous_eth_open(t))
-    test_boundary("previous_eth_open", actual, "2024-03-18 18:00:00")
-    # Previous RTH Open
-    actual = dhu.dt_as_str(sym.get_previous_rth_open(t))
-    test_boundary("previous_rth_open", actual, "2024-03-19 09:30:00")
-    # Previous ETH Close
-    actual = dhu.dt_as_str(sym.get_previous_eth_close(t))
-    test_boundary("previous_eth_close", actual, "2024-03-18 16:59:00")
-    # Previous RTH Close
-    actual = dhu.dt_as_str(sym.get_previous_rth_close(t))
-    test_boundary("previous_rth_close", actual, "2024-03-18 16:14:00")
-    print("-----------------------------------------------------------------")
-    print("\nTesting Previous boundaries from Monday noon 2024-03-18 "
-          "12:00:00 (should hit Friday/Sunday)")
-    print("This confirms we span the weekend as expected when appropriate")
-    t = dhu.dt_as_dt("2024-03-18 12:00:00")
-    print(f"{str(t)}\n")
-    # Previous ETH Open
-    actual = dhu.dt_as_str(sym.get_previous_eth_open(t))
-    test_boundary("previous_eth_open", actual, "2024-03-17 18:00:00")
-    # Previous RTH Open
-    actual = dhu.dt_as_str(sym.get_previous_rth_open(t))
-    test_boundary("previous_rth_open", actual, "2024-03-18 09:30:00")
-    # Previous ETH Close
-    actual = dhu.dt_as_str(sym.get_previous_eth_close(t))
-    test_boundary("previous_eth_close", actual, "2024-03-15 16:59:00")
-    # Previous RTH Close
-    actual = dhu.dt_as_str(sym.get_previous_rth_close(t))
-    test_boundary("previous_rth_close", actual, "2024-03-15 16:14:00")
-    print("-----------------------------------------------------------------")
-    print("Setting up a few events to test that boundary mechanics respect")
-    events = [Event(start_dt="2024-03-28 17:00:00",
-                    end_dt="2024-03-31 17:59:00",
-                    symbol="ES",
-                    category="Closed",
-                    notes="Good Friday Closed",
-                    ),
-              Event(start_dt="2024-03-18 00:00:00",
-                    end_dt="2024-03-19 23:59:00",
-                    symbol="ES",
-                    category="Closed",
-                    notes="Tues-Wed Full days closure",
-                    ),
-              Event(start_dt="2024-03-18 13:00:00",
-                    end_dt="2024-03-18 17:59:00",
-                    symbol="ES",
-                    category="Closed",
-                    notes="Tues early closure",
-                    ),
-              ]
-    for ev in events:
-        print(ev.pretty())
-    print("\nTesting Next against Good Friday closure starting Thursday "
-          "2024-03-28 17:00:00 through Sunday 2024-03-31 17:59:00")
-    print("Checking from noon on Thursday 2024-03-28 12:00:00")
-    print("This confirms we cross the event and weekend where appropriate.")
-    t = dhu.dt_as_dt("2024-03-28 12:00:00")
-    print(f"{str(t)}\n")
-    # Next ETH Open
-    actual = dhu.dt_as_str(sym.get_next_eth_open(t, events=events))
-    test_boundary("next_eth_open", actual, "2024-03-31 18:00:00")
-    # Next RTH Open
-    actual = dhu.dt_as_str(sym.get_next_rth_open(t, events=events))
-    test_boundary("next_rth_open", actual, "2024-04-01 09:30:00")
-    # Next ETH Close
-    actual = dhu.dt_as_str(sym.get_next_eth_close(t, events=events))
-    test_boundary("next_eth_close", actual, "2024-03-28 16:59:00")
-    # Next RTH Close
-    actual = dhu.dt_as_str(sym.get_next_rth_close(t, events=events))
-    test_boundary("next_rth_close", actual, "2024-03-28 16:14:00")
-
-    print("\nTesting same closure window from within using Friday at Noon "
-          "2024-03-29 12:00:00")
-    print("This confirms times inside a closure are moved outside of it in "
-          "both direction")
-    t = dhu.dt_as_dt("2024-03-29 12:00:00")
-    print(f"{str(t)}\n")
-    # Next ETH Close
-    actual = dhu.dt_as_str(sym.get_next_eth_close(t, events=events))
-    test_boundary("next_eth_close", actual, "2024-04-01 16:59:00")
-    # Next RTH Close
-    actual = dhu.dt_as_str(sym.get_next_rth_close(t, events=events))
-    test_boundary("next_rth_close", actual, "2024-04-01 16:14:00")
-    # Previous ETH Close
-    actual = dhu.dt_as_str(sym.get_previous_eth_close(t, events=events))
-    test_boundary("previous_eth_close", actual, "2024-03-28 16:59:00")
-    # Previous RTH Close
-    actual = dhu.dt_as_str(sym.get_previous_rth_close(t, events=events))
-    test_boundary("previous_rth_close", actual, "2024-03-28 16:14:00")
-    # Next ETH Open
-    actual = dhu.dt_as_str(sym.get_next_eth_open(t, events=events))
-    test_boundary("next_eth_open", actual, "2024-03-31 18:00:00")
-    # Next RTH Open
-    actual = dhu.dt_as_str(sym.get_next_rth_open(t, events=events))
-    test_boundary("next_rth_open", actual, "2024-04-01 09:30:00")
-    # Previous ETH Open
-    actual = dhu.dt_as_str(sym.get_previous_eth_open(t, events=events))
-    test_boundary("previous_eth_open", actual, "2024-03-27 18:00:00")
-    # Previous RTH Open
-    actual = dhu.dt_as_str(sym.get_previous_rth_open(t, events=events))
-    test_boundary("previous_rth_open", actual, "2024-03-28 09:30:00")
-
-    print("\nTesting same closure window from the following Monday at Noon "
-          "2024-04-01 12:00:00")
-    print("This confirms Previous crosses the event to the prior week.")
-    t = dhu.dt_as_dt("2024-04-01 12:00:00")
-    print(f"{str(t)}\n")
-    # Previous ETH Open
-    actual = dhu.dt_as_str(sym.get_previous_eth_open(t, events=events))
-    test_boundary("previous_eth_open", actual, "2024-03-31 18:00:00")
-    # Previous RTH Open
-    actual = dhu.dt_as_str(sym.get_previous_rth_open(t, events=events))
-    test_boundary("previous_rth_open", actual, "2024-04-01 09:30:00")
-    # Previous ETH Close
-    actual = dhu.dt_as_str(sym.get_previous_eth_close(t, events=events))
-    test_boundary("previous_eth_close", actual, "2024-03-28 16:59:00")
-    # Previous RTH Close
-    actual = dhu.dt_as_str(sym.get_previous_rth_close(t, events=events))
-    test_boundary("previous_rth_close", actual, "2024-03-28 16:14:00")
-    print("\nTesting nested closure window from within both using "
-          "2024-03-18 14:00:00")
-    print("This confirms that multiple overlapping events don't muck it up.")
-    t = dhu.dt_as_dt("2024-03-18 14:00:00")
-    print(f"{str(t)}\n")
-    # Next ETH Close
-    actual = dhu.dt_as_str(sym.get_next_eth_close(t, events=events))
-    test_boundary("next_eth_close", actual, "2024-03-20 16:59:00")
-    # Next RTH Close
-    actual = dhu.dt_as_str(sym.get_next_rth_close(t, events=events))
-    test_boundary("next_rth_close", actual, "2024-03-20 16:14:00")
-    # Previous ETH Close
-    actual = dhu.dt_as_str(sym.get_previous_eth_close(t, events=events))
-    test_boundary("previous_eth_close", actual, "2024-03-15 16:59:00")
-    # Previous RTH Close
-    actual = dhu.dt_as_str(sym.get_previous_rth_close(t, events=events))
-    test_boundary("previous_rth_close", actual, "2024-03-15 16:14:00")
-    # Next ETH Open
-    actual = dhu.dt_as_str(sym.get_next_eth_open(t, events=events))
-    test_boundary("next_eth_open", actual, "2024-03-20 18:00:00")
-    # Next RTH Open
-    actual = dhu.dt_as_str(sym.get_next_rth_open(t, events=events))
-    test_boundary("next_rth_open", actual, "2024-03-20 09:30:00")
-    # Previous ETH Open
-    actual = dhu.dt_as_str(sym.get_previous_eth_open(t, events=events))
-    test_boundary("previous_eth_open", actual, "2024-03-17 18:00:00")
-    # Previous RTH Open
-    actual = dhu.dt_as_str(sym.get_previous_rth_open(t, events=events))
-    test_boundary("previous_rth_open", actual, "2024-03-15 09:30:00")
-    # TODO test nested from inside only 1
-    print("\nTesting nested closure window from within outer only using "
-          "2024-03-18 10:00:00")
-    print("This confirms that multiple overlapping events don't muck it up.")
-    t = dhu.dt_as_dt("2024-03-18 10:00:00")
-    print(f"{str(t)}\n")
-    # Next ETH Close
-    actual = dhu.dt_as_str(sym.get_next_eth_close(t, events=events))
-    test_boundary("next_eth_close", actual, "2024-03-20 16:59:00")
-    # Next RTH Close
-    actual = dhu.dt_as_str(sym.get_next_rth_close(t, events=events))
-    test_boundary("next_rth_close", actual, "2024-03-20 16:14:00")
-    # Previous ETH Close
-    actual = dhu.dt_as_str(sym.get_previous_eth_close(t, events=events))
-    test_boundary("previous_eth_close", actual, "2024-03-15 16:59:00")
-    # Previous RTH Close
-    actual = dhu.dt_as_str(sym.get_previous_rth_close(t, events=events))
-    test_boundary("previous_rth_close", actual, "2024-03-15 16:14:00")
-    # Next ETH Open
-    actual = dhu.dt_as_str(sym.get_next_eth_open(t, events=events))
-    test_boundary("next_eth_open", actual, "2024-03-20 18:00:00")
-    # Next RTH Open
-    actual = dhu.dt_as_str(sym.get_next_rth_open(t, events=events))
-    test_boundary("next_rth_open", actual, "2024-03-20 09:30:00")
-    # Previous ETH Open
-    actual = dhu.dt_as_str(sym.get_previous_eth_open(t, events=events))
-    test_boundary("previous_eth_open", actual, "2024-03-17 18:00:00")
-    # Previous RTH Open
-    actual = dhu.dt_as_str(sym.get_previous_rth_open(t, events=events))
-    test_boundary("previous_rth_open", actual, "2024-03-15 09:30:00")
-    print("\nTesting nested closure window from within outer only using "
-          "2024-03-19 06:00:00")
-    print("This confirms that multiple overlapping events don't muck it up.")
-    t = dhu.dt_as_dt("2024-03-19 06:00:00")
-    print(f"{str(t)}\n")
-    # Next ETH Close
-    actual = dhu.dt_as_str(sym.get_next_eth_close(t, events=events))
-    test_boundary("next_eth_close", actual, "2024-03-20 16:59:00")
-    # Next RTH Close
-    actual = dhu.dt_as_str(sym.get_next_rth_close(t, events=events))
-    test_boundary("next_rth_close", actual, "2024-03-20 16:14:00")
-    # Previous ETH Close
-    actual = dhu.dt_as_str(sym.get_previous_eth_close(t, events=events))
-    test_boundary("previous_eth_close", actual, "2024-03-15 16:59:00")
-    # Previous RTH Close
-    actual = dhu.dt_as_str(sym.get_previous_rth_close(t, events=events))
-    test_boundary("previous_rth_close", actual, "2024-03-15 16:14:00")
-    # Next ETH Open
-    actual = dhu.dt_as_str(sym.get_next_eth_open(t, events=events))
-    test_boundary("next_eth_open", actual, "2024-03-20 18:00:00")
-    # Next RTH Open
-    actual = dhu.dt_as_str(sym.get_next_rth_open(t, events=events))
-    test_boundary("next_rth_open", actual, "2024-03-20 09:30:00")
-    # Previous ETH Open
-    actual = dhu.dt_as_str(sym.get_previous_eth_open(t, events=events))
-    test_boundary("previous_eth_open", actual, "2024-03-17 18:00:00")
-    # Previous RTH Open
-    actual = dhu.dt_as_str(sym.get_previous_rth_open(t, events=events))
-    test_boundary("previous_rth_open", actual, "2024-03-15 09:30:00")
-    print("-----------------------------------------------------------------")
-    print("-----------------------------------------------------------------")
-    if boundaries_all_ok:
-        print("OK: All boundary tests were successful")
-    else:
-        print("ERROR: Some boundary tests failed, please review.")
-
-    print("\n######################### INDICATORS ###########################")
-    # Indicators
-    print("Building 5m9sma for 2025-01-08 9:30am-11:30am")
-    itest = IndicatorSMA(name="TestSMA-DELETEME",
-                         timeframe="5m",
-                         trading_hours="eth",
-                         symbol="ES",
-                         description="yadda",
-                         calc_version="yoda",
-                         calc_details="yeeta",
-                         start_dt="2025-01-08 09:30:00",
-                         end_dt="2025-01-08 11:30:00",
-                         parameters={"length": 9,
-                                     "method": "close"
-                                     },
-                         )
-    itest.load_underlying_chart()
-    itest.calculate()
-    print(itest.get_info())
-    print(f"length of candle_chart: {len(itest.candle_chart.c_candles)}")
-    print("Last 5 datapoints:")
-    for d in itest.datapoints[:5]:
-        print(d)
-    print("\n################################################")
-    print("Building e1h9ema for 2025-01-08 - 2025-01-12")
-    # A test that spans a weekend closure covers most edge cases
-    itest = IndicatorEMA(name="TestEMA-DELETEME",
-                         timeframe="e1h",
-                         trading_hours="eth",
-                         symbol="ES",
-                         description="yadda",
-                         calc_version="yoda",
-                         calc_details="yeeta",
-                         start_dt="2025-01-08 00:00:00",
-                         end_dt="2025-01-12 20:00:00",
-                         parameters={"length": 9,
-                                     "method": "close"
-                                     },
-                         )
-    itest.load_underlying_chart()
-    itest.calculate()
-    print("\n.get_info():")
-    print(itest.get_info())
-    print("\n------------------------------------------------")
-    print("Validate candles as expected")
-    print(f"length of candle_chart: {len(itest.candle_chart.c_candles)}")
-    expected = [{'dt': '2025-01-10 15:00:00', 'value': 5890.25,
-                 'ind_id': 'ethESe1hTestEMA-DELETEME', 'epoch': 1736539200},
-                {'dt': '2025-01-10 16:00:00', 'value': 5884.5,
-                 'ind_id': 'ethESe1hTestEMA-DELETEME', 'epoch': 1736542800},
-                {'dt': '2025-01-12 18:00:00', 'value': 5879.6,
-                 'ind_id': 'ethESe1hTestEMA-DELETEME', 'epoch': 1736722800},
-                {'dt': '2025-01-12 19:00:00', 'value': 5875.38,
-                 'ind_id': 'ethESe1hTestEMA-DELETEME', 'epoch': 1736726400},
-                {'dt': '2025-01-12 20:00:00', 'value': 5869.3,
-                 'ind_id': 'ethESe1hTestEMA-DELETEME', 'epoch': 1736730000},
-                ]
-    calculated = itest.datapoints[-5:]
-    print("(E)xpected vs (C)alculated last 5 datapoints:")
-    for i in range(5):
-        print(f"E: {expected[i]}")
-        print(f"C: {calculated[i]}")
-    print("If expected and calculated don't match above, something is broken")
-    print("\n------------------------------------------------")
-    print("\nTesting getting datapoints by dt using 2025-01-12 18:00:00")
-    dp_dt = "2025-01-12 18:00:00"
-    print("\nCurrent 2025-01-12 18:00:00 is expected (Sunday 6pm)")
-    print(itest.get_datapoint(dt=dp_dt))
-    print("\nNext    2025-01-12 19:00:00 is expected (7pm / 1hr later)")
-    print(itest.next_datapoint(dt=dp_dt))
-    print("\nPrev    2025-01-10 16:00:00 is expected (last candle on Friday)")
-    print(itest.prev_datapoint(dt=dp_dt))
-    print("\n################################################")
-
-    # Testing storage and retrieval
-    print("Testing indicator storage and retrieval")
-    result = itest.store()
-    print(f"Actual completion time: {result['elapsed'].elapsed_str}")
-    print("\nIndicators storage result:")
-    print(result["indicator"])
-    print(result.keys())
-    print(f"Skipped datapoints: {result['datapoints_skipped']}")
-    print(f"Stored datapoints: {result['datapoints_stored']}")
-    print("\n------------------------------------------------")
-    print(f"Listing all indicators in storage, should include {itest.ind_id}")
-    indicators = dhs.list_indicators()
-    for i in indicators:
-        print(f"* {i['ind_id']} {i['description']}")
-    print(f"\nRetrieving stored datapoints for {itest.ind_id}\n")
-    datapoints = dhs.get_indicator_datapoints(
-            ind_id=itest.ind_id)
-    for d in datapoints:
-        print(d)
-    print("\n------------------------------------------------")
-    print("Updating TestEMA-DELETEME to add another day then storing again")
-    print("We should see 23 datapoints skipped and 46 stored here")
-    itest.end_dt = "2025-01-14 20:00:00"
-    itest.load_underlying_chart()
-    itest.calculate()
-    result = itest.store()
-    print(f"Actual completion time: {result['elapsed'].elapsed_str}")
-    print("\nIndicators storage result:")
-    print(result["indicator"])
-    print(result.keys())
-    print(f"Skipped datapoints: {result['datapoints_skipped']}")
-    print(f"Stored datapoints: {result['datapoints_stored']}")
-    if (result["datapoints_skipped"] == 23
-            and result["datapoints_stored"] == 46):
-        print("OK: 23 skipped and 46 stored are the expected results!")
-    else:
-        print("ERROR: 23 skipped and 46 stored are the expected results...")
-    print("\n------------------------------------------------")
-    print(f"\nRetrieving stored datapoints for {itest.ind_id}, confirm "
-          "there are no duplicate 'dt' datetimes.\n")
-    datapoints = dhs.get_indicator_datapoints(
-            ind_id=itest.ind_id)
-    for d in datapoints:
-        print(d)
-    print("\n------------------------------------------------")
-    print("Attempting to load the stored Indicator and it's Datapoints "
-          "into a new variable from storage.  This should match the existing.")
-    itoo = dhs.get_indicator(ind_id=itest.ind_id)
-    prev_info = itest.get_info()
-    new_info = itoo.get_info()
-    # adjusting dates to allow comparison as they don't get stored
-    new_info["start_dt"] = "2025-01-08 00:00:00"
-    new_info["end_dt"] = "2025-01-14 20:00:00"
-    print(f"Source var:\n{itest.get_info()}")
-    print(f"New var:\n{itoo.get_info()}")
-    if prev_info == new_info:
-        print("\nOK: Everything matches!")
-    else:
-        print("\nERROR: Something doesn't look right")
-    print("\n\n------------------------------------------------")
-    print("\nRemoving test documents from storage\n")
-    print(dhs.delete_indicator(itest.ind_id))
-    print(f"\nListing stored indicators; should NOT include {itest.ind_id}")
-    indicators = dhs.list_indicators()
-    for i in indicators:
-        print(f"* {i['ind_id']} {i['description']}")
-    print(f"\nRetrieving stored datapoints for {itest.ind_id} which should "
-          "no longer exist:\n")
-    datapoints = dhs.get_indicator_datapoints(
-            ind_id=itest.ind_id)
-    for d in datapoints:
-        print(d)
-    print("\n------------------------------------------------")
-    print("We're done here.")

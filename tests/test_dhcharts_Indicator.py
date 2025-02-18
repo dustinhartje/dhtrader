@@ -15,7 +15,7 @@ import sys
 #      specifically for them?
 
 # Create a base class Indicator and calculate
-def test_Indicator_demo_hod_creation_and_calculation():
+def test_dhcharts_Indicator_demo_hod_creation_and_calculation():
     # Confirm RTH datapoints are calculated
     ind = dhc.Indicator(name="DELETEME-hod-demo",
                         description="Code testing use only",
@@ -105,6 +105,7 @@ def hide_Indicator_spotcheck_ES_eth_5m_EMA_close_l9_s2():
     ind = dhs.get_indicator(ind_id="ES_eth_5m_EMA_close_l9_s2",
                             autoload_datapoints=True,
                             )
+    print(ind)
     # print("\n")
     # print(ind.pretty())
     # Sun-Sat - first & last candles, rando in the middle, rando in closed
@@ -118,6 +119,7 @@ def hide_Indicator_spotcheck_ES_eth_5m_EMA_close_l20_s2():
     ind = dhs.get_indicator(ind_id="ES_eth_5m_EMA_close_l20_s2",
                             autoload_datapoints=True,
                             )
+    print(ind)
     # print("\n")
     # print(ind.pretty())
     # Sun-Sat - first & last candles, rando in the middle, rando in closed
@@ -329,6 +331,7 @@ def hide_Indicator_spotcheck_ES_rth_5m_EMA_close_l9_s2():
     ind = dhs.get_indicator(ind_id="ES_rth_5m_EMA_close_l9_s2",
                             autoload_datapoints=True,
                             )
+    print(ind)
     # print("\n")
     # print(ind.pretty())
     # Sun-Sat - first & last candles, rando in the middle, rando closed before,
@@ -343,6 +346,7 @@ def hide_Indicator_spotcheck_ES_rth_5m_EMA_close_l20_s2():
     ind = dhs.get_indicator(ind_id="ES_rth_5m_EMA_close_l20_s2",
                             autoload_datapoints=True,
                             )
+    print(ind)
     # print("\n")
     # print(ind.pretty())
     # Sun-Sat - first & last candles, rando in the middle, rando closed before,
@@ -354,7 +358,7 @@ def hide_Indicator_spotcheck_ES_rth_5m_EMA_close_l20_s2():
 # TODO 15m RTH 9
 
 
-def hide_Indicator_spotcheck_ES_rth_15m_EMA_close_l9_s2():
+def test_Indicator_spotcheck_ES_rth_15m_EMA_close_l9_s2():
     ind = dhs.get_indicator(ind_id="ES_rth_15m_EMA_close_l9_s2",
                             autoload_datapoints=True,
                             )
@@ -365,48 +369,48 @@ def hide_Indicator_spotcheck_ES_rth_15m_EMA_close_l9_s2():
     #      in mongo
     # Sun-Sat - first & last candles, rando in the middle, rando closed before,
     #           rando closed after
-#    # Sun 7/14/24
-#    assert ind.get_datapoint(dt="2024-07-14 05:21:00") is None
-#    assert ind.get_datapoint(dt="2024-07-14 09:30:00") is None
-#    assert ind.get_datapoint(dt="2024-07-14 13:47:00") is None
-#    assert ind.get_datapoint(dt="2024-07-14 15:59:00") is None
-#    assert ind.get_datapoint(dt="2024-07-14 18:12:00") is None
-#    # Mon 7/15/24
-#    assert ind.get_datapoint(dt="2024-07-15 09:29:00") is None
-#    assert ind.get_datapoint(dt="2024-07-15 09:30:00").value == 5685.59
-#    assert ind.get_datapoint(dt="2024-07-15 10:50:00").value == 5695.13
-#    assert ind.get_datapoint(dt="2024-07-15 15:59:00").value == 5687.14
-#    assert ind.get_datapoint(dt="2024-07-15 22:01:00") is None
-#    # Tue 7/16/24
-#    assert ind.get_datapoint(dt="2024-07-16 03:57:00") is None
-#    assert ind.get_datapoint(dt="2024-07-16 09:30:00").value == 5689.51
-#    assert ind.get_datapoint(dt="2024-07-16 12:41:00").value == 5697.65
-#    assert ind.get_datapoint(dt="2024-07-16 15:59:00").value == 5710.84
-#    assert ind.get_datapoint(dt="2024-07-16 16:10:00") is None
-#    # Wed 7/17/24
-#    assert ind.get_datapoint(dt="2024-07-17 06:20:00") is None
-#    assert ind.get_datapoint(dt="2024-07-17 09:30:00").value == 5701.69
-#    assert ind.get_datapoint(dt="2024-07-17 13:36:00").value == 5644.69
-#    assert ind.get_datapoint(dt="2024-07-17 15:59:00").value == 5642.65
-#    assert ind.get_datapoint(dt="2024-07-17 21:58:00") is None
-#    # Thu 7/18/24
-#    assert ind.get_datapoint(dt="2024-07-18 00:01:00") is None
-#    assert ind.get_datapoint(dt="2024-07-18 09:30:00").value == 5642.80
-#    assert ind.get_datapoint(dt="2024-07-18 13:31:00").value == 5609.72
-#    assert ind.get_datapoint(dt="2024-07-18 15:59:00").value == 5591.28
-#    assert ind.get_datapoint(dt="2024-07-18 20:30:00") is None
-#    # Fri 7/19/24
-#    assert ind.get_datapoint(dt="2024-07-19 05:11:00") is None
-#    assert ind.get_datapoint(dt="2024-07-19 09:30:00").value == 5592.17
-#    assert ind.get_datapoint(dt="2024-07-19 14:15:00").value == 5555.82
-#    assert ind.get_datapoint(dt="2024-07-19 15:59:00").value == 5555.12
-#    assert ind.get_datapoint(dt="2024-07-19 17:52:00") is None
-#    # Sat 7/20/24
-#    assert ind.get_datapoint(dt="2024-07-20 08:30:00") is None
-#    assert ind.get_datapoint(dt="2024-07-20 09:30:00") is None
-#    assert ind.get_datapoint(dt="2024-07-20 13:05:00") is None
-#    assert ind.get_datapoint(dt="2024-07-20 23:59:00") is None
-#    assert ind.get_datapoint(dt="2024-07-20 23:00:00") is None
+    # Sun 7/14/24
+    assert ind.get_datapoint(dt="2024-07-14 05:21:00") is None
+    assert ind.get_datapoint(dt="2024-07-14 09:30:00") is None
+    assert ind.get_datapoint(dt="2024-07-14 13:47:00") is None
+    assert ind.get_datapoint(dt="2024-07-14 15:59:00") is None
+    assert ind.get_datapoint(dt="2024-07-14 18:12:00") is None
+    # Mon 7/15/24
+    assert ind.get_datapoint(dt="2024-07-15 09:29:00") is None
+    assert ind.get_datapoint(dt="2024-07-15 09:30:00").value == 5685.59
+    assert ind.get_datapoint(dt="2024-07-15 10:50:00").value == 5695.13
+    assert ind.get_datapoint(dt="2024-07-15 15:59:00").value == 5687.14
+    assert ind.get_datapoint(dt="2024-07-15 22:01:00") is None
+    # Tue 7/16/24
+    assert ind.get_datapoint(dt="2024-07-16 03:57:00") is None
+    assert ind.get_datapoint(dt="2024-07-16 09:30:00").value == 5689.51
+    assert ind.get_datapoint(dt="2024-07-16 12:41:00").value == 5697.65
+    assert ind.get_datapoint(dt="2024-07-16 15:59:00").value == 5710.84
+    assert ind.get_datapoint(dt="2024-07-16 16:10:00") is None
+    # Wed 7/17/24
+    assert ind.get_datapoint(dt="2024-07-17 06:20:00") is None
+    assert ind.get_datapoint(dt="2024-07-17 09:30:00").value == 5701.69
+    assert ind.get_datapoint(dt="2024-07-17 13:36:00").value == 5644.69
+    assert ind.get_datapoint(dt="2024-07-17 15:59:00").value == 5642.65
+    assert ind.get_datapoint(dt="2024-07-17 21:58:00") is None
+    # Thu 7/18/24
+    assert ind.get_datapoint(dt="2024-07-18 00:01:00") is None
+    assert ind.get_datapoint(dt="2024-07-18 09:30:00").value == 5642.80
+    assert ind.get_datapoint(dt="2024-07-18 13:31:00").value == 5609.72
+    assert ind.get_datapoint(dt="2024-07-18 15:59:00").value == 5591.28
+    assert ind.get_datapoint(dt="2024-07-18 20:30:00") is None
+    # Fri 7/19/24
+    assert ind.get_datapoint(dt="2024-07-19 05:11:00") is None
+    assert ind.get_datapoint(dt="2024-07-19 09:30:00").value == 5592.17
+    assert ind.get_datapoint(dt="2024-07-19 14:15:00").value == 5555.82
+    assert ind.get_datapoint(dt="2024-07-19 15:59:00").value == 5555.12
+    assert ind.get_datapoint(dt="2024-07-19 17:52:00") is None
+    # Sat 7/20/24
+    assert ind.get_datapoint(dt="2024-07-20 08:30:00") is None
+    assert ind.get_datapoint(dt="2024-07-20 09:30:00") is None
+    assert ind.get_datapoint(dt="2024-07-20 13:05:00") is None
+    assert ind.get_datapoint(dt="2024-07-20 23:59:00") is None
+    assert ind.get_datapoint(dt="2024-07-20 23:00:00") is None
 #    # TODO why does TV show a 16:00 candle?  check 1m and other
 #    #      timeframes, is this skewing their results?!?
 #
@@ -426,6 +430,7 @@ def hide_Indicator_spotcheck_ES_rth_15m_EMA_close_l20_s2():
     ind = dhs.get_indicator(ind_id="ES_rth_15m_EMA_close_l20_s2",
                             autoload_datapoints=True,
                             )
+    print(ind)
     # print("\n")
     # print(ind.pretty())
     # Sun-Sat - first & last candles, rando in the middle, rando closed before,
@@ -440,6 +445,7 @@ def hide_Indicator_spotcheck_ES_rth_r1h_EMA_close_l9_s2():
     ind = dhs.get_indicator(ind_id="ES_rth_r1h_EMA_close_l9_s2",
                             autoload_datapoints=True,
                             )
+    print(ind)
     # print("\n")
     # print(ind.pretty())
     # Sun-Sat - first & last candles, rando in the middle, rando closed before,
@@ -454,6 +460,7 @@ def hide_Indicator_spotcheck_ES_rth_r1h_EMA_close_l20_s2():
     ind = dhs.get_indicator(ind_id="ES_rth_r1h_EMA_close_l20_s2",
                             autoload_datapoints=True,
                             )
+    print(ind)
     # print("\n")
     # print(ind.pretty())
     # Sun-Sat - first & last candles, rando in the middle, rando closed before,
@@ -466,3 +473,164 @@ def hide_Indicator_spotcheck_ES_rth_r1h_EMA_close_l20_s2():
 # TODO Write a function that tests several points around multiple holidays
 #      Use the same times for each timeframe/trading_hours around
 #      thanksgiving, christmas, and new years
+
+
+def test_dhcharts_Indicator_create_and_calculate():
+    # TODO break this up into however many functions make sense once converted
+    # Building 5m9sma for 2025-01-08 9:30am-11:30am
+    itest = dhc.IndicatorSMA(name="TestSMA-DELETEME",
+                             timeframe="5m",
+                             trading_hours="eth",
+                             symbol="ES",
+                             description="yadda",
+                             calc_version="yoda",
+                             calc_details="yeeta",
+                             start_dt="2025-01-08 09:30:00",
+                             end_dt="2025-01-08 11:30:00",
+                             parameters={"length": 9,
+                                         "method": "close"
+                                         },
+                             )
+    itest.load_underlying_chart()
+    itest.calculate()
+    assert len(itest.candle_chart.c_candles) == 25
+    assert len(itest.datapoints) == 17
+
+    # Building e1h9ema for 2025-01-08 - 2025-01-12
+    # A test that spans a weekend closure covers most edge cases
+    itest = dhc.IndicatorEMA(name="TestEMA-DELETEME",
+                             timeframe="e1h",
+                             trading_hours="eth",
+                             symbol="ES",
+                             description="yadda",
+                             calc_version="yoda",
+                             calc_details="yeeta",
+                             start_dt="2025-01-08 00:00:00",
+                             end_dt="2025-01-12 20:00:00",
+                             parameters={"length": 9,
+                                         "method": "close"
+                                         },
+                             )
+    itest.load_underlying_chart()
+    itest.calculate()
+    # Validate candles as expected
+    assert len(itest.candle_chart.c_candles) == 59
+    expected_id = "ES_eth_e1h_TestEMA-DELETEME_close_l9_s2"
+    expected = [dhc.IndicatorDataPoint(dt='2025-01-10 15:00:00',
+                                       value=5890.25,
+                                       ind_id=expected_id,
+                                       epoch=1736539200),
+                dhc.IndicatorDataPoint(dt='2025-01-10 16:00:00',
+                                       value=5884.5,
+                                       ind_id=expected_id,
+                                       epoch=1736542800),
+                dhc.IndicatorDataPoint(dt='2025-01-12 18:00:00',
+                                       value=5879.6,
+                                       ind_id=expected_id,
+                                       epoch=1736722800),
+                dhc.IndicatorDataPoint(dt='2025-01-12 19:00:00',
+                                       value=5875.38,
+                                       ind_id=expected_id,
+                                       epoch=1736726400),
+                dhc.IndicatorDataPoint(dt='2025-01-12 20:00:00',
+                                       value=5869.3,
+                                       ind_id=expected_id,
+                                       epoch=1736730000),
+                ]
+    calculated = itest.datapoints[-5:]
+    for i in range(5):
+        assert expected[i] == calculated[i]
+
+
+def test_dhcharts_Indicator_get_datapoints():
+    itest = dhc.IndicatorEMA(name="TestEMA-DELETEME",
+                             timeframe="e1h",
+                             trading_hours="eth",
+                             symbol="ES",
+                             description="yadda",
+                             calc_version="yoda",
+                             calc_details="yeeta",
+                             start_dt="2025-01-08 00:00:00",
+                             end_dt="2025-01-12 20:00:00",
+                             parameters={"length": 9,
+                                         "method": "close"
+                                         },
+                             )
+    itest.load_underlying_chart()
+    itest.calculate()
+    # Testing getting datapoints by dt using 2025-01-12 18:00:00
+    dp_dt = "2025-01-12 18:00:00"
+    # Current 2025-01-12 18:00:00 is expected (Sunday 6pm)")
+    assert itest.get_datapoint(dt=dp_dt).dt == "2025-01-12 18:00:00"
+    assert itest.get_datapoint(dt=dp_dt).value == 5879.6
+    assert itest.next_datapoint(dt=dp_dt).dt == "2025-01-12 19:00:00"
+    assert itest.next_datapoint(dt=dp_dt).value == 5875.38
+    assert itest.prev_datapoint(dt=dp_dt).dt == "2025-01-10 16:00:00"
+    assert itest.prev_datapoint(dt=dp_dt).value == 5884.5
+
+
+def test_dhcharts_Indicator_storage_and_retrieval():
+    itest = dhc.IndicatorEMA(name="TestEMA-DELETEME",
+                             timeframe="e1h",
+                             trading_hours="eth",
+                             symbol="ES",
+                             description="yadda",
+                             calc_version="yoda",
+                             calc_details="yeeta",
+                             start_dt="2025-01-08 00:00:00",
+                             end_dt="2025-01-12 20:00:00",
+                             parameters={"length": 9,
+                                         "method": "close"
+                                         },
+                             )
+    itest.load_underlying_chart()
+    itest.calculate()
+    # Confirm indicator is not already stored by first deleting it in case a
+    # prior test run failed early
+    dhs.delete_indicator(itest.ind_id)
+    # Then attempting retrieval
+    retrieve = dhs.get_indicator(ind_id=itest.ind_id)
+    assert retrieve is None
+
+    # Store it
+    result = itest.store()
+
+    # Confirm storage returned something that looks vaguely like an Indicator
+    r_id = result["indicator"]["ind_id"]
+    assert r_id == 'ES_eth_e1h_TestEMA-DELETEME_close_l9_s2'
+
+    # Confirm we can retrieve it from storage now
+    # Dates must be set as they don't get stored
+    retrieve = dhs.get_indicator(ind_id=itest.ind_id,
+                                 autoload_datapoints=True)
+    retrieve.start_dt = "2025-01-08 00:00:00"
+    retrieve.end_dt = "2025-01-12 20:00:00"
+    retrieve.load_underlying_chart()
+    assert retrieve == itest
+    assert isinstance(retrieve, dhc.IndicatorEMA)
+    assert retrieve.ind_id == itest.ind_id
+
+    # Test datapoint retrieval
+    datapoints = dhs.get_indicator_datapoints(
+            ind_id=itest.ind_id)
+    assert len(datapoints) == 23
+    assert datapoints[5].ind_id == itest.ind_id
+
+    # Updating TestEMA-DELETEME to add another day then storing again
+    # This confirms only new datapoints get stored, existing should get
+    # skipped which dramatically improves perodic update performance.
+    # We should see 23 datapoints skipped and 46 stored on this operation
+    itest.end_dt = "2025-01-14 20:00:00"
+    itest.load_underlying_chart()
+    itest.calculate()
+    result = itest.store()
+    assert result["datapoints_stored"] == 46
+    assert result["datapoints_skipped"] == 23
+
+    # Removing test object from storage
+    dhs.delete_indicator(itest.ind_id)
+    # And confirm it's gone
+    retrieve = dhs.get_indicator(ind_id=itest.ind_id)
+    assert retrieve is None
+    dps = dhs.get_indicator_datapoints(ind_id=itest.ind_id)
+    assert len(dps) == 0

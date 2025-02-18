@@ -790,6 +790,8 @@ class Backtest():
     # TODO method to check status of this backtest by bt_id
     #      --what did I mean by this?!?  status in storage maybe, like the
     #        range of it's parameters and tradeseries dates?
+    #      --possibly I meant when it was last run / where to pick up on next
+    #        run?  Or if it's ever been run at all?
     # TODO method or update to calc method which will retrieve results
     #      from prior runs and then update them.  Since there may be
     #      many trade series involved this might get tricky, start by just
