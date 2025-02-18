@@ -87,10 +87,6 @@ class Symbol():
 
     def set_times(self):
         """Sets times for known Symbol objects."""
-        # TODO this is a rough hack that should be revisited later.  Perhaps
-        #      it should be a json file or something which I can provide an
-        #      example to be stored and retrieved from storage rather than
-        #      hard coding?
         # DELETEME mimics ES and is used for testing storage to avoid polluting
         # actual ES related data
         if self.ticker in ["ES", "DELETEME"]:
@@ -100,7 +96,7 @@ class Symbol():
                                                        "%H:%M:%S").time()
             self.rth_open_time = dt.datetime.strptime("09:30:00",
                                                       "%H:%M:%S").time()
-            self.rth_close_time = dt.datetime.strptime("15:59:00",
+            self.rth_close_time = dt.datetime.strptime("16:14:00",
                                                        "%H:%M:%S").time()
             self.eth_week_open = {"day_of_week": 6,
                                   "time": self.eth_open_time}
@@ -622,6 +618,7 @@ class Candle():
 class Chart():
     def __init__(self,
                  c_timeframe: str,
+                 c_trading_hours: str,
                  c_symbol,
                  c_start: str = None,
                  c_end: str = None,
@@ -629,10 +626,10 @@ class Chart():
                  autoload: bool = False,
                  ):
 
-        self.c_timeframe = c_timeframe
-        if self.c_timeframe not in CANDLE_TIMEFRAMES:
-            raise ValueError(f"c_timeframe of {c_timeframe} is not in the "
-                             "known list {CANDLE_TIMEFRAMES}")
+        if dhu.valid_timeframe(c_timeframe):
+            self.c_timeframe = c_timeframe
+        if dhu.valid_trading_hours(c_trading_hours):
+            self.c_trading_hours = c_trading_hours
         if isinstance(c_symbol, str):
             self.c_symbol = dhs.get_symbol_by_ticker(ticker=c_symbol)
         else:
@@ -730,12 +727,22 @@ class Chart():
 
     def load_candles(self):
         """Load candles from central storage based on current attributes"""
-        self.c_candles = dhs.get_candles(
-                start_epoch=dhu.dt_to_epoch(self.c_start),
-                end_epoch=dhu.dt_to_epoch(self.c_end),
-                timeframe=self.c_timeframe,
-                symbol=self.c_symbol.ticker,
-                )
+        cans = dhs.get_candles(
+               start_epoch=dhu.dt_to_epoch(self.c_start),
+               end_epoch=dhu.dt_to_epoch(self.c_end),
+               timeframe=self.c_timeframe,
+               symbol=self.c_symbol.ticker,
+               )
+        self.c_candles = []
+        events = dhs.get_events(symbol=self.c_symbol.ticker,
+                                categories=["Closed"],
+                                )
+        for c in cans:
+            if self.c_symbol.market_is_open(target_dt=c.c_datetime,
+                                            trading_hours=self.c_trading_hours,
+                                            events=events,
+                                            ):
+                self.c_candles.append(c)
         self.sort_candles()
         self.review_candles()
 
@@ -1290,6 +1297,7 @@ class Indicator():
     def load_underlying_chart(self):
         """Load the underlying candle chart from central storage"""
         self.candle_chart = Chart(c_timeframe=self.timeframe,
+                                  c_trading_hours=self.trading_hours,
                                   c_symbol=self.symbol,
                                   c_start=self.start_dt,
                                   c_end=self.end_dt,
@@ -1311,18 +1319,38 @@ class Indicator():
         accpet only a list of Candles, sort it, and calculate new indicator
         datapoints from the candles.  Copy and modify this method as needed
         in subclasses."""
-        if self.chart is None:
+        if self.candle_chart is None:
             self.load_underlying_chart()
         if not isinstance(self.candle_chart, Chart):
             raise TypeError(f"candle_chart {type(self.candle_chart)} must be a"
                             " <class dhcharts.Chart> object")
-        self.chart.sort()
+        self.candle_chart.sort_candles()
 
         # Subclass specific functionality starts here
-        result = "No calculations can be done on parent class Indicator()"
-        print(result)
 
-        return result
+        # The code below is used for testing and demonstration only as this
+        # class is not meant to be used directly.  You should create a
+        # subclass and rewrite this method based on the specific needs of
+        # your target indicator.
+
+        # For demo purposes, let's calculate the high of the day
+        self.datapoints = []
+        hod = 0
+        prev_day = dhu.dt_as_dt("1900-01-01 00:00:00").date()
+        for c in self.candle_chart.c_candles:
+            today = dhu.dt_as_dt(c.c_datetime).date()
+            # Reset HOD for first candle of a new day
+            if today > prev_day:
+                prev_day = today
+                hod = c.c_high
+            else:
+                hod = max(hod, c.c_high)
+            self.datapoints.append(IndicatorDataPoint(dt=c.c_datetime,
+                                                      value=hod,
+                                                      ind_id=self.ind_id,
+                                                      ))
+
+        return True
 
     def store(self,
               store_datapoints: bool = True,
@@ -1661,6 +1689,7 @@ if __name__ == '__main__':
     print(out_candle.pretty())
     print("\n----------------------------- CHART ----------------------------")
     out_chart = Chart(c_timeframe="1m",
+                      c_trading_hours="rth",
                       c_symbol="ES",
                       c_start="2025-01-02 12:00:00",
                       c_end="2025-01-02 12:10:00",

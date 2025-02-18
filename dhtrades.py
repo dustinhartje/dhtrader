@@ -672,12 +672,14 @@ class Backtest():
         timeframe arguments.  This will be the base data for calculating
         trades."""
         self.chart_tf = dhc.Chart(c_timeframe=self.timeframe,
+                                  c_trading_hours=self.trading_hours,
                                   c_symbol=self.symbol,
                                   c_start=self.start_dt,
                                   c_end=self.end_dt,
                                   autoload=True,
                                   )
         self.chart_1m = dhc.Chart(c_timeframe="1m",
+                                  c_trading_hours=self.trading_hours,
                                   c_symbol=self.symbol,
                                   c_start=self.start_dt,
                                   c_end=self.end_dt,
