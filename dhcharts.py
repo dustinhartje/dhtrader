@@ -1356,7 +1356,7 @@ class Indicator():
         # class is not meant to be used directly.  You should create a
         # subclass and rewrite this method based on the specific needs of
         # your target indicator.
-
+        logi("Parent class calculations are for testing purposes only")
         # For demo purposes, let's calculate the high of the day
         self.datapoints = []
         hod = 0
