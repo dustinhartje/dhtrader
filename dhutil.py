@@ -190,15 +190,8 @@ def next_candle_start(dt,
     """Returns the next datetime that represents a proper candle start
     after the given datetime (dt).  Will not return given datetime even if
     it starts a candle."""
-    if symbol == "ES":
-        sym = dhc.Symbol(ticker="ES",
-                         name="ES",
-                         leverage_ratio=float(50),
-                         tick_size=0.25,
-                         )
-    else:
-        raise ValueError("Only ES is supported for symbol at this time")
-
+    if isinstance(symbol, str):
+        symbol = dhs.get_symbol_by_ticker(ticker=symbol)
     valid_trading_hours(trading_hours)
     check_tf_th_compatibility(tf=timeframe, th=trading_hours)
     # Start with a rounded minute, no seconds or ms supported
@@ -227,11 +220,11 @@ def next_candle_start(dt,
         else:
             raise ValueError(f"timeframe: {timeframe} not supported")
         # Ensure the market is open at the dt found, otherwise keep looping
-        done = sym.market_is_open(trading_hours=trading_hours,
-                                  target_dt=next_dt,
-                                  check_closed_events=True,
-                                  events=events,
-                                  )
+        done = symbol.market_is_open(trading_hours=trading_hours,
+                                     target_dt=next_dt,
+                                     check_closed_events=True,
+                                     events=events,
+                                     )
 
     return next_dt
 
@@ -336,8 +329,8 @@ def generate_zero_volume_candle(c_datetime,
 
 def expected_candle_datetimes(start_dt,
                               end_dt,
-                              symbol: str,
                               timeframe: str,
+                              symbol="ES",
                               exclude_categories: list = None,
                               ):
     """Return a sorted list of datetimes within the provided start_dt and
@@ -345,14 +338,16 @@ def expected_candle_datetimes(start_dt,
     standard market hours, after removing any known Closed events.
     Optionally also exclude anything within known Event times matching
     exclude_categories."""
-    if symbol == "ES":
+    if isinstance(symbol, str):
+        symbol = dhs.get_symbol_by_ticker(ticker=symbol)
+    if symbol.ticker == "ES":
         if timeframe == "r1h":
             weekday_open = {"hour": 9, "minute": 30, "second": 0}
-            weekday_close = {"hour": 15, "minute": 59, "second": 0}
+            weekday_close = {"hour": 16, "minute": 14, "second": 0}
             # Market opens for the week Sunday evening
             week_open = {"day": 0, "hour": 9, "minute": 30, "second": 0}
             # Market closes for the week Friday evening
-            week_close = {"day": 4, "hour": 15, "minute": 59, "second": 0}
+            week_close = {"day": 4, "hour": 16, "minute": 14, "second": 0}
             trading_hours = "rth"
         else:
             weekday_open = {"hour": 18, "minute": 0, "second": 0}
@@ -450,7 +445,7 @@ def expected_candle_datetimes(start_dt,
 
 
 def remediate_candle_gaps(timeframe: str = "1m",
-                          symbol: str = "ES",
+                          symbol="ES",
                           prompt: bool = True,
                           fix_obvious: bool = False,
                           fix_unclear: bool = False,
@@ -473,14 +468,14 @@ def remediate_candle_gaps(timeframe: str = "1m",
         delta = timedelta(minutes=1)
     else:
         raise ValueError("timeframe: {timeframe} is not currently supported")
-    if symbol != "ES":
-        raise ValueError("symbol: {symbol} is not currently supported")
+    if isinstance(symbol, str):
+        symbol = dhs.get_symbol_by_ticker(ticker=symbol)
     print("Remediating Candle Gaps")
     print(f"Auto fixing obvious zero volume gaps: {fix_obvious}")
     print(f"Prompting before fixing unclear candles: {prompt}")
     print(f"Dry Run Mode (only simulate changes): {dry_run}")
     review = dhs.review_candles(timeframe='1m',
-                                symbol='ES',
+                                symbol=symbol,
                                 check_integrity=True,
                                 return_detail=True,
                                 )
@@ -1104,9 +1099,9 @@ def test_basics():
                                             )
     for c in weekday_gap:
         print(dt_as_str(c))
-    print("\nExpected candles spanning both weekday and weekend closures, r1h")
-    weekday_gap = expected_candle_datetimes(start_dt="2024-11-29 12:05:00",
-                                            end_dt="2024-12-04 12:05:00",
+    print("\nExpected candles spanning weekday and weekend closures, r1h")
+    weekday_gap = expected_candle_datetimes(start_dt="2024-11-15 11:05:00",
+                                            end_dt="2024-11-18 12:05:00",
                                             symbol="ES",
                                             timeframe="r1h",
                                             )

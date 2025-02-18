@@ -887,7 +887,7 @@ class Day():
                                               '%Y-%m-%d %H:%M:%S').time()
         eth_end_time = dt.datetime.strptime('2000-01-01 23:59:00',
                                             '%Y-%m-%d %H:%M:%S').time()
-        rth_end_time = dt.datetime.strptime('2000-01-01 15:59:00',
+        rth_end_time = dt.datetime.strptime('2000-01-01 16:14:00',
                                             '%Y-%m-%d %H:%M:%S').time()
 
         # Setup class attributes
@@ -1890,13 +1890,13 @@ if __name__ == '__main__':
     test_boundary("next_rth_open", actual, "2024-03-21 09:30:00")
     # Next RTH Close
     actual = dhu.dt_as_str(sym.get_next_rth_close(t))
-    test_boundary("next_rth_close", actual, "2024-03-20 15:59:00")
+    test_boundary("next_rth_close", actual, "2024-03-20 16:14:00")
     # Previous RTH Open
     actual = dhu.dt_as_str(sym.get_previous_rth_open(t))
     test_boundary("previous_rth_open", actual, "2024-03-20 09:30:00")
     # Previous RTH Close
     actual = dhu.dt_as_str(sym.get_previous_rth_close(t))
-    test_boundary("previous_rth_close", actual, "2024-03-19 15:59:00")
+    test_boundary("previous_rth_close", actual, "2024-03-19 16:14:00")
     print("-----------------------------------------------------------------")
     print("\nTesting Next boundaries from Thursday noon 2024-03-21 12:00:00 "
           "(should hit Thursday/Friday)")
@@ -1915,7 +1915,7 @@ if __name__ == '__main__':
     test_boundary("next_eth_close", actual, "2024-03-21 16:59:00")
     # Next RTH Close
     actual = dhu.dt_as_str(sym.get_next_rth_close(t))
-    test_boundary("next_rth_close", actual, "2024-03-21 15:59:00")
+    test_boundary("next_rth_close", actual, "2024-03-21 16:14:00")
     print("-----------------------------------------------------------------")
     print("\nTesting Next boundaries from Friday noon 2024-03-22 12:00:00 "
           "(should hit Sunday/Monday)")
@@ -1933,7 +1933,7 @@ if __name__ == '__main__':
     test_boundary("next_eth_close", actual, "2024-03-22 16:59:00")
     # Next RTH Close
     actual = dhu.dt_as_str(sym.get_next_rth_close(t))
-    test_boundary("next_rth_close", actual, "2024-03-22 15:59:00")
+    test_boundary("next_rth_close", actual, "2024-03-22 16:14:00")
     print("-----------------------------------------------------------------")
     print("\nTesting Previous boundaries from Tuesday noon 2024-03-19 "
           "12:00:00 (should hit Monday/Tuesday)")
@@ -1952,7 +1952,7 @@ if __name__ == '__main__':
     test_boundary("previous_eth_close", actual, "2024-03-18 16:59:00")
     # Previous RTH Close
     actual = dhu.dt_as_str(sym.get_previous_rth_close(t))
-    test_boundary("previous_rth_close", actual, "2024-03-18 15:59:00")
+    test_boundary("previous_rth_close", actual, "2024-03-18 16:14:00")
     print("-----------------------------------------------------------------")
     print("\nTesting Previous boundaries from Monday noon 2024-03-18 "
           "12:00:00 (should hit Friday/Sunday)")
@@ -1970,7 +1970,7 @@ if __name__ == '__main__':
     test_boundary("previous_eth_close", actual, "2024-03-15 16:59:00")
     # Previous RTH Close
     actual = dhu.dt_as_str(sym.get_previous_rth_close(t))
-    test_boundary("previous_rth_close", actual, "2024-03-15 15:59:00")
+    test_boundary("previous_rth_close", actual, "2024-03-15 16:14:00")
     print("-----------------------------------------------------------------")
     print("Setting up a few events to test that boundary mechanics respect")
     events = [Event(start_dt="2024-03-28 17:00:00",
@@ -2011,7 +2011,7 @@ if __name__ == '__main__':
     test_boundary("next_eth_close", actual, "2024-03-28 16:59:00")
     # Next RTH Close
     actual = dhu.dt_as_str(sym.get_next_rth_close(t, events=events))
-    test_boundary("next_rth_close", actual, "2024-03-28 15:59:00")
+    test_boundary("next_rth_close", actual, "2024-03-28 16:14:00")
 
     print("\nTesting same closure window from within using Friday at Noon "
           "2024-03-29 12:00:00")
@@ -2024,13 +2024,13 @@ if __name__ == '__main__':
     test_boundary("next_eth_close", actual, "2024-04-01 16:59:00")
     # Next RTH Close
     actual = dhu.dt_as_str(sym.get_next_rth_close(t, events=events))
-    test_boundary("next_rth_close", actual, "2024-04-01 15:59:00")
+    test_boundary("next_rth_close", actual, "2024-04-01 16:14:00")
     # Previous ETH Close
     actual = dhu.dt_as_str(sym.get_previous_eth_close(t, events=events))
     test_boundary("previous_eth_close", actual, "2024-03-28 16:59:00")
     # Previous RTH Close
     actual = dhu.dt_as_str(sym.get_previous_rth_close(t, events=events))
-    test_boundary("previous_rth_close", actual, "2024-03-28 15:59:00")
+    test_boundary("previous_rth_close", actual, "2024-03-28 16:14:00")
     # Next ETH Open
     actual = dhu.dt_as_str(sym.get_next_eth_open(t, events=events))
     test_boundary("next_eth_open", actual, "2024-03-31 18:00:00")
@@ -2060,7 +2060,7 @@ if __name__ == '__main__':
     test_boundary("previous_eth_close", actual, "2024-03-28 16:59:00")
     # Previous RTH Close
     actual = dhu.dt_as_str(sym.get_previous_rth_close(t, events=events))
-    test_boundary("previous_rth_close", actual, "2024-03-28 15:59:00")
+    test_boundary("previous_rth_close", actual, "2024-03-28 16:14:00")
     print("\nTesting nested closure window from within both using "
           "2024-03-18 14:00:00")
     print("This confirms that multiple overlapping events don't muck it up.")
@@ -2071,13 +2071,13 @@ if __name__ == '__main__':
     test_boundary("next_eth_close", actual, "2024-03-20 16:59:00")
     # Next RTH Close
     actual = dhu.dt_as_str(sym.get_next_rth_close(t, events=events))
-    test_boundary("next_rth_close", actual, "2024-03-20 15:59:00")
+    test_boundary("next_rth_close", actual, "2024-03-20 16:14:00")
     # Previous ETH Close
     actual = dhu.dt_as_str(sym.get_previous_eth_close(t, events=events))
     test_boundary("previous_eth_close", actual, "2024-03-15 16:59:00")
     # Previous RTH Close
     actual = dhu.dt_as_str(sym.get_previous_rth_close(t, events=events))
-    test_boundary("previous_rth_close", actual, "2024-03-15 15:59:00")
+    test_boundary("previous_rth_close", actual, "2024-03-15 16:14:00")
     # Next ETH Open
     actual = dhu.dt_as_str(sym.get_next_eth_open(t, events=events))
     test_boundary("next_eth_open", actual, "2024-03-20 18:00:00")
@@ -2101,13 +2101,13 @@ if __name__ == '__main__':
     test_boundary("next_eth_close", actual, "2024-03-20 16:59:00")
     # Next RTH Close
     actual = dhu.dt_as_str(sym.get_next_rth_close(t, events=events))
-    test_boundary("next_rth_close", actual, "2024-03-20 15:59:00")
+    test_boundary("next_rth_close", actual, "2024-03-20 16:14:00")
     # Previous ETH Close
     actual = dhu.dt_as_str(sym.get_previous_eth_close(t, events=events))
     test_boundary("previous_eth_close", actual, "2024-03-15 16:59:00")
     # Previous RTH Close
     actual = dhu.dt_as_str(sym.get_previous_rth_close(t, events=events))
-    test_boundary("previous_rth_close", actual, "2024-03-15 15:59:00")
+    test_boundary("previous_rth_close", actual, "2024-03-15 16:14:00")
     # Next ETH Open
     actual = dhu.dt_as_str(sym.get_next_eth_open(t, events=events))
     test_boundary("next_eth_open", actual, "2024-03-20 18:00:00")
@@ -2130,13 +2130,13 @@ if __name__ == '__main__':
     test_boundary("next_eth_close", actual, "2024-03-20 16:59:00")
     # Next RTH Close
     actual = dhu.dt_as_str(sym.get_next_rth_close(t, events=events))
-    test_boundary("next_rth_close", actual, "2024-03-20 15:59:00")
+    test_boundary("next_rth_close", actual, "2024-03-20 16:14:00")
     # Previous ETH Close
     actual = dhu.dt_as_str(sym.get_previous_eth_close(t, events=events))
     test_boundary("previous_eth_close", actual, "2024-03-15 16:59:00")
     # Previous RTH Close
     actual = dhu.dt_as_str(sym.get_previous_rth_close(t, events=events))
-    test_boundary("previous_rth_close", actual, "2024-03-15 15:59:00")
+    test_boundary("previous_rth_close", actual, "2024-03-15 16:14:00")
     # Next ETH Open
     actual = dhu.dt_as_str(sym.get_next_eth_open(t, events=events))
     test_boundary("next_eth_open", actual, "2024-03-20 18:00:00")

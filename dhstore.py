@@ -2,7 +2,7 @@
 # migration to a different storage solution in the future without
 # massive overhaul of backtest, chart, and trader code bases.
 
-# TODO rework this file to return non-pymongo objects in it's results
+# TODO rework this file to return dhtrader objects in it's results
 #      it's purpose is to abstract the mongo specifics away which it's not
 #      currently doing, and instead act as an shim to translate the mongo
 #      specifics into generic types that could still be used by anything
@@ -648,16 +648,18 @@ def get_candles(start_epoch: int,
 
 
 def review_candles(timeframe: str,
-                   symbol: str = "ES",
+                   symbol="ES",
                    check_integrity: bool = False,
                    return_detail: bool = False,
                    ):
     """Provides aggregate summary data about candles in central storage
     with options to further check completeness (integrity) of candle data and
     provide remediation"""
+    if isinstance(symbol, str):
+        symbol = get_symbol_by_ticker(ticker=symbol)
     print("Retrieving candles from storage, this may take a few minutes...")
     overview = dhm.review_candles(timeframe=timeframe,
-                                  symbol=symbol,
+                                  symbol=symbol.ticker,
                                   )
     if overview is None:
         print(f"No candles found for the specified timeframe {timeframe}")
@@ -666,7 +668,7 @@ def review_candles(timeframe: str,
     end_epoch = dhu.dt_to_epoch(overview["latest_dt"])
     if check_integrity:
         candles = get_candles(timeframe=timeframe,
-                              symbol=symbol,
+                              symbol=symbol.ticker,
                               start_epoch=start_epoch,
                               end_epoch=end_epoch,
                               )
@@ -837,7 +839,7 @@ def store_event(event):
                         "<class dhcharts.Event> object")
     result = dhm.store_event(start_dt=event.start_dt,
                              end_dt=event.end_dt,
-                             symbol=event.symbol,
+                             symbol=event.symbol.ticker,
                              category=event.category,
                              tags=event.tags,
                              notes=event.notes,
@@ -848,7 +850,7 @@ def store_event(event):
     return result
 
 
-def get_events(symbol: str = "ES",
+def get_events(symbol="ES",
                start_epoch: int = None,
                end_epoch: int = None,
                categories: list = None,
@@ -857,13 +859,15 @@ def get_events(symbol: str = "ES",
     """Returns a list of events starting within the start and end epochs given
     inclusive of both epochs.  Note this will return events that end after
     end_epoch so long as they start before or on it."""
+    if isinstance(symbol, str):
+        symbol = get_symbol_by_ticker(ticker=symbol)
     if start_epoch is None:
         start_epoch = dhu.dt_to_epoch("1900-01-01 00:00:00")
     if end_epoch is None:
         end_epoch = dhu.dt_to_epoch(dt.now())
     result = dhm.get_events(start_epoch=start_epoch,
                             end_epoch=end_epoch,
-                            symbol=symbol,
+                            symbol=symbol.ticker,
                             categories=categories,
                             tags=tags,
                             )
@@ -900,11 +904,6 @@ def test_basics():
     # TODO consider converting these into unit tests some day
     # https://docs.python.org/3/library/unittest.html
 
-    # TODO in lieu of real unit tests, start a test_results empty list and
-    #      record a quick oneliner for each easily confirmable test as it
-    #      finishes, something like "OK - Trade() Storage and retrieval"
-    #      then print them all at the end.  For non-easily-confirmed could
-    #      add a note like "UNKNOWN - Visual confirm needed for Trade.pretty()
     print("=========================== CANDLES ==============================")
     # Test basic candle storing functionality
     print("\nStoring 2 test candles")
@@ -1000,10 +999,10 @@ def test_basics():
                         end_epoch=1735707599,
                         symbol="ES",
                         )
-    print(f"Found {len(result)} events in 2024.  Showing the first 5:")
+    print(f"Found {len(result)} events since 2024.  Showing the first 5:")
     first_five = result[:5]
     for r in first_five:
-        print(r.__dict__)
+        print(r.pretty())
 
     print("Testing complete.")
     print("\n----------------------------------------------------------------")
