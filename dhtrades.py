@@ -463,6 +463,9 @@ class TradeSeries():
             self.trades = []
         else:
             self.trades = trades.copy()
+            for t in self.trades:
+                t.ts_id = self.ts_id
+                t.bt_id = self.bt_id
 
     def __eq__(self, other):
         return (self.start_dt == other.start_dt
@@ -521,6 +524,13 @@ class TradeSeries():
         return json.dumps(self.to_clean_dict(suppress_trades=suppress_trades),
                           indent=4,
                           )
+
+    def update_bt_id(self, bt_id):
+        """Update bt_id on this and any attached Trade objects.  Typicaly
+        called by a Backtest when adding this object to it's list."""
+        self.bt_id = bt_id
+        for t in self.trades:
+            t.bt_id = bt_id
 
     def store(self,
               store_trades: bool = False
@@ -656,6 +666,8 @@ class Backtest():
             self.tradeseries = []
         else:
             self.tradeseries = tradeseries.copy()
+            for ts in self.tradeseries:
+                ts.update_bt_id(self.bt_id)
         self.autoload_charts = autoload_charts
         if self.autoload_charts:
             self.load_charts()
@@ -833,7 +845,7 @@ class Backtest():
         if self.tradeseries is None:
             self.tradeseries = []
         # Associate this TradeSeries with this Backtest
-        ts.bt_id = self.bt_id
+        ts.update_bt_id(self.bt_id)
         self.tradeseries.append(ts)
 
     def load_tradeseries(self):
