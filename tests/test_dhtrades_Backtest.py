@@ -32,18 +32,18 @@ import dhstore as dhs
 # TODO confirm no other TODOs remain in this file before clearing this line
 
 
-def create_basic_trade(open_dt="2025-01-02 12:00:00",
-                       direction="long",
-                       timeframe="5m",
-                       trading_hours="rth",
-                       entry_price=5000,
-                       stop_ticks=20,
-                       stop_target=4995,
-                       prof_ticks=20,
-                       prof_target=5005,
-                       open_drawdown=1000,
-                       name="DELETEME"
-                       ):
+def create_trade(open_dt="2025-01-02 12:00:00",
+                 direction="long",
+                 timeframe="5m",
+                 trading_hours="rth",
+                 entry_price=5000,
+                 stop_ticks=20,
+                 stop_target=4995,
+                 prof_ticks=20,
+                 prof_target=5005,
+                 open_drawdown=1000,
+                 name="DELETEME"
+                 ):
     return dht.Trade(open_dt=open_dt,
                      direction=direction,
                      timeframe=timeframe,
@@ -58,16 +58,16 @@ def create_basic_trade(open_dt="2025-01-02 12:00:00",
                      )
 
 
-def create_basic_tradeseries(start_dt="2025-01-01 00:00:00",
-                             end_dt="2025-02-01 00:00:00",
-                             timeframe="5m",
-                             symbol="ES",
-                             name="DELETEME",
-                             params_str="a1_b2_c3_p0",
-                             ts_id=None,
-                             bt_id=None,
-                             trades=None,
-                             ):
+def create_tradeseries(start_dt="2025-01-01 00:00:00",
+                       end_dt="2025-02-01 00:00:00",
+                       timeframe="5m",
+                       symbol="ES",
+                       name="DELETEME",
+                       params_str="a1_b2_c3_p0",
+                       ts_id=None,
+                       bt_id=None,
+                       trades=None,
+                       ):
     return dht.TradeSeries(start_dt=start_dt,
                            end_dt=end_dt,
                            timeframe=timeframe,
@@ -80,20 +80,20 @@ def create_basic_tradeseries(start_dt="2025-01-01 00:00:00",
                            )
 
 
-def create_basic_backtest(start_dt="2025-01-01 00:00:00",
-                          end_dt="2025-02-01 00:00:00",
-                          timeframe="e1h",
-                          trading_hours="eth",
-                          symbol="ES",
-                          name="DELETEME",
-                          parameters={"a": 1, "b": "two"},
-                          bt_id=None,
-                          class_name="BacktestTestDeleteme",
-                          chart_tf=None,
-                          chart_1m=None,
-                          autoload_charts=False,
-                          tradeseries=None,
-                          ):
+def create_backtest(start_dt="2025-01-01 00:00:00",
+                    end_dt="2025-02-01 00:00:00",
+                    timeframe="e1h",
+                    trading_hours="eth",
+                    symbol="ES",
+                    name="DELETEME",
+                    parameters={"a": 1, "b": "two"},
+                    bt_id=None,
+                    class_name="BacktestTestDeleteme",
+                    chart_tf=None,
+                    chart_1m=None,
+                    autoload_charts=False,
+                    tradeseries=None,
+                    ):
     r = dht.Backtest(start_dt=start_dt,
                      end_dt=end_dt,
                      timeframe=timeframe,
@@ -149,11 +149,11 @@ def create_basic_backtest(start_dt="2025-01-01 00:00:00",
 
 def test_Backtest_create_and_verify_pretty():
     # Check line counts of pretty output, won't change unless class changes
-    bt = create_basic_backtest()
+    bt = create_backtest()
     assert isinstance(bt, dht.Backtest)
-    ts = create_basic_tradeseries()
+    ts = create_tradeseries()
     assert isinstance(ts, dht.TradeSeries)
-    tr = create_basic_trade()
+    tr = create_trade()
     assert isinstance(tr, dht.Trade)
     assert len(bt.pretty().splitlines()) == 20
     ts.add_trade(tr)
@@ -164,10 +164,10 @@ def test_Backtest_create_and_verify_pretty():
 
 
 def test_Backtest_load_charts():
-    bt = create_basic_backtest(start_dt="2025-01-01 00:00:00",
-                               end_dt="2025-01-08 00:00:00",
-                               timeframe="e1h",
-                               trading_hours="eth")
+    bt = create_backtest(start_dt="2025-01-01 00:00:00",
+                         end_dt="2025-01-08 00:00:00",
+                         timeframe="e1h",
+                         trading_hours="eth")
     # Confirm charts have not been populated
     assert bt.chart_1m is None
     assert bt.chart_tf is None
@@ -178,15 +178,15 @@ def test_Backtest_load_charts():
 
 
 def test_Backtest_add_tradeseries_and_trades():
-    bt = create_basic_backtest()
+    bt = create_backtest()
     assert isinstance(bt, dht.Backtest)
     assert len(bt.tradeseries) == 0
-    ts = create_basic_tradeseries()
+    ts = create_tradeseries()
     assert isinstance(ts, dht.TradeSeries)
     assert len(ts.trades) == 0
     # TradeSeries should not have a bt_id yet
     assert ts.bt_id is None
-    tr = create_basic_trade()
+    tr = create_trade()
     assert isinstance(tr, dht.Trade)
     # Trade should not have a ts_id or bt_id yet
     assert tr.ts_id is None
@@ -206,10 +206,10 @@ def test_Backtest_add_tradeseries_and_trades():
 
 def test_Backtest_store_retrieve_load_tradeseries_and_delete():
     # Create and link Backtest, TradeSeries, and Trade objects
-    tr = create_basic_trade()
-    ts = create_basic_tradeseries()
+    tr = create_trade()
+    ts = create_tradeseries()
     ts.add_trade(tr)
-    bt = create_basic_backtest()
+    bt = create_backtest()
     bt.add_tradeseries(ts)
 
     # Clear and confirm storage has no objects with this name currently
@@ -254,16 +254,16 @@ def test_Backtest_store_retrieve_load_tradeseries_and_delete():
     # Attempt to rebuild Backtest from storage using .load_tradeseries() to
     # add TradeSeries and Trades
     s = s_bt[0]
-    r_bt = create_basic_backtest(start_dt=s["start_dt"],
-                                 end_dt=s["end_dt"],
-                                 timeframe=s["timeframe"],
-                                 trading_hours=s["trading_hours"],
-                                 symbol=s["symbol"],
-                                 name=s["name"],
-                                 bt_id=s["bt_id"],
-                                 class_name=s["class_name"],
-                                 parameters=s["parameters"],
-                                 )
+    r_bt = create_backtest(start_dt=s["start_dt"],
+                           end_dt=s["end_dt"],
+                           timeframe=s["timeframe"],
+                           trading_hours=s["trading_hours"],
+                           symbol=s["symbol"],
+                           name=s["name"],
+                           bt_id=s["bt_id"],
+                           class_name=s["class_name"],
+                           parameters=s["parameters"],
+                           )
     r_bt.load_tradeseries()
     # Confirm the rebuilt Backtest matches the original we created
     assert r_bt == bt

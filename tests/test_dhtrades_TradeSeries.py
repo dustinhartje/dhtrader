@@ -19,19 +19,19 @@ import dhstore as dhs
 # TODO confirm no other TODOs remain in this file before clearing this line
 
 
-def create_basic_trade(open_dt="2025-01-02 12:00:00",
-                       close_dt=None,
-                       direction="long",
-                       timeframe="5m",
-                       trading_hours="rth",
-                       entry_price=5000,
-                       stop_ticks=20,
-                       stop_target=4995,
-                       prof_ticks=20,
-                       prof_target=5005,
-                       open_drawdown=1000,
-                       name="DELETEME"
-                       ):
+def create_trade(open_dt="2025-01-02 12:00:00",
+                 close_dt=None,
+                 direction="long",
+                 timeframe="5m",
+                 trading_hours="rth",
+                 entry_price=5000,
+                 stop_ticks=20,
+                 stop_target=4995,
+                 prof_ticks=20,
+                 prof_target=5005,
+                 open_drawdown=1000,
+                 name="DELETEME"
+                 ):
     return dht.Trade(open_dt=open_dt,
                      close_dt=close_dt,
                      direction=direction,
@@ -47,16 +47,16 @@ def create_basic_trade(open_dt="2025-01-02 12:00:00",
                      )
 
 
-def create_basic_tradeseries(start_dt="2025-01-01 00:00:00",
-                             end_dt="2025-02-01 00:00:00",
-                             timeframe="5m",
-                             symbol="ES",
-                             name="DELETEME",
-                             params_str="a1_b2_c3_p0",
-                             ts_id=None,
-                             bt_id=None,
-                             trades=None,
-                             ):
+def create_tradeseries(start_dt="2025-01-01 00:00:00",
+                       end_dt="2025-02-01 00:00:00",
+                       timeframe="5m",
+                       symbol="ES",
+                       name="DELETEME",
+                       params_str="a1_b2_c3_p0",
+                       ts_id=None,
+                       bt_id=None,
+                       trades=None,
+                       ):
     r = dht.TradeSeries(start_dt=start_dt,
                         end_dt=end_dt,
                         timeframe=timeframe,
@@ -104,8 +104,8 @@ def create_basic_tradeseries(start_dt="2025-01-01 00:00:00",
 
 def test_TradeSeries_create_and_verify_pretty():
     # Check line counts of pretty output, won't change unless class changes
-    ts = create_basic_tradeseries()
-    test_trade = create_basic_trade()
+    ts = create_tradeseries()
+    test_trade = create_trade()
     assert isinstance(ts, dht.TradeSeries)
     assert len(ts.pretty().splitlines()) == 13
     ts.add_trade(test_trade)
@@ -114,15 +114,15 @@ def test_TradeSeries_create_and_verify_pretty():
 
 
 def test_TradeSeries_add_sort_and_get_trades():
-    ts = create_basic_tradeseries()
+    ts = create_tradeseries()
     assert len(ts.trades) == 0
     # Create and add 2 trades out of order (later trade goes in first)
-    trade1 = create_basic_trade(open_dt="2025-01-05 12:00:00",
-                                close_dt="2025-01-05 13:00:00")
+    trade1 = create_trade(open_dt="2025-01-05 12:00:00",
+                          close_dt="2025-01-05 13:00:00")
     ts.add_trade(trade1)
     assert len(ts.trades) == 1
-    trade2 = create_basic_trade(open_dt="2025-01-04 09:35:00",
-                                close_dt="2025-01-04 09:40:00")
+    trade2 = create_trade(open_dt="2025-01-04 09:35:00",
+                          close_dt="2025-01-04 09:40:00")
     ts.add_trade(trade2)
     assert len(ts.trades) == 2
     # Confirm trades are out of order
@@ -140,11 +140,11 @@ def test_TradeSeries_add_sort_and_get_trades():
 
 def test_TradeSeries_store_retrieve_and_delete():
     # Create a TradeSeries with 2 Trade objects to test with
-    ts = create_basic_tradeseries(name="DELETEME-TEST")
-    ts.add_trade(create_basic_trade(open_dt="2025-01-05 12:00:00",
-                                    close_dt="2025-01-05 13:00:00"))
-    ts.add_trade(create_basic_trade(open_dt="2025-01-06 09:35:00",
-                                    close_dt="2025-01-06 09:40:00"))
+    ts = create_tradeseries(name="DELETEME-TEST")
+    ts.add_trade(create_trade(open_dt="2025-01-05 12:00:00",
+                              close_dt="2025-01-05 13:00:00"))
+    ts.add_trade(create_trade(open_dt="2025-01-06 09:35:00",
+                              close_dt="2025-01-06 09:40:00"))
     # Clear and confirm storage has no objects with this name currently
     dhs.delete_tradeseries(symbol="ES", field="name", value="DELETEME-TEST")
     s_ts = dhs.get_tradeseries_by_field(field="name", value="DELETEME-TEST")

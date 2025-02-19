@@ -40,18 +40,18 @@ def hide_dhtrades_Trade_drawdown_calculations_correct():
     # TODO move this test to after create_and_verify_pretty once finished
 
 
-def create_basic_trade(open_dt="2025-01-02 12:00:00",
-                       direction="long",
-                       timeframe="5m",
-                       trading_hours="rth",
-                       entry_price=5000,
-                       stop_ticks=20,
-                       stop_target=4995,
-                       prof_ticks=20,
-                       prof_target=5005,
-                       open_drawdown=1000,
-                       name="DELETEME"
-                       ):
+def create_trade(open_dt="2025-01-02 12:00:00",
+                 direction="long",
+                 timeframe="5m",
+                 trading_hours="rth",
+                 entry_price=5000,
+                 stop_ticks=20,
+                 stop_target=4995,
+                 prof_ticks=20,
+                 prof_target=5005,
+                 open_drawdown=1000,
+                 name="DELETEME"
+                 ):
     # Do not add further arguments to this function where defaults are set
     # by Trade() or it will break assertions below meant to test defaults
     # and calculated attributes.  For further testing in test_* functions using
@@ -113,134 +113,134 @@ def create_basic_trade(open_dt="2025-01-02 12:00:00",
 
 def test_Trade_create_and_verify_pretty():
     # Check line counts of pretty output, won't change unless class changes
-    trade = create_basic_trade()
+    trade = create_trade()
     assert isinstance(trade, dht.Trade)
     assert len(trade.pretty().splitlines()) == 30
 
 
 def test_Trade_tick_and_target_calculations_correct():
     # LONG Providing both accurately should result in the values as provided
-    t = create_basic_trade(direction="long",
-                           entry_price=5000,
-                           stop_ticks=20,
-                           stop_target=4995,
-                           prof_ticks=20,
-                           prof_target=5005,
-                           )
+    t = create_trade(direction="long",
+                     entry_price=5000,
+                     stop_ticks=20,
+                     stop_target=4995,
+                     prof_ticks=20,
+                     prof_target=5005,
+                     )
     assert t.stop_ticks == 20
     assert t.stop_target == 4995
     assert t.prof_ticks == 20
     assert t.prof_target == 5005
     # LONG Providing both inaccurately should fail with Value Error
     with pytest.raises(ValueError):
-        create_basic_trade(direction="long",
-                           entry_price=5000,
-                           stop_ticks=250,
-                           stop_target=4995,
-                           )
+        create_trade(direction="long",
+                     entry_price=5000,
+                     stop_ticks=250,
+                     stop_target=4995,
+                     )
     with pytest.raises(ValueError):
-        create_basic_trade(direction="long",
-                           entry_price=5000,
-                           prof_ticks=250,
-                           prof_target=5005,
-                           )
+        create_trade(direction="long",
+                     entry_price=5000,
+                     prof_ticks=250,
+                     prof_target=5005,
+                     )
     # LONG Providing ticks only should calculate accurate target
-    t = create_basic_trade(direction="long",
-                           entry_price=5000,
-                           stop_ticks=20,
-                           stop_target=None,
-                           prof_ticks=20,
-                           prof_target=None,
-                           )
+    t = create_trade(direction="long",
+                     entry_price=5000,
+                     stop_ticks=20,
+                     stop_target=None,
+                     prof_ticks=20,
+                     prof_target=None,
+                     )
     assert t.stop_target == 4995
     assert t.prof_target == 5005
     # LONG Providing targets only should calculate accurate ticks
-    t = create_basic_trade(direction="long",
-                           entry_price=5000,
-                           stop_ticks=None,
-                           stop_target=4995,
-                           prof_ticks=None,
-                           prof_target=5005,
-                           )
+    t = create_trade(direction="long",
+                     entry_price=5000,
+                     stop_ticks=None,
+                     stop_target=4995,
+                     prof_ticks=None,
+                     prof_target=5005,
+                     )
     assert t.stop_ticks == 20
     assert t.prof_ticks == 20
     # LONG Providing neither should fail with ValueError
     with pytest.raises(ValueError):
-        t = create_basic_trade(direction="long",
-                               entry_price=5000,
-                               stop_ticks=None,
-                               stop_target=None,
-                               )
+        t = create_trade(direction="long",
+                         entry_price=5000,
+                         stop_ticks=None,
+                         stop_target=None,
+                         )
     with pytest.raises(ValueError):
-        t = create_basic_trade(direction="long",
-                               entry_price=5000,
-                               prof_ticks=None,
-                               prof_target=None,
-                               )
+        t = create_trade(direction="long",
+                         entry_price=5000,
+                         prof_ticks=None,
+                         prof_target=None,
+                         )
     # ### Short trades
     # SHORT Providing both accurately should result in the values as provided
-    t = create_basic_trade(direction="short",
-                           entry_price=5000,
-                           stop_ticks=20,
-                           stop_target=5005,
-                           prof_ticks=20,
-                           prof_target=4995,
-                           )
+    t = create_trade(direction="short",
+                     entry_price=5000,
+                     stop_ticks=20,
+                     stop_target=5005,
+                     prof_ticks=20,
+                     prof_target=4995,
+                     )
     assert t.stop_ticks == 20
     assert t.stop_target == 5005
     assert t.prof_ticks == 20
     assert t.prof_target == 4995
     # SHORT Providing both inaccurately should fail with Value Error
     with pytest.raises(ValueError):
-        create_basic_trade(direction="short",
-                           entry_price=5000,
-                           stop_ticks=250,
-                           stop_target=5005,
-                           )
+        create_trade(direction="short",
+                     entry_price=5000,
+                     stop_ticks=250,
+                     stop_target=5005,
+                     )
     with pytest.raises(ValueError):
-        create_basic_trade(direction="short",
-                           entry_price=5000,
-                           prof_ticks=250,
-                           prof_target=4995,
-                           )
+        create_trade(direction="short",
+                     entry_price=5000,
+                     prof_ticks=250,
+                     prof_target=4995,
+                     )
     # SHORT Providing ticks only should calculate accurate target
-    t = create_basic_trade(direction="short",
-                           entry_price=5000,
-                           stop_ticks=20,
-                           stop_target=None,
-                           prof_ticks=20,
-                           prof_target=None,
-                           )
+    t = create_trade(direction="short",
+                     entry_price=5000,
+                     stop_ticks=20,
+                     stop_target=None,
+                     prof_ticks=20,
+                     prof_target=None,
+                     )
     assert t.stop_target == 5005
     assert t.prof_target == 4995
     # SHORT Providing targets only should calculate accurate ticks
-    t = create_basic_trade(direction="short",
-                           entry_price=5000,
-                           stop_ticks=None,
-                           stop_target=5005,
-                           prof_ticks=None,
-                           prof_target=4995,
-                           )
+    t = create_trade(direction="short",
+                     entry_price=5000,
+                     stop_ticks=None,
+                     stop_target=5005,
+                     prof_ticks=None,
+                     prof_target=4995,
+                     )
     assert t.stop_ticks == 20
     assert t.prof_ticks == 20
     # SHORT Providing neither should fail with ValueError
     with pytest.raises(ValueError):
-        t = create_basic_trade(direction="short",
-                               entry_price=5000,
-                               stop_ticks=None,
-                               stop_target=None,
-                               )
+        t = create_trade(direction="short",
+                         entry_price=5000,
+                         stop_ticks=None,
+                         stop_target=None,
+                         )
     with pytest.raises(ValueError):
-        t = create_basic_trade(direction="short",
-                               entry_price=5000,
-                               prof_ticks=None,
-                               prof_target=None,
-                               )
+        t = create_trade(direction="short",
+                         entry_price=5000,
+                         prof_ticks=None,
+                         prof_target=None,
+                         )
 
 
 def test_Trade_creation_long_update_drawdown_and_close_at_profit():
     # Create a trade (basic_trade() covers creation assertions)
-    t = create_basic_trade(direction="long")
+    t = create_trade(direction="long")
     # Update drawdown_impact
     t.update_drawdown(price_seen=5003)
     assert t.drawdown_impact == -3
@@ -259,7 +259,7 @@ def test_Trade_creation_long_update_drawdown_and_close_at_profit():
 
 def test_Trade_creation_long_update_drawdown_and_close_at_loss():
     # Create a trade (basic_trade() covers creation assertions)
-    t = create_basic_trade(direction="long")
+    t = create_trade(direction="long")
     # Update drawdown_impact
     t.update_drawdown(price_seen=5009)
     assert t.drawdown_impact == -9
@@ -278,10 +278,10 @@ def test_Trade_creation_long_update_drawdown_and_close_at_loss():
 
 def test_Trade_creation_short_update_drawdown_and_close_at_profit():
     # Create a trade (basic_trade() covers creation assertions)
-    t = create_basic_trade(direction="short",
-                           stop_target=5005,
-                           prof_target=4995,
-                           )
+    t = create_trade(direction="short",
+                     stop_target=5005,
+                     prof_target=4995,
+                     )
     # Update drawdown_impact
     t.update_drawdown(price_seen=4998)
     assert t.drawdown_impact == -2
@@ -300,10 +300,10 @@ def test_Trade_creation_short_update_drawdown_and_close_at_profit():
 
 def test_Trade_creation_short_update_drawdown_and_close_at_loss():
     # Create a trade (basic_trade() covers creation assertions)
-    t = create_basic_trade(direction="short",
-                           stop_target=5005,
-                           prof_target=4995,
-                           )
+    t = create_trade(direction="short",
+                     stop_target=5005,
+                     prof_target=4995,
+                     )
     # Update drawdown_impact
     t.update_drawdown(price_seen=4998)
     assert t.drawdown_impact == -2
@@ -326,7 +326,7 @@ def test_Trade_store_retrieve_delete():
     stored = dhs.get_trades_by_field(field="name", value="DELETEME-TEST")
     assert len(stored) == 0
     # Create and store a basic test, confirming it can be retreived after
-    t = create_basic_trade(name="DELETEME-TEST")
+    t = create_trade(name="DELETEME-TEST")
     print("\n-----------------------------")
     stored = t.store()
     # Confirm storage op returns something that looks vaguely like our trade
