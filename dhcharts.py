@@ -1189,6 +1189,7 @@ class Indicator():
                  start_dt=bot(),
                  end_dt=None,
                  ind_id=None,
+                 autoload_chart=True,
                  candle_chart=None,
                  datapoints: list = None,
                  parameters={},
@@ -1233,9 +1234,6 @@ class Indicator():
         self.end_dt = end_dt
         if self.end_dt is None:
             self.end_dt = dhu.dt_as_str(dt.datetime.now())
-        self.candle_chart = candle_chart
-        if self.candle_chart is None:
-            self.load_underlying_chart()
         if datapoints is None:
             self.datapoints = []
         else:
@@ -1247,6 +1245,10 @@ class Indicator():
         else:
             self.ind_id = ind_id
         self.class_name = "Indicator"
+        self.autoload_chart = autoload_chart
+        self.candle_chart = candle_chart
+        if self.candle_chart is None and self.autoload_chart:
+            self.load_underlying_chart()
 
     def __eq__(self, other):
         return (self.name == other.name
@@ -1358,13 +1360,17 @@ class Indicator():
 
     def load_underlying_chart(self):
         """Load the underlying candle chart from central storage"""
-        self.candle_chart = Chart(c_timeframe=self.timeframe,
-                                  c_trading_hours=self.trading_hours,
-                                  c_symbol=self.symbol,
-                                  c_start=self.start_dt,
-                                  c_end=self.end_dt,
-                                  autoload=True,
-                                  )
+        if self.start_dt is None or self.end_dt is None:
+            self.candle_chart = None
+        else:
+            self.candle_chart = Chart(c_timeframe=self.timeframe,
+                                      c_trading_hours=self.trading_hours,
+                                      c_symbol=self.symbol,
+                                      c_start=self.start_dt,
+                                      c_end=self.end_dt,
+                                      autoload=True,
+                                      )
+        return self.candle_chart
 
     def load_datapoints(self):
         """Load any datapoints available from central storage by ind_id,
@@ -1477,6 +1483,7 @@ class IndicatorSMA(Indicator):
                  start_dt=bot(),
                  end_dt=None,
                  ind_id=None,
+                 autoload_chart=True,
                  candle_chart=None,
                  name="SMA",
                  datapoints=None,
@@ -1492,6 +1499,7 @@ class IndicatorSMA(Indicator):
                          start_dt=start_dt,
                          end_dt=end_dt,
                          ind_id=ind_id,
+                         autoload_chart=autoload_chart,
                          candle_chart=candle_chart,
                          datapoints=datapoints,
                          parameters=parameters,
@@ -1579,6 +1587,7 @@ class IndicatorEMA(Indicator):
                  start_dt=bot(),
                  end_dt=None,
                  ind_id=None,
+                 autoload_chart=True,
                  candle_chart=None,
                  name="EMA",
                  datapoints=None,
@@ -1594,6 +1603,7 @@ class IndicatorEMA(Indicator):
                          start_dt=start_dt,
                          end_dt=end_dt,
                          ind_id=ind_id,
+                         autoload_chart=autoload_chart,
                          candle_chart=candle_chart,
                          datapoints=datapoints,
                          parameters=parameters,

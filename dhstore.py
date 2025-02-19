@@ -327,6 +327,7 @@ def review_indicators(meta_collection: str = COLL_IND_META,
 
 def get_indicator(ind_id: str,
                   meta_collection: str = COLL_IND_META,
+                  autoload_chart: bool = True,
                   autoload_datapoints: bool = True,
                   ):
     """Returns an indicator based on ind_id (which should be unique) and
@@ -350,6 +351,7 @@ def get_indicator(ind_id: str,
                                   calc_version=i["calc_version"],
                                   calc_details=i["calc_details"],
                                   ind_id=i["ind_id"],
+                                  autoload_chart=autoload_chart,
                                   name=i["name"],
                                   parameters=i["parameters"],
                                   )
@@ -361,6 +363,7 @@ def get_indicator(ind_id: str,
                                   calc_version=i["calc_version"],
                                   calc_details=i["calc_details"],
                                   ind_id=i["ind_id"],
+                                  autoload_chart=autoload_chart,
                                   name=i["name"],
                                   parameters=i["parameters"],
                                   )
