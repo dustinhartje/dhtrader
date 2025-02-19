@@ -8,15 +8,26 @@ import dhutil as dhu
 from dhutil import dt_as_dt, dt_as_str
 import dhstore as dhs
 
-# TODO Go through dhtrades.py every function/class and write out comments
-#      here for things that need testing
 # TODO think through which tests can be done simply by creating and calcing,
 #      and which should pull data from storage to confirm live results
 #      Probably many should have both.  Should they be in the same file?
-# TODO Check that list against below tests that were transfered from my
-#      original manual testing hacks
-# TODO write any remaining tests needed here or in class specific files
 # TODO confirm no other TODOs remain in this file before clearing this line
+
+
+# TODO Tests needed (some of these have already been written partially/fully
+# Trade Drawdown calculations (see placeholder function below for details)
+# Trade review __init__ and make sure I've covered all attributes with type and
+#       value test, as well as any calculations or scenarios where wrong
+#       things might get passed in or various flags might change behavior
+#       -- perhaps this should have it's own test to be clear and found easily
+#          for future updates?  even if all it does is call create_*
+# Trade __eq__ and __ne__ pass and fail scenarios
+# Trade __str__ and __repr__ return strings successfully
+# Trade to.json and to_clean_dict  return correct types and mock values
+# Trade .close_trade() I do some closes in other tests already, but write
+#       a test that specifically covers as many closing scenarios as I can
+#       think up and confirm it's results.  Does timeframe/trading_hours
+#       matter here?
 
 
 def hide_dhtrades_Trade_drawdown_calculations_correct():

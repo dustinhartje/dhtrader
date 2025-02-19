@@ -11,25 +11,28 @@ import dhstore as dhs
 # NOTE No tests are needed on the base Backtest() class for .calculate() or
 #      .incorporate_parameters() methods as these are only implemented when
 #      building subclasses
-# TODO Go through dhtrades.py every function/class and write out comments
-#      here for things that need testing
 # TODO loop through all passable attributes and ensure assertions cover
 #      whether they are passed, not passed, or passed as different obj types
 #      where applicable (i.e. symbol as str or Symbol)
 #      TODO I may not have fully covered this on other objects so duplicate
 #           this TODO for all others as well
-# TODO might as well write tests for .to_json(), .to_clean_dict(), maybe
-#      __eq__/__ne__/__str__/__repr__ (at least check types for those and
-#      running them will ensure no exceptions are being thrown)
-#      TODO duplicate this TODO back to all other classes I haven't covered
-#           yet with it.  These should be quick and easy (knock on wood)
 # TODO think through which tests can be done simply by creating and calcing,
 #      and which should pull data from storage to confirm live results
 #      Probably many should have both.  Should they be in the same file?
-# TODO Check that list against below tests that were transfered from my
-#      original manual testing hacks
-# TODO write any remaining tests needed here or in class specific files
-# TODO confirm no other TODOs remain in this file before clearing this line
+# TODO confirm no other TODOs remain in this file before clearing this one
+
+# TODO Tests needed (some of these have already been written partially/fully
+# Backtest review __init__ and make sure I've covered all attributes with type
+#          and value test, as well as any calculations or scenarios where wrong
+#          things might get passed in or various flags might change behavior
+#          -- perhaps this should have it's own test to be clear and found
+#             easily for future updates?  even if all it does is call create_*
+# Backtest __eq__ and __ne__ pass and fail scenarios
+# Backtest __str__ and __repr__ return strings successfully
+# Backtest to.json and to_clean_dict  return correct types and mock values
+# BacktestIndicatorTag (backtesting repo) - needs basically everything in
+#     this file plus specific tests for calculate, subs_*, parameters, and
+#     anything else it does different
 
 
 def create_trade(open_dt="2025-01-02 12:00:00",

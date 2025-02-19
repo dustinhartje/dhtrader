@@ -5,14 +5,31 @@ site.addsitedir('modulepaths')
 import dhcharts as dhc
 from dhutil import dt_as_dt, dt_as_str, dow_name
 
-# TODO Review the rest of the Symbol class, I have not gone through it
-#      thoroughly yet
 # TODO think through which tests can be done simply by creating and calcing,
 #      and which should pull data from storage to confirm live results
 #      Probably many should have both.  Should they be in the same file?
+# TODO confirm all other TODOs have been cleared from this file
+# TODO Tests needed (some of these have already been written partially/fully
+# Symbol __eq__ and __ne__ pass and fail scenarios
+# Symbol __str__ and __repr__ return strings successfully
+# Symbol to.json and to_clean_dict  return correct types and mock values
+# Symbol.pretty() (already written below)
+# Symbol.set_times() creates correct attributes for ES
+# Symbol.get_next_tick_up/down() return correct values including adjacent
+#     to day/week/month/holiday closure boundaries, looping several timeframes,
+#     eth and rth both
+# Symbol.get_next/prev_rth/eth_open/close() return correct values (should
+#     run similar tests to get_market_boundaries but use different dates for
+#     more coverage.  See if there's a way I can loop this and maybe randomize?
+#     Or literally have it check every date for the last year?
+#     Maybe have it pick a bunch of random dates then detect the day-of-week
+#     to determine what it should test on them.  (do holidays separate and
+#     static, just need to ensure random datetimes are outside them)
+#     # TODO if this works well maybe revamp get_market_boundaries to also
+#            randomize.
 
-# ################################ Symbol() #################################
-
+# TODO I should probalby have this be a create_symbol() function like other
+#      test files?  and it will need to test all the __init__ stuff too
 SYMBOL = dhc.Symbol(ticker="ES", name="ES", leverage_ratio=50, tick_size=0.25)
 
 
@@ -578,93 +595,6 @@ def test_Symbol_market_is_open():
                                      target_dt=f"{date} 23:59:00",
                                      events=events,
                                      )
-
-
-def test_dhcharts_Symbol_market_is_open_transferred():
-    # TODO LOWPRI review vs above method, this one was transferred over from
-    #      dhcharts.py and likely mostly redundant
-    sym = dhc.Symbol(ticker="ES",
-                     name="ES",
-                     leverage_ratio=50.0,
-                     tick_size=0.25,
-                     )
-
-    # Sunday 2024-03-17
-    # Monday 2024-03-18
-    # Wednesday 2024-03-20
-    # Friday 2024-03-22
-    # Saturday 2024-03-23
-
-    # ETH
-    # Saturday should fail at 4am, 5:30pm, and 9pm
-    assert not sym.market_is_open(trading_hours="eth",
-                                  target_dt="2024-03-23 04:00:00")
-    assert not sym.market_is_open(trading_hours="eth",
-                                  target_dt="2024-03-23 17:30:00")
-    assert not sym.market_is_open(trading_hours="eth",
-                                  target_dt="2024-03-23 21:00:00")
-    # Friday should succeed at noon, fail after 5pm
-    assert sym.market_is_open(trading_hours="eth",
-                              target_dt="2024-03-22 12:00:00")
-    assert not sym.market_is_open(trading_hours="eth",
-                                  target_dt="2024-03-22 17:30:00")
-    # Sunday should fail at noon, succeed after 6pm
-    assert not sym.market_is_open(trading_hours="eth",
-                                  target_dt="2024-03-17 12:00:00")
-    assert sym.market_is_open(trading_hours="eth",
-                              target_dt="2024-03-17 19:30:00")
-    # Wednesday should succeed at noon and 8pm, fail at 5:30pm
-    assert sym.market_is_open(trading_hours="eth",
-                              target_dt="2024-03-20 12:00:00")
-    assert sym.market_is_open(trading_hours="eth",
-                              target_dt="2024-03-20 20:00:00")
-    assert not sym.market_is_open(trading_hours="eth",
-                                  target_dt="2024-03-20 17:30:00")
-
-    # RTH
-    # Saturday should fail at 4am, 5:30pm, and 9pm
-    assert not sym.market_is_open(trading_hours="rth",
-                                  target_dt="2024-03-16 04:00:00")
-    assert not sym.market_is_open(trading_hours="rth",
-                                  target_dt="2024-03-16 17:30:00")
-    assert not sym.market_is_open(trading_hours="rth",
-                                  target_dt="2024-03-16 21:00:00")
-    # Sunday should fail at 4am, 5:30pm, and 9pm
-    assert not sym.market_is_open(trading_hours="rth",
-                                  target_dt="2024-03-17 04:00:00")
-    assert not sym.market_is_open(trading_hours="rth",
-                                  target_dt="2024-03-17 17:30:00")
-    assert not sym.market_is_open(trading_hours="rth",
-                                  target_dt="2024-03-17 21:00:00")
-    # Monday should fail at 8am, succeed after 2pm
-    assert not sym.market_is_open(trading_hours="rth",
-                                  target_dt="2024-03-18 08:00:00")
-    assert sym.market_is_open(trading_hours="rth",
-                              target_dt="2024-03-18 14:00:00")
-    # Friday should succeed at noon, fail after 4pm
-    assert sym.market_is_open(trading_hours="rth",
-                              target_dt="2024-03-22 12:00:00")
-    assert not sym.market_is_open(trading_hours="rth",
-                                  target_dt="2024-03-22 17:00:00")
-    # Wednesday should fail at 4am, succeed at noon, and fail at 8pm
-    assert not sym.market_is_open(trading_hours="rth",
-                                  target_dt="2024-03-20 04:00:00")
-    assert sym.market_is_open(trading_hours="rth",
-                              target_dt="2024-03-20 12:00:00")
-    assert not sym.market_is_open(trading_hours="rth",
-                                  target_dt="2024-03-20 20:00:00")
-
-    # Market should not indicate open during Closed events like holidays even
-    # during market hours.  Using noon on Good Friday to test noon eth and rth
-    assert not sym.market_is_open(trading_hours="rth",
-                                  target_dt="2024-03-29 12:00:00")
-    assert not sym.market_is_open(trading_hours="eth",
-                                  target_dt="2024-03-29 12:00:00")
-
-    # And just to be sure it's not going to flip somehow test during
-    # daily eth closure window on the same holiday:
-    assert not sym.market_is_open(trading_hours="rth",
-                                  target_dt="2024-03-29 17:30:00")
 
 
 def test_dhcharts_Symbol_get_market_boundary():
