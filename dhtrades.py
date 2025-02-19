@@ -76,8 +76,6 @@ class Trade():
                  timeframe: str,
                  trading_hours: str,
                  entry_price: float,
-                 stop_target: float,
-                 prof_target: float,
                  open_drawdown: float,
                  close_drawdown: float = None,
                  close_dt: str = None,
@@ -85,8 +83,10 @@ class Trade():
                  open_epoch: int = None,
                  exit_price: float = None,
                  gain_loss: float = None,
-                 stop_ticks: int = 0,
-                 prof_ticks: int = 0,
+                 stop_target: float = None,
+                 prof_target: float = None,
+                 stop_ticks: int = None,
+                 prof_ticks: int = None,
                  offset_ticks: int = 0,
                  drawdown_impact: float = float(0),
                  symbol="ES",
@@ -154,6 +154,82 @@ class Trade():
                        dt=self.close_dt,
                        )
         self.open_epoch = dhu.dt_to_epoch(self.open_dt)
+        # Calc or confirm ticks and targets to prevent later innaccuracies
+        if self.prof_ticks is None:
+            if self.prof_target is None:
+                # If neither provided we can't continue
+                raise ValueError("Must provide either prof_ticks or "
+                                 "prof_target (or both).  Neither was passed")
+            else:
+                # Need to calculate prof_ticks
+                self.prof_ticks = ((self.prof_target - self.entry_price)
+                                   * self.flipper
+                                   / self.symbol.tick_size)
+        else:
+            if self.prof_target is None:
+                # Need to calculate prof_target
+                self.prof_target = self.entry_price + ((self.prof_ticks
+                                                       * self.flipper)
+                                                       * self.symbol.tick_size)
+            else:
+                # Both provided, make sure they math out correctly
+                pt = self.entry_price + ((self.prof_ticks
+                                         * self.flipper)
+                                         * self.symbol.tick_size)
+                if not pt == self.prof_target:
+                    msg = (f"Provided prof_target does not match prof_ticks "
+                           "calculation against entry_price.  These numbers "
+                           "cannot be trusted for later calculations.  "
+                           f"entry_price={self.entry_price} "
+                           f"prof_ticks={self.prof_ticks} "
+                           f"direction={self.direction} "
+                           f"should get prof_target of {pt} but we got "
+                           f"prof_target={self.prof_target} instead."
+                           )
+                    raise ValueError(msg)
+        if self.stop_ticks is None:
+            if self.stop_target is None:
+                # If neither provided we can't continue
+                raise ValueError("Must provide either stop_ticks or "
+                                 "stop_target (or both).  Neither was passed")
+            else:
+                # Need to calculate stop_ticks
+                self.stop_ticks = ((self.entry_price - self.stop_target)
+                                   * self.flipper
+                                   / self.symbol.tick_size)
+        else:
+            if self.stop_target is None:
+                # Need to calculate stop_target
+                self.stop_target = self.entry_price - ((self.stop_ticks
+                                                       * self.flipper)
+                                                       * self.symbol.tick_size)
+            else:
+                # Both provided, make sure they math out correctly
+                st = self.entry_price - ((self.stop_ticks
+                                         * self.flipper)
+                                         * self.symbol.tick_size)
+                if not st == self.stop_target:
+                    msg = (f"Provided stop_target does not match stop_ticks "
+                           "calculation against entry_price.  These numbers "
+                           "cannot be trusted for later calculations.  "
+                           f"entry_price={self.entry_price} "
+                           f"stop_ticks={self.stop_ticks} "
+                           f"direction={self.direction} "
+                           f"should get stop_target of {st} but we got "
+                           f"stop_target={self.stop_target} instead."
+                           )
+                    raise ValueError(msg)
+        # Make sure ticks end up integers, no decimals allowed
+        if self.prof_ticks == int(self.prof_ticks):
+            self.prof_ticks = int(self.prof_ticks)
+        else:
+            raise ValueError("prof_ticks must be an integer but we got "
+                             f"{self.prof_ticks}")
+        if self.stop_ticks == int(self.stop_ticks):
+            self.stop_ticks = int(self.stop_ticks)
+        else:
+            raise ValueError("stop_ticks must be an integer but we got "
+                             f"{self.stop_ticks}")
 
     def __str__(self):
         return str(self.to_clean_dict())
@@ -797,302 +873,3 @@ class Backtest():
     #      many trade series involved this might get tricky, start by just
     #      getting it working on a wipe-and-start-over-each-time basis
     #      then I'll have to work through saving/retrieving/updating carefully
-
-
-def test_basics():
-    """Basics tests used during development and to confirm simple functions
-    working as expected"""
-    # TODO LOWPRI make these into unit tests some day
-    print("\n========================= OUTPUTS ===========================")
-    # TODO in lieu of real unit tests, start a test_results empty list and
-    #      record a quick oneliner for each easily confirmable test as it
-    #      finishes, something like "OK - Trade() Storage and retrieval"
-    #      then print them all at the end.  For non-easily-confirmed could
-    #      add a note like "UNKNOWN - Visual confirm needed for Trade.pretty()
-    print("All objects should print 'pretty' which confirms .to_json(), "
-          ".to_clean_dict(), and .pretty() methods all work properly"
-          )
-    print("\n---------------------------- TRADE ---------------------------")
-    out_trade = Trade(open_dt="2025-01-02 12:00:00",
-                      direction="long",
-                      timeframe="5m",
-                      trading_hours="rth",
-                      entry_price=5001.50,
-                      stop_target=4995,
-                      prof_target=5010,
-                      open_drawdown=1000,
-                      name="DELETEME"
-                      )
-    print(out_trade.pretty())
-    print("\n-------------------------- TRADESERIES -------------------------")
-    out_ts = TradeSeries(start_dt="2025-01-02 00:00:00",
-                         end_dt="2025-01-05 17:59:00",
-                         timeframe="5m",
-                         symbol="ES",
-                         name="DELETEME_Testing",
-                         params_str="1p_2s",
-                         trades=None,
-                         )
-    out_ts.add_trade(out_trade)
-    print("Without trades")
-    print(out_ts.pretty())
-    print("With trades")
-    print(out_ts.pretty(suppress_trades=False))
-    print("\n--------------------------- BACKTEST --------------------------")
-    out_bt = Backtest(start_dt="2025-01-02 12:00:00",
-                      end_dt="2025-01-02 12:01:00",
-                      symbol="ES",
-                      timeframe="1m",
-                      trading_hours="eth",
-                      name="DELETEME_Testing",
-                      parameters={},
-                      autoload_charts=True,
-                      )
-    out_bt.add_tradeseries(out_ts)
-    print("Without tradeseries, trades, charts, and candles")
-    print(out_bt.pretty())
-    print("With tradeseries, trades, charts, and candles")
-    print(out_bt.pretty(suppress_tradeseries=False,
-                        suppress_trades=False,
-                        suppress_charts=False,
-                        suppress_chart_candles=False,
-                        ))
-    print("============================ TRADES ==============================")
-    # Trades
-    t = Trade(open_dt="2025-01-02 12:00:00",
-              direction="long",
-              timeframe="5m",
-              trading_hours="rth",
-              entry_price=5001.50,
-              stop_target=4995,
-              prof_target=5010,
-              open_drawdown=1000,
-              name="DELETEME"
-              )
-    print(f"Created unclosed long test trade:\n{t}")
-    print("\nUpdating drawdown_impact")
-    t.update_drawdown(price_seen=5009)
-    print(t)
-    print("\nClosing long trade at a loss.  This should have gain_loss == "
-          "-$325 and drawdown_impact == -700.")
-    t.close(price=4995, dt="2025-01-02 12:45:00")
-    print(t)
-    print("\nStoring trade")
-    print(t.store())
-
-    print("------------------------------------------------------------------")
-    t = Trade(open_dt="2025-01-02 12:01:00",
-              close_dt="2025-01-02 12:15:00",
-              direction="short",
-              timeframe="5m",
-              trading_hours="rth",
-              entry_price=5001.50,
-              stop_target=4995,
-              prof_target=5010,
-              open_drawdown=1000,
-              exit_price=4995,
-              name="DELETEMEToo"
-              )
-    print("Created closed short test trade with a gain.  This should have "
-          f"gain_loss == $325 and drawdown_impact == $325 (I think...)\n{t}")
-    print("\nUpdating drawdown_impact")
-    t.update_drawdown(price_seen=5009)
-    print(t)
-    print("\nStoring trade")
-    print(t.store())
-
-    print("\n\nReviewing trades in storage:")
-    print(dhs.review_trades(symbol="ES"))
-
-    print("\nDeleting name=DELETEMEToo trades first")
-    print(dhs.delete_trades(symbol="ES",
-                            field="name",
-                            value="DELETEMEToo",
-                            ))
-    print("\nReviewing trades in storage to confirm deletion:")
-    print(dhs.review_trades(symbol="ES"))
-    print("\nDeleting trades with name=DELETEME to finish cleanup")
-    print(dhs.delete_trades(symbol="ES",
-                            field="name",
-                            value="DELETEME",
-                            ))
-    print("\nReviewing trades in storage to confirm deletion:")
-    print(dhs.review_trades(symbol="ES"))
-
-    # TradeSeries
-    print("========================== TRADESERIES ===========================")
-    print("Creating a TradeSeries")
-    ts = TradeSeries(start_dt="2025-01-02 00:00:00",
-                     end_dt="2025-01-05 17:59:00",
-                     timeframe="5m",
-                     symbol="ES",
-                     name="DELETEME_Testing",
-                     params_str="1p_2s",
-                     trades=None,
-                     )
-    ts_id_to_delete = [ts.ts_id]
-    print(ts)
-    print("\nAdding two trades out of order")
-    ts.add_trade(Trade(open_dt="2025-01-03 12:00:00",
-                       close_dt="2025-01-03 12:15:00",
-                       direction="short",
-                       timeframe="5m",
-                       trading_hours="rth",
-                       entry_price=5001.50,
-                       stop_target=4995,
-                       prof_target=5010,
-                       open_drawdown=1000,
-                       exit_price=4995,
-                       name="DELETEME",
-                       ))
-    ts.add_trade(Trade(open_dt="2025-01-02 14:10:00",
-                       close_dt="2025-01-02 15:35:00",
-                       direction="short",
-                       timeframe="5m",
-                       trading_hours="rth",
-                       entry_price=5001.50,
-                       stop_target=4995,
-                       prof_target=5010,
-                       open_drawdown=1000,
-                       exit_price=4995,
-                       name="DELETEME"
-                       ))
-    print(ts.trades)
-    print("\nTesting .get_trade_by_open_dt() method returns a trade for "
-          "2025-01-02 14:10:00")
-    print(ts.get_trade_by_open_dt("2025-01-02 14:10:00"))
-    print("\nTesting .get_trade_by_open_dt() method returns a None for "
-          "2025-01-02 15:10:00")
-    print(ts.get_trade_by_open_dt("2025-01-02 15:10:00"))
-    print("\nCurrent order of trade open_dt fields")
-    for t in ts.trades:
-        print(t.open_dt)
-    print("\nrunning .sort_trades() to fix the ordering:")
-    ts.sort_trades()
-    for t in ts.trades:
-        print(t.open_dt)
-
-    print("\nStoring TradeSeries and child Trades")
-    print(ts.store(store_trades=True))
-    print("\n\nReviewing tradeseries in storage:")
-    print(dhs.review_tradeseries(symbol="ES"))
-    print("\n\nReviewing trades in storage:")
-    print(dhs.review_trades(symbol="ES"))
-
-    print("\nDeleting TradeSeries objects from mongo using ts_id")
-    for t in ts_id_to_delete:
-        print(dhs.delete_tradeseries(symbol="ES",
-                                     field="ts_id",
-                                     value=t
-                                     ))
-    print("\nDeleting Trade objects from mongo using ts_id")
-    print(dhs.delete_trades(symbol="ES",
-                            field="ts_id",
-                            value=ts.ts_id,
-                            ))
-    print("\nReviewing again to confirm deletion")
-    print("\n\nReviewing tradeseries in storage:")
-    print(dhs.review_tradeseries(symbol="ES"))
-    print("\n\nReviewing trades in storage:")
-    print(dhs.review_trades(symbol="ES"))
-
-    # Backtesters
-    print("======================== BACKTESTS================================")
-    print("Creating a Backtest object")
-    b = Backtest(start_dt="2025-01-02 00:00:00",
-                 end_dt="2025-01-04 00:00:00",
-                 symbol="ES",
-                 timeframe="e1h",
-                 trading_hours="eth",
-                 name="DELETEME_Testing",
-                 parameters={},
-                 autoload_charts=True,
-                 )
-    print(b)
-    print("\nAdding the previous test TradeSeries to this test Backtest")
-    b.add_tradeseries(ts)
-    print(b)
-    print("\nLet's make sure our Backtest has turtles all the way down, "
-          "i.e. complete set of child objects"
-          )
-    stuff = {"tradeseries": 0,
-             "trades": 0,
-             "charts": 0,
-             "tf_candles": 0,
-             "1m_candles": 0,
-             }
-    things = {"tradeseries": 1,
-              "trades": 2,
-              "charts": 2,
-              "tf_candles": 40,
-              "1m_candles": 2400,
-              }
-    if b.chart_tf is not None:
-        stuff["charts"] += 1
-        stuff["tf_candles"] += len(b.chart_tf.c_candles)
-    if b.chart_1m is not None:
-        stuff["charts"] += 1
-        stuff["1m_candles"] += len(b.chart_1m.c_candles)
-    if b.tradeseries is not None:
-        stuff["tradeseries"] += len(b.tradeseries)
-        for ts in b.tradeseries:
-            if ts.trades is not None:
-                stuff["trades"] += len(ts.trades)
-    print(f"Expected: {things}")
-    print(f"Received: {stuff}")
-    if stuff == things:
-        print("OK: They match!")
-    else:
-        print("ERROR: They don't match...")
-
-    print("------------------------------------------------------------------")
-    print("\nReviewing before storing all this junk:")
-    print("\nReviewing backtests in storage")
-    print(dhs.review_backtests(symbol="ES"))
-    print("\nReviewing tradeseries in storage:")
-    print(dhs.review_tradeseries(symbol="ES"))
-    print("\nReviewing trades in storage:")
-    print(dhs.review_trades(symbol="ES"))
-
-    print("\nStoring the backtest and it's child objects")
-    b.store(store_tradeseries=True,
-            store_trades=True,
-            )
-
-    print("\nReviewing after storing all this junk, we should see 1 Backtest, "
-          "1 TradeSeries, and 2 Trades all with 'DELETEME' in their names"
-          )
-    print("\nReviewing backtests in storage")
-    print(dhs.review_backtests(symbol="ES"))
-    print("\nReviewing tradeseries in storage:")
-    print(dhs.review_tradeseries(symbol="ES"))
-    print("\nReviewing trades in storage:")
-    print(dhs.review_trades(symbol="ES"))
-
-    print("\nAnd now we'll try to delete them all through the bt_id and ts_id "
-          "fields")
-    print(dhs.delete_backtests(symbol="ES",
-                               field="bt_id",
-                               value=b.bt_id,
-                               ))
-    for t in b.tradeseries:
-        print(dhs.delete_tradeseries(symbol="ES",
-                                     field="ts_id",
-                                     value=t.ts_id,
-                                     ))
-        print(dhs.delete_trades(symbol="ES",
-                                field="ts_id",
-                                value=t.ts_id,
-                                ))
-
-    print("\nReviewing after deletion, no 'DELETEME' objects should exist")
-    print("\nReviewing backtests in storage")
-    print(dhs.review_backtests(symbol="ES"))
-    print("\nReviewing tradeseries in storage:")
-    print(dhs.review_tradeseries(symbol="ES"))
-    print("\nReviewing trades in storage:")
-    print(dhs.review_trades(symbol="ES"))
-
-
-if __name__ == '__main__':
-    test_basics()

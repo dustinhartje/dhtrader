@@ -7,6 +7,9 @@ from dhutil import dt_as_dt, dt_as_str, dow_name
 
 # TODO Review the rest of the Symbol class, I have not gone through it
 #      thoroughly yet
+# TODO think through which tests can be done simply by creating and calcing,
+#      and which should pull data from storage to confirm live results
+#      Probably many should have both.  Should they be in the same file?
 
 # ################################ Symbol() #################################
 

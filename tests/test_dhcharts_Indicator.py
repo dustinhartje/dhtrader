@@ -10,6 +10,9 @@ import sys
 # ################################ Indicator() ################################
 
 # TODO Test various methods (need more TODOs here)
+# TODO think through which tests can be done simply by creating and calcing,
+#      and which should pull data from storage to confirm live results
+#      Probably many should have both.  Should they be in the same file?
 # TODO Test storage and retrieval
 # TODO what else can I do that covers subclasses without writing the tests
 #      specifically for them?

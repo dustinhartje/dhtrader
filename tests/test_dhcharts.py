@@ -3,8 +3,17 @@ site.addsitedir('modulepaths')
 import dhcharts as dhc
 import dhutil as dhu
 from dhutil import dt_as_dt, dt_as_str
-# TODO Go through dhchars.py every function/class and write out comments
+
+# TODO go through transferred stuff below, there is a lot of repeat stuff
+#      that can probably be condensed into shared functions to make this more
+#      readable and possibly look through a lot more assertions in some cases
+#      for more robust coverage.  Similar for other test files, particularly
+#      dhtrades.py if I haven't already written it that way
+# TODO Go through dhcharts.py every function/class and write out comments
 #      here for things that need testing
+# TODO think through which tests can be done simply by creating and calcing,
+#      and which should pull data from storage to confirm live results
+#      Probably many should have both.  Should they be in the same file?
 # TODO Check that list against below tests that were transfered from my
 #      original manual testing hacks
 # TODO write any remaining tests needed here or in class specific files
