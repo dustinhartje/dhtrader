@@ -597,7 +597,7 @@ def test_Symbol_market_is_open():
                                      )
 
 
-def test_dhcharts_Symbol_get_market_boundary():
+def test_Symbol_get_market_boundary():
     sym = dhc.Symbol(ticker="ES",
                      name="ES",
                      leverage_ratio=50.0,

@@ -24,7 +24,7 @@ from dhutil import dt_as_dt, dt_as_str, dow_name
 
 
 # TODO Update this to be the new create and test_creation functions
-def test_dhcharts_create_and_verify_pretty_all_classes():
+def test_Candle_create_and_verify_pretty():
     out_candle = dhc.Candle(c_datetime="2025-01-02 12:00:00",
                             c_timeframe="1m",
                             c_open=5000,

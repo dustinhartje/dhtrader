@@ -25,7 +25,7 @@ from dhutil import dt_as_dt, dt_as_str, dow_name
 
 
 # TODO Update this to be the new create and test_creation functions
-def test_dhcharts_create_and_verify_pretty_all_classes():
+def test_Event_create_and_verify_pretty():
     # Check line counts of pretty output, won't change unless class changes
     out_event = dhc.Event(start_dt="2025-01-02 12:00:00",
                           end_dt="2025-01-02 18:00:00",

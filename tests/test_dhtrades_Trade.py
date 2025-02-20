@@ -338,7 +338,6 @@ def test_Trade_store_retrieve_delete():
     assert len(stored) == 0
     # Create and store a basic test, confirming it can be retreived after
     t = create_trade(name="DELETEME-TEST")
-    print("\n-----------------------------")
     stored = t.store()
     # Confirm storage op returns something that looks vaguely like our trade
     assert stored[0]["name"] == "DELETEME-TEST"
