@@ -1,9 +1,11 @@
 from datetime import datetime as dt
 from datetime import timedelta, date
+from copy import deepcopy
 import csv
 import sys
 import re
 import logging
+import json
 from tabulate import tabulate
 import dhcharts as dhc
 import dhstore as dhs
@@ -49,6 +51,7 @@ class OperationTimer():
                  elapsed_str="",
                  auto_start: bool = True,
                  ):
+        self.name = name
         self.start_dt = start_dt
         self.end_dt = end_dt
         self.elapsed_dt = elapsed_dt
@@ -58,18 +61,59 @@ class OperationTimer():
             self.start()
 
     def __str__(self):
-        return str(self.__dict__)
+        return str(self.to_clean_dict())
 
     def __repr__(self):
-        return str(self.__dict__)
+        return str(self)
+
+    def to_json(self):
+        """returns a json version of this object while normalizing
+        custom types (like datetime to string)"""
+        self.update_elapsed()
+        working = deepcopy(self.__dict__)
+        if self.start_dt is not None:
+            working["start_dt"] = dt_as_str(self.start_dt)
+        if self.end_dt is not None:
+            working["end_dt"] = dt_as_str(self.end_dt)
+        if self.elapsed_dt is not None:
+            working["elapsed_dt"] = str(self.elapsed_dt)
+
+        return json.dumps(working)
+
+    def to_clean_dict(self):
+        """Converts to JSON string then back to a python dict.  This helps
+        to normalize types (I'm looking at YOU datetime) while ensuring
+        a portable python data structure"""
+        return json.loads(self.to_json())
+
+    def pretty(self):
+        """Attempts to return an indented multiline version of this object,
+        meant to provide an easy to read output for console or other purposes.
+        Optionally suppress_datapoints to reduce output size when not needed.
+        """
+        return json.dumps(self.to_clean_dict(),
+                          indent=4,
+                          )
+
+    def summary(self):
+        """Provide a one line str summary of the timer's current status, useful
+        for monotiring running timers or final review."""
+        self.update_elapsed()
+        return (f"OpTimer {self.name} | started {dt_as_str(self.start_dt)} | "
+                f"elapsed {self.elapsed_str} | ended {dt_as_str(self.end_dt)}")
 
     def start(self):
         self.start_dt = dt.now()
 
+    def update_elapsed(self, now=None):
+        if now is None:
+            now = dt.now()
+        self.elapsed_dt = now - self.start_dt
+        self.elapsed_str = re.sub("\\..*", "", str(self.elapsed_dt))
+
     def stop(self):
         self.end_dt = dt.now()
-        self.elapsed_dt = self.end_dt - self.start_dt
-        self.elapsed_str = re.sub("\\..*", "", str(self.elapsed_dt))
+        self.update_elapsed(self.end_dt)
 
 
 def sort_dict(d: dict):
@@ -152,6 +196,8 @@ def valid_event_category(c, exit=True):
 
 def dt_as_dt(d):
     """return a datetime object regardless of datetime or string input"""
+    if d is None:
+        return None
     if isinstance(d, dt):
         return d
     else:
@@ -160,6 +206,8 @@ def dt_as_dt(d):
 
 def dt_as_str(d):
     """return a string object regardless of datetime or string input"""
+    if d is None:
+        return None
     if isinstance(d, str):
         return d
     else:
@@ -168,6 +216,8 @@ def dt_as_str(d):
 
 def dt_as_time(time: str):
     """Return a datetime.time object for the given %H:%M:%S string"""
+    if time is None:
+        return None
     return dt_as_dt(f"2000-01-01 {time}").time()
 
 
@@ -181,11 +231,15 @@ def dow_name(dow: int):
 
 def dt_to_epoch(d):
     """return an epoch integer from a datetime or string"""
+    if d is None:
+        return None
     return int(dt_as_dt(d).strftime('%s'))
 
 
 def dt_from_epoch(d):
     """return a datetime object from an epoch integer"""
+    if d is None:
+        return None
     return dt.fromtimestamp(d)
 
 

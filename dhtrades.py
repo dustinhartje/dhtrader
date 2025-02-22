@@ -639,7 +639,7 @@ class Backtest():
                  class_name: str = "Backtest",
                  chart_tf=None,
                  chart_1m=None,
-                 autoload_charts: bool = True,
+                 autoload_charts: bool = False,
                  tradeseries: list = None,
                  ):
         self.start_dt = dhu.dt_as_str(start_dt)

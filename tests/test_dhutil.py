@@ -14,6 +14,7 @@
 # test_basics() review and make sure anything it was doing previously is
 #     covered, copying out any useful code before recreating
 # OperationTimer __init__, __str__, __repr__ similar to other classes
+# OperationTimer I also created summary and may others for this one?
 # OperationTimer can probably wrap creation, start, stop, and results
 #                into a single function, there's not much to this.  Just make
 #                sure it gets correct times (within a few secs of when they are
