@@ -105,15 +105,17 @@ class OperationTimer():
     def start(self):
         self.start_dt = dt.now()
 
-    def update_elapsed(self, now=None):
-        if now is None:
+    def update_elapsed(self):
+        if self.end_dt is None:
             now = dt.now()
+        else:
+            now = self.end_dt
         self.elapsed_dt = now - self.start_dt
         self.elapsed_str = re.sub("\\..*", "", str(self.elapsed_dt))
 
     def stop(self):
         self.end_dt = dt.now()
-        self.update_elapsed(self.end_dt)
+        self.update_elapsed()
 
 
 def sort_dict(d: dict):
