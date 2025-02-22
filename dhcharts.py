@@ -1224,10 +1224,10 @@ class Indicator():
         if not dhu.valid_trading_hours(trading_hours):
             raise ValueError(f"{trading_hours} not valid for trading_hours")
         self.trading_hours = trading_hours
-        if isinstance(symbol, Symbol):
-            self.symbol = symbol
-        else:
+        if isinstance(symbol, str):
             self.symbol = dhs.get_symbol_by_ticker(ticker=symbol)
+        else:
+            self.symbol = symbol
         self.calc_version = calc_version
         self.calc_details = calc_details
         self.start_dt = start_dt
@@ -1629,8 +1629,8 @@ class IndicatorEMA(Indicator):
         else:
             self.method = "close"
         supported_methods = ["close"]
-        if not parameters["method"] in supported_methods:
-            raise TypeError(f"Method {parameters['method']} not supported, "
+        if self.method not in supported_methods:
+            raise TypeError(f"self.method {self.method} not supported, "
                             f"must be one of: f{supported_methods}"
                             )
         if "smoothing" in parameters.keys():
