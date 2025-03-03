@@ -73,7 +73,7 @@ def test_Symbol_market_is_open():
         assert SYMBOL.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 23:59:00")
     # Friday
-    date = f"2025-01-17"
+    date = "2025-01-17"
     # Open at midnight
     assert SYMBOL.market_is_open(trading_hours="eth",
                                  target_dt=f"{date} 00:00:00")
@@ -109,7 +109,7 @@ def test_Symbol_market_is_open():
                                      target_dt=f"{date} 23:59:00")
 
     # Saturday
-    date = f"2025-01-18"
+    date = "2025-01-18"
     # Closed at midnight and midnight
     assert not SYMBOL.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 00:00:00")
@@ -145,7 +145,7 @@ def test_Symbol_market_is_open():
                                      target_dt=f"{date} 23:59:00")
 
     # Sunday
-    date = f"2025-01-19"
+    date = "2025-01-19"
     # Closed at midnight
     assert not SYMBOL.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 00:00:00")

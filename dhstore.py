@@ -64,8 +64,56 @@ def drop_collection(collection: str):
     return dhm.drop_collection(collection=collection)
 
 
+def get_all_records_by_collection(collection: str):
+    """Return all records from a given collection without attempting to
+    reconstruct them into dhtrader classes."""
+    return dhm.get_all_records_by_collection(collection=collection)
+
+
 ##############################################################################
 # Trades
+def reconstruct_trade(t):
+    """Takes a dictionary and builds a Trade() object from it.  Primarily used
+    by other functions to convert results retrieved from storage."""
+    return dht.Trade(open_dt=t["open_dt"],
+                     direction=t["direction"],
+                     timeframe=t["timeframe"],
+                     trading_hours=t["trading_hours"],
+                     entry_price=t["entry_price"],
+                     stop_target=t["stop_target"],
+                     prof_target=t["prof_target"],
+                     open_drawdown=t["open_drawdown"],
+                     close_drawdown=t["close_drawdown"],
+                     close_dt=t["close_dt"],
+                     created_dt=t["created_dt"],
+                     open_epoch=t["open_epoch"],
+                     exit_price=t["exit_price"],
+                     gain_loss=t["gain_loss"],
+                     stop_ticks=t["stop_ticks"],
+                     prof_ticks=t["prof_ticks"],
+                     offset_ticks=t["offset_ticks"],
+                     drawdown_impact=t["drawdown_impact"],
+                     symbol=t["symbol"],
+                     contracts=t["contracts"],
+                     contract_value=t["contract_value"],
+                     is_open=t["is_open"],
+                     profitable=t["profitable"],
+                     name=t["name"],
+                     version=t["version"],
+                     ts_id=t["ts_id"],
+                     bt_id=t["bt_id"],
+                     )
+
+
+def get_all_trades(collection: str = COLL_TRADES):
+    "Get all stored trades and return as a list."""
+    result = []
+    r = dhm.get_all_records_by_collection(collection=collection)
+    for t in r:
+        result.append(reconstruct_trade(t))
+
+    return result
+
 
 def get_trades_by_field(field: str,
                         value,
@@ -78,35 +126,7 @@ def get_trades_by_field(field: str,
                                 collection=collection,
                                 )
     for t in r:
-        trade = dht.Trade(open_dt=t["open_dt"],
-                          direction=t["direction"],
-                          timeframe=t["timeframe"],
-                          trading_hours=t["trading_hours"],
-                          entry_price=t["entry_price"],
-                          stop_target=t["stop_target"],
-                          prof_target=t["prof_target"],
-                          open_drawdown=t["open_drawdown"],
-                          close_drawdown=t["close_drawdown"],
-                          close_dt=t["close_dt"],
-                          created_dt=t["created_dt"],
-                          open_epoch=t["open_epoch"],
-                          exit_price=t["exit_price"],
-                          gain_loss=t["gain_loss"],
-                          stop_ticks=t["stop_ticks"],
-                          prof_ticks=t["prof_ticks"],
-                          offset_ticks=t["offset_ticks"],
-                          drawdown_impact=t["drawdown_impact"],
-                          symbol=t["symbol"],
-                          contracts=t["contracts"],
-                          contract_value=t["contract_value"],
-                          is_open=t["is_open"],
-                          profitable=t["profitable"],
-                          name=t["name"],
-                          version=t["version"],
-                          ts_id=t["ts_id"],
-                          bt_id=t["bt_id"],
-                          )
-        result.append(trade)
+        result.append(reconstruct_trade(t))
 
     return result
 
@@ -158,6 +178,29 @@ def delete_trades(symbol: str,
 
 ##############################################################################
 # TradeSeries
+def reconstruct_tradeseries(ts):
+    """Takes a dictionary and builds a Trade() object from it.  Primarily used
+    by other functions to convert results retrieved from storage."""
+    return dht.TradeSeries(start_dt=ts["start_dt"],
+                           end_dt=ts["end_dt"],
+                           timeframe=ts["timeframe"],
+                           symbol=ts["symbol"],
+                           name=ts["name"],
+                           params_str=ts["params_str"],
+                           ts_id=ts["ts_id"],
+                           bt_id=ts["bt_id"],
+                           trades=[],
+                           )
+
+
+def get_all_tradeseries(collection: str = COLL_TRADESERIES):
+    "Get all stored tradeseries and return as a list."""
+    result = []
+    r = dhm.get_all_records_by_collection(collection=collection)
+    for t in r:
+        result.append(reconstruct_tradeseries(t))
+
+    return result
 
 
 def get_tradeseries_by_field(field: str,
@@ -173,16 +216,7 @@ def get_tradeseries_by_field(field: str,
                                      collection=collection,
                                      )
     for t in r:
-        ts = dht.TradeSeries(start_dt=t["start_dt"],
-                             end_dt=t["end_dt"],
-                             timeframe=t["timeframe"],
-                             symbol=t["symbol"],
-                             name=t["name"],
-                             params_str=t["params_str"],
-                             ts_id=t["ts_id"],
-                             bt_id=t["bt_id"],
-                             trades=[],
-                             )
+        ts = reconstruct_tradeseries(t)
         if include_trades:
             ts.trades = get_trades_by_field(field="ts_id",
                                             value=ts.ts_id,
@@ -236,18 +270,23 @@ def delete_tradeseries(symbol: str,
 
 ##############################################################################
 # Backtests
+def get_all_backtests(collection: str = COLL_BACKTESTS):
+    """Get all stored backtests and return as a list if dicts.  Because
+    dhtrader.Backtest() is meant to be subclassed we don't return Backtest()
+    objects here.  Subclass implementations can warp this function to convert
+    dicts into their subclass specific object types as needed."""
+    return dhm.get_all_records_by_collection(collection=collection)
+
 
 def get_backtests_by_field(field: str,
                            value,
                            collection: str = COLL_BACKTESTS,
                            ):
     """Returns a list of Backtest() objects (as dictionaries), matching the
-    field=value provided."""
-    # Note that a Backtest() object is not returned in this case because
-    # the class is meant to be subclassed outside of the library, not to be
-    # directly used.  Since we can't predict what subclass will be needed
-    # we return the dictionary and leave it to the caller to instantiate
-    # their subclass with it.
+    field=value provided.  Because dhtrader.Backtest() is meant to be
+    subclassed we don't return Backtest() objects here.  Subclass
+    implementations can warp this function to convert dicts into their
+    subclass specific object types as needed."""
     result = dhm.get_backtests_by_field(field=field,
                                         value=value,
                                         collection=collection,
@@ -453,7 +492,7 @@ def store_indicator(indicator,
                     show_progress: bool = False,
                     ):
     """Store indicator meta and datapoints in central storage.  Does not
-    overwrite existing datapoints unless overwrite_dp == True"""
+    overwrite existing datapoints unless overwrite_dp is True"""
     op_timer = dhu.OperationTimer(name="Indicator Storage Job")
     # First store/replace the indicator meta doc itself
     i = indicator.to_clean_dict()
@@ -666,7 +705,7 @@ def review_candles(timeframe: str,
                    return_detail: bool = False,
                    ):
     """Provides aggregate summary data about candles in central storage
-    with options to further check completeness (integrity) of candle data and
+    with options to further check completeness/integrity of candle data and
     provide remediation"""
     if isinstance(symbol, str):
         symbol = get_symbol_by_ticker(ticker=symbol)

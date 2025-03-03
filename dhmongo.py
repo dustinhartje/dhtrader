@@ -97,6 +97,52 @@ def drop_collection(collection: str):
     return result
 
 
+def get_all_records_by_collection(collection: str):
+    """Return all records from a collection, typically wrapped by more
+    specific functions in dhstore such as get_all_trades()."""
+    c = db[collection]
+    result = c.find()
+
+    return list(result)
+
+
+def count_records_by_field(collection: str,
+                           field: str,
+                           ):
+    """Return aggregation with count of records split by a single field."""
+    c = db[collection]
+    result = list(c.aggregate([{"$group": {"_id": f"${field}",
+                                           "count": {"$sum": 1},
+                                           }}]))
+    for r in result:
+        r[field] = r.pop("_id")
+
+    return result
+
+
+def update_records_value(search: dict,
+                         update_field: str,
+                         update_value: str,
+                         collection: str,
+                         ):
+    """Using 'search', which should be a dict representing a mongo filter,
+    update all matching records update_field with the new update_value
+
+    Example:
+    To replace bt_id 'foo' with 'bar' on all backtests currently matching 'foo'
+    update_record_value(search={"bt_id": "foo"},
+                        update_field="bt_id",
+                        update_value="bar",
+                        collection="backtests")
+    """
+    c = db[collection]
+    result = c.update_many(search,
+                           {"$set": {update_field: update_value}}
+                           )
+
+    return result
+
+
 ##############################################################################
 # Trades
 

@@ -713,7 +713,7 @@ def remediate_candle_gaps(timeframe: str = "1m",
                             z.store()
                             fixed_unclear.append(c)
                         else:
-                            print(f"Skipping unclear candles for this run")
+                            print("Skipping unclear candles for this run")
                             skipped.append(c)
                     else:
                         print("Error creating zero volume candle, skipping",
