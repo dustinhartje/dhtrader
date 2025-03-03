@@ -220,11 +220,12 @@ def review_tradeseries(symbol: str,
     c = db[collection]
     try:
         tradeseries = list(c.aggregate([{"$match": {"symbol": symbol}},
-                                        {"$group": {"_id": "$ts_id",
+                                        {"$group": {"_id": {
+                                                            "bt_id": "$bt_id",
+                                                            "ts_id": "$ts_id"
+                                                            },
                                                     "count": {"$sum": 1},
                                                     }}]))
-        for t in tradeseries:
-            t["ts_id"] = t.pop("_id")
 
         return tradeseries
     # IndexError is raised if collection does not exist yet
