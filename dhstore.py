@@ -2,15 +2,6 @@
 # migration to a different storage solution in the future without
 # massive overhaul of backtest, chart, and trader code bases.
 
-# TODO rework this file to return dhtrader objects in it's results
-#      it's purpose is to abstract the mongo specifics away which it's not
-#      currently doing, and instead act as an shim to translate the mongo
-#      specifics into generic types that could still be used by anything
-#      accessing the data even if I swapped out the storage layer entirely
-# TODO also review each function, they should accept dhcharts objects for
-#      the most part rather than detailed arguments to reduce duplication
-#      and be more shim-ish in nature
-
 import csv
 import sys
 import progressbar
@@ -22,9 +13,6 @@ import dhcharts as dhc
 import dhtrades as dht
 import dhutil as dhu
 import dhmongo as dhm
-
-# TODO these should be moved to dhmongo.py as they are mongo specific
-#      this will require a bit of refactoring within functions below
 
 COLL_TRADES = "trades"
 COLL_TRADESERIES = "tradeseries"
@@ -636,7 +624,6 @@ def get_symbol_by_ticker(ticker: str):
     be replaced by proper storage and retrieval functions eventually but since
     I don't forsee working with any symbol other than ES for the forseeable
     future I'm deprioritizing that work."""
-    # TODO LOWPRI replace this with dhstore/dhmongo storage/retrieval functions
     if ticker in ["ES", "DELETEME"]:
         return dhc.Symbol(ticker=ticker,
                           name=ticker,
@@ -953,8 +940,6 @@ def drop_events(symbol: str,
 def test_basics():
     """runs a few basics tests, mostly used during initial development
        to confirm functionality as desired"""
-    # TODO consider converting these into unit tests some day
-    # https://docs.python.org/3/library/unittest.html
 
     print("=========================== CANDLES ==============================")
     # Test basic candle storing functionality

@@ -243,12 +243,6 @@ class Trade():
                 and self.entry_price == other.entry_price
                 and self.stop_target == other.stop_target
                 and self.prof_target == other.prof_target
-                # TODO drawdown stats are getting changed when Trades are
-                #      stored and then retrieved.  I also have not yet
-                #      verified they are calculating properly in the first
-                #      place (there's another TODO for this somewhere)
-                #      Ignoring for now as they are breaking tests and I'm not
-                #      yet using them anyways
                 # and self.open_drawdown == other.open_drawdown
                 # and self.close_drawdown == other.close_drawdown
                 and self.close_dt == other.close_dt
@@ -259,7 +253,6 @@ class Trade():
                 and self.stop_ticks == other.stop_ticks
                 and self.prof_ticks == other.prof_ticks
                 and self.offset_ticks == other.offset_ticks
-                # TODO another drawdown thing to fix later
                 # and self.drawdown_impact == other.drawdown_impact
                 and self.symbol == other.symbol
                 and self.contracts == other.contracts
@@ -345,57 +338,14 @@ class Trade():
         self.gain_loss = (((self.exit_price - self.entry_price)
                           * contract_multiplier)) * self.flipper
         # Close as a profitable trade if we made money
-        # TODO I'm not sure if I have drawdown impacts calculating correctly
-        #      I may need to do some trades and check the direct impact
-        #      in apex to confirm my understanding of how they work.
-        #      Specifically when it closes in profit but not at the max
-        #      profit it could have seen i.e. it goes up 10pts but does not
-        #      reach my profit target and stops out after pulling back 5pts.
-        #      Is my drawdown balance left the same as before the trade
-        #      because I gained 5 from the profit but lost 5 from the pb?
-        #      or it it up 5 because I gained 10 then lost 5 on the drawdown?
-        #      In other words, is the drawdown impact always equal to the gain
-        #      on a winning trade
-        #      TODO can I pull some trades from apex history to check this
-        #           so I don't have to wait until sunday evening to test?
-        #      TODO I should rewrite tests at the bottom to reflect actual
-        #           trades I did so I can confirm all the results, including
-        #           drawdown impact, against real results vs theory
-        #      TODO be sure to test all scenarios:
-        #           * profitable trade hits profit target
-        #           * profitable trade with small pullback
-        #           * trade comes back to exit at breakeven
-        #           * exit at a loss after it goes green substantially first
-        #           * trade never sees price above entry just goes to stop
-        #           * loss but pulls back towards BE some before I exit
-        #           TODO write a unit test that checks each of these scenarios
-        #                and confirms all of them get the correct result
-        #                This one really does need to be a comprehensive test
-        #                I'm running regularly probably as a pipeline
-        #                because this has to be right or everything else is
-        #                untrustable.  It's worth putting an evening into
-        #                figuring out and then maybe if it's quick I can put
-        #                a few hours into updating others into unit tests
-        #                What do I want it to do on a test failure?  Can
-        #                it email me?  would prefer the commit goes through
-        #                either way I just want a notification.  Commit hook
-        #                testing locally might be an ok first step for now
-        #                if it doesn't take very long each time
-        #      TODO If I can't test with live trades today, go watch ATF vids
-        #           and get my best guess on how it works then test live
-        #           with MES sunday evening to confirm, this is not a
-        #           blocker to building on Trades yet I just can't trust the
-        #           any backtest trades until this is all confirmed and tested
         if self.gain_loss > 0:
             self.profitable = True
-            # TODO update this comment if I learn differently in testing
             # On a profitable trade, our drawdown_impact is equal to the
             # profit made on the trade.
             self.drawdown_impact = self.gain_loss
         # Close as a losing trade if we lost money
         else:
             self.profitable = False
-            # TODO also update these comments based on real life testing
             # If the trade was a loss, our drawdown is negatively impacted
             # by the delta from the entry to the max profit it reached
             # (drawdown_impact) plus the stop target / amount lost in the trade
@@ -874,14 +824,3 @@ class Backtest():
         backtest to another.
         """
         pass
-
-    # TODO method to check status of this backtest by bt_id
-    #      --what did I mean by this?!?  status in storage maybe, like the
-    #        range of it's parameters and tradeseries dates?
-    #      --possibly I meant when it was last run / where to pick up on next
-    #        run?  Or if it's ever been run at all?
-    # TODO method or update to calc method which will retrieve results
-    #      from prior runs and then update them.  Since there may be
-    #      many trade series involved this might get tricky, start by just
-    #      getting it working on a wipe-and-start-over-each-time basis
-    #      then I'll have to work through saving/retrieving/updating carefully

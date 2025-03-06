@@ -38,10 +38,6 @@ def logd(msg: str):
     log.debug(msg)
 
 
-# TODO review all functions in this file.  Some may make sense to move to
-#      other files (such as dhstore for storage validation stuff) or as
-#      methods on dhcharts objects rather than standalone functions
-
 class OperationTimer():
     def __init__(self,
                  name: str,
@@ -455,10 +451,7 @@ def expected_candle_datetimes(start_dt,
     ender = dt_as_dt(end_dt)
     while this <= ender:
         include = True
-        # TODO revisit this now that I've got Symbol.market_is_open() avail
-        #      it may be possible to integrate that method to simplify?
-        #      In fact, also integrating next_candle_start() might turn this
-        #      into about a 3 line loop...?
+        # TODO Issue 21
         # Check if this candle falls in the weekday closure window
         this_weekday_close = this.replace(hour=weekday_close["hour"],
                                           minute=weekday_close["minute"],
@@ -1124,14 +1117,6 @@ def summarize_candles(timeframe: str,
 def test_basics():
     """runs a few basics tests, mostly used during initial development
        to confirm functionality as desired"""
-    # TODO consider converting these into unit tests some day
-    # https://docs.python.org/3/library/unittest.html
-
-    # TODO in lieu of real unit tests, start a test_results empty list and
-    #      record a quick oneliner for each easily confirmable test as it
-    #      finishes, something like "OK - Trade() Storage and retrieval"
-    #      then print them all at the end.  For non-easily-confirmed could
-    #      add a note like "UNKNOWN - Visual confirm needed for Trade.pretty()
     # Test datatime functions
     ts = "2024-01-01 12:30:00"
     print(f"Starting with string: {ts} {type(ts)}")

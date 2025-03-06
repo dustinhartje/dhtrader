@@ -21,6 +21,10 @@ from dhutil import dt_as_dt, dt_as_str, dow_name
 # Candle store, retreive, delete
 # Candle contains_datetime() pass and fail scenarios
 # Candle contains_price() pass and fail scenarios
+# Check candle storage to confirm no improper datetimes are included
+#     Particularly for r1h end of day, the last candle should start
+#     at 15:30 and end at 16:14 and there should not be a new candle at
+#     16:00
 
 
 # TODO Update this to be the new create and test_creation functions

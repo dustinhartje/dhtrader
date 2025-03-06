@@ -212,19 +212,6 @@ def delete_trades(symbol: str,
     Example to delete all trade records with name=="DELETEME":
         delete_trades(symbol="ES", field="name", value="DELETEME")
     """
-    # TODO For now I mostly just need to wipe specific runs so this is enough
-    #      as I can specifiy a 'name', 'ts_id', or 'bt_id' in most of the
-    #      cases I can imagine to get it operational.
-    #      In the future I may need to do more complex queries both for
-    #      review and deletion as I expand.  Based on a few stackoverflow
-    #      hits it looks like I can build dictionaries with Mongo queries to
-    #      handle this but will need to do a fair amount of learning and
-    #      testing to get there, so deferring for now.  When needed though I
-    #      should be able to build queries using $match, $and, and other such
-    #      things to find and selectively delete and then pass those into
-    #      this function, or build them within the funtion based on arg flags.
-    #      A few simple query examples can be found in this file already to
-    #      build ideas off of when that day comes.
     c = db[collection]
     result = c.delete_many({field: value})
 
@@ -654,14 +641,6 @@ def test_basics():
     """runs a few basics tests, mostly used during initial development
        to confirm functionality as desired.  Also dumps a basic summary
        of the database for quick checks at the end"""
-    # TODO consider converting these into unit tests some day
-    # https://docs.python.org/3/library/unittest.html
-
-    # TODO in lieu of real unit tests, start a test_results empty list and
-    #      record a quick oneliner for each easily confirmable test as it
-    #      finishes, something like "OK - Trade() Storage and retrieval"
-    #      then print them all at the end.  For non-easily-confirmed could
-    #      add a note like "UNKNOWN - Visual confirm needed for Trade.pretty()
     print("\nListing current collections before we make changes")
     print(list_collections())
 

@@ -8,34 +8,6 @@ from statistics import fmean
 from copy import deepcopy
 import logging
 
-
-# TODO -----CURRENT PRIORITIES JAN 2025-----
-# TODO add low hanging fruit like HOD/LOD/YRHI/YRLO/OOD/GXHI/GXLO/YRCL
-# TODO add subclass of Inidicators class for each type of indicator I want
-#      9 & 20 EMAs, HOD, LOD, OOD, GXLO, GXHI should all be easy to do now
-#      when I get around to adding 1d timeframes also do 20/50/100/200dSMA
-#      later maybe do VWAP, RSI, what else?
-# TODO get a backtester and analyzer built for EMAs as a framework that can
-#      be used for other indicators.  Should spit out raw "best" as well as
-#      things like running-last-week, running-lastX as the first version.
-#      Other more complex scenarios can be added later per-idea, including
-#      stuff like what the opening range or daily chart looks like as triggers
-#      --------------------------------------
-
-# TODO add function to update some or all indicators based on incoming candles
-#      this should accept a list of indicators to loop through by short_name,
-#      with "all" being the default only item in the list.  For each indicator
-#      if it's in the list or all is in the list go ahead and run it.  Each of
-#      the indicators gets built as an object then it's store method is run
-#      by default
-#      --really the looper should go in either dhutility.py or refreshdata.py.
-#      the method on each indicator should just be able to update itself
-#      using the latest candles avail in storage.  It should have options
-#      to just calculate new datapoints or wipe and recalc from beginning
-# TODO update docstrings in this and all other module files to google style:
-#      https://sphinxcontrib-napoleon.readthedocs.io/
-#          en/latest/example_google.html
-
 CANDLE_TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w']
 BEGINNING_OF_TIME = "2024-01-01 00:00:00"
 
@@ -321,13 +293,6 @@ class Symbol():
         backtest results over meaningful periods of time and it's presumed
         one would probably not want to trade these periods anyways.
         """
-        # TODO LOWPRI As noted in docstring, rare valid trading timeframes may
-        #             be skipped due to events beginning or ending inside of
-        #             standars market hours.  If this becomes problematic
-        #             revisit and try to account for them in this and the other
-        #             related _eth/rth_open/close methods.  I don't expect
-        #             I'll actually trade within them though.
-
         # Prep vars
         if events is None:
             events = []
@@ -888,28 +853,6 @@ class Event():
 
 
 class Day():
-    # TODO - Review this class for possible deprecation.  I suspect I created
-    #        it mostly for use on the assumption I'd be writing candle data
-    #        to disk in a Day based folder structure which is no longer needed.
-    #        It looks like the only place I've used it is in firstrate.py
-    #        in the process_unpacked_data() function which appears to also
-    #        probably be obsolete at a glance and possibly also deprecatable.
-    #      --on the flip side, this would still be handy for identifying things
-    #        like opening range characteristics.  Perhaps rather than having
-    #        candle specific attributes it should just retrieve r1d and e1d
-    #        candles from storage during init then calculate things like
-    #        opening range and such that are day specific.  HOD, LOD, stuff
-    #        like that.  Only things that aren't already in a candle or are
-    #        essentially indicators.  Not sure what all that would mean yet
-    #        so basically just simplify it down to unique things, possibly
-    #        remove the charts or maybe those are helpful at least for rth?
-    #        Then just add things to it if/when I find uses for it while
-    #        building backtesters.  If I get several backtesters built and
-    #        still have not found a use for this class or see a likely use for
-    #        it in upcoming backtests then it will be safe to remove.
-    #      --it could also be potentially useful for somehow capturing Brooks
-    #        style encyclopedia patterns across the whole day?  How would I use
-    #        something like that?
     def __init__(self,
                  d_symbol,
                  d_date,
@@ -1198,24 +1141,6 @@ class Indicator():
         abbreviations as they are used in tagging and storage, think like
         sma, hod, vwap, etc.  This class won't be used directly, use it's
         child classes which will be indicator type specific"""
-        # TODO method to populate datapoints from storage, which should then
-        #      possibly also calculate anything missing based on underlying
-        #      candles' timestamps.  Or maybe just trigger a full recalc
-        #      if anything seems amiss?
-        #      TODO note earliest and latest timestamps then use expected
-        #      candle functionality to check for missing datapoints.  Will
-        #      need to account somehow for things like the first 8 bars of a
-        #      9 bar ema/sma not being included, that's gonna get tricky
-        #      if I don't want to write this to be indicator specific.  Maybe
-        #      I can include leading and trailing gap parameters with default
-        #      zero in the base class then adjust to be indicator specific
-        #      in the subclasses, that should work!
-        # TODO Review get_info(), is it still needed after creation of
-        #      .pretty()?
-        #      If so, add earliest and latest datapoints to get_info()
-        #      see dhmongo review_candles() for example
-        #      If ditching it maybe add them as attributes?  be sure to recalc
-        #      them whenever I adjust datapoints if I do
         self.name = name
         self.description = description
         if not dhu.valid_timeframe(timeframe):
@@ -1505,15 +1430,6 @@ class IndicatorSMA(Indicator):
                          parameters=parameters,
                          )
         """Subclass of Indicator() specifically used for simple moving avg"""
-        # TODO Need to revisit before using this class.  I've made further
-        #      refinements to IndicatorEMA that should be reflected here as
-        #      well, particularly around name, description, and ind_id attribs.
-        #      Also go through all the methods too though and catch up any
-        #      other changes I've made since these should be pretty much the
-        #      same other than the calculation formula.  In fact maybe they
-        #      can be merged into a single IndicatorMA class with EMA/SMA as
-        #      a parameter?
-
         # Confirm that parameters includes the subclass specific arguments
         # needed for this type of indicator
         # For simple SMA we just need a length and a method/value to use
