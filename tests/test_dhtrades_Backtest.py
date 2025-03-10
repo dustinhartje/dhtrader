@@ -44,7 +44,6 @@ def create_trade(open_dt="2025-01-02 12:00:00",
                  stop_target=4995,
                  prof_ticks=20,
                  prof_target=5005,
-                 open_drawdown=1000,
                  name="DELETEME"
                  ):
     return dht.Trade(open_dt=open_dt,
@@ -56,7 +55,6 @@ def create_trade(open_dt="2025-01-02 12:00:00",
                      stop_target=stop_target,
                      prof_ticks=prof_ticks,
                      prof_target=prof_target,
-                     open_drawdown=open_drawdown,
                      name=name,
                      )
 
@@ -163,7 +161,7 @@ def test_Backtest_create_and_verify_pretty():
     bt.add_tradeseries(ts)
     # With TradeSeries and Trdes shown
     assert len(bt.pretty(suppress_tradeseries=False,
-                         suppress_trades=False).splitlines()) == 61
+                         suppress_trades=False).splitlines()) == 57
 
 
 def test_Backtest_load_charts():

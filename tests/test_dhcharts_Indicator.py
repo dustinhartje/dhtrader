@@ -72,7 +72,7 @@ import sys
 
 # TODO revamp this to have a create_* function similar to dhtrades patterns
 # Create a base class Indicator and calculate
-def hide_dhcharts_Indicator_demo_hod_creation_and_calculation():
+def hide_Indicator_demo_hod_creation_and_calculation():
     # Confirm RTH datapoints are calculated
     ind = dhc.Indicator(name="DELETEME-hod-demo",
                         description="Code testing use only",
@@ -596,7 +596,7 @@ def Indicator_spotcheck_ES_rth_r1h_EMA_close_l20_s2(i):
     pass
 
 
-def hide_dhcharts_Indicator_create_and_calculate():
+def hide_Indicator_create_and_calculate():
     # TODO break this up into however many functions make sense once converted
     # Building 5m9sma for 2025-01-08 9:30am-11:30am
     itest = dhc.IndicatorSMA(name="TestSMA-DELETEME",
@@ -663,7 +663,7 @@ def hide_dhcharts_Indicator_create_and_calculate():
         assert expected[i] == calculated[i]
 
 
-def hide_dhcharts_Indicator_get_datapoints():
+def hide_Indicator_get_datapoints():
     itest = dhc.IndicatorEMA(name="TestEMA-DELETEME",
                              timeframe="e1h",
                              trading_hours="eth",
@@ -690,7 +690,7 @@ def hide_dhcharts_Indicator_get_datapoints():
     assert itest.prev_datapoint(dt=dp_dt).value == 5884.5
 
 
-def hide_dhcharts_Indicator_storage_and_retrieval():
+def hide_Indicator_storage_and_retrieval():
     itest = dhc.IndicatorEMA(name="TestEMA-DELETEME",
                              timeframe="e1h",
                              trading_hours="eth",

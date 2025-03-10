@@ -19,7 +19,6 @@ Each class should then determine, within it's own methods exclusively, whether a
 Each class with nested objects should include a .to_clean_dict() method which will return a python dictionary of it's storable attributes while stripping any nested objects.  This way the storage function can receive the entire object and call back to it to get just the storable parts to pass to dhmongo as a json object while remaining compatible with future storage systems that may need something different.
 
 # Events suggestions
-
 The following events are what I find helpful to load into my central storage for use in backtesting analysis.  There is no hard fast rule here, it's up to the user to determine what events are relevant for their testing.  That being said, gap analsyis and similar functions will throw errors if market closures are not included.
 
 * Holidays (Closed)
@@ -32,3 +31,14 @@ The following events are what I find helpful to load into my central storage for
   * NFP
   * What else?
 * Periods of high volatility due to unexpected news
+
+# Analyzing with trailing drawdown effects in prop firm accounts
+The library makes some efforts to assist traders in factoring trailing drawdowns into their analysis process to simulate how real world trading would play out in a prop firm account.  This is primarily handled through on-demand methods on the Trade and TradeSeries object types so that it can be applied without recalculating the backtest.  For traders working in real cash accounts these methods can simply be ignored as they are not applied as defaults.
+
+Trailing drawdowns are assumed to work like Apex Trader Funding style as that's what I'm using.  The details are listed out at https://support.apextraderfunding.com/hc/en-us/articles/4408610260507-How-Does-the-Trailing-Threshold-Work-Master-Course but I will attempt to summarize in my own words here:
+
+* Each account has a maximum trailing threshold amount, often referred to as a "drawdown distance", which determines the account balance dollar amount at which your account will be liquidated and closed if you lose too much money trading.
+* This drawdown distance is udpated live as trades are running, tracking the difference between the entry price and the current price until it is locked in by the trade being closed.  It can never exceed the maximum trailing threshold amount, nor can it go below zero as this will liquidate the account.
+* When a profitable trade would take the drawdown distance above the maximum trailing threshold amount, the level at which you will be liquidated increases by the same amount as the "overreach" even if you do not close the trade until it pulls back.
+
+Note that this library only factors in eval style drawdowns that never stop trailing, and it does not necessarily trigger liquidation out of the box, allowing the user to simply work with the outputs of the applicable methods to decide when and whether to consider it a failed Trade or TradeSeries in the context of their specific strategy ideas.
