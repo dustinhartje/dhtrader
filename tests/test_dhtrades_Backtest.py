@@ -44,7 +44,7 @@ def create_trade(open_dt="2025-01-02 12:00:00",
                  stop_target=4995,
                  prof_ticks=20,
                  prof_target=5005,
-                 open_drawdown=1000,
+                 drawdown_open=1000,
                  name="DELETEME"
                  ):
     return dht.Trade(open_dt=open_dt,
@@ -56,7 +56,7 @@ def create_trade(open_dt="2025-01-02 12:00:00",
                      stop_target=stop_target,
                      prof_ticks=prof_ticks,
                      prof_target=prof_target,
-                     open_drawdown=open_drawdown,
+                     drawdown_open=drawdown_open,
                      name=name,
                      )
 
