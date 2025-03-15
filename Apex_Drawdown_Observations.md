@@ -203,9 +203,8 @@ Drawdown distance before: 6234.40
 Acct balance before: 249734.40
 Drawdown distance after: 6448.45
 Acct balance after: 249993.80
-Entry price: 5752.50
 Entry time: 3/10/2025 12:40:41am
-Peak profit seen: 5746 (26 ticks)
+Entry price: 5752.50
 Direction: short
 Exit price: 5747.25
 Exit time: 3/10/2025 12:54:10am
@@ -217,6 +216,17 @@ Started under max drawdown, pushed through it by a few ticks, then fell under it
 
 DONE trade starting below max drawdown, pushing past it, then falling back to close at least a few ticks below it
 
+
+##########################
+Reviewing in light of discrepencies between my calculations and the
+actual drawdown impact result I saw in this trade:
+drawdown distance was 6234.40, went up 325 to 6559.40 (overage 59.40)
+closed at 5747.25 for a closing profit of 5.25 pts or $262.50
+6234.4 + 262.5 = 6496.9 - fees (3.10) - overage (59.4) = 6434.4 = $200 impact
+why did it land on 214.05 in real life?  Do I have a bug I'm not seeing in
+how I'm calculating this or is this a Tradovate/Apex shenanigan/problem?  Or
+maybe I just wrote one of the numbers down wrong?
+##########################
 
 --------------------------------------------------------------------
 Account #85
@@ -235,3 +245,40 @@ Drawdown change: 0
 
 DONE trade starting at max drawdown and ending in profit, should result in 0 drawdown distance change but a positive gain/loss
 --------------------------------------------------------------------
+Account #84
+
+Contracts: 2
+Drawdown distance before: 6161.05
+Acct balance before: 249706.40
+Drawdown distance after: 6321.90
+Acct balance after: 250275.20
+Entry price: 5625.75
+Entry time: 3/14/2025 14:36:49
+Peak profit seen: 5633.75
+Direction: long
+Exit price: 5631.50
+Exit time: 3/14/2025 14:41:21
+G/L of: 568.80
+Drawdown change: 160.85
+
+TODO add to tests
+long trade, multiple contracts, goes into drawdown_max then partial pullback
+--------------------------------------------------------------------
+Account #84
+
+Contracts: 3
+Drawdown distance before: 6321.90
+Acct balance before: 250275.20
+Drawdown distance after: 6382.85
+Acct balance after: 250378.40
+Entry price: 5629.50
+Entry time: 3/14/2025 14:51:28
+Peak profit seen: 5627.50 
+Direction: short
+Exit price: 5628.75
+Exit time: 3/14/2025 14:52:22
+G/L of: 112.20
+Drawdown change: 60.95
+
+TODO add to tests
+new short trade to check since first failed me, multiple contracts, goes into drawdown_max then partial pullback

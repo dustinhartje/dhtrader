@@ -64,6 +64,13 @@ except Exception:
     print("Log into the Atlas web interface > Clusters > Cluster0 > Connect "
           "button.  It should show a dialogue that allows me to add it.")
     print("If this keeps happening maybe add a subnet range too?")
+    # TODO LOWPRI - it would be better to raise the exception with the text
+    #      above as part of it's message rather than printing it so it shows
+    #      in the stack trace, currently it's hard to spot when the error
+    #      occurs.  Need to make a github issue for this, unfortunately my
+    #      internet is down currently which is what caused the error to pop
+    #      so I'm adding it here in hopes I run into it again while reviewing
+    #      the diff at commit time
     sys.exit()
 
 

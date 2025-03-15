@@ -192,6 +192,13 @@ def valid_event_category(c, exit=True):
         return False
 
 
+def flote(n: float):
+    """Simply rounds floats to 2 decimals to eliminate the long trailng
+    decimal anomalies that can due to weird floating math intricacies I don't
+    really understand that the community seems to just accept as unavoidable"""
+    return round(n, 2)
+
+
 def dt_as_dt(d):
     """return a datetime object regardless of datetime or string input"""
     if d is None:
