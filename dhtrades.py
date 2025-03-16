@@ -359,19 +359,6 @@ class Trade():
             return {"closed": True}
         else:
             return {"closed": False}
-        # TODO ensure there are tests in place to cover all of the new
-        #      attributes and calculations being done in this method as well
-        #      as anything that changed in the close method.
-        #      TODO ensure all new attributes are asserted in tests at trade
-        #           creation
-        #      TODO create basic tests for each of the new methods' outputs
-        #           covering all of the fields included
-        # TODO revamp the EMA backtester calculation methods which were doing
-        #      much of the logic now being handled directly by Trade.  Make
-        #      sure that's working well before finalizing this commit
-        # TODO check both repos for references to Trade, any other code
-        #      need updating?  Check for any backtesting tests failing that
-        #      might need fixes on this side
 
     def drawdown_impact(self,
                         drawdown_open: float,
@@ -388,7 +375,6 @@ class Trade():
         # until the trade is closed.  Returning results could cause mistakes.
         if self.is_open:
             return None
-        cmult = contracts * contract_value
         # Determine max gain and loss prices seen during trade
         if self.direction == "long":
             max_gain = self.high_price - self.entry_price
@@ -397,6 +383,7 @@ class Trade():
             max_gain = self.entry_price - self.low_price
             max_loss = self.high_price - self.entry_price
         # Use these to calculate highest and lowest drawdown distances seen
+        cmult = contracts * contract_value
         drawdown_max = drawdown_open + (max_gain * cmult)
         drawdown_min = drawdown_open - (max_loss * cmult)
         if drawdown_max > drawdown_limit:
@@ -412,7 +399,7 @@ class Trade():
                           - (contracts * contract_fee))
         # Closing drawdown cannot exceed drawdown limit on account
         drawdown_close = min(drawdown_close, drawdown_limit)
-        # Round all because float math anomalies create trailing decimals
+        # Round results because float math anomalies create trailing decimals
         drawdown_open = round(drawdown_open, 2)
         drawdown_close = round(drawdown_close, 2)
         drawdown_max = round(drawdown_max, 2)
@@ -439,16 +426,34 @@ class Trade():
         # Cannot return balance impact until trade is closed
         if self.is_open:
             return None
+        # Determine max gain and loss prices seen during trade
+        if self.direction == "long":
+            max_gain = self.high_price - self.entry_price
+            max_loss = self.entry_price - self.low_price
+        elif self.direction == "short":
+            max_gain = self.entry_price - self.low_price
+            max_loss = self.high_price - self.entry_price
+        # Use these to calculate highest and lowest balances seen
+        cmult = contracts * contract_value
+        balance_max = balance_open + (max_gain * cmult)
+        balance_min = balance_open - (max_loss * cmult)
         # Calculate gain/loss of the trade
-        gl = (((self.exit_price - self.entry_price)
-              * contracts * contract_value * self.flipper)
-              - (contracts * contract_fee))
+        gain_loss = (((self.exit_price - self.entry_price)
+                     * contracts * contract_value * self.flipper)
+                     - (contracts * contract_fee))
         # Closing balance is just the difference from opening balance
-        balance_close = round((balance_open + gl), 2)
+        balance_close = round((balance_open + gain_loss), 2)
+        # Round results because float math anomalies create trailing decimals
+        balance_close = round(balance_close, 2)
+        balance_max = round(balance_max, 2)
+        balance_min = round(balance_min, 2)
+        gain_loss = round(gain_loss, 2)
 
         return {"balance_open": balance_open,
                 "balance_close": balance_close,
-                "gain_loss": gl,
+                "balance_max": balance_max,
+                "balance_min": balance_min,
+                "gain_loss": gain_loss,
                 }
 
     def close(self,

@@ -26,8 +26,8 @@ Drawdown change: 18.80
 
 not sure if it dipped below entry initiall but it did go up several ticks and then fell back into a trailing stop for 1 tick profit
 2 contracts and 1 tick should be worth $25, so g/l of 18.8 implies $3.10/contract in fees
-DONE long trade with more than 1 contract
-DONE long partial profit (closed after peak and pullback but still ITM)
+long trade with more than 1 contract
+long partial profit (closed after peak and pullback but still ITM)
 --------------------------------------------------------------------
 Drawdown distance before: 1776.08
 Acct balance before: 245502.73
@@ -45,7 +45,7 @@ Drawdown change: -40.6
 dropped 1 tick under entry iniitally and got at least 1 tick over as well before falling to stop target for "max loss"
 closed 3 ticks below entry so raw loss would be 37.50.  $3.10 fee per contract
 confirmed here
-DONE long close at loss after some green
+long close at loss after some green
 --------------------------------------------------------------------
 Drawdown distance before: 1735.48
 Acct balance before: 245462.13
@@ -62,7 +62,7 @@ Drawdown change: -3.10
 
 went up to profit target but didn't fill then fell back below entry.  I moved
 profit target down to BE and it popped back up for the fill
-DONE long close at breakeven after some downside seen
+long close at breakeven after some downside seen
 --------------------------------------------------------------------
 Drawdown distance before: 1732.38
 Acct balance before: 245459.03
@@ -78,7 +78,7 @@ G/L of: 21.90
 Drawdown change: 21.90
 
 never went red, straight to profit target
-DONE long max profit
+long max profit
 --------------------------------------------------------------------
 3 contracts
 
@@ -99,8 +99,8 @@ went to max profit with no downside seen
 3 contracts * 3 ticks should see 37.5 profit per tick for 112.50 total
 minues 3.10 * 3 contracts in fees = 103.20 just as shown
 
-DONE short max profit
-DONE short trade with more than 1 contract
+short max profit
+short trade with more than 1 contract
 --------------------------------------------------------------------
 Drawdown distance before: 1929.48
 Acct balance before: 245656.13
@@ -116,7 +116,7 @@ G/L of: -28.10
 Drawdown change: -28.10
 never say any green, straight to stop target
 
-DONE long close at direct loss (never got green)
+long close at direct loss (never got green)
 --------------------------------------------------------------------
 Drawdown distance before: 1901.38
 Acct balance before: 245628.03
@@ -131,7 +131,7 @@ Exit time: 3/10/2025 12:05:12am
 G/L of: -65.6
 Drawdown change: -65.6
 no profit seen, straight to stop target
-DONE short close at direct loss (never got green)
+short close at direct loss (never got green)
 --------------------------------------------------------------------
 Drawdown distance before: 1835.78
 Acct balance before: 245562.43
@@ -146,7 +146,7 @@ Exit time: 3/10/2025 12:11:08am
 G/L of: -28.10
 Drawdown change: -28.10
 got open of candle, initially went into green 2 ticks then flipped red
-DONE short close at loss after some green
+short close at loss after some green
 --------------------------------------------------------------------
 Drawdown distance before: 1807.68
 Acct balance before: 245534.33
@@ -161,7 +161,7 @@ Exit time: 3/10/2025 12:13:54am
 G/L of: -3.10
 Drawdown change: -3.10
 initially went negative 2 ticks, caught at breakeven
-DONE short close at breakeven after some downside seen
+short close at breakeven after some downside seen
 --------------------------------------------------------------------
 Drawdown distance before: 1804.58
 Acct balance before: 245531.23
@@ -175,7 +175,7 @@ Exit price: 5754.00
 Exit time: 3/10/2025 12:19:58am
 G/L of: 21.90
 Drawdown change: 21.90
-DONE short partial profit (closed after peak and pullback but still ITM)
+short partial profit (closed after peak and pullback but still ITM)
 
 =======================================================================
 Using a few reset accounts to try to get trades around max drawdowns
@@ -210,24 +210,12 @@ Exit price: 5747.25
 Exit time: 3/10/2025 12:54:10am
 G/L of: 259.40
 Drawdown change: 214.05
+Observed trailing change (G/L - Drawdown change) = 45.35
 
 Started under max drawdown, pushed through it by a few ticks, then fell under it to get closed by my trailing stop.  This trade shows how breaching the max drawdown triggers a trailing distance and resulting in Gain/Loss and Drawdown Distance changes not being equal for such trades because drawdown distance gain was limited by the max drawdown while Gain continued to increase, then both fell back equally from the peak profit seen.
 
 
-DONE trade starting below max drawdown, pushing past it, then falling back to close at least a few ticks below it
-
-
-##########################
-Reviewing in light of discrepencies between my calculations and the
-actual drawdown impact result I saw in this trade:
-drawdown distance was 6234.40, went up 325 to 6559.40 (overage 59.40)
-closed at 5747.25 for a closing profit of 5.25 pts or $262.50
-6234.4 + 262.5 = 6496.9 - fees (3.10) - overage (59.4) = 6434.4 = $200 impact
-why did it land on 214.05 in real life?  Do I have a bug I'm not seeing in
-how I'm calculating this or is this a Tradovate/Apex shenanigan/problem?  Or
-maybe I just wrote one of the numbers down wrong?
-##########################
-
+trade starting below max drawdown, pushing past it, then falling back to close at least a few ticks below it
 --------------------------------------------------------------------
 Account #85
 Drawdown distance before: 6500
@@ -243,7 +231,7 @@ Exit time: 3/10/2025 12:53:35am
 G/L of: 34.40
 Drawdown change: 0
 
-DONE trade starting at max drawdown and ending in profit, should result in 0 drawdown distance change but a positive gain/loss
+trade starting at max drawdown and ending in profit, should result in 0 drawdown distance change but a positive gain/loss
 --------------------------------------------------------------------
 Account #84
 
@@ -260,9 +248,9 @@ Exit price: 5631.50
 Exit time: 3/14/2025 14:41:21
 G/L of: 568.80
 Drawdown change: 160.85
+Observed trailing change (G/L - Drawdown change) = 407.95
 
-TODO add to tests
-long trade, multiple contracts, goes into drawdown_max then partial pullback
+long trade, multiple contracts, goes into drawdown_limit then partial pullback
 --------------------------------------------------------------------
 Account #84
 
@@ -279,6 +267,6 @@ Exit price: 5628.75
 Exit time: 3/14/2025 14:52:22
 G/L of: 112.20
 Drawdown change: 60.95
+Observed trailing change (G/L - Drawdown change) = 51.25
 
-TODO add to tests
-new short trade to check since first failed me, multiple contracts, goes into drawdown_max then partial pullback
+new short trade to check since first failed me, multiple contracts, goes into drawdown_limit then partial pullback
