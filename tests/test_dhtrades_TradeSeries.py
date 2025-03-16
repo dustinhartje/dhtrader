@@ -41,7 +41,6 @@ def create_trade(open_dt="2025-01-02 12:00:00",
                  stop_target=4995,
                  prof_ticks=20,
                  prof_target=5005,
-                 drawdown_open=1000,
                  name="DELETEME"
                  ):
     return dht.Trade(open_dt=open_dt,
@@ -54,7 +53,6 @@ def create_trade(open_dt="2025-01-02 12:00:00",
                      stop_target=stop_target,
                      prof_ticks=prof_ticks,
                      prof_target=prof_target,
-                     drawdown_open=drawdown_open,
                      name=name,
                      )
 
@@ -122,7 +120,7 @@ def test_TradeSeries_create_and_verify_pretty():
     assert len(ts.pretty().splitlines()) == 13
     ts.add_trade(test_trade)
     # With trades shown
-    assert len(ts.pretty(suppress_trades=False).splitlines()) == 42
+    assert len(ts.pretty(suppress_trades=False).splitlines()) == 38
 
 
 def test_TradeSeries_add_sort_and_get_trades():

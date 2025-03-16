@@ -43,20 +43,13 @@ class Trade():
         entry_price (float): price at which trade was initiated
         stop_target (float): price at which trade would auto exit at loss
         prof_target (float): price at which trade would auto exit at profit
-        drawdown_max (float): account maximum allowed drawdown distance i.e.
-            the level at which the liquidation level starts trailing up
-        drawdown_open (float): account drawdown distance at time of trade open
-        drawdown_close (float): account drawdown distance after trade closed
-        drawdown_impact (float): potential impact on trailing drawdown from
-            entry_price to max unrealized profit seen.  Added to gain_loss in
-            a losing trade to determine drawdown_close
-        peak_profit (float): Highest potential profit seen while the
-            trade was open even if closed after it pulled back from there.
-            (<highest price seen> - entry_price) * contracts * contract_value
         close_dt (str): datetime trade was closed
         created_dt (str): datetime this object was created
+        high_price (float): highest price seen during trade
+        low_price (float): lowest price seen during trade
         exit_price (float): price at which trade was closed
-        gain_loss (float): account balance gain or loss resulting from trade
+        stop_target (float): Target price at which trade should exit at a loss
+        prof_target (float): Target price at which trade should exit at a gain
         stop_ticks (float): number of ticks to reach stop_target from entry,
             primarily used as trade rules identification during analysis
         prof_ticks (float): number of ticks to reach prof_target from entry,
@@ -65,9 +58,6 @@ class Trade():
             this trade made entry, primarily used as trade rules
             identification during analysis
         symbol (str): ticker being traded
-        contracts (int): number of contracts traded
-        contract_value (float): value per contract
-        contract_fee (float): fee charged per contract
         is_open (bool): True if trade has not yet been closed via .close()
         profitable (bool): True if trade made money
         name (str): Label for identifying groups of similar trades
@@ -76,44 +66,30 @@ class Trade():
         ts_id (str): unique id of associated TradeSeries this was created by
         bt_id (str): unique id of associated Backtest this was created by
     """
-    # TODO I've added a number of new calculated attributes, review docstring
-    #      and make sure it's got everything and usage changes are updated
     def __init__(self,
                  open_dt: str,
                  direction: str,
                  timeframe: str,
                  trading_hours: str,
                  entry_price: float,
-                 drawdown_open: float,
-                 balance_open: float,
-                 drawdown_close: float = None,
-                 balance_close: float = None,
-                 drawdown_max: float = float(0),
-                 drawdown_impact: float = float(0),
-                 peak_profit: float = float(0),
-                 peak_loss: float = float(0),
                  close_dt: str = None,
                  created_dt: str = None,
                  open_epoch: int = None,
+                 high_price: float = None,
+                 low_price: float = None,
                  exit_price: float = None,
-                 gain_loss: float = None,
                  stop_target: float = None,
                  prof_target: float = None,
                  stop_ticks: int = None,
                  prof_ticks: int = None,
                  offset_ticks: int = 0,
                  symbol="ES",
-                 contracts: int = 1,
-                 contract_value: float = float(50),
-                 contract_fee: float = float(0),
                  is_open: bool = True,
                  profitable: bool = None,
                  name: str = None,
                  version: str = "1.0.0",
                  ts_id: str = None,
                  bt_id: str = None,
-                 tracks_drawdown: bool = True,
-                 tracks_balance: bool = True,
                  ):
 
         # Passable attributes
@@ -136,16 +112,15 @@ class Trade():
         self.entry_price = entry_price
         self.stop_target = stop_target
         self.prof_target = prof_target
+        if high_price is None:
+            self.high_price = entry_price
+        else:
+            self.high_price = high_price
+        if low_price is None:
+            self.low_price = entry_price
+        else:
+            self.low_price = low_price
         self.exit_price = exit_price
-        self.drawdown_open = drawdown_open
-        self.balance_open = balance_open
-        self.drawdown_close = drawdown_close
-        self.balance_close = balance_close
-        self.drawdown_max = drawdown_max
-        self.drawdown_impact = drawdown_impact
-        self.peak_profit = peak_profit
-        self.peak_loss = peak_loss
-        self.gain_loss = gain_loss
         self.stop_ticks = stop_ticks
         self.prof_ticks = prof_ticks
         self.offset_ticks = offset_ticks
@@ -153,17 +128,12 @@ class Trade():
             self.symbol = dhs.get_symbol_by_ticker(ticker=symbol)
         else:
             self.symbol = symbol
-        self.contracts = contracts
-        self.contract_value = contract_value
-        self.contract_fee = contract_fee
         self.is_open = is_open
         self.profitable = profitable
         self.name = name
         self.version = version
         self.ts_id = ts_id
         self.bt_id = bt_id
-        self.tracks_drawdown = tracks_drawdown
-        self.tracks_balance = tracks_balance
 
         # Calculated attributes
         if self.direction == "long":
@@ -249,9 +219,6 @@ class Trade():
         else:
             raise ValueError("stop_ticks must be an integer but we got "
                              f"{self.stop_ticks}")
-        # Calculate contract related attributes
-        self.contract_multiplier = self.contracts * self.contract_value
-        self.total_fees = self.contracts * self.contract_fee
         # If closing attributes were passed, run close() to ensure all
         # related attributes that may not have been passed in are finalized.
         # Also update drawdown & balance attributes
@@ -259,10 +226,6 @@ class Trade():
             self.close(price=self.exit_price,
                        dt=self.close_dt,
                        )
-            self.update_drawdowns(self.exit_price)
-            self.update_balances()
-        else:
-            self.update_drawdowns(self.entry_price)
 
     def __str__(self):
         return str(self.to_clean_dict())
@@ -271,27 +234,23 @@ class Trade():
         return str(self)
 
     def __eq__(self, other):
-        # TODO update this for additional attributes added
         return (self.open_dt == other.open_dt
+                and self.timeframe == other.timeframe
+                and self.trading_hours == other.trading_hours
                 and self.direction == other.direction
                 and self.entry_price == other.entry_price
+                and self.high_price == other.high_price
+                and self.low_price == other.low_price
                 and self.stop_target == other.stop_target
                 and self.prof_target == other.prof_target
-                # and self.drawdown_open == other.drawdown_open
-                # and self.drawdown_close == other.drawdown_close
-                # and self.drawdown_max == other.drawdown_max
                 and self.close_dt == other.close_dt
                 and self.created_dt == other.created_dt
                 and self.open_epoch == other.open_epoch
                 and self.exit_price == other.exit_price
-                and self.gain_loss == other.gain_loss
                 and self.stop_ticks == other.stop_ticks
                 and self.prof_ticks == other.prof_ticks
                 and self.offset_ticks == other.offset_ticks
-                # and self.drawdown_impact == other.drawdown_impact
                 and self.symbol == other.symbol
-                and self.contracts == other.contracts
-                and self.contract_value == other.contract_value
                 and self.is_open == other.is_open
                 and self.profitable == other.profitable
                 and self.name == other.name
@@ -340,209 +299,157 @@ class Trade():
 
         return dhs.store_trades(trades=[self])
 
-    def update(self,
-               candle,
-               ):
-        """Incorporates a new candle into an open Trade, adjusting related
-        attributes accordingly."""
+    def candle_update(self,
+                      candle,
+                      ):
+        """Incorporates a new candle into an open Trade, updating low and
+        high price attributes and checking for trade closing triggers."""
         if not self.is_open:
             raise Exception("Cannot run update() on a closed Trade, this "
                             "would break reality.")
         if not isinstance(candle, dhc.Candle):
             raise TypeError(f"candle {candle} must be a dhcharts.Candle obj, "
                             f"we got a {type(candle)} instead")
-        result = {"closed": False,
-                  "liquidated_drawdown": False,
-                  "liquidated_balance": False,
-                  }
         # Set short var names for calcs in this method
-        mult = self.contract_multiplier
-        fees = self.total_fees
         tick = self.symbol.tick_size
-        entry = self.entry_price
-        stop = self.stop_target
-        profit = self.prof_target
         close_price = None
-        print("-------------------------------------------------------------")
-        print(f"################################ Starting update() with\n"
-              f"candle=\n{candle.pretty()}\n"
-              f"direction={self.direction}\n"
-              f"drawdown_open={self.drawdown_open}\n"
-              f"drawdown_close={self.drawdown_close}\n"
-              f"drawdown_max={self.drawdown_max}\n"
-              f"drawdown_impact={self.drawdown_impact}\n"
-              f"entry_price={self.entry_price}\n"
-              f"peak_profit={self.peak_profit}\n"
-              f"contract_multiplier={self.contract_multiplier}\n"
-              f"total_fees={self.total_fees}\n"
-              f"mult={mult}\n"
-              f"fees={fees}\n"
-              f"tick={tick}\n"
-              f"entry={entry}\n"
-              f"stop={stop}\n"
-              f"profit={profit}\n"
-              f"close_price={close_price}\n"
-              "###############################")
         # Calculate updates based on direction
-        # While using flipper could potentially combine directions, writing
-        # it out by direction is much easier to follow & debug later
         if self.direction == "long":
-            # First close on stop to be conservative if profit was also hit
-            if candle.c_low <= stop:
-                close_price = stop
-                new_loss = entry - stop
+            # Close on stop to be conservative even if profit_target also hit
+            if candle.c_low <= self.stop_target:
+                close_price = self.stop_target
+                self.low_price = min(self.low_price, self.stop_target)
             else:
-                new_loss = entry - candle.c_low
-            # Now if we hit the profit target we can close at a gain
-            if candle.c_high >= (profit + tick):
+                self.low_price = min(self.low_price, candle.c_low)
+            # Now if we passed the profit target we can close at a gain
+            # Exact tag doesn't guarantee fill so we must see a tick past
+            if candle.c_high >= (self.prof_target + tick):
                 if close_price is None:
-                    close_price = profit
+                    close_price = self.prof_target
                 # Even if we closed on a stop, assume the worst case that
                 # we got to profit_target but did not get filled before
                 # falling to stop_target.  This has the most conservative
                 # /worst case effect on drawdown impacts.
-                new_profit = profit - entry
+                self.high_price = max(self.high_price, self.prof_target)
             else:
-                new_profit = candle.c_high - entry
+                self.high_price = max(self.high_price, candle.c_high)
         elif self.direction == "short":
-            # First close on stop to be conservative if profit was also hit
-            if candle.c_high >= stop:
-                close_price = stop
-                new_loss = stop - entry
+            # Close on stop to be conservative even if profit_target also hit
+            if candle.c_high >= self.stop_target:
+                close_price = self.stop_target
+                self.high_price = max(self.high_price, self.stop_target)
             else:
-                new_loss = candle.c_high - entry
-            # Now if we hit the profit target we can close at a gain
-            if candle.c_low <= (profit - tick):
+                self.high_price = max(self.high_price, candle.c_high)
+            # Now if we passed the profit target we can close at a gain
+            # Exact tag doesn't guarantee fill so we must see a tick past
+            if candle.c_low <= (self.prof_target - tick):
                 if close_price is None:
-                    close_price = profit
-                # Even if we closed on a stop, assume the worst case that
+                    close_price = self.prof_target
+                # Even if we closed on a stop_target, assume worst case that
                 # we got to profit_target but did not get filled before
                 # falling to stop_target.  This has the most conservative
                 # /worst case effect on drawdown impacts.
-                new_profit = entry - profit
+                self.low_price = min(self.low_price, self.prof_target)
             else:
-                new_profit = entry - candle.c_low
+                self.low_price = min(self.low_price, candle.c_low)
 
-        # Update peak profit and loss attributes
-        self.peak_profit = max(self.peak_profit, new_profit * mult)
-        self.peak_loss = max(self.peak_loss, new_loss * mult)
-        print(f"self.peak_profit={self.peak_profit}\n"
-              f"self.peak_loss={self.peak_loss}\n"
-              f"close_price={close_price}\n"
-              )
-
-        # Check for liquidation events in case the caller cares about them.
-        # The Trade is not affected directly as this is context dependent
-        # since the Trade can be reused in other TradeSeries where it may
-        # not liquidate
-        result["liquidates_drawdown"] = self.liquidates_drawdown()
-        result["liquidates_balance"] = self.liquidates_balance()
         # Close the trade if we hit a target
         if close_price is not None:
             self.close(close_price, candle.c_datetime)
-            result["closed"] = True
-            # self.update_drawdowns() is called within self.close()
+            return {"closed": True}
         else:
-            # Update drawdowns if we did not close the trade
-            self.update_drawdowns(candle.c_close)
+            return {"closed": False}
         # TODO ensure there are tests in place to cover all of the new
         #      attributes and calculations being done in this method as well
         #      as anything that changed in the close method.
-        #      TODO I don't have a long trade test that exceeds drawdown_max,
-        #           get one of those in place because the calcs can get
-        #           complicated and just having the short trade test might not
-        #           cover all failure potentials.  now that I know how it
-        #           works I can probably mock one up safely rather than try to
-        #           get a real trade to compare, right?
-        #      TODO add assertions to existing drawdown tests to check
-        #           balance_close against real results.  Probably rename the
-        #           test to include balances as well
-        #      TODO tests to cover when tracks_drawdown or tracks_balance
-        #           are False
         #      TODO ensure all new attributes are asserted in tests at trade
         #           creation
-        #      TODO review all peak_*, drawdown, and balance stuff
-        #      TODO check a git diff for anything else I might have missed
+        #      TODO create basic tests for each of the new methods' outputs
+        #           covering all of the fields included
+        # TODO revamp the EMA backtester calculation methods which were doing
+        #      much of the logic now being handled directly by Trade.  Make
+        #      sure that's working well before finalizing this commit
         # TODO check both repos for references to Trade, any other code
-        #      need updating?
-        # TODO confirm all tests in this repo pass (unhide Trade tests and be
-        #      sure to run other test files too)
-        return result
+        #      need updating?  Check for any backtesting tests failing that
+        #      might need fixes on this side
 
-    def update_drawdowns(self, price):
-        """Update drawdown related attributes assuming a current price as
-        passed.  At Trade creation this price would be the entry_price.  While
-        the trade is still open it would reflect any update coming from candle
-        data being incorporated.  Once the trade is closed, this price should
-        be the exit_price.
-
-        This method is used during initial Trade creation but can also be used
-        later if the drawdown_open or drawdown_max is changed which can happen
-        if Trade is moved to a different TradeSeries for example."""
-        print(f"******************* Starting update_drawdowns() with\n"
-              f"price={price}\n"
-              f"drawdown_open={self.drawdown_open}\n"
-              f"drawdown_close={self.drawdown_close}\n"
-              f"drawdown_max={self.drawdown_max}\n"
-              f"drawdown_impact={self.drawdown_impact}\n"
-              f"entry_price={self.entry_price}\n"
-              f"peak_profit={self.peak_profit}\n"
-              f"contract_multiplier={self.contract_multiplier}\n"
-              f"total_fees={self.total_fees}\n"
-              "*******************************")
-        if self.tracks_drawdown:
-            # Drawdown overage accounts for profit that has gone beyond the
-            # accounts drawdown_max level during the trade whether or not it
-            # was locked in by closing the trade while above drawdown_max.
-            # This will be subtracted from the drawdown_impact to represent
-            # the trailing threshold moving up as a result of the overage.
-            # It cannot be less than zero as the threshold only moves if the
-            # drawdown_max is exceeded.
-            overage = self.drawdown_open + self.peak_profit - self.drawdown_max
-            overage = max(round(overage, 2), 0)
-            print(f"overage={overage}")
-            # Calculate drawdown_impact which would be the difference between
-            # the account drawdown distance when the trade was opened and now,
-            # if we were to close the trade at this price.  This is tracked
-            # separate from drawdown_open and drawdown_close so that drawdowns
-            # can be recalculated if the Trade is used in a different sequence
-            # (TradeSeries) later.
-            self.drawdown_impact = (((price - self.entry_price) * self.flipper
-                                    * self.contract_multiplier)
-                                    - self.total_fees
-                                    ) - overage
-            # Update drawdown_close if the trade has been closed only
-            if self.is_open:
-                self.drawdown_close = None
-            else:
-                self.drawdown_close = self.drawdown_open + self.drawdown_impact
-            # Round all because float math anomalies create trailing decimals
-            self.drawdown_impact = round(self.drawdown_impact, 2)
-            if self.drawdown_close is not None:
-                self.drawdown_close = round(self.drawdown_close, 2)
+    def drawdown_impact(self,
+                        drawdown_open: float,
+                        drawdown_limit: float,
+                        contracts: int,
+                        contract_value: float,
+                        contract_fee: float
+                        ):
+        """Calculates and returns resulting values of drawdown range and ending
+        values seen during the trade for given series specific inputs.
+        Primarily used by TradeSeries to loop through all Trade
+        objects checking for drawdown liquidations"""
+        # Until I find a reasonable need, assume we don't care about drawdowns
+        # until the trade is closed.  Returning results could cause mistakes.
+        if self.is_open:
+            return None
+        cmult = contracts * contract_value
+        # Determine max gain and loss prices seen during trade
+        if self.direction == "long":
+            max_gain = self.high_price - self.entry_price
+            max_loss = self.entry_price - self.low_price
+        elif self.direction == "short":
+            max_gain = self.entry_price - self.low_price
+            max_loss = self.high_price - self.entry_price
+        # Use these to calculate highest and lowest drawdown distances seen
+        drawdown_max = drawdown_open + (max_gain * cmult)
+        drawdown_min = drawdown_open - (max_loss * cmult)
+        if drawdown_max > drawdown_limit:
+            drawdown_trail_increase = drawdown_max - drawdown_limit
         else:
-            self.drawdown_close = None
-            self.drawdown_impact = 0
-        print(f"drawdown_open={self.drawdown_open}")
-        print(f"drawdown_close={self.drawdown_close}")
-        print(f"drawdown_impact={self.drawdown_impact}")
+            drawdown_trail_increase = 0
+        # Calculate the closing drawdown level i.e. where it will be after
+        # the trade is finished.
+        drawdown_close = (((self.exit_price - self.entry_price)
+                          * self.flipper
+                          * cmult)
+                          + drawdown_open
+                          - (contracts * contract_fee))
+        # Closing drawdown cannot exceed drawdown limit on account
+        drawdown_close = min(drawdown_close, drawdown_limit)
+        # Round all because float math anomalies create trailing decimals
+        drawdown_open = round(drawdown_open, 2)
+        drawdown_close = round(drawdown_close, 2)
+        drawdown_max = round(drawdown_max, 2)
+        drawdown_min = round(drawdown_min, 2)
+        drawdown_trail_increase = round(drawdown_trail_increase, 2)
 
-    def update_balances(self):
-        """Update account balance related attributes.  This is used during
-        initial Trade creation but can also be used later if the balance_open
-        or any otherwise balance related changes are made to the Trade.  This
-        can happen when Trades are added/removed/changed inside of TradeSeries
-        during later Analysis operations which can affect what the beginning
-        balance of the Trade would be in the new context."""
-        if self.tracks_balance:
-            if self.is_open:
-                self.balance_close = None
-            else:
-                # Fees are included in gain_loss, no need to subtract again
-                self.balance_close = round((self.balance_open
-                                           + self.gain_loss), 2)
-        else:
-            self.balance_close = None
+        return {"drawdown_open": drawdown_open,
+                "drawdown_close": drawdown_close,
+                "drawdown_trail_increase": drawdown_trail_increase,
+                "drawdown_max": drawdown_max,
+                "drawdown_min": drawdown_min,
+                }
+
+    def balance_impact(self,
+                       balance_open: float,
+                       contracts: int,
+                       contract_value: float,
+                       contract_fee: float,
+                       ):
+        """Calculates and returns ending balance and gain/loss values for the
+        trade given series specific inputs.  Primarily used by TradeSeries to
+        loop through all Trade objects to evaluate ending gains and balances.
+        """
+        # Cannot return balance impact until trade is closed
+        if self.is_open:
+            return None
+        # Calculate gain/loss of the trade
+        gl = (((self.exit_price - self.entry_price)
+              * contracts * contract_value * self.flipper)
+              - (contracts * contract_fee))
+        # Closing balance is just the difference from opening balance
+        balance_close = round((balance_open + gl), 2)
+
+        return {"balance_open": balance_open,
+                "balance_close": balance_close,
+                "gain_loss": gl,
+                }
 
     def close(self,
               price: float,
@@ -550,52 +457,13 @@ class Trade():
               ):
         """Closes the trade at the price given, finalizing related attributes.
         """
-        mult = self.contract_multiplier
-        fees = self.total_fees
         self.is_open = False
         self.close_dt = dhu.dt_as_str(dt)
         self.exit_price = price
-        print("@@@@@@@@@@@@@@@@@ Starting .close() with")
-        print(f"price={price}")
-        print(f"mult={mult}")
-        print(f"fees={fees}")
-        print(f"fees={fees}")
-        print(f"self.is_open={self.is_open}")
-        print(f"self.close_dt={self.close_dt}")
-        print(f"self.exit_price={self.exit_price}")
-        print(f"self.entry_price={self.entry_price}")
-        self.gain_loss = (((self.exit_price - self.entry_price)
-                          * mult * self.flipper)
-                          - self.total_fees)
-        # Update balances and drawdowns
-        self.update_balances()
-        self.update_drawdowns(self.exit_price)
-        # Set profitability flag
-        if self.gain_loss > 0:
+        if (self.exit_price - self.entry_price) * self.flipper > 0:
             self.profitable = True
         else:
             self.profitable = False
-        print("@@@@@@@@@@@@@@@@@@@@")
-        print(f"self.gain_loss={self.gain_loss}")
-        print(f"self.profitable={self.profitable}")
-
-    def liquidates_drawdown(self):
-        """Returns True if the current attributes would indicate that a
-        trailing drawdown liquidation level was reached, which would close
-        the account."""
-        if self.tracks_drawdown and self.drawdown_open - self.peak_loss <= 0:
-            return True
-        else:
-            return False
-
-    def liquidates_balance(self):
-        """Returns True if the current attributes would indicate that an
-        account balance liquidation level was reached, which would prevent
-        further trading."""
-        if self.tracks_balance and self.balance_open - self.peak_loss <= 0:
-            return True
-        else:
-            return False
 
 
 class TradeSeries():
