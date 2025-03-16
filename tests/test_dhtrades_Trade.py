@@ -115,8 +115,8 @@ def test_dhtrades_Trade_confirm_observed_results():
     assertions being based on this data such as high_price and low_price.
 
     Some assertions could not be observed so they are assumed based on my best
-    understanding of the math involved.  This includes balance_min,
-    balance_max, drawdown_min, and drawdown_max
+    understanding of the math involved.  This includes balance_low,
+    balance_high, drawdown_low, and drawdown_high
 
     These trades cover all combinations and edge cases I could think of and
     check all potential outputs.  Collectively they should cover most potential
@@ -125,7 +125,7 @@ def test_dhtrades_Trade_confirm_observed_results():
 
     Note that stop and profit targets are seldom used to close these trades as
     they mostly were closed manually to catch specific scenarios, as such the
-    drawdown_min/max and balance_min/max might have been different if I were
+    drawdown_low/max and balance_low/max might have been different if I were
     using targets.  Other tests will cover target based scenarios."""
 
     # These tests compare to real trade results captured in an Apex evaluation
@@ -149,13 +149,13 @@ def test_dhtrades_Trade_confirm_observed_results():
     draw = t.drawdown_impact(1757.28, 6500, 2, 50, 3.10)
     assert bal["balance_open"] == 245483.93
     assert bal["balance_close"] == 245502.73
-    assert bal["balance_min"] == 245308.93
-    assert bal["balance_max"] == 245858.93
+    assert bal["balance_low"] == 245302.73
+    assert bal["balance_high"] == 245852.73
     assert bal["gain_loss"] == 18.8
     assert draw["drawdown_open"] == 1757.28
     assert draw["drawdown_close"] == 1776.08
-    assert draw["drawdown_min"] == 1582.28
-    assert draw["drawdown_max"] == 2132.28
+    assert draw["drawdown_low"] == 1576.08
+    assert draw["drawdown_high"] == 2126.08
     assert draw["drawdown_trail_increase"] == 0
 
     # Long trade closed at a loss after being temporarily in profit
@@ -174,13 +174,13 @@ def test_dhtrades_Trade_confirm_observed_results():
     draw = t.drawdown_impact(1776.08, 6500, 1, 50, 3.10)
     assert bal["balance_open"] == 245502.73
     assert bal["balance_close"] == 245462.13
-    assert bal["balance_min"] == 245390.23
-    assert bal["balance_max"] == 245515.23
+    assert bal["balance_low"] == 245387.13
+    assert bal["balance_high"] == 245512.13
     assert bal["gain_loss"] == -40.6
     assert draw["drawdown_open"] == 1776.08
     assert draw["drawdown_close"] == 1735.48
-    assert draw["drawdown_min"] == 1663.58
-    assert draw["drawdown_max"] == 1788.58
+    assert draw["drawdown_low"] == 1660.48
+    assert draw["drawdown_high"] == 1785.48
     assert draw["drawdown_trail_increase"] == 0
 
     # Long trade closed at break even after some downside seen
@@ -199,13 +199,13 @@ def test_dhtrades_Trade_confirm_observed_results():
     draw = t.drawdown_impact(1735.48, 6500, 1, 50, 3.10)
     assert bal["balance_open"] == 245462.13
     assert bal["balance_close"] == 245459.03
-    assert bal["balance_min"] == 245412.13
-    assert bal["balance_max"] == 245512.13
+    assert bal["balance_low"] == 245409.03
+    assert bal["balance_high"] == 245509.03
     assert bal["gain_loss"] == -3.1
     assert draw["drawdown_open"] == 1735.48
     assert draw["drawdown_close"] == 1732.38
-    assert draw["drawdown_min"] == 1685.48
-    assert draw["drawdown_max"] == 1785.48
+    assert draw["drawdown_low"] == 1682.38
+    assert draw["drawdown_high"] == 1782.38
     assert draw["drawdown_trail_increase"] == 0
 
     # Long trade runs to profit target directly from entry
@@ -224,13 +224,13 @@ def test_dhtrades_Trade_confirm_observed_results():
     draw = t.drawdown_impact(1732.38, 6500, 1, 50, 3.10)
     assert bal["balance_open"] == 245459.03
     assert bal["balance_close"] == 245480.93
-    assert bal["balance_min"] == 245434.03
-    assert bal["balance_max"] == 245534.03
+    assert bal["balance_low"] == 245430.93
+    assert bal["balance_high"] == 245530.93
     assert bal["gain_loss"] == 21.90
     assert draw["drawdown_open"] == 1732.38
     assert draw["drawdown_close"] == 1754.28
-    assert draw["drawdown_min"] == 1707.38
-    assert draw["drawdown_max"] == 1807.38
+    assert draw["drawdown_low"] == 1704.28
+    assert draw["drawdown_high"] == 1804.28
     assert draw["drawdown_trail_increase"] == 0
 
     # Long trade runs to stop target directly from entry, no green seen
@@ -247,13 +247,13 @@ def test_dhtrades_Trade_confirm_observed_results():
     draw = t.drawdown_impact(1929.48, 6500, 1, 50, 3.10)
     assert bal["balance_open"] == 245656.13
     assert bal["balance_close"] == 245628.03
-    assert bal["balance_min"] == 245618.63
-    assert bal["balance_max"] == 245656.13
+    assert bal["balance_low"] == 245615.53
+    assert bal["balance_high"] == 245653.03
     assert bal["gain_loss"] == -28.10
     assert draw["drawdown_open"] == 1929.48
     assert draw["drawdown_close"] == 1901.38
-    assert draw["drawdown_min"] == 1891.98
-    assert draw["drawdown_max"] == 1929.48
+    assert draw["drawdown_low"] == 1888.88
+    assert draw["drawdown_high"] == 1926.38
     assert draw["drawdown_trail_increase"] == 0
 
     # Short trade runs to profit target directly from entry
@@ -273,13 +273,13 @@ def test_dhtrades_Trade_confirm_observed_results():
     draw = t.drawdown_impact(1779.38, 6500, 3, 50, 3.10)
     assert bal["balance_open"] == 245506.03
     assert bal["balance_close"] == 245609.23
-    assert bal["balance_min"] == 245468.53
-    assert bal["balance_max"] == 245618.53
+    assert bal["balance_low"] == 245459.23
+    assert bal["balance_high"] == 245609.23
     assert bal["gain_loss"] == 103.20
     assert draw["drawdown_open"] == 1779.38
     assert draw["drawdown_close"] == 1882.58
-    assert draw["drawdown_min"] == 1741.88
-    assert draw["drawdown_max"] == 1891.88
+    assert draw["drawdown_low"] == 1732.58
+    assert draw["drawdown_high"] == 1882.58
     assert draw["drawdown_trail_increase"] == 0
 
     # Short trade runs to stop target directly from entry, no green seen
@@ -301,13 +301,13 @@ def test_dhtrades_Trade_confirm_observed_results():
     draw = t.drawdown_impact(1901.38, 6500, 1, 50, 3.10)
     assert bal["balance_open"] == 245628.03
     assert bal["balance_close"] == 245562.43
-    assert bal["balance_min"] == 245565.53
-    assert bal["balance_max"] == 245628.03
+    assert bal["balance_low"] == 245562.43
+    assert bal["balance_high"] == 245624.93
     assert bal["gain_loss"] == -65.60
     assert draw["drawdown_open"] == 1901.38
     assert draw["drawdown_close"] == 1835.78
-    assert draw["drawdown_min"] == 1838.88
-    assert draw["drawdown_max"] == 1901.38
+    assert draw["drawdown_low"] == 1835.78
+    assert draw["drawdown_high"] == 1898.28
     assert draw["drawdown_trail_increase"] == 0
 
     # Short trade closed at a loss after reaching profit temporarily
@@ -325,13 +325,13 @@ def test_dhtrades_Trade_confirm_observed_results():
     draw = t.drawdown_impact(1835.78, 6500, 1, 50, 3.10)
     assert bal["balance_open"] == 245562.43
     assert bal["balance_close"] == 245534.33
-    assert bal["balance_min"] == 245512.43
-    assert bal["balance_max"] == 245587.43
+    assert bal["balance_low"] == 245509.33
+    assert bal["balance_high"] == 245584.33
     assert bal["gain_loss"] == -28.10
     assert draw["drawdown_open"] == 1835.78
     assert draw["drawdown_close"] == 1807.68
-    assert draw["drawdown_min"] == 1785.78
-    assert draw["drawdown_max"] == 1860.78
+    assert draw["drawdown_low"] == 1782.68
+    assert draw["drawdown_high"] == 1857.68
     assert draw["drawdown_trail_increase"] == 0
 
     # Short trade closed at break even after some downside seen
@@ -349,13 +349,13 @@ def test_dhtrades_Trade_confirm_observed_results():
     draw = t.drawdown_impact(1807.68, 6500, 1, 50, 3.10)
     assert bal["balance_open"] == 245534.33
     assert bal["balance_close"] == 245531.23
-    assert bal["balance_min"] == 245509.33
-    assert bal["balance_max"] == 245546.83
+    assert bal["balance_low"] == 245506.23
+    assert bal["balance_high"] == 245543.73
     assert bal["gain_loss"] == -3.10
     assert draw["drawdown_open"] == 1807.68
     assert draw["drawdown_close"] == 1804.58
-    assert draw["drawdown_min"] == 1782.68
-    assert draw["drawdown_max"] == 1820.18
+    assert draw["drawdown_low"] == 1779.58
+    assert draw["drawdown_high"] == 1817.08
     assert draw["drawdown_trail_increase"] == 0
 
     # Short trade closed in profit after some pullback
@@ -375,13 +375,13 @@ def test_dhtrades_Trade_confirm_observed_results():
     draw = t.drawdown_impact(1804.58, 6500, 1, 50, 3.10)
     assert bal["balance_open"] == 245531.23
     assert bal["balance_close"] == 245553.13
-    assert bal["balance_min"] == 245506.23
-    assert bal["balance_max"] == 245581.23
+    assert bal["balance_low"] == 245503.13
+    assert bal["balance_high"] == 245578.13
     assert bal["gain_loss"] == 21.90
     assert draw["drawdown_open"] == 1804.58
     assert draw["drawdown_close"] == 1826.48
-    assert draw["drawdown_min"] == 1779.58
-    assert draw["drawdown_max"] == 1854.58
+    assert draw["drawdown_low"] == 1776.48
+    assert draw["drawdown_high"] == 1851.48
     assert draw["drawdown_trail_increase"] == 0
 
     # Remaining trades occurred near/through drawdown_limit levels
@@ -408,13 +408,13 @@ def test_dhtrades_Trade_confirm_observed_results():
     draw = t.drawdown_impact(6500, 6500, 1, 50, 3.10)
     assert bal["balance_open"] == 250000
     assert bal["balance_close"] == 249734.40
-    assert bal["balance_min"] == 249712.50
-    assert bal["balance_max"] == 250000
+    assert bal["balance_low"] == 249709.40
+    assert bal["balance_high"] == 249996.90
     assert bal["gain_loss"] == -265.60
     assert draw["drawdown_open"] == 6500
     assert draw["drawdown_close"] == 6234.40
-    assert draw["drawdown_min"] == 6212.50
-    assert draw["drawdown_max"] == 6500
+    assert draw["drawdown_low"] == 6209.40
+    assert draw["drawdown_high"] == 6496.90
     assert draw["drawdown_trail_increase"] == 0
 
     # Short trade opens at drawdown_limit and goes into profit.  We expect zero
@@ -436,14 +436,14 @@ def test_dhtrades_Trade_confirm_observed_results():
     draw = t.drawdown_impact(6500, 6500, 1, 50, 3.10)
     assert bal["balance_open"] == 250000
     assert bal["balance_close"] == 250034.40
-    assert bal["balance_min"] == 249950
-    assert bal["balance_max"] == 250037.50
+    assert bal["balance_low"] == 249946.90
+    assert bal["balance_high"] == 250034.40
     assert bal["gain_loss"] == 34.40
     assert draw["drawdown_open"] == 6500
     assert draw["drawdown_close"] == 6500
-    assert draw["drawdown_min"] == 6450
-    assert draw["drawdown_max"] == 6537.50
-    assert draw["drawdown_trail_increase"] == 37.50
+    assert draw["drawdown_low"] == 6446.90
+    assert draw["drawdown_high"] == 6534.40
+    assert draw["drawdown_trail_increase"] == 34.40
 
     # The following 3 trades open near drawdown_limit, run into
     # profit past that threshold, then pull back some before being closed.
@@ -478,15 +478,15 @@ def test_dhtrades_Trade_confirm_observed_results():
     draw = t.drawdown_impact(6234.40, 6500, 1, 50, 3.10)
     assert bal["balance_open"] == 249734.40
     assert bal["balance_close"] == 249993.80
-    assert bal["balance_min"] == 249721.90
-    assert bal["balance_max"] == 250059.40
+    assert bal["balance_low"] == 249718.80
+    assert bal["balance_high"] == 250056.30
     assert bal["gain_loss"] == 259.40
     assert draw["drawdown_open"] == 6234.40
     # Github Issue 33 (multiple lines in this file)
     # calculating as 6493.80, observed 6448.45, off by 45.35
     # assert draw["drawdown_close"] == 6448.45
-    assert draw["drawdown_min"] == 6221.90
-    assert draw["drawdown_max"] == 6559.40
+    assert draw["drawdown_low"] == 6218.80
+    assert draw["drawdown_high"] == 6556.30
     # Github Issue 33 (multiple lines in this file)
     # calculating as 59.40, observed 45.35, off by 14.05
     # assert draw["drawdown_trail_increase"] == 45.35
@@ -510,15 +510,15 @@ def test_dhtrades_Trade_confirm_observed_results():
     draw = t.drawdown_impact(6161.05, 6500, 2, 50, 3.10)
     assert bal["balance_open"] == 249706.40
     assert bal["balance_close"] == 250275.20
-    assert bal["balance_min"] == 249506.40
-    assert bal["balance_max"] == 250506.40
+    assert bal["balance_low"] == 249500.20
+    assert bal["balance_high"] == 250500.20
     assert bal["gain_loss"] == 568.80
     assert draw["drawdown_open"] == 6161.05
     # Github Issue 33 (multiple lines in this file)
     # calculating as 6500, observed 6321.90, off by 178.10
     # assert draw["drawdown_close"] == 6321.90
-    assert draw["drawdown_min"] == 5961.05
-    assert draw["drawdown_max"] == 6961.05
+    assert draw["drawdown_low"] == 5954.85
+    assert draw["drawdown_high"] == 6954.85
     # Github Issue 33 (multiple lines in this file)
     # calculating as 461.05, observed 407.95, off by 53.10
     # assert draw["drawdown_trail_increase"] == 407.95
@@ -538,15 +538,15 @@ def test_dhtrades_Trade_confirm_observed_results():
     draw = t.drawdown_impact(6321.90, 6500, 3, 50, 3.10)
     assert bal["balance_open"] == 250275.20
     assert bal["balance_close"] == 250378.40
-    assert bal["balance_min"] == 249712.70
-    assert bal["balance_max"] == 250575.20
+    assert bal["balance_low"] == 249703.40
+    assert bal["balance_high"] == 250565.90
     assert bal["gain_loss"] == 103.20
     assert draw["drawdown_open"] == 6321.90
     # Github Issue 33 (multiple lines in this file)
     # calculating as 6425.10, observed 6382.85, off by 42.25
     # assert draw["drawdown_close"] == 6382.85
-    assert draw["drawdown_min"] == 5759.40
-    assert draw["drawdown_max"] == 6621.90
+    assert draw["drawdown_low"] == 5750.10
+    assert draw["drawdown_high"] == 6612.60
     # Github Issue 33 (multiple lines in this file)
     # calculating as 121.90, observed 51.25, off by 70.65
     # assert draw["drawdown_trail_increase"] == 51.25

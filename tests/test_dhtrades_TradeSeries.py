@@ -57,9 +57,25 @@ def create_trade(open_dt="2025-01-02 12:00:00",
                      )
 
 
+def add_1m_candle(trade, dt, c_open, c_high, c_low, c_close):
+    """Creates a dhcharts.Candle representing a 1 minute candle occurring
+    during an open trade.  This is used to test against actual observed live
+    trade results, simulating each significant candle in the trade."""
+    trade.candle_update(dhc.Candle(c_datetime=dt,
+                                   c_timeframe="1m",
+                                   c_open=c_open,
+                                   c_high=c_high,
+                                   c_low=c_low,
+                                   c_close=c_close,
+                                   c_volume=100,
+                                   c_symbol="ES",
+                                   ))
+
+
 def create_tradeseries(start_dt="2025-01-01 00:00:00",
                        end_dt="2025-02-01 00:00:00",
                        timeframe="5m",
+                       trading_hours="rth",
                        symbol="ES",
                        name="DELETEME",
                        params_str="a1_b2_c3_p0",
@@ -70,6 +86,7 @@ def create_tradeseries(start_dt="2025-01-01 00:00:00",
     r = dht.TradeSeries(start_dt=start_dt,
                         end_dt=end_dt,
                         timeframe=timeframe,
+                        trading_hours=trading_hours,
                         symbol=symbol,
                         name=name,
                         params_str=params_str,
@@ -86,6 +103,8 @@ def create_tradeseries(start_dt="2025-01-01 00:00:00",
     assert isinstance(dt_as_dt(r.end_dt), datetime.datetime)
     assert isinstance(r.timeframe, str)
     assert r.timeframe == timeframe
+    assert isinstance(r.trading_hours, str)
+    assert r.trading_hours == trading_hours
     assert isinstance(r.name, str)
     assert r.name == name
     assert isinstance(r.params_str, str)
@@ -117,10 +136,10 @@ def test_TradeSeries_create_and_verify_pretty():
     ts = create_tradeseries()
     test_trade = create_trade()
     assert isinstance(ts, dht.TradeSeries)
-    assert len(ts.pretty().splitlines()) == 13
+    assert len(ts.pretty().splitlines()) == 14
     ts.add_trade(test_trade)
     # With trades shown
-    assert len(ts.pretty(suppress_trades=False).splitlines()) == 38
+    assert len(ts.pretty(suppress_trades=False).splitlines()) == 39
 
 
 def test_TradeSeries_add_sort_and_get_trades():
@@ -146,6 +165,209 @@ def test_TradeSeries_add_sort_and_get_trades():
     assert ts.get_trade_by_open_dt("2025-01-04 09:35:00") == trade2
     # Confirm we cannot retrieve a trade by open_dt that does not exist
     assert ts.get_trade_by_open_dt("2025-01-04 08:35:00") is None
+
+
+def test_TradeSeries_balance_impact():
+    # Test a TradeSeries with winning and losing trades that does not liquidate
+    ts = create_tradeseries()
+    t = create_trade(open_dt="2025-01-02 12:30:00",
+                     stop_ticks=None, prof_ticks=None,
+                     stop_target=4900, prof_target=5025,
+                     )
+    add_1m_candle(t, "2025-01-02 12:31:00", 5000, 5200, 5000, 5000)
+    ts.add_trade(t)
+    t = create_trade(open_dt="2025-01-02 13:30:00",
+                     stop_ticks=None, prof_ticks=None,
+                     stop_target=4950, prof_target=5050,
+                     )
+    add_1m_candle(t, "2025-01-02 13:31:00", 5000, 5000, 4500, 5000)
+    ts.add_trade(t)
+    r = ts.balance_impact(balance_open=3000,
+                          contracts=1,
+                          contract_value=50,
+                          contract_fee=3.10)
+    assert r["balance_open"] == 3000
+    assert r["balance_close"] == 1743.80
+    assert r["balance_high"] == 4246.90
+    assert r["balance_low"] == 1743.80
+    assert r["liquidated"] is False
+    # Test a TradeSeries with all winning trades that does not liquidate
+    ts = create_tradeseries()
+    t = create_trade(open_dt="2025-01-02 12:30:00",
+                     stop_ticks=None, prof_ticks=None,
+                     stop_target=4900, prof_target=5025,
+                     )
+    add_1m_candle(t, "2025-01-02 12:31:00", 5000, 5200, 4970, 5000)
+    ts.add_trade(t)
+    t = create_trade(open_dt="2025-01-02 13:30:00",
+                     stop_ticks=None, prof_ticks=None,
+                     stop_target=4950, prof_target=5050,
+                     )
+    add_1m_candle(t, "2025-01-02 13:31:00", 5000, 5100, 4970, 5000)
+    ts.add_trade(t)
+    t = create_trade(open_dt="2025-01-02 14:30:00",
+                     stop_ticks=None, prof_ticks=None,
+                     stop_target=4950, prof_target=5082,
+                     )
+    add_1m_candle(t, "2025-01-02 14:31:00", 5000, 5100, 5000, 5000)
+    ts.add_trade(t)
+    r = ts.balance_impact(balance_open=50000,
+                          contracts=4,
+                          contract_value=50,
+                          contract_fee=3.10)
+    assert r["balance_open"] == 50000
+    assert r["balance_close"] == 81362.80
+    assert r["balance_high"] == 81362.80
+    assert r["balance_low"] == 43987.60
+    assert r["liquidated"] is False
+    # Test a TradeSeries with all losing trades that does liquidate
+    # after setting two sequential new highs
+    ts = create_tradeseries()
+    t = create_trade(open_dt="2025-01-02 12:30:00",
+                     stop_ticks=None, prof_ticks=None,
+                     stop_target=4992, prof_target=6000,
+                     )
+    add_1m_candle(t, "2025-01-02 12:31:00", 5000, 5010, 4900, 5000)
+    ts.add_trade(t)
+    t = create_trade(open_dt="2025-01-02 13:30:00",
+                     stop_ticks=None, prof_ticks=None,
+                     stop_target=4980, prof_target=6000,
+                     )
+    add_1m_candle(t, "2025-01-02 12:31:00", 5000, 5100, 4900, 5000)
+    ts.add_trade(t)
+    t = create_trade(open_dt="2025-01-02 14:30:00",
+                     stop_ticks=None, prof_ticks=None,
+                     stop_target=4975, prof_target=6000,
+                     )
+    add_1m_candle(t, "2025-01-02 12:31:00", 5000, 5000, 4900, 5000)
+    ts.add_trade(t)
+    r = ts.balance_impact(balance_open=5000,
+                          contracts=2,
+                          contract_value=50,
+                          contract_fee=3.10)
+    assert r["balance_open"] == 5000
+    assert r["balance_close"] == -318.60
+    assert r["balance_high"] == 14187.60
+    assert r["balance_low"] == -318.60
+    assert r["liquidated"] is True
+
+
+def test_TradeSeries_drawdown_impact():
+    # Test a TradeSeries with winning and losing trades that does not liquidate
+    ts = create_tradeseries()
+    t = create_trade(open_dt="2025-01-02 12:30:00",
+                     stop_ticks=None, prof_ticks=None,
+                     stop_target=4900, prof_target=5025,
+                     )
+    add_1m_candle(t, "2025-01-02 12:31:00", 5000, 5200, 5000, 5000)
+    ts.add_trade(t)
+    t = create_trade(open_dt="2025-01-02 13:30:00",
+                     stop_ticks=None, prof_ticks=None,
+                     stop_target=4950, prof_target=5050,
+                     )
+    add_1m_candle(t, "2025-01-02 13:31:00", 5000, 5000, 4500, 5000)
+    ts.add_trade(t)
+    r = ts.drawdown_impact(drawdown_open=3000,
+                           drawdown_limit=6500,
+                           contracts=1,
+                           contract_value=50,
+                           contract_fee=3.10)
+    assert r["drawdown_open"] == 3000
+    assert r["drawdown_close"] == 1743.80
+    assert r["drawdown_high"] == 4246.90
+    assert r["drawdown_low"] == 1743.80
+    assert r["liquidated"] is False
+    # Test a TradeSeries with all winning trades that does not liquidate
+    ts = create_tradeseries()
+    t = create_trade(open_dt="2025-01-02 12:30:00",
+                     stop_ticks=None, prof_ticks=None,
+                     stop_target=4900, prof_target=5005,
+                     )
+    add_1m_candle(t, "2025-01-02 12:31:00", 5000, 5200, 4995, 5000)
+    ts.add_trade(t)
+    t = create_trade(open_dt="2025-01-02 13:30:00",
+                     stop_ticks=None, prof_ticks=None,
+                     stop_target=4950, prof_target=5003,
+                     )
+    add_1m_candle(t, "2025-01-02 13:31:00", 5000, 5100, 5000, 5000)
+    ts.add_trade(t)
+    t = create_trade(open_dt="2025-01-02 14:30:00",
+                     stop_ticks=None, prof_ticks=None,
+                     stop_target=4950, prof_target=5007,
+                     )
+    add_1m_candle(t, "2025-01-02 14:31:00", 5000, 5100, 5000, 5000)
+    ts.add_trade(t)
+    r = ts.drawdown_impact(drawdown_open=5000,
+                           drawdown_limit=6500,
+                           contracts=4,
+                           contract_value=50,
+                           contract_fee=3.10)
+    assert r["drawdown_open"] == 5000
+    assert r["drawdown_close"] == 6500
+    assert r["drawdown_high"] == 7887.60
+    assert r["drawdown_low"] == 3987.60
+    assert r["liquidated"] is False
+    # Test a TradeSeries with all losing trades that does liquidate
+    # after setting two sequential new highs
+    ts = create_tradeseries()
+    t = create_trade(open_dt="2025-01-02 12:30:00",
+                     stop_ticks=None, prof_ticks=None,
+                     stop_target=4992, prof_target=6000,
+                     )
+    add_1m_candle(t, "2025-01-02 12:31:00", 5000, 5002, 4900, 5000)
+    ts.add_trade(t)
+    t = create_trade(open_dt="2025-01-02 13:30:00",
+                     stop_ticks=None, prof_ticks=None,
+                     stop_target=4980, prof_target=6000,
+                     )
+    add_1m_candle(t, "2025-01-02 12:31:00", 5000, 5020, 4900, 5000)
+    ts.add_trade(t)
+    t = create_trade(open_dt="2025-01-02 14:30:00",
+                     stop_ticks=None, prof_ticks=None,
+                     stop_target=4950, prof_target=6000,
+                     )
+    add_1m_candle(t, "2025-01-02 12:31:00", 5000, 5000, 4900, 5000)
+    ts.add_trade(t)
+    r = ts.drawdown_impact(drawdown_open=5000,
+                           drawdown_limit=6500,
+                           contracts=2,
+                           contract_value=50,
+                           contract_fee=3.10)
+    assert r["drawdown_open"] == 5000
+    assert r["drawdown_close"] == -2818.60
+    assert r["drawdown_high"] == 6187.60
+    assert r["drawdown_low"] == -2818.60
+    assert r["liquidated"] is True
+    # TradeSeries pushes 1 trade past drawdown_limit triggering trail effect
+    ts = create_tradeseries()
+    t = create_trade(open_dt="2025-01-02 12:30:00",
+                     stop_ticks=None, prof_ticks=None,
+                     stop_target=4000, prof_target=5005,
+                     )
+    add_1m_candle(t, "2025-01-02 12:31:00", 5000, 5100, 5000, 5000)
+    ts.add_trade(t)
+    t = create_trade(open_dt="2025-01-02 13:30:00",
+                     stop_ticks=None, prof_ticks=None,
+                     stop_target=4000, prof_target=5005,
+                     )
+    add_1m_candle(t, "2025-01-02 12:31:00", 5000, 5100, 5000, 5000)
+    ts.add_trade(t)
+    t = create_trade(open_dt="2025-01-02 14:30:00",
+                     stop_ticks=None, prof_ticks=None,
+                     stop_target=4000, prof_target=5005,
+                     )
+    add_1m_candle(t, "2025-01-02 12:31:00", 5000, 5100, 5000, 5000)
+    ts.add_trade(t)
+    r = ts.drawdown_impact(drawdown_open=5800,
+                           drawdown_limit=6500,
+                           contracts=2,
+                           contract_value=50,
+                           contract_fee=3.10)
+    assert r["drawdown_open"] == 5800
+    assert r["drawdown_close"] == 6500
+    assert r["drawdown_high"] == 6993.80
+    assert r["drawdown_low"] == 5793.80
+    assert r["liquidated"] is False
 
 
 def test_TradeSeries_store_retrieve_and_delete():

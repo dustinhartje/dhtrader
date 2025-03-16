@@ -62,6 +62,7 @@ def create_trade(open_dt="2025-01-02 12:00:00",
 def create_tradeseries(start_dt="2025-01-01 00:00:00",
                        end_dt="2025-02-01 00:00:00",
                        timeframe="5m",
+                       trading_hours="rth",
                        symbol="ES",
                        name="DELETEME",
                        params_str="a1_b2_c3_p0",
@@ -72,6 +73,7 @@ def create_tradeseries(start_dt="2025-01-01 00:00:00",
     return dht.TradeSeries(start_dt=start_dt,
                            end_dt=end_dt,
                            timeframe=timeframe,
+                           trading_hours=trading_hours,
                            symbol=symbol,
                            name=name,
                            params_str=params_str,
@@ -161,7 +163,7 @@ def test_Backtest_create_and_verify_pretty():
     bt.add_tradeseries(ts)
     # With TradeSeries and Trdes shown
     assert len(bt.pretty(suppress_tradeseries=False,
-                         suppress_trades=False).splitlines()) == 57
+                         suppress_trades=False).splitlines()) == 58
 
 
 def test_Backtest_load_charts():

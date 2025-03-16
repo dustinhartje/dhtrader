@@ -168,6 +168,7 @@ def reconstruct_tradeseries(ts):
     return dht.TradeSeries(start_dt=ts["start_dt"],
                            end_dt=ts["end_dt"],
                            timeframe=ts["timeframe"],
+                           trading_hours=ts["trading_hours"],
                            symbol=ts["symbol"],
                            name=ts["name"],
                            params_str=ts["params_str"],

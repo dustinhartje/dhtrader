@@ -374,6 +374,7 @@ class Trade():
         # until the trade is closed.  Returning results could cause mistakes.
         if self.is_open:
             return None
+        fees = contracts * contract_fee
         # Determine max gain and loss prices seen during trade
         if self.direction == "long":
             max_gain = self.high_price - self.entry_price
@@ -383,10 +384,10 @@ class Trade():
             max_loss = self.high_price - self.entry_price
         # Use these to calculate highest and lowest drawdown distances seen
         cmult = contracts * contract_value
-        drawdown_max = drawdown_open + (max_gain * cmult)
-        drawdown_min = drawdown_open - (max_loss * cmult)
-        if drawdown_max > drawdown_limit:
-            drawdown_trail_increase = drawdown_max - drawdown_limit
+        drawdown_high = drawdown_open + (max_gain * cmult) - fees
+        drawdown_low = drawdown_open - (max_loss * cmult) - fees
+        if drawdown_high > drawdown_limit:
+            drawdown_trail_increase = drawdown_high - drawdown_limit
         else:
             drawdown_trail_increase = 0
         # Calculate the closing drawdown level i.e. where it will be after
@@ -401,15 +402,15 @@ class Trade():
         # Round results because float math anomalies create trailing decimals
         drawdown_open = round(drawdown_open, 2)
         drawdown_close = round(drawdown_close, 2)
-        drawdown_max = round(drawdown_max, 2)
-        drawdown_min = round(drawdown_min, 2)
+        drawdown_high = round(drawdown_high, 2)
+        drawdown_low = round(drawdown_low, 2)
         drawdown_trail_increase = round(drawdown_trail_increase, 2)
 
         return {"drawdown_open": drawdown_open,
                 "drawdown_close": drawdown_close,
                 "drawdown_trail_increase": drawdown_trail_increase,
-                "drawdown_max": drawdown_max,
-                "drawdown_min": drawdown_min,
+                "drawdown_high": drawdown_high,
+                "drawdown_low": drawdown_low,
                 }
 
     def balance_impact(self,
@@ -425,6 +426,7 @@ class Trade():
         # Cannot return balance impact until trade is closed
         if self.is_open:
             return None
+        fees = contracts * contract_fee
         # Determine max gain and loss prices seen during trade
         if self.direction == "long":
             max_gain = self.high_price - self.entry_price
@@ -434,24 +436,24 @@ class Trade():
             max_loss = self.high_price - self.entry_price
         # Use these to calculate highest and lowest balances seen
         cmult = contracts * contract_value
-        balance_max = balance_open + (max_gain * cmult)
-        balance_min = balance_open - (max_loss * cmult)
+        balance_high = balance_open + (max_gain * cmult) - fees
+        balance_low = balance_open - (max_loss * cmult) - fees
         # Calculate gain/loss of the trade
         gain_loss = (((self.exit_price - self.entry_price)
                      * contracts * contract_value * self.flipper)
-                     - (contracts * contract_fee))
+                     - fees)
         # Closing balance is just the difference from opening balance
         balance_close = round((balance_open + gain_loss), 2)
         # Round results because float math anomalies create trailing decimals
         balance_close = round(balance_close, 2)
-        balance_max = round(balance_max, 2)
-        balance_min = round(balance_min, 2)
+        balance_high = round(balance_high, 2)
+        balance_low = round(balance_low, 2)
         gain_loss = round(gain_loss, 2)
 
         return {"balance_open": balance_open,
                 "balance_close": balance_close,
-                "balance_max": balance_max,
-                "balance_min": balance_min,
+                "balance_high": balance_high,
+                "balance_low": balance_low,
                 "gain_loss": gain_loss,
                 }
 
@@ -478,7 +480,9 @@ class TradeSeries():
             may be earlier than the first trade datetime
         end_dt (str or datetime): End of time period evaluated
         timeframe (str): timeframe of underlying chart trades were evaluated
-            on
+            from
+        trading_hours (str): trading_hours of underlying chart trades were
+            evaluated from
         symbol (str): The symbol or "ticker" being evaluated
         name (str): Human friendly label representing this object
         params_str (str): Represents Backtest or trade specific parameters
@@ -496,6 +500,7 @@ class TradeSeries():
                  start_dt,
                  end_dt,
                  timeframe: str,
+                 trading_hours: str,
                  symbol="ES",
                  name: str = "",
                  params_str: str = "",
@@ -506,7 +511,10 @@ class TradeSeries():
 
         self.start_dt = dhu.dt_as_str(start_dt)
         self.end_dt = dhu.dt_as_str(end_dt)
-        self.timeframe = timeframe
+        if dhu.valid_timeframe(timeframe):
+            self.timeframe = timeframe
+        if dhu.valid_trading_hours(trading_hours):
+            self.trading_hours = trading_hours
         if isinstance(symbol, str):
             self.symbol = dhs.get_symbol_by_ticker(ticker=symbol)
         else:
@@ -648,6 +656,76 @@ class TradeSeries():
                 return t
 
         return None
+
+    def balance_impact(self,
+                       balance_open: float,
+                       contracts: int,
+                       contract_value: float,
+                       contract_fee: float,
+                       ):
+        """Runs through current trades list, calculating changes to a running
+        account balance starting with balance_open.  Returns high, low, and
+        ending balance."""
+        # Make sure trades are in order or results can't be trusted
+        self.sort_trades()
+        balance_close = balance_open
+        balance_high = balance_open
+        balance_low = balance_open
+        liquidated = False
+        for t in self.trades:
+            r = t.balance_impact(balance_open=balance_close,
+                                 contracts=contracts,
+                                 contract_value=contract_value,
+                                 contract_fee=contract_fee,
+                                 )
+            balance_high = max(balance_high, r["balance_high"])
+            balance_low = min(balance_low, r["balance_low"])
+            balance_close = r["balance_close"]
+        if balance_low <= 0:
+            liquidated = True
+
+        return {"balance_open": balance_open,
+                "balance_close": balance_close,
+                "balance_high": balance_high,
+                "balance_low": balance_low,
+                "liquidated": liquidated,
+                }
+
+    def drawdown_impact(self,
+                        drawdown_open: float,
+                        drawdown_limit: float,
+                        contracts: int,
+                        contract_value: float,
+                        contract_fee: float,
+                        ):
+        """Runs through current trades list, calculating changes to a running
+        account drawdown starting with drawdown_open.  Returns high, low, and
+        ending drawdown."""
+        # Make sure trades are in order or results can't be trusted
+        self.sort_trades()
+        drawdown_close = drawdown_open
+        drawdown_high = drawdown_open
+        drawdown_low = drawdown_open
+        liquidated = False
+        for t in self.trades:
+            r = t.drawdown_impact(drawdown_open=drawdown_close,
+                                  drawdown_limit=drawdown_limit,
+                                  contracts=contracts,
+                                  contract_value=contract_value,
+                                  contract_fee=contract_fee,
+                                  )
+            drawdown_high = max(drawdown_high, r["drawdown_high"])
+            drawdown_low = min(drawdown_low, r["drawdown_low"])
+            drawdown_close = r["drawdown_close"]
+        if drawdown_low <= 0:
+            liquidated = True
+
+        return {"drawdown_open": drawdown_open,
+                "drawdown_close": drawdown_close,
+                "drawdown_high": drawdown_high,
+                "drawdown_low": drawdown_low,
+                "liquidated": liquidated,
+                }
 
 
 class Backtest():
