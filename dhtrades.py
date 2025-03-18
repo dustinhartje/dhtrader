@@ -763,6 +763,9 @@ class Backtest():
         autoload_charts (bool): Whether to automatically load chart_tf and
             chart_1m from central storage at creation
             at creation (default True)
+        prefer_stored (bool): If a backtest with the same bt_id is in storage,
+            configure this object with it's configuration rather than creating
+            a new backtest (default True)
         tradeseries (list): List of TradeSeries() objects which will be
             created when the Backtest is run
     """
@@ -779,6 +782,7 @@ class Backtest():
                  chart_tf=None,
                  chart_1m=None,
                  autoload_charts: bool = False,
+                 prefer_stored: bool = True,
                  tradeseries: list = None,
                  ):
         self.start_dt = dhu.dt_as_str(start_dt)
@@ -810,6 +814,9 @@ class Backtest():
         self.autoload_charts = autoload_charts
         if self.autoload_charts:
             self.load_charts()
+        self.prefer_stored = prefer_stored
+        if self.prefer_stored:
+            self.config_from_storage()
 
     def __eq__(self, other):
         return (self.start_dt == other.start_dt
@@ -996,13 +1003,15 @@ class Backtest():
                                                         include_trades=True,
                                                         )
 
-    def calculate(self):
-        """This class should be updated in subclasses to run whatever logic is
-        needed to transform the chart_* attributes into multiple TradeSeries
-        using parameters supplied.  This will vary greatly from one type of
-        backtest to another.  At the end of the run it will likely need to
-        also store the Backtest object along with it's child TradeSeries and
-        grandchild Trades.
+    def config_from_storage(self):
+        """This class should be updated in subclasses to allow retrieval and
+        configuration of itself from storage if there is a matching bt_id
+        stored.  Otherwise it should do nothing as the object has already
+        been created and configured by __init__ by the time it gets here.
+
+        Note that in most cases this should by default also load any
+        TradeSeries that exist in storage and their associated Trades though
+        this could be suppressed by a feature flag if desired in the subclass.
         """
         pass
 
@@ -1011,5 +1020,15 @@ class Backtest():
         needed to validate any subclass-specific parameters and set them up
         as attributes on the object. This will vary greatly from one type of
         backtest to another.
+        """
+        pass
+
+    def calculate(self):
+        """This class should be updated in subclasses to run whatever logic is
+        needed to transform the chart_* attributes into multiple TradeSeries
+        using parameters supplied.  This will vary greatly from one type of
+        backtest to another.  At the end of the run it will likely need to
+        also store the Backtest object along with it's child TradeSeries and
+        grandchild Trades.
         """
         pass

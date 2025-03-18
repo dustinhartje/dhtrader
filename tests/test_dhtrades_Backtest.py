@@ -158,12 +158,12 @@ def test_Backtest_create_and_verify_pretty():
     assert isinstance(ts, dht.TradeSeries)
     tr = create_trade()
     assert isinstance(tr, dht.Trade)
-    assert len(bt.pretty().splitlines()) == 20
+    assert len(bt.pretty().splitlines()) == 21
     ts.add_trade(tr)
     bt.add_tradeseries(ts)
     # With TradeSeries and Trdes shown
     assert len(bt.pretty(suppress_tradeseries=False,
-                         suppress_trades=False).splitlines()) == 58
+                         suppress_trades=False).splitlines()) == 59
 
 
 def test_Backtest_load_charts():
