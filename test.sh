@@ -1,5 +1,5 @@
 #! /bin/bash
-pytest -sv $1
+pytest -sv $1 --durations=0
 
 ls tests/hide_* &>/dev/null
 test $? -ne 0 || echo "Hidden test files detected (./tests/hide_*.py.  Is this intentional?"

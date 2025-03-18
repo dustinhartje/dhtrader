@@ -524,7 +524,6 @@ class TradeSeries():
         if ts_id is None:
             self.ts_id = "_".join([self.name,
                                    self.params_str,
-                                   str(dhu.dt_to_epoch(dt.now())),
                                    ])
         else:
             self.ts_id = ts_id
@@ -795,7 +794,7 @@ class Backtest():
             self.symbol = symbol
         self.name = name
         if bt_id is None:
-            self.bt_id = "_".join([name, str(dhu.dt_to_epoch(dt.now()))])
+            self.bt_id = name
         else:
             self.bt_id = bt_id
         self.class_name = class_name
