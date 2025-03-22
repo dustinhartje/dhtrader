@@ -168,7 +168,7 @@ def test_Backtest_create_and_verify_pretty():
 
 def test_Backtest_load_charts():
     bt = create_backtest(start_dt="2025-01-01 00:00:00",
-                         end_dt="2025-01-08 00:00:00",
+                         end_dt="2025-01-07 17:30:00",
                          timeframe="e1h",
                          trading_hours="eth")
     # Confirm charts have not been populated
@@ -176,8 +176,11 @@ def test_Backtest_load_charts():
     assert bt.chart_tf is None
     # Load and confirm number of candles as expected in both chart types
     bt.load_charts()
-    assert len(bt.chart_1m.c_candles) == 5881
-    assert len(bt.chart_tf.c_candles) == 99
+    assert len(bt.chart_1m.c_candles) == 5520
+    assert len(bt.chart_tf.c_candles) == 92
+    # Confirm start_dt and end_dt were updated based on 1m candle availability
+    assert bt.start_dt == "2025-01-01 18:00:00"
+    assert bt.end_dt == "2025-01-07 16:59:00"
 
 
 def test_Backtest_add_and_remove_tradeseries_and_trades():

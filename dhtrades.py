@@ -928,7 +928,12 @@ class Backtest():
     def load_charts(self):
         """Load a Chart based on this object's datetimes, symbol, and
         timeframe arguments.  This will be the base data for calculating
-        trades."""
+        trades.  This method also restricts the Backtest's timeframe (start_dt
+        and end_dt attributes) to match the earliest and latest 1m candles
+        available from storage to ensure future updates do not leave
+        calculation gaps where valid candles were not yet available on earlier
+        runs."""
+        # Build candle charts, retrieving candles from storage
         self.chart_tf = dhc.Chart(c_timeframe=self.timeframe,
                                   c_trading_hours=self.trading_hours,
                                   c_symbol=self.symbol,
@@ -943,6 +948,9 @@ class Backtest():
                                   c_end=self.end_dt,
                                   autoload=True,
                                   )
+        # Limit the timeframe of the Backtest based on existing candles
+        self.start_dt = self.chart_1m.c_candles[0].c_datetime
+        self.end_dt = self.chart_1m.c_candles[-1].c_datetime
 
     def store(self,
               store_tradeseries: bool = True,
