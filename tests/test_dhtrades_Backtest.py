@@ -160,7 +160,7 @@ def test_Backtest_create_and_verify_pretty():
     assert isinstance(tr, dht.Trade)
     assert len(bt.pretty().splitlines()) == 21
     ts.add_trade(tr)
-    bt.add_tradeseries(ts)
+    bt.update_tradeseries(ts)
     # With TradeSeries and Trdes shown
     assert len(bt.pretty(suppress_tradeseries=False,
                          suppress_trades=False).splitlines()) == 59
@@ -180,31 +180,235 @@ def test_Backtest_load_charts():
     assert len(bt.chart_tf.c_candles) == 99
 
 
-def test_Backtest_add_tradeseries_and_trades():
-    bt = create_backtest()
+def test_Backtest_add_and_remove_tradeseries_and_trades():
+    bt = create_backtest(name="DELETEME-ARTSTest")
     assert isinstance(bt, dht.Backtest)
     assert len(bt.tradeseries) == 0
-    ts = create_tradeseries()
-    assert isinstance(ts, dht.TradeSeries)
-    assert len(ts.trades) == 0
+    ts1 = create_tradeseries(name="DELETEME-ARTS1",
+                             start_dt="2025-01-05 10:00:00",
+                             end_dt="2025-01-05 14:00:00",
+                             )
+    assert isinstance(ts1, dht.TradeSeries)
+    assert len(ts1.trades) == 0
     # TradeSeries should not have a bt_id yet
-    assert ts.bt_id is None
-    tr = create_trade()
-    assert isinstance(tr, dht.Trade)
-    # Trade should not have a ts_id or bt_id yet
-    assert tr.ts_id is None
-    assert tr.bt_id is None
-    ts.add_trade(tr)
-    assert len(ts.trades) == 1
-    assert isinstance(ts.trades[0], dht.Trade)
-    # After adding to TradeSeries, Trade should now have TradeSerie's ts_id
-    assert tr.ts_id == ts.ts_id
-    bt.add_tradeseries(ts)
+    assert ts1.bt_id is None
+    # Create and add 2 Trades
+    for dt in ["2025-01-05 12:00:00", "2025-01-05 13:00:00"]:
+        tr = create_trade(open_dt=dt, name="DELETEME-ARTSTest")
+        assert isinstance(tr, dht.Trade)
+        # Trade should not have a ts_id or bt_id yet
+        assert tr.ts_id is None
+        assert tr.bt_id is None
+        ts1.add_trade(tr)
+        # After adding to TradeSeries, Trade should now have TradeSeries ts_id
+        assert tr.ts_id == ts1.ts_id
+    assert len(ts1.trades) == 2
+    assert isinstance(ts1.trades[0], dht.Trade)
+    assert isinstance(ts1.trades[1], dht.Trade)
+    # Add the TradeSeries to the Backtest
+    bt.update_tradeseries(ts1)
     assert len(bt.tradeseries) == 1
     assert isinstance(bt.tradeseries[0], dht.TradeSeries)
     # TradeSeries and Trade should now have Backtest's bt_id
-    assert ts.bt_id == bt.bt_id
-    assert tr.bt_id == bt.bt_id
+    assert ts1.bt_id == bt.bt_id
+    for tr in ts1.trades:
+        assert tr.bt_id == bt.bt_id
+    # Create and add a second TradeSeries
+    ts2 = create_tradeseries(name="DELETEME-ARTS2",
+                             start_dt="2025-01-06 13:00:00",
+                             end_dt="2025-01-06 16:00:00",
+                             )
+    for dt in ["2025-01-06 14:00:00", "2025-01-06 15:00:00"]:
+        tr = create_trade(open_dt=dt, name="DELETEME-ARTSTest")
+        ts2.add_trade(tr)
+    bt.update_tradeseries(ts2)
+    assert isinstance(bt.tradeseries[1], dht.TradeSeries)
+    # Confirm both TradeSeries and Trades attached as expected
+    assert len(bt.tradeseries) == 2
+    assert bt.tradeseries[0].ts_id == "DELETEME-ARTS1_a1_b2_c3_p0"
+    assert bt.tradeseries[0].start_dt == "2025-01-05 10:00:00"
+    assert bt.tradeseries[0].end_dt == "2025-01-05 14:00:00"
+    assert bt.tradeseries[1].ts_id == "DELETEME-ARTS2_a1_b2_c3_p0"
+    assert bt.tradeseries[1].start_dt == "2025-01-06 13:00:00"
+    assert bt.tradeseries[1].end_dt == "2025-01-06 16:00:00"
+    assert len(bt.tradeseries[0].trades) == 2
+    assert bt.tradeseries[0].trades[0].open_dt == "2025-01-05 12:00:00"
+    assert bt.tradeseries[0].trades[1].open_dt == "2025-01-05 13:00:00"
+    assert len(bt.tradeseries[1].trades) == 2
+    assert bt.tradeseries[1].trades[0].open_dt == "2025-01-06 14:00:00"
+    assert bt.tradeseries[1].trades[1].open_dt == "2025-01-06 15:00:00"
+    # Clear and confirm storage has no objects with these name currently
+    # in case previous tests failed and left orphans
+    dhs.delete_backtests(symbol="ES", field="name", value="DELETEME-ARTSTest")
+    s_bt = dhs.get_backtests_by_field(field="name", value="DELETEME-ARTSTest")
+    assert len(s_bt) == 0
+    dhs.delete_tradeseries(symbol="ES", field="name", value="DELETEME-ARTS1")
+    s_ts = dhs.get_tradeseries_by_field(field="name", value="DELETEME-ARTS1")
+    assert len(s_ts) == 0
+    dhs.delete_tradeseries(symbol="ES", field="name", value="DELETEME-ARTS2")
+    s_ts = dhs.get_tradeseries_by_field(field="name", value="DELETEME-ARTS2")
+    assert len(s_ts) == 0
+    dhs.delete_trades(symbol="ES", field="name", value="DELETEME-ARTSTest")
+    s_tr = dhs.get_trades_by_field(field="name", value="DELETEME-ARTSTest")
+    assert len(s_tr) == 0
+    # Store the backtest
+    bt.store(store_tradeseries=True, store_trades=True)
+
+    # Modify and replace the 1st tradeseries, including storage update
+    ts1.start_dt = "2025-01-05 08:30:00"
+    ts1.end_dt = "2025-01-05 16:30:00"
+    ts1.trades[0].open_dt = "2025-01-05 11:30:00"
+    ts1.trades[1].open_dt = "2025-01-05 12:30:00"
+    bt.update_tradeseries(ts1)
+    # Confirm previous tradeseries no longer in storage since it was modified
+    # but not yet stored again.  Only the second (unmodified) TradeSeries
+    # should be retrievable at this stage.
+    s_ts = dhs.get_tradeseries_by_field(field="bt_id", value=bt.bt_id)
+    assert len(s_ts) == 1
+    assert s_ts[0].name == "DELETEME-ARTS2"
+    # Confirm backtest updated and no dupes.  Note that the modified
+    # TradeSeries was removed and readded so it's last now
+    assert len(bt.tradeseries) == 2
+    assert bt.tradeseries[0].ts_id == "DELETEME-ARTS2_a1_b2_c3_p0"
+    assert bt.tradeseries[0].start_dt == "2025-01-06 13:00:00"
+    assert bt.tradeseries[0].end_dt == "2025-01-06 16:00:00"
+    assert bt.tradeseries[1].ts_id == "DELETEME-ARTS1_a1_b2_c3_p0"
+    assert bt.tradeseries[1].start_dt == "2025-01-05 08:30:00"
+    assert bt.tradeseries[1].end_dt == "2025-01-05 16:30:00"
+    assert len(bt.tradeseries[0].trades) == 2
+    assert bt.tradeseries[0].trades[0].open_dt == "2025-01-06 14:00:00"
+    assert bt.tradeseries[0].trades[1].open_dt == "2025-01-06 15:00:00"
+    assert len(bt.tradeseries[1].trades) == 2
+    assert bt.tradeseries[1].trades[0].open_dt == "2025-01-05 11:30:00"
+    assert bt.tradeseries[1].trades[1].open_dt == "2025-01-05 12:30:00"
+    # Store the backtest again, which should replace itself, it's TradeSeries,
+    # and their Trades without duplication occurring
+    bt.store(store_tradeseries=True, store_trades=True)
+    # Get backtests with this name from storage
+    s_bt = dhs.get_backtests_by_field(field="name", value="DELETEME-ARTSTest")
+    # Confirm exactly 1 backtest found in storage with this name
+    assert len(s_bt) == 1
+    # Get TradeSeries by bt_id from storage
+    s_ts = dhs.get_tradeseries_by_field(field="bt_id", value=bt.bt_id)
+    # Confirm exactly 2 TradeSeries in storage
+    assert len(s_ts) == 2
+    # Get TradeSeries by name from storage
+    s_ts1 = dhs.get_tradeseries_by_field(field="name", value="DELETEME-ARTS1")
+    s_ts2 = dhs.get_tradeseries_by_field(field="name", value="DELETEME-ARTS2")
+    # Confirm exactly 1 of each tradeseries by name
+    assert len(s_ts1) == 1
+    assert len(s_ts2) == 1
+    # Confirm expected start_dt and end_dt for each TradeSeries
+    # ts1 should have been modified in storage after update
+    assert s_ts1[0].start_dt == "2025-01-05 08:30:00"
+    assert s_ts1[0].end_dt == "2025-01-05 16:30:00"
+    # ts2 should retain the original values in storage as it was not updated
+    assert s_ts2[0].start_dt == "2025-01-06 13:00:00"
+    assert s_ts2[0].end_dt == "2025-01-06 16:00:00"
+    # Confirm exactly 4 trades in storage by name and bt_id
+    s_tr = dhs.get_trades_by_field(field="name", value="DELETEME-ARTSTest")
+    assert len(s_tr) == 4
+    s_tr = dhs.get_trades_by_field(field="bt_id", value="DELETEME-ARTSTest")
+    assert len(s_tr) == 4
+    # Confirm exactly 2 Trades in storage by each TradeSeries ts_id
+    s_tr1 = dhs.get_trades_by_field(field="ts_id",
+                                    value="DELETEME-ARTS1_a1_b2_c3_p0")
+    assert len(s_tr1) == 2
+    s_tr2 = dhs.get_trades_by_field(field="ts_id",
+                                    value="DELETEME-ARTS2_a1_b2_c3_p0")
+    assert len(s_tr2) == 2
+    # Confirm Trade open_dt values as expected in storage, with ts1 updated
+    # and ts2 retaining original unmodified values
+    assert s_tr1[0].open_dt == "2025-01-05 11:30:00"
+    assert s_tr1[1].open_dt == "2025-01-05 12:30:00"
+    assert s_tr2[0].open_dt == "2025-01-06 14:00:00"
+    assert s_tr2[1].open_dt == "2025-01-06 15:00:00"
+
+    # Modify and replace the 2nd tradeseries, without storage update
+    ts2.start_dt = "2025-01-06 09:30:00"
+    ts2.end_dt = "2025-01-06 18:30:00"
+    ts2.trades[0].open_dt = "2025-01-06 14:30:00"
+    ts2.trades[1].open_dt = "2025-01-06 15:30:00"
+    bt.update_tradeseries(ts2, clear_storage=False)
+    # Confirm backtest updated and no duplication happened in TradeSeries or
+    # Trades
+    # Note that modifying the 2nd TradeSeries moved it back to the end
+    # of the list again
+    assert len(bt.tradeseries) == 2
+    assert bt.tradeseries[0].ts_id == "DELETEME-ARTS1_a1_b2_c3_p0"
+    assert bt.tradeseries[0].start_dt == "2025-01-05 08:30:00"
+    assert bt.tradeseries[0].end_dt == "2025-01-05 16:30:00"
+    assert bt.tradeseries[1].ts_id == "DELETEME-ARTS2_a1_b2_c3_p0"
+    assert bt.tradeseries[1].start_dt == "2025-01-06 09:30:00"
+    assert bt.tradeseries[1].end_dt == "2025-01-06 18:30:00"
+    assert len(bt.tradeseries[0].trades) == 2
+    assert bt.tradeseries[0].trades[0].open_dt == "2025-01-05 11:30:00"
+    assert bt.tradeseries[0].trades[1].open_dt == "2025-01-05 12:30:00"
+    assert len(bt.tradeseries[1].trades) == 2
+    assert bt.tradeseries[1].trades[0].open_dt == "2025-01-06 14:30:00"
+    assert bt.tradeseries[1].trades[1].open_dt == "2025-01-06 15:30:00"
+    # Confirm storage not updated, including Trades, and no dupes
+    # All of the below should remain the same as before we modified TS #2
+    # Get TradeSeries by bt_id from storage
+    s_ts = dhs.get_tradeseries_by_field(field="bt_id", value=bt.bt_id)
+    # Confirm exactly 2 TradeSeries in storage
+    assert len(s_ts) == 2
+    # Get TradeSeries by name from storage
+    s_ts1 = dhs.get_tradeseries_by_field(field="name", value="DELETEME-ARTS1")
+    s_ts2 = dhs.get_tradeseries_by_field(field="name", value="DELETEME-ARTS2")
+    # Confirm exactly 1 of each tradeseries by name
+    assert len(s_ts1) == 1
+    assert len(s_ts2) == 1
+    # Confirm expected start_dt and end_dt for each TradeSeries
+    # ts1 should have been modified in storage after update
+    assert s_ts1[0].start_dt == "2025-01-05 08:30:00"
+    assert s_ts1[0].end_dt == "2025-01-05 16:30:00"
+    # ts2 should retain the original values in storage as it was not updated
+    assert s_ts2[0].start_dt == "2025-01-06 13:00:00"
+    assert s_ts2[0].end_dt == "2025-01-06 16:00:00"
+    # Confirm exactly 4 trades in storage by name and bt_id
+    s_tr = dhs.get_trades_by_field(field="name", value="DELETEME-ARTSTest")
+    assert len(s_tr) == 4
+    s_tr = dhs.get_trades_by_field(field="bt_id", value="DELETEME-ARTSTest")
+    assert len(s_tr) == 4
+    # Confirm exactly 2 Trades in storage by each TradeSeries ts_id
+    s_tr1 = dhs.get_trades_by_field(field="ts_id",
+                                    value="DELETEME-ARTS1_a1_b2_c3_p0")
+    assert len(s_tr1) == 2
+    s_tr2 = dhs.get_trades_by_field(field="ts_id",
+                                    value="DELETEME-ARTS2_a1_b2_c3_p0")
+    assert len(s_tr2) == 2
+    # Confirm Trade open_dt values as expected in storage, with ts1 updated
+    # and ts2 retaining original unmodified values
+    assert s_tr1[0].open_dt == "2025-01-05 11:30:00"
+    assert s_tr1[1].open_dt == "2025-01-05 12:30:00"
+    assert s_tr2[0].open_dt == "2025-01-06 14:00:00"
+    assert s_tr2[1].open_dt == "2025-01-06 15:00:00"
+
+    # Confirm remove_tradeseries() works directly on backtest, removing
+    # TradeSeries and Trades from storage by default
+    bt.remove_tradeseries(ts_id=ts2.ts_id)
+    assert len(bt.tradeseries) == 1
+    assert bt.tradeseries[0].ts_id == ts1.ts_id
+    s_ts2 = dhs.get_tradeseries_by_field(field="name", value="DELETEME-ARTS2")
+    assert len(s_ts2) == 0
+    s_tr2 = dhs.get_trades_by_field(field="ts_id",
+                                    value="DELETEME-ARTS2_a1_b2_c3_p0")
+    assert len(s_tr2) == 0
+
+    # Delete everything from storage to cleanup
+    dhs.delete_backtests(symbol="ES", field="name", value="DELETEME-ARTSTest")
+    s_bt = dhs.get_backtests_by_field(field="name", value="DELETEME-ARTSTest")
+    assert len(s_bt) == 0
+    dhs.delete_tradeseries(symbol="ES", field="name", value="DELETEME-ARTS1")
+    s_ts = dhs.get_tradeseries_by_field(field="name", value="DELETEME-ARTS1")
+    assert len(s_ts) == 0
+    dhs.delete_tradeseries(symbol="ES", field="name", value="DELETEME-ARTS2")
+    s_ts = dhs.get_tradeseries_by_field(field="name", value="DELETEME-ARTS2")
+    assert len(s_ts) == 0
+    dhs.delete_trades(symbol="ES", field="name", value="DELETEME-ARTSTest")
+    s_tr = dhs.get_trades_by_field(field="name", value="DELETEME-ARTSTest")
+    assert len(s_tr) == 0
 
 
 def test_Backtest_store_retrieve_load_tradeseries_and_delete():
@@ -213,7 +417,7 @@ def test_Backtest_store_retrieve_load_tradeseries_and_delete():
     ts = create_tradeseries()
     ts.add_trade(tr)
     bt = create_backtest()
-    bt.add_tradeseries(ts)
+    bt.update_tradeseries(ts)
 
     # Clear and confirm storage has no objects with this name currently
     dhs.delete_backtests(symbol="ES", field="name", value="DELETEME-TEST")

@@ -948,6 +948,11 @@ class Backtest():
               store_tradeseries: bool = True,
               store_trades: bool = True,
               ):
+        """Store the backtest and optionally any attached TradeSeries and their
+        attached Trades.  This first deletes any of the same 3 object types
+        from storage with this Backtest's bt_id to ensure no duplication
+        occurs."""
+        self.delete_from_storage()
         result = {"backtest": dhs.store_backtests(backtests=[self]),
                   "tradeseries": [],
                   }
@@ -979,11 +984,14 @@ class Backtest():
 
         return result
 
-    def add_tradeseries(self,
-                        ts,
-                        ):
-        """Add an existing tradeseries to this Backtest, typically used
-        for pulling results in from previous runs to update with new data."""
+    def update_tradeseries(self,
+                           ts,
+                           clear_storage: bool = True):
+        """Add an existing TradeSeries to this Backtest, typically used
+        for pulling results in from previous runs to update with new data.
+        If a TradeSeries with the same ts_id is already attached, this will
+        replace it.  clear_storage is passed to remove_tradeseries to delete
+        the TradeSeries from storage when updating."""
         if not isinstance(ts, TradeSeries):
             raise TypeError(f"ts {ts} must be a dhtrades.TradeSeries() obj, "
                             f"got a {type(ts)} instead!"
@@ -992,10 +1000,34 @@ class Backtest():
             self.tradeseries = []
         # Associate this TradeSeries with this Backtest
         ts.update_bt_id(self.bt_id)
+        # Remove any existing TradeSeries with the same ts_id in case this
+        # is an update rather than new addition
+        self.remove_tradeseries(ts.ts_id, clear_storage=clear_storage)
+        # Add the tradeseries to the Backtest
         self.tradeseries.append(ts)
 
+    def remove_tradeseries(self,
+                           ts_id,
+                           clear_storage: bool = True):
+        """Removes any TradeSeries with the given ts_id from the Backtest.
+        Optionally remove TradeSeries and it's Trades from storage as well
+        (default = True)."""
+        # Delete TradeSeries and associated Trades from storage
+        if clear_storage:
+            dhs.delete_tradeseries(symbol="ES",
+                                   field="ts_id",
+                                   value=ts_id,
+                                   )
+            dhs.delete_trades(symbol="ES",
+                              field="ts_id",
+                              value=ts_id,
+                              )
+        # Rebuild Backtest's list of TradeSeries, excluding any matching ts_id
+        self.tradeseries = [ts for ts in self.tradeseries if ts.ts_id != ts_id]
+        return True
+
     def load_tradeseries(self):
-        """Attaches any TradeSeries and it's linked trades that are found in
+        """Attaches any TradeSeries and their linked trades that are found in
         storage and which match this object's bt_id.  This will replace any
         currently attached tradeseries."""
         self.tradeseries = dhs.get_tradeseries_by_field(field="bt_id",
