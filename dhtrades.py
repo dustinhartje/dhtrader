@@ -636,10 +636,6 @@ class TradeSeries():
     def add_trade(self,
                   trade,
                   ):
-        if not isinstance(trade, Trade):
-            raise TypeError(f"trade {trade} must be a dhtrades.Trade() obj,"
-                            f"got a {type(trade)} instead"
-                            )
         # Associate this Trade with this Backtest
         trade.ts_id = self.ts_id
         self.trades.append(trade)
@@ -1002,10 +998,6 @@ class Backtest():
         If a TradeSeries with the same ts_id is already attached, this will
         replace it.  clear_storage is passed to remove_tradeseries to delete
         the TradeSeries from storage when updating."""
-        if not isinstance(ts, TradeSeries):
-            raise TypeError(f"ts {ts} must be a dhtrades.TradeSeries() obj, "
-                            f"got a {type(ts)} instead!"
-                            )
         if self.tradeseries is None:
             self.tradeseries = []
         # Associate this TradeSeries with this Backtest
