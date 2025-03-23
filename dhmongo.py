@@ -452,7 +452,7 @@ def get_indicator_datapoints(ind_id: str,
                              earliest_dt: str = None,
                              latest_dt: str = None,
                              ):
-    """retrieves all datapoints for the given ind_id that fall within
+    """Retrieves all datapoints for the given ind_id that fall within
     the range of earliest_dt and latest_dt (inclusive of both), returning
     them as a chronologially sorted list"""
     if earliest_dt is None:

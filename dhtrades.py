@@ -960,7 +960,9 @@ class Backtest():
         attached Trades.  This first deletes any of the same 3 object types
         from storage with this Backtest's bt_id to ensure no duplication
         occurs."""
-        self.delete_from_storage()
+        self.delete_from_storage(include_tradeseries=store_tradeseries,
+                                 include_trades=store_trades,
+                                 )
         result = {"backtest": dhs.store_backtests(backtests=[self]),
                   "tradeseries": [],
                   }
