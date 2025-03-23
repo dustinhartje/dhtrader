@@ -947,6 +947,11 @@ class Backtest():
         # Limit the timeframe of the Backtest based on existing candles
         self.start_dt = self.chart_1m.c_candles[0].c_datetime
         self.end_dt = self.chart_1m.c_candles[-1].c_datetime
+        # And adjust the chart timeframes to match the Backtest
+        self.chart_tf.c_start = self.start_dt
+        self.chart_tf.c_end = self.end_dt
+        self.chart_1m.c_start = self.start_dt
+        self.chart_1m.c_end = self.end_dt
 
     def store(self,
               store_tradeseries: bool = True,
