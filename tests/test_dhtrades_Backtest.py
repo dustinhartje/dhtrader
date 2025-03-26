@@ -269,21 +269,20 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
     s_ts = dhs.get_tradeseries_by_field(field="bt_id", value=bt.bt_id)
     assert len(s_ts) == 1
     assert s_ts[0].name == "DELETEME-ARTS2"
-    # Confirm backtest updated and no dupes.  Note that the modified
-    # TradeSeries was removed and readded so it's last now
+    # Confirm backtest updated and no dupes
     assert len(bt.tradeseries) == 2
-    assert bt.tradeseries[0].ts_id == "DELETEME-ARTS2_a1_b2_c3_p0"
-    assert bt.tradeseries[0].start_dt == "2025-01-06 13:00:00"
-    assert bt.tradeseries[0].end_dt == "2025-01-06 16:00:00"
-    assert bt.tradeseries[1].ts_id == "DELETEME-ARTS1_a1_b2_c3_p0"
-    assert bt.tradeseries[1].start_dt == "2025-01-05 08:30:00"
-    assert bt.tradeseries[1].end_dt == "2025-01-05 16:30:00"
+    assert bt.tradeseries[0].ts_id == "DELETEME-ARTS1_a1_b2_c3_p0"
+    assert bt.tradeseries[0].start_dt == "2025-01-05 08:30:00"
+    assert bt.tradeseries[0].end_dt == "2025-01-05 16:30:00"
     assert len(bt.tradeseries[0].trades) == 2
-    assert bt.tradeseries[0].trades[0].open_dt == "2025-01-06 14:00:00"
-    assert bt.tradeseries[0].trades[1].open_dt == "2025-01-06 15:00:00"
+    assert bt.tradeseries[0].trades[0].open_dt == "2025-01-05 11:30:00"
+    assert bt.tradeseries[0].trades[1].open_dt == "2025-01-05 12:30:00"
+    assert bt.tradeseries[1].ts_id == "DELETEME-ARTS2_a1_b2_c3_p0"
+    assert bt.tradeseries[1].start_dt == "2025-01-06 13:00:00"
+    assert bt.tradeseries[1].end_dt == "2025-01-06 16:00:00"
     assert len(bt.tradeseries[1].trades) == 2
-    assert bt.tradeseries[1].trades[0].open_dt == "2025-01-05 11:30:00"
-    assert bt.tradeseries[1].trades[1].open_dt == "2025-01-05 12:30:00"
+    assert bt.tradeseries[1].trades[0].open_dt == "2025-01-06 14:00:00"
+    assert bt.tradeseries[1].trades[1].open_dt == "2025-01-06 15:00:00"
     # Store the backtest again, which should replace itself, it's TradeSeries,
     # and their Trades without duplication occurring
     bt.store(store_tradeseries=True, store_trades=True)
@@ -335,8 +334,10 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
     bt.update_tradeseries(ts2, clear_storage=False)
     # Confirm backtest updated and no duplication happened in TradeSeries or
     # Trades
-    # Note that modifying the 2nd TradeSeries moved it back to the end
-    # of the list again
+    # This also confirms that .sort_tradeseries() is working as the update
+    # would have added *ARTS1* on the end of the list during the update, then
+    # .update_tradeseries() runs .sort_tradeseries() which sorts them
+    # alphabetically by ts_id
     assert len(bt.tradeseries) == 2
     assert bt.tradeseries[0].ts_id == "DELETEME-ARTS1_a1_b2_c3_p0"
     assert bt.tradeseries[0].start_dt == "2025-01-05 08:30:00"

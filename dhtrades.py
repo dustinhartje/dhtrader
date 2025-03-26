@@ -1012,6 +1012,7 @@ class Backtest():
         self.remove_tradeseries(ts.ts_id, clear_storage=clear_storage)
         # Add the tradeseries to the Backtest
         self.tradeseries.append(ts)
+        self.sort_tradeseries()
 
     def remove_tradeseries(self,
                            ts_id,
@@ -1033,6 +1034,9 @@ class Backtest():
         self.tradeseries = [ts for ts in self.tradeseries if ts.ts_id != ts_id]
         return True
 
+    def sort_tradeseries(self):
+        self.tradeseries.sort(key=lambda t: t.ts_id)
+
     def load_tradeseries(self):
         """Attaches any TradeSeries and their linked trades that are found in
         storage and which match this object's bt_id.  This will replace any
@@ -1041,6 +1045,7 @@ class Backtest():
                                                         value=self.bt_id,
                                                         include_trades=True,
                                                         )
+        self.sort_tradeseries()
 
     def config_from_storage(self):
         """This class should be updated in subclasses to allow retrieval and
@@ -1052,7 +1057,7 @@ class Backtest():
         TradeSeries that exist in storage and their associated Trades though
         this could be suppressed by a feature flag if desired in the subclass.
         """
-        pass
+        self.sort_tradeseries()
 
     def incorporate_parameters(self):
         """This class should be updated in subclasses to run whatever logic is
