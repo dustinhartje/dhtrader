@@ -184,16 +184,26 @@ def store_trades(trades: list,
 
 def review_trades(symbol: str,
                   collection: str,
+                  bt_id: str = None,
+                  ts_id: str = None,
                   ):
     """Provides aggregate summary data about trades in mongo"""
     c = db[collection]
+    match = {"symbol": symbol}
+    group = {"_id": {"name": "$name"},
+             "earliest_epoch": {"$min": "$open_epoch"},
+             "latest_epoch": {"$max": "$open_epoch"},
+             }
+    if bt_id is not None:
+        match["bt_id"] = bt_id
+        group["_id"]["bt_id"] = "$bt_id"
+    if ts_id is not None:
+        match["ts_id"] = ts_id
+        group["_id"]["ts_id"] = "$ts_id"
+    group["count"] = {"$sum": 1}
     try:
-        trades = list(c.aggregate([{"$match": {"symbol": symbol}},
-                                   {"$group": {"_id": "$name",
-                                               "count": {"$sum": 1},
-                                               }}]))
-        for t in trades:
-            t["name"] = t.pop("_id")
+        trades = list(c.aggregate([{"$match": match},
+                                   {"$group": group}]))
 
         return trades
     # IndexError is raised if collection does not exist yet
@@ -248,22 +258,26 @@ def store_tradeseries(series: dict,
 
 def review_tradeseries(symbol: str,
                        collection: str,
+                       bt_id: str,
                        ):
     """Provides aggregate summary data about tradeseries in mongo"""
     c = db[collection]
+    match = {"symbol": symbol}
+    group = {"_id": {"name": "$name", "bt_id": "$bt_id"},
+             "earliest_start": {"$min": "$start_dt"},
+             "latest_end": {"$max": "$end_dt"},
+             }
+    if bt_id is not None:
+        match["bt_id"] = bt_id
+    group["count"] = {"$sum": 1}
     try:
-        tradeseries = list(c.aggregate([{"$match": {"symbol": symbol}},
-                                        {"$group": {"_id": {
-                                                            "bt_id": "$bt_id",
-                                                            "ts_id": "$ts_id"
-                                                            },
-                                                    "count": {"$sum": 1},
-                                                    }}]))
-
-        return tradeseries
+        tradeseries = list(c.aggregate([{"$match": match},
+                                        {"$group": group}]))
     # IndexError is raised if collection does not exist yet
     except IndexError:
         return None
+    else:
+        return tradeseries
 
 
 def delete_tradeseries(symbol: str,
@@ -313,13 +327,15 @@ def review_backtests(symbol: str,
                      ):
     """Provides aggregate summary data about backtests in mongo"""
     c = db[collection]
+    match = {"symbol": symbol}
+    group = {"_id": {"name": "$name", "bt_id": "$bt_id"},
+             "earliest_start": {"$min": "$start_dt"},
+             "latest_end": {"$max": "$end_dt"},
+             }
+    group["count"] = {"$sum": 1}
     try:
-        backtests = list(c.aggregate([{"$match": {"symbol": symbol}},
-                                      {"$group": {"_id": "$bt_id",
-                                                  "count": {"$sum": 1},
-                                                  }}]))
-        for b in backtests:
-            b["bt_id"] = b.pop("_id")
+        backtests = list(c.aggregate([{"$match": match},
+                                      {"$group": group}]))
 
         return backtests
     # IndexError is raised if collection does not exist yet

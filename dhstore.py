@@ -3,6 +3,7 @@
 # massive overhaul of backtest, chart, and trader code bases.
 
 import csv
+import json
 import sys
 import progressbar
 from collections import Counter, defaultdict
@@ -132,12 +133,34 @@ def store_trades(trades: list,
 
 def review_trades(symbol: str = "ES",
                   collection: str = COLL_TRADES,
+                  bt_id: str = None,
+                  ts_id: str = None,
+                  include_epochs: bool = False,
+                  pretty: bool = False,
                   ):
-    """Provides aggregate summary data about trades in central storage"""
+    """Provides aggregate summary data about trades in central storage,
+    optionally filtering by bt_id and/or ts_id.  Earliest and latest dates
+    are returned as strings and include_epochs can optionally also provide them
+    as epochs.  pretty=True returns in a print friendly, multiline, indended
+    string format."""
+    review = dhm.review_trades(symbol=symbol,
+                               collection=collection,
+                               bt_id=bt_id,
+                               ts_id=ts_id,
+                               )
+    for t in review:
+        t["earliest"] = dhu.dt_as_str(dhu.dt_from_epoch(t["earliest_epoch"]))
+        t["latest"] = dhu.dt_as_str(dhu.dt_from_epoch(t["latest_epoch"]))
+        if not include_epochs:
+            t.pop("earliest_epoch")
+            t.pop("latest_epoch")
 
-    return dhm.review_trades(symbol=symbol,
-                             collection=collection,
-                             )
+    if pretty:
+        return json.dumps(review,
+                          indent=4,
+                          )
+    else:
+        return review
 
 
 def delete_trades(symbol: str,
@@ -228,12 +251,29 @@ def store_tradeseries(series: list,
 
 def review_tradeseries(symbol: str = "ES",
                        collection: str = COLL_TRADESERIES,
+                       bt_id: str = None,
+                       include_trades: bool = False,
+                       pretty: bool = False,
                        ):
-    """Provides aggregate summary data about tradeseries in central storage"""
-
-    return dhm.review_tradeseries(symbol=symbol,
-                                  collection=collection,
-                                  )
+    """Provides aggregate summary data about tradeseries in central storage,
+    optionally filtering by bt_id.  Earliest start_dt and latest end_dt are
+    returned as strings.  pretty=True returns in a print friendly, multiline,
+    indented string format."""
+    review = dhm.review_tradeseries(symbol=symbol,
+                                    collection=collection,
+                                    bt_id=bt_id,
+                                    )
+    if include_trades:
+        for ts in review:
+            ts["trades"] = review_trades(symbol=symbol,
+                                         bt_id=ts["_id"]["bt_id"],
+                                         )
+    if pretty:
+        return json.dumps(review,
+                          indent=4,
+                          )
+    else:
+        return review
 
 
 def delete_tradeseries(symbol: str,
@@ -295,12 +335,27 @@ def store_backtests(backtests: list,
 
 def review_backtests(symbol: str = "ES",
                      collection: str = COLL_BACKTESTS,
+                     include_tradeseries: bool = False,
+                     include_trades: bool = False,
+                     pretty: bool = False,
                      ):
     """Provides aggregate summary data about backtests in central storage"""
-
-    return dhm.review_backtests(symbol=symbol,
-                                collection=collection,
-                                )
+    review = dhm.review_backtests(symbol=symbol,
+                                  collection=collection,
+                                  )
+    if include_tradeseries:
+        for bt in review:
+            bt["tradeseries"] = review_tradeseries(
+                    symbol=symbol,
+                    bt_id=bt["_id"]["bt_id"],
+                    include_trades=include_trades,
+                    )
+    if pretty:
+        return json.dumps(review,
+                          indent=4,
+                          )
+    else:
+        return review
 
 
 def delete_backtests(symbol: str,
