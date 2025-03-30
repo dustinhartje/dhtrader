@@ -131,11 +131,11 @@ def create_backtest(start_dt="2025-01-01 00:00:00",
         assert r.bt_id == bt_id
     assert isinstance(r.class_name, str)
     assert r.class_name == class_name
-    if chart_tf is None:
+    if chart_tf is None and autoload_charts is False:
         assert r.chart_tf is None
     else:
         assert isinstance(r.chart_tf, dhc.Chart)
-    if chart_1m is None:
+    if chart_1m is None and autoload_charts is False:
         assert r.chart_1m is None
     else:
         assert isinstance(r.chart_1m, dhc.Chart)
@@ -148,6 +148,20 @@ def create_backtest(start_dt="2025-01-01 00:00:00",
         assert r.symbol.ticker == symbol
     assert isinstance(r.tradeseries, list)
     return r
+
+
+def clear_storage_by_name(name: str):
+    """Delete all Backtests, TradeSeries, and Trades with the given name from
+    central storage"""
+    dhs.delete_backtests(symbol="ES", field="name", value=name)
+    s_bt = dhs.get_backtests_by_field(field="name", value=name)
+    assert len(s_bt) == 0
+    dhs.delete_tradeseries(symbol="ES", field="name", value=name)
+    s_ts = dhs.get_tradeseries_by_field(field="name", value=name)
+    assert len(s_ts) == 0
+    dhs.delete_trades(symbol="ES", field="name", value=name)
+    s_tr = dhs.get_trades_by_field(field="name", value=name)
+    assert len(s_tr) == 0
 
 
 def test_Backtest_create_and_verify_pretty():
@@ -183,11 +197,281 @@ def test_Backtest_load_charts():
     assert bt.end_dt == "2025-01-07 16:59:00"
 
 
+def test_Backtest_restrict_dates():
+    test_name = "DELETEME-RESTRICTTest"
+    bt = create_backtest(name=test_name,
+                         start_dt="2025-01-01 18:00:00",
+                         end_dt="2025-01-31 16:59:00",
+                         timeframe="e1h",
+                         trading_hours="eth",
+                         autoload_charts=True,
+                         )
+    ts1 = create_tradeseries(name=test_name,
+                             start_dt="2025-01-01 18:00:00",
+                             end_dt="2025-01-31 16:59:00",
+                             timeframe="e1h",
+                             trading_hours="eth",
+                             params_str="a1_b2_c3_p0",
+                             )
+    ts1.add_trade(create_trade(open_dt="2025-01-02 12:00:00",
+                               timeframe="e1h",
+                               trading_hours="eth",
+                               name=test_name
+                               ))
+    ts1.add_trade(create_trade(open_dt="2025-01-12 12:00:00",
+                               timeframe="e1h",
+                               trading_hours="eth",
+                               name=test_name
+                               ))
+    ts1.add_trade(create_trade(open_dt="2025-01-20 12:00:00",
+                               timeframe="e1h",
+                               trading_hours="eth",
+                               name=test_name
+                               ))
+    bt.update_tradeseries(ts1)
+    assert bt.start_dt == "2025-01-01 18:00:00"
+    assert bt.end_dt == "2025-01-31 16:59:00"
+    assert len(bt.tradeseries) == 1
+    assert len(bt.tradeseries[0].trades) == 3
+    assert bt.tradeseries[0].trades[0].open_dt == "2025-01-02 12:00:00"
+    assert bt.tradeseries[0].trades[1].open_dt == "2025-01-12 12:00:00"
+    assert bt.tradeseries[0].trades[2].open_dt == "2025-01-20 12:00:00"
+    assert bt.chart_tf.earliest_candle == "2025-01-01 18:00:00"
+    assert bt.chart_tf.latest_candle == "2025-01-31 16:00:00"
+    assert bt.chart_1m.earliest_candle == "2025-01-01 18:00:00"
+    assert bt.chart_1m.latest_candle == "2025-01-31 16:59:00"
+    # Confirm trying to expand dates raises an Exception
+    with pytest.raises(ValueError):
+        bt.restrict_dates(new_start_dt="2024-12-15 00:00:00",
+                          new_end_dt="2025-01-31 16:59:00",
+                          update_storage=False,
+                          )
+    with pytest.raises(ValueError):
+        bt.restrict_dates(new_start_dt="2025-01-01 18:00:00",
+                          new_end_dt="2025-02-12 16:59:00",
+                          update_storage=False,
+                          )
+    with pytest.raises(ValueError):
+        bt.restrict_dates(new_start_dt="2024-12-15 00:00:00",
+                          new_end_dt="2025-02-12 16:59:00",
+                          update_storage=False,
+                          )
+    # Make sure nothing actually changed
+    assert bt.start_dt == "2025-01-01 18:00:00"
+    assert bt.end_dt == "2025-01-31 16:59:00"
+    assert len(bt.tradeseries) == 1
+    assert len(bt.tradeseries[0].trades) == 3
+    assert bt.tradeseries[0].trades[0].open_dt == "2025-01-02 12:00:00"
+    assert bt.tradeseries[0].trades[1].open_dt == "2025-01-12 12:00:00"
+    assert bt.tradeseries[0].trades[2].open_dt == "2025-01-20 12:00:00"
+    assert bt.chart_tf.earliest_candle == "2025-01-01 18:00:00"
+    assert bt.chart_tf.latest_candle == "2025-01-31 16:00:00"
+    assert bt.chart_1m.earliest_candle == "2025-01-01 18:00:00"
+    assert bt.chart_1m.latest_candle == "2025-01-31 16:59:00"
+
+    # Confirm restricting start date a little works with no trade change
+    bt.restrict_dates(new_start_dt="2025-01-01 22:00:00",
+                      new_end_dt="2025-01-31 16:59:00",
+                      update_storage=False,
+                      )
+    assert bt.start_dt == "2025-01-01 22:00:00"
+    assert bt.end_dt == "2025-01-31 16:59:00"
+    assert len(bt.tradeseries) == 1
+    assert len(bt.tradeseries[0].trades) == 3
+    assert bt.tradeseries[0].trades[0].open_dt == "2025-01-02 12:00:00"
+    assert bt.tradeseries[0].trades[1].open_dt == "2025-01-12 12:00:00"
+    assert bt.tradeseries[0].trades[2].open_dt == "2025-01-20 12:00:00"
+    assert bt.chart_tf.earliest_candle == "2025-01-01 22:00:00"
+    assert bt.chart_tf.latest_candle == "2025-01-31 16:00:00"
+    assert bt.chart_1m.earliest_candle == "2025-01-01 22:00:00"
+    assert bt.chart_1m.latest_candle == "2025-01-31 16:59:00"
+    # Confirm restring start date a lot eliminates the first trade
+    bt.restrict_dates(new_start_dt="2025-01-03 12:00:00",
+                      new_end_dt="2025-01-31 16:59:00",
+                      update_storage=False,
+                      )
+    assert bt.start_dt == "2025-01-03 12:00:00"
+    assert bt.end_dt == "2025-01-31 16:59:00"
+    assert len(bt.tradeseries) == 1
+    assert len(bt.tradeseries[0].trades) == 2
+    assert bt.tradeseries[0].trades[0].open_dt == "2025-01-12 12:00:00"
+    assert bt.tradeseries[0].trades[1].open_dt == "2025-01-20 12:00:00"
+    assert bt.chart_tf.earliest_candle == "2025-01-03 12:00:00"
+    assert bt.chart_tf.latest_candle == "2025-01-31 16:00:00"
+    assert bt.chart_1m.earliest_candle == "2025-01-03 12:00:00"
+    assert bt.chart_1m.latest_candle == "2025-01-31 16:59:00"
+
+    # Confirm restricting end date a little works with no trade change
+    bt.restrict_dates(new_start_dt="2025-01-03 12:00:00",
+                      new_end_dt="2025-01-31 14:59:00",
+                      update_storage=False,
+                      )
+    assert bt.start_dt == "2025-01-03 12:00:00"
+    assert bt.end_dt == "2025-01-31 14:59:00"
+    assert len(bt.tradeseries) == 1
+    assert len(bt.tradeseries[0].trades) == 2
+    assert bt.tradeseries[0].trades[0].open_dt == "2025-01-12 12:00:00"
+    assert bt.tradeseries[0].trades[1].open_dt == "2025-01-20 12:00:00"
+    assert bt.chart_tf.earliest_candle == "2025-01-03 12:00:00"
+    assert bt.chart_tf.latest_candle == "2025-01-31 14:00:00"
+    assert bt.chart_1m.earliest_candle == "2025-01-03 12:00:00"
+    assert bt.chart_1m.latest_candle == "2025-01-31 14:59:00"
+    # Confirm restring start date a lot eliminates the last trade
+    bt.restrict_dates(new_start_dt="2025-01-03 12:00:00",
+                      new_end_dt="2025-01-18 14:59:00",
+                      update_storage=False,
+                      )
+    assert bt.start_dt == "2025-01-03 12:00:00"
+    assert bt.end_dt == "2025-01-18 14:59:00"
+    assert len(bt.tradeseries) == 1
+    assert len(bt.tradeseries[0].trades) == 1
+    assert bt.tradeseries[0].trades[0].open_dt == "2025-01-12 12:00:00"
+    assert bt.chart_tf.earliest_candle == "2025-01-03 12:00:00"
+    # 2025-01-18 was a Saturday so latest candles are on Fri the 17th at close
+    assert bt.chart_tf.latest_candle == "2025-01-17 16:00:00"
+    assert bt.chart_1m.earliest_candle == "2025-01-03 12:00:00"
+    assert bt.chart_1m.latest_candle == "2025-01-17 16:59:00"
+    # Confirm restricting both dates works and eliminates the final trade
+    bt.restrict_dates(new_start_dt="2025-01-08 12:00:00",
+                      new_end_dt="2025-01-10 14:59:00",
+                      update_storage=False,
+                      )
+    assert bt.start_dt == "2025-01-08 12:00:00"
+    assert bt.end_dt == "2025-01-10 14:59:00"
+    assert len(bt.tradeseries) == 1
+    assert len(bt.tradeseries[0].trades) == 0
+    assert bt.chart_tf.earliest_candle == "2025-01-08 12:00:00"
+    # 2025-01-18 was a saturday so latest candles are on Fri the 17th at close
+    assert bt.chart_tf.latest_candle == "2025-01-10 14:00:00"
+    assert bt.chart_1m.earliest_candle == "2025-01-08 12:00:00"
+    assert bt.chart_1m.latest_candle == "2025-01-10 14:59:00"
+
+    # ###############################################################
+    # Reset, store, and repeat updates with storage verification this time
+
+    # Clear and confirm storage has no objects with this name currently
+    clear_storage_by_name(name=test_name)
+    # Create a Backtest with 1 TradeSeries and 3 Trades
+    bt = None
+    bt = create_backtest(name=test_name,
+                         start_dt="2025-01-01 18:00:00",
+                         end_dt="2025-01-31 16:59:00",
+                         timeframe="e1h",
+                         trading_hours="eth",
+                         autoload_charts=True,
+                         )
+    ts1 = create_tradeseries(name=test_name,
+                             start_dt="2025-01-01 18:00:00",
+                             end_dt="2025-01-31 16:59:00",
+                             timeframe="e1h",
+                             trading_hours="eth",
+                             params_str="a1_b2_c3_p0",
+                             )
+    ts1.add_trade(create_trade(open_dt="2025-01-02 12:00:00",
+                               timeframe="e1h",
+                               trading_hours="eth",
+                               name=test_name
+                               ))
+    ts1.add_trade(create_trade(open_dt="2025-01-12 12:00:00",
+                               timeframe="e1h",
+                               trading_hours="eth",
+                               name=test_name
+                               ))
+    ts1.add_trade(create_trade(open_dt="2025-01-20 12:00:00",
+                               timeframe="e1h",
+                               trading_hours="eth",
+                               name=test_name
+                               ))
+    bt.update_tradeseries(ts1)
+    bt.store()
+    bt_load = dhs.get_backtests_by_field(field="bt_id",
+                                         value=bt.bt_id)[0]
+    assert bt_load["start_dt"] == "2025-01-01 18:00:00"
+    assert bt_load["end_dt"] == "2025-01-31 16:59:00"
+    ts_load = dhs.get_tradeseries_by_field(field="bt_id",
+                                           value=bt.bt_id,
+                                           include_trades=True)
+
+    assert len(ts_load) == 1
+    ts = ts_load[0]
+    assert ts.start_dt == "2025-01-01 18:00:00"
+    assert ts.end_dt == "2025-01-31 16:59:00"
+    assert len(ts.trades) == 3
+    assert ts.trades[0].open_dt == "2025-01-02 12:00:00"
+    assert ts.trades[1].open_dt == "2025-01-12 12:00:00"
+    assert ts.trades[2].open_dt == "2025-01-20 12:00:00"
+    # Update only start_dt, eliminating the first trade
+    bt.restrict_dates(new_start_dt="2025-01-03 12:00:00",
+                      new_end_dt="2025-01-31 16:59:00",
+                      update_storage=True,
+                      )
+    bt_load = dhs.get_backtests_by_field(field="bt_id",
+                                         value=bt.bt_id)[0]
+    assert bt_load["start_dt"] == "2025-01-03 12:00:00"
+    assert bt_load["end_dt"] == "2025-01-31 16:59:00"
+    ts_load = dhs.get_tradeseries_by_field(field="bt_id",
+                                           value=bt.bt_id,
+                                           include_trades=True)
+    assert len(ts_load) == 1
+    ts = ts_load[0]
+    assert ts.start_dt == "2025-01-03 12:00:00"
+    assert ts.end_dt == "2025-01-31 16:59:00"
+    assert len(bt.tradeseries[0].trades) == 2
+    assert ts.trades[0].open_dt == "2025-01-12 12:00:00"
+    assert ts.trades[1].open_dt == "2025-01-20 12:00:00"
+    # Update only end_dt, eliminating the last
+    bt.restrict_dates(new_start_dt="2025-01-03 12:00:00",
+                      new_end_dt="2025-01-18 14:59:00",
+                      update_storage=True,
+                      )
+    bt_load = dhs.get_backtests_by_field(field="bt_id",
+                                         value=bt.bt_id)[0]
+    assert bt_load["start_dt"] == "2025-01-03 12:00:00"
+    assert bt_load["end_dt"] == "2025-01-18 14:59:00"
+    ts_load = dhs.get_tradeseries_by_field(field="bt_id",
+                                           value=bt.bt_id,
+                                           include_trades=True)
+    assert len(ts_load) == 1
+    ts = ts_load[0]
+    assert ts.start_dt == "2025-01-03 12:00:00"
+    assert ts.end_dt == "2025-01-18 14:59:00"
+    assert len(bt.tradeseries[0].trades) == 1
+    assert ts.trades[0].open_dt == "2025-01-12 12:00:00"
+    # Reduce both, eliminating final trade
+    bt.restrict_dates(new_start_dt="2025-01-08 12:00:00",
+                      new_end_dt="2025-01-10 14:59:00",
+                      update_storage=True,
+                      )
+    bt_load = dhs.get_backtests_by_field(field="bt_id",
+                                         value=bt.bt_id)[0]
+    assert bt_load["start_dt"] == "2025-01-08 12:00:00"
+    assert bt_load["end_dt"] == "2025-01-10 14:59:00"
+    ts_load = dhs.get_tradeseries_by_field(field="bt_id",
+                                           value=bt.bt_id,
+                                           include_trades=True)
+    assert len(ts_load) == 1
+    ts = ts_load[0]
+    assert ts.start_dt == "2025-01-08 12:00:00"
+    assert ts.end_dt == "2025-01-10 14:59:00"
+    assert len(bt.tradeseries[0].trades) == 0
+    trades = dhs.get_trades_by_field(field="bt_id",
+                                     value=bt.bt_id)
+    assert len(trades) == 0
+
+    # Clear and confirm storage has no objects with this name currently
+    clear_storage_by_name(name=test_name)
+
+
 def test_Backtest_add_and_remove_tradeseries_and_trades():
-    bt = create_backtest(name="DELETEME-ARTSTest")
+    test_name = "DELETEME-ARTSTest"
+    ts1_name = "".join([test_name, "1"])
+    ts1_ts_id = "".join([test_name, "1_a1_b2_c3_p0"])
+    ts2_name = "".join([test_name, "2"])
+    ts2_ts_id = "".join([test_name, "2_a1_b2_c3_p0"])
+    bt = create_backtest(name=test_name)
     assert isinstance(bt, dht.Backtest)
     assert len(bt.tradeseries) == 0
-    ts1 = create_tradeseries(name="DELETEME-ARTS1",
+    ts1 = create_tradeseries(name=ts1_name,
                              start_dt="2025-01-05 10:00:00",
                              end_dt="2025-01-05 14:00:00",
                              )
@@ -197,7 +481,7 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
     assert ts1.bt_id is None
     # Create and add 2 Trades
     for dt in ["2025-01-05 12:00:00", "2025-01-05 13:00:00"]:
-        tr = create_trade(open_dt=dt, name="DELETEME-ARTSTest")
+        tr = create_trade(open_dt=dt, name=test_name)
         assert isinstance(tr, dht.Trade)
         # Trade should not have a ts_id or bt_id yet
         assert tr.ts_id is None
@@ -217,21 +501,21 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
     for tr in ts1.trades:
         assert tr.bt_id == bt.bt_id
     # Create and add a second TradeSeries
-    ts2 = create_tradeseries(name="DELETEME-ARTS2",
+    ts2 = create_tradeseries(name=ts2_name,
                              start_dt="2025-01-06 13:00:00",
                              end_dt="2025-01-06 16:00:00",
                              )
     for dt in ["2025-01-06 14:00:00", "2025-01-06 15:00:00"]:
-        tr = create_trade(open_dt=dt, name="DELETEME-ARTSTest")
+        tr = create_trade(open_dt=dt, name=test_name)
         ts2.add_trade(tr)
     bt.update_tradeseries(ts2)
     assert isinstance(bt.tradeseries[1], dht.TradeSeries)
     # Confirm both TradeSeries and Trades attached as expected
     assert len(bt.tradeseries) == 2
-    assert bt.tradeseries[0].ts_id == "DELETEME-ARTS1_a1_b2_c3_p0"
+    assert bt.tradeseries[0].ts_id == ts1_ts_id
     assert bt.tradeseries[0].start_dt == "2025-01-05 10:00:00"
     assert bt.tradeseries[0].end_dt == "2025-01-05 14:00:00"
-    assert bt.tradeseries[1].ts_id == "DELETEME-ARTS2_a1_b2_c3_p0"
+    assert bt.tradeseries[1].ts_id == ts2.ts_id
     assert bt.tradeseries[1].start_dt == "2025-01-06 13:00:00"
     assert bt.tradeseries[1].end_dt == "2025-01-06 16:00:00"
     assert len(bt.tradeseries[0].trades) == 2
@@ -242,17 +526,17 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
     assert bt.tradeseries[1].trades[1].open_dt == "2025-01-06 15:00:00"
     # Clear and confirm storage has no objects with these name currently
     # in case previous tests failed and left orphans
-    dhs.delete_backtests(symbol="ES", field="name", value="DELETEME-ARTSTest")
-    s_bt = dhs.get_backtests_by_field(field="name", value="DELETEME-ARTSTest")
+    dhs.delete_backtests(symbol="ES", field="name", value=test_name)
+    s_bt = dhs.get_backtests_by_field(field="name", value=test_name)
     assert len(s_bt) == 0
-    dhs.delete_tradeseries(symbol="ES", field="name", value="DELETEME-ARTS1")
-    s_ts = dhs.get_tradeseries_by_field(field="name", value="DELETEME-ARTS1")
+    dhs.delete_tradeseries(symbol="ES", field="name", value=ts1_name)
+    s_ts = dhs.get_tradeseries_by_field(field="name", value=ts1_name)
     assert len(s_ts) == 0
-    dhs.delete_tradeseries(symbol="ES", field="name", value="DELETEME-ARTS2")
-    s_ts = dhs.get_tradeseries_by_field(field="name", value="DELETEME-ARTS2")
+    dhs.delete_tradeseries(symbol="ES", field="name", value=ts2_name)
+    s_ts = dhs.get_tradeseries_by_field(field="name", value=ts2_name)
     assert len(s_ts) == 0
-    dhs.delete_trades(symbol="ES", field="name", value="DELETEME-ARTSTest")
-    s_tr = dhs.get_trades_by_field(field="name", value="DELETEME-ARTSTest")
+    dhs.delete_trades(symbol="ES", field="name", value=test_name)
+    s_tr = dhs.get_trades_by_field(field="name", value=test_name)
     assert len(s_tr) == 0
     # Store the backtest
     bt.store(store_tradeseries=True, store_trades=True)
@@ -268,16 +552,16 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
     # should be retrievable at this stage.
     s_ts = dhs.get_tradeseries_by_field(field="bt_id", value=bt.bt_id)
     assert len(s_ts) == 1
-    assert s_ts[0].name == "DELETEME-ARTS2"
+    assert s_ts[0].name == ts2_name
     # Confirm backtest updated and no dupes
     assert len(bt.tradeseries) == 2
-    assert bt.tradeseries[0].ts_id == "DELETEME-ARTS1_a1_b2_c3_p0"
+    assert bt.tradeseries[0].ts_id == ts1_ts_id
     assert bt.tradeseries[0].start_dt == "2025-01-05 08:30:00"
     assert bt.tradeseries[0].end_dt == "2025-01-05 16:30:00"
     assert len(bt.tradeseries[0].trades) == 2
     assert bt.tradeseries[0].trades[0].open_dt == "2025-01-05 11:30:00"
     assert bt.tradeseries[0].trades[1].open_dt == "2025-01-05 12:30:00"
-    assert bt.tradeseries[1].ts_id == "DELETEME-ARTS2_a1_b2_c3_p0"
+    assert bt.tradeseries[1].ts_id == ts2_ts_id
     assert bt.tradeseries[1].start_dt == "2025-01-06 13:00:00"
     assert bt.tradeseries[1].end_dt == "2025-01-06 16:00:00"
     assert len(bt.tradeseries[1].trades) == 2
@@ -287,7 +571,7 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
     # and their Trades without duplication occurring
     bt.store(store_tradeseries=True, store_trades=True)
     # Get backtests with this name from storage
-    s_bt = dhs.get_backtests_by_field(field="name", value="DELETEME-ARTSTest")
+    s_bt = dhs.get_backtests_by_field(field="name", value=test_name)
     # Confirm exactly 1 backtest found in storage with this name
     assert len(s_bt) == 1
     # Get TradeSeries by bt_id from storage
@@ -295,8 +579,8 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
     # Confirm exactly 2 TradeSeries in storage
     assert len(s_ts) == 2
     # Get TradeSeries by name from storage
-    s_ts1 = dhs.get_tradeseries_by_field(field="name", value="DELETEME-ARTS1")
-    s_ts2 = dhs.get_tradeseries_by_field(field="name", value="DELETEME-ARTS2")
+    s_ts1 = dhs.get_tradeseries_by_field(field="name", value=ts1_name)
+    s_ts2 = dhs.get_tradeseries_by_field(field="name", value=ts2_name)
     # Confirm exactly 1 of each tradeseries by name
     assert len(s_ts1) == 1
     assert len(s_ts2) == 1
@@ -308,16 +592,14 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
     assert s_ts2[0].start_dt == "2025-01-06 13:00:00"
     assert s_ts2[0].end_dt == "2025-01-06 16:00:00"
     # Confirm exactly 4 trades in storage by name and bt_id
-    s_tr = dhs.get_trades_by_field(field="name", value="DELETEME-ARTSTest")
+    s_tr = dhs.get_trades_by_field(field="name", value=test_name)
     assert len(s_tr) == 4
-    s_tr = dhs.get_trades_by_field(field="bt_id", value="DELETEME-ARTSTest")
+    s_tr = dhs.get_trades_by_field(field="bt_id", value=test_name)
     assert len(s_tr) == 4
     # Confirm exactly 2 Trades in storage by each TradeSeries ts_id
-    s_tr1 = dhs.get_trades_by_field(field="ts_id",
-                                    value="DELETEME-ARTS1_a1_b2_c3_p0")
+    s_tr1 = dhs.get_trades_by_field(field="ts_id", value=ts1_ts_id)
     assert len(s_tr1) == 2
-    s_tr2 = dhs.get_trades_by_field(field="ts_id",
-                                    value="DELETEME-ARTS2_a1_b2_c3_p0")
+    s_tr2 = dhs.get_trades_by_field(field="ts_id", value=ts2_ts_id)
     assert len(s_tr2) == 2
     # Confirm Trade open_dt values as expected in storage, with ts1 updated
     # and ts2 retaining original unmodified values
@@ -339,10 +621,10 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
     # .update_tradeseries() runs .sort_tradeseries() which sorts them
     # alphabetically by ts_id
     assert len(bt.tradeseries) == 2
-    assert bt.tradeseries[0].ts_id == "DELETEME-ARTS1_a1_b2_c3_p0"
+    assert bt.tradeseries[0].ts_id == ts1_ts_id
     assert bt.tradeseries[0].start_dt == "2025-01-05 08:30:00"
     assert bt.tradeseries[0].end_dt == "2025-01-05 16:30:00"
-    assert bt.tradeseries[1].ts_id == "DELETEME-ARTS2_a1_b2_c3_p0"
+    assert bt.tradeseries[1].ts_id == ts2_ts_id
     assert bt.tradeseries[1].start_dt == "2025-01-06 09:30:00"
     assert bt.tradeseries[1].end_dt == "2025-01-06 18:30:00"
     assert len(bt.tradeseries[0].trades) == 2
@@ -358,8 +640,8 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
     # Confirm exactly 2 TradeSeries in storage
     assert len(s_ts) == 2
     # Get TradeSeries by name from storage
-    s_ts1 = dhs.get_tradeseries_by_field(field="name", value="DELETEME-ARTS1")
-    s_ts2 = dhs.get_tradeseries_by_field(field="name", value="DELETEME-ARTS2")
+    s_ts1 = dhs.get_tradeseries_by_field(field="name", value=ts1_name)
+    s_ts2 = dhs.get_tradeseries_by_field(field="name", value=ts2_name)
     # Confirm exactly 1 of each tradeseries by name
     assert len(s_ts1) == 1
     assert len(s_ts2) == 1
@@ -371,16 +653,14 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
     assert s_ts2[0].start_dt == "2025-01-06 13:00:00"
     assert s_ts2[0].end_dt == "2025-01-06 16:00:00"
     # Confirm exactly 4 trades in storage by name and bt_id
-    s_tr = dhs.get_trades_by_field(field="name", value="DELETEME-ARTSTest")
+    s_tr = dhs.get_trades_by_field(field="name", value=test_name)
     assert len(s_tr) == 4
-    s_tr = dhs.get_trades_by_field(field="bt_id", value="DELETEME-ARTSTest")
+    s_tr = dhs.get_trades_by_field(field="bt_id", value=test_name)
     assert len(s_tr) == 4
     # Confirm exactly 2 Trades in storage by each TradeSeries ts_id
-    s_tr1 = dhs.get_trades_by_field(field="ts_id",
-                                    value="DELETEME-ARTS1_a1_b2_c3_p0")
+    s_tr1 = dhs.get_trades_by_field(field="ts_id", value=ts1_ts_id)
     assert len(s_tr1) == 2
-    s_tr2 = dhs.get_trades_by_field(field="ts_id",
-                                    value="DELETEME-ARTS2_a1_b2_c3_p0")
+    s_tr2 = dhs.get_trades_by_field(field="ts_id", value=ts2_ts_id)
     assert len(s_tr2) == 2
     # Confirm Trade open_dt values as expected in storage, with ts1 updated
     # and ts2 retaining original unmodified values
@@ -394,28 +674,28 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
     bt.remove_tradeseries(ts_id=ts2.ts_id)
     assert len(bt.tradeseries) == 1
     assert bt.tradeseries[0].ts_id == ts1.ts_id
-    s_ts2 = dhs.get_tradeseries_by_field(field="name", value="DELETEME-ARTS2")
+    s_ts2 = dhs.get_tradeseries_by_field(field="name", value=ts2_name)
     assert len(s_ts2) == 0
-    s_tr2 = dhs.get_trades_by_field(field="ts_id",
-                                    value="DELETEME-ARTS2_a1_b2_c3_p0")
+    s_tr2 = dhs.get_trades_by_field(field="ts_id", value=ts2_ts_id)
     assert len(s_tr2) == 0
 
     # Delete everything from storage to cleanup
-    dhs.delete_backtests(symbol="ES", field="name", value="DELETEME-ARTSTest")
-    s_bt = dhs.get_backtests_by_field(field="name", value="DELETEME-ARTSTest")
+    dhs.delete_backtests(symbol="ES", field="name", value=test_name)
+    s_bt = dhs.get_backtests_by_field(field="name", value=test_name)
     assert len(s_bt) == 0
-    dhs.delete_tradeseries(symbol="ES", field="name", value="DELETEME-ARTS1")
-    s_ts = dhs.get_tradeseries_by_field(field="name", value="DELETEME-ARTS1")
+    dhs.delete_tradeseries(symbol="ES", field="name", value=ts1_name)
+    s_ts = dhs.get_tradeseries_by_field(field="name", value=ts1_name)
     assert len(s_ts) == 0
-    dhs.delete_tradeseries(symbol="ES", field="name", value="DELETEME-ARTS2")
-    s_ts = dhs.get_tradeseries_by_field(field="name", value="DELETEME-ARTS2")
+    dhs.delete_tradeseries(symbol="ES", field="name", value=ts2_name)
+    s_ts = dhs.get_tradeseries_by_field(field="name", value=ts2_name)
     assert len(s_ts) == 0
-    dhs.delete_trades(symbol="ES", field="name", value="DELETEME-ARTSTest")
-    s_tr = dhs.get_trades_by_field(field="name", value="DELETEME-ARTSTest")
+    dhs.delete_trades(symbol="ES", field="name", value=test_name)
+    s_tr = dhs.get_trades_by_field(field="name", value=test_name)
     assert len(s_tr) == 0
 
 
 def test_Backtest_store_retrieve_load_tradeseries_and_delete():
+    test_name = "DELETEME-STORELOADTest"
     # Create and link Backtest, TradeSeries, and Trade objects
     tr = create_trade()
     ts = create_tradeseries()
@@ -424,15 +704,7 @@ def test_Backtest_store_retrieve_load_tradeseries_and_delete():
     bt.update_tradeseries(ts)
 
     # Clear and confirm storage has no objects with this name currently
-    dhs.delete_backtests(symbol="ES", field="name", value="DELETEME-TEST")
-    s_bt = dhs.get_backtests_by_field(field="name", value="DELETEME-TEST")
-    assert len(s_bt) == 0
-    dhs.delete_tradeseries(symbol="ES", field="name", value="DELETEME-TEST")
-    s_ts = dhs.get_tradeseries_by_field(field="name", value="DELETEME-TEST")
-    assert len(s_ts) == 0
-    dhs.delete_trades(symbol="ES", field="name", value="DELETEME-TEST")
-    s_tr = dhs.get_trades_by_field(field="name", value="DELETEME-TEST")
-    assert len(s_tr) == 0
+    clear_storage_by_name(name=test_name)
 
     # Store using Backtest.store() method and confirm result looks ok via _ids
     r_bt = bt.store(store_tradeseries=True,

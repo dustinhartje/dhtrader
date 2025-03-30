@@ -143,6 +143,17 @@ def update_records_value(search: dict,
     return result
 
 
+def delete_one_document(query: dict,
+                        collection: str,
+                        ):
+    """Delete a single document from storage using the provided query.  This
+    is primarily called by more specific functions in dhstore.py for individual
+    object types using relevant parameters to build the query there."""
+    c = db[collection]
+    result = c.delete_one(query)
+
+    return result
+
 ##############################################################################
 # Trades
 

@@ -774,6 +774,32 @@ class Chart():
                 "latest_candle": self.latest_candle,
                 }
 
+    def restrict_dates(self, new_start_dt: str, new_end_dt: str):
+        """Reduce the date range of the Chart and remove any Candles that are
+        no longer in bounds"""
+        os = dhu.dt_as_dt(self.c_start)
+        oe = dhu.dt_as_dt(self.c_end)
+        ns = dhu.dt_as_dt(new_start_dt)
+        ne = dhu.dt_as_dt(new_end_dt)
+        ns_epoch = dhu.dt_to_epoch(new_start_dt)
+        ne_epoch = dhu.dt_to_epoch(new_end_dt)
+        # Ensure new dates don't expand the daterange, they should only reduce
+        if ns < os:
+            raise ValueError(f"new_start_dt {new_start_dt} cannot be earlier "
+                             f"than the current self.c_start {self.c_start}")
+        if ne > oe:
+            raise ValueError(f"new_end_dt {new_end_dt} cannot be later "
+                             f"than the current self.c_end {self.c_end}")
+        # Update Chart dates
+        self.c_start = new_start_dt
+        self.c_end = new_end_dt
+        # Remove any candles outside of the new range by rebuilding the list
+        # with only candles that fall in the new range using epoch comparison
+        self.c_candles = [c for c in self.c_candles
+                          if ns_epoch <= c.c_epoch <= ne_epoch
+                          ]
+        self.review_candles()
+
 
 class Event():
     """Classifies periods of time that are notable and may need to be

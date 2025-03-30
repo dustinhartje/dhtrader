@@ -294,9 +294,16 @@ class Trade():
                           )
 
     def store(self):
-        """Store this trade in central storage"""
+        """Store this Trade in central storage"""
 
         return dhs.store_trades(trades=[self])
+
+    def delete_from_storage(self):
+        """Delete this Trade from central storage if it exists"""
+        return dhs.delete_one_trade(symbol=self.symbol.ticker,
+                                    open_dt=self.open_dt,
+                                    ts_id=self.ts_id,
+                                    )
 
     def candle_update(self,
                       candle,
@@ -652,6 +659,44 @@ class TradeSeries():
 
         return None
 
+    def restrict_dates(self,
+                       new_start_dt: str,
+                       new_end_dt: str,
+                       update_storage: bool = False,
+                       ):
+        """Reduce the date range of the TradeSeries and remove any Trades that
+        are no longer in bounds"""
+        os = dhu.dt_as_dt(self.start_dt)
+        oe = dhu.dt_as_dt(self.end_dt)
+        ns = dhu.dt_as_dt(new_start_dt)
+        ne = dhu.dt_as_dt(new_end_dt)
+        ns_epoch = dhu.dt_to_epoch(new_start_dt)
+        ne_epoch = dhu.dt_to_epoch(new_end_dt)
+        # Ensure new dates don't expand the daterange, they should only reduce
+        if ns < os:
+            raise ValueError(f"new_start_dt {new_start_dt} cannot be earlier "
+                             f"than the current self.start_dt {self.start_dt}")
+        if ne > oe:
+            raise ValueError(f"new_end_dt {new_end_dt} cannot be later "
+                             f"than the current self.end_dt {self.end_dt}")
+        # Update TradeSeries dates
+        self.start_dt = new_start_dt
+        self.end_dt = new_end_dt
+        if update_storage:
+            # Store (update) the TradeSeries
+            self.store(store_trades=False)
+            # Remove all trades from storage that are no longer in bounds
+            remove_trades = [t for t in self.trades
+                             if (t.open_epoch < ns_epoch
+                                 or t.open_epoch > ne_epoch)
+                             ]
+            for t in remove_trades:
+                t.delete_from_storage()
+        # Remove trades from the current object's list as well
+        self.trades = [t for t in self.trades
+                       if ns_epoch <= t.open_epoch <= ne_epoch
+                       ]
+
     def balance_impact(self,
                        balance_open: float,
                        contracts: int,
@@ -1002,7 +1047,7 @@ class Backtest():
         for pulling results in from previous runs to update with new data.
         If a TradeSeries with the same ts_id is already attached, this will
         replace it.  clear_storage is passed to remove_tradeseries to delete
-        the TradeSeries from storage when updating."""
+        the replaced TradeSeries from storage when updating."""
         if self.tradeseries is None:
             self.tradeseries = []
         # Associate this TradeSeries with this Backtest
@@ -1046,6 +1091,49 @@ class Backtest():
                                                         include_trades=True,
                                                         )
         self.sort_tradeseries()
+
+    def restrict_dates(self,
+                       new_start_dt: str,
+                       new_end_dt: str,
+                       update_storage: bool = False,
+                       ):
+        """Reduce the datetime range of the Backtest which will also reduce
+        any attached TradeSeries and remove any Trades that start ouside of
+        the boundaries of the new range.  Optionally pass update_storage=True
+        to remove Trades and update dates on both Backtest and it's linked
+        TradeSeries in storage (destructive) to make this permanent.
+        Typically used to clean up failed partial calculation runs or, when
+        non-destructive, to set up for analyzing a targetted timeframe of
+        special interest within the longer Backtest."""
+        os = dhu.dt_as_dt(self.start_dt)
+        oe = dhu.dt_as_dt(self.end_dt)
+        ns = dhu.dt_as_dt(new_start_dt)
+        ne = dhu.dt_as_dt(new_end_dt)
+        # Ensure new dates don't expand the daterange, they should only reduce
+        if ns < os:
+            raise ValueError(f"new_start_dt {new_start_dt} cannot be earlier "
+                             f"than the current self.start_dt {self.start_dt}")
+        if ne > oe:
+            raise ValueError(f"new_end_dt {new_end_dt} cannot be later "
+                             f"than the current self.end_dt {self.end_dt}")
+        # Update Backtest start and end dates and optionally store
+        self.start_dt = dhu.dt_as_str(new_start_dt)
+        self.end_dt = dhu.dt_as_str(new_end_dt)
+        if update_storage:
+            self.store(store_tradeseries=False, store_trades=False)
+        # Update the attached Charts for the new dates as well
+        self.chart_tf.restrict_dates(new_start_dt=new_start_dt,
+                                     new_end_dt=new_end_dt,
+                                     )
+        self.chart_1m.restrict_dates(new_start_dt=new_start_dt,
+                                     new_end_dt=new_end_dt,
+                                     )
+        # Update all attached TradeSeries
+        for ts in self.tradeseries:
+            ts.restrict_dates(new_start_dt=new_start_dt,
+                              new_end_dt=new_end_dt,
+                              update_storage=update_storage,
+                              )
 
     def config_from_storage(self):
         """This class should be updated in subclasses to allow retrieval and

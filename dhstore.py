@@ -163,6 +163,21 @@ def review_trades(symbol: str = "ES",
         return review
 
 
+def delete_one_trade(symbol: str,
+                     open_dt: str,
+                     ts_id: str,
+                     collection: str = COLL_TRADES,
+                     ):
+    """Delete a single trade from storage, identifying by symbol, open_dt, and
+    ts_id"""
+    query = {"symbol": symbol,
+             "open_dt": open_dt,
+             "ts_id": ts_id,
+             }
+
+    return dhm.delete_one_document(query=query, collection=collection)
+
+
 def delete_trades(symbol: str,
                   field: str,
                   value,
@@ -686,9 +701,10 @@ def get_symbol_by_ticker(ticker: str):
         raise ValueError("Only ['ES', 'DELETEME'] is currently supported as "
                          f"Symbol ticker, we got {ticker}")
 
-
 ##############################################################################
 # Candles
+
+
 def store_candle(candle):
     """Write a single dhcharts.Candle() to central storage"""
     if not isinstance(candle, dhc.Candle):
