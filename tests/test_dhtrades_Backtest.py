@@ -268,6 +268,18 @@ def test_Backtest_restrict_dates():
     assert bt.chart_tf.latest_candle == "2025-01-31 16:00:00"
     assert bt.chart_1m.earliest_candle == "2025-01-01 18:00:00"
     assert bt.chart_1m.latest_candle == "2025-01-31 16:59:00"
+    # TODO check into why BacktestIndTag runs __init__ multiple times,
+    #      does this happen with Backtest also?  this is slowing things
+    #      way down I'm sure...
+    # TODO Run restrict_dates using the original dates
+    # TODO Confirm nothing actually changed again
+    # TODO Revisit code and review what would happen if interrupted.  I would
+    #      like it to always adjust dates on both backtest and tradeseries
+    #      even if they already match and also kill any out of bounds trades
+    #      rather than exit if the dates already match.  Write a test for this
+    #      scenario also (will need to manually adjust the tradeseries
+    #      and add a trade out of bounds to simulate a failed run then run
+    #      again with the same/original dates
 
     # Confirm restricting start date a little works with no trade change
     bt.restrict_dates(new_start_dt="2025-01-01 22:00:00",

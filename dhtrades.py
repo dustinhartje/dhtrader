@@ -852,12 +852,16 @@ class Backtest():
             self.tradeseries = tradeseries.copy()
             for ts in self.tradeseries:
                 ts.update_bt_id(self.bt_id)
-        self.autoload_charts = autoload_charts
-        if self.autoload_charts:
-            self.load_charts()
         self.prefer_stored = prefer_stored
         if self.prefer_stored:
-            self.config_from_storage()
+            from_store = self.config_from_storage()
+        else:
+            from_store = False
+        self.autoload_charts = autoload_charts
+        # Only load charts if this copy wasn't configured from storage
+        # as config_from_storage will load charts via rerunning __init__
+        if self.autoload_charts and not from_store:
+            self.load_charts()
 
     def __eq__(self, other):
         return (self.start_dt == other.start_dt
@@ -1146,6 +1150,10 @@ class Backtest():
         this could be suppressed by a feature flag if desired in the subclass.
         """
         self.sort_tradeseries()
+        # Subclass copies of this method should return True if configuration
+        # from storage was successful (a stored version was found and applied)
+        # and False if it was not reconfigured from storage.
+        return False
 
     def incorporate_parameters(self):
         """This class should be updated in subclasses to run whatever logic is
