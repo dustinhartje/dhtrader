@@ -784,6 +784,7 @@ class Chart():
         ns_epoch = dhu.dt_to_epoch(new_start_dt)
         ne_epoch = dhu.dt_to_epoch(new_end_dt)
         # Ensure new dates don't expand the daterange, they should only reduce
+        # or keep unchanged
         if ns < os:
             raise ValueError(f"new_start_dt {new_start_dt} cannot be earlier "
                              f"than the current self.c_start {self.c_start}")

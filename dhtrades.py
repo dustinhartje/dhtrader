@@ -673,6 +673,7 @@ class TradeSeries():
         ns_epoch = dhu.dt_to_epoch(new_start_dt)
         ne_epoch = dhu.dt_to_epoch(new_end_dt)
         # Ensure new dates don't expand the daterange, they should only reduce
+        # or keep unchanged
         if ns < os:
             raise ValueError(f"new_start_dt {new_start_dt} cannot be earlier "
                              f"than the current self.start_dt {self.start_dt}")
@@ -692,7 +693,8 @@ class TradeSeries():
                              ]
             for t in remove_trades:
                 t.delete_from_storage()
-        # Remove trades from the current object's list as well
+        # Remove trades from the current object's list as well by rebuilding
+        # with only trades inside the new datetime range
         self.trades = [t for t in self.trades
                        if ns_epoch <= t.open_epoch <= ne_epoch
                        ]
@@ -1114,6 +1116,7 @@ class Backtest():
         ns = dhu.dt_as_dt(new_start_dt)
         ne = dhu.dt_as_dt(new_end_dt)
         # Ensure new dates don't expand the daterange, they should only reduce
+        # or keep unchanged
         if ns < os:
             raise ValueError(f"new_start_dt {new_start_dt} cannot be earlier "
                              f"than the current self.start_dt {self.start_dt}")

@@ -256,7 +256,7 @@ def test_Backtest_restrict_dates():
                           new_end_dt="2025-02-12 16:59:00",
                           update_storage=False,
                           )
-    # Make sure nothing actually changed
+    # Confirm no changes
     assert bt.start_dt == "2025-01-01 18:00:00"
     assert bt.end_dt == "2025-01-31 16:59:00"
     assert len(bt.tradeseries) == 1
@@ -268,20 +268,43 @@ def test_Backtest_restrict_dates():
     assert bt.chart_tf.latest_candle == "2025-01-31 16:00:00"
     assert bt.chart_1m.earliest_candle == "2025-01-01 18:00:00"
     assert bt.chart_1m.latest_candle == "2025-01-31 16:59:00"
-    # TODO check into why BacktestIndTag runs __init__ multiple times,
-    #      does this happen with Backtest also?  this is slowing things
-    #      way down I'm sure...
-    # TODO Run restrict_dates using the original dates
-    # TODO Confirm nothing actually changed again
-    # TODO Revisit code and review what would happen if interrupted.  I would
-    #      like it to always adjust dates on both backtest and tradeseries
-    #      even if they already match and also kill any out of bounds trades
-    #      rather than exit if the dates already match.  Write a test for this
-    #      scenario also (will need to manually adjust the tradeseries
-    #      and add a trade out of bounds to simulate a failed run then run
-    #      again with the same/original dates
+    # Run restrict_dates using the original dates and confirm no changes
+    bt.restrict_dates(new_start_dt="2025-01-01 18:00:00",
+                      new_end_dt="2025-01-31 16:59:00",
+                      update_storage=False,
+                      )
+    assert bt.start_dt == "2025-01-01 18:00:00"
+    assert bt.end_dt == "2025-01-31 16:59:00"
+    assert len(bt.tradeseries) == 1
+    assert len(bt.tradeseries[0].trades) == 3
+    assert bt.tradeseries[0].trades[0].open_dt == "2025-01-02 12:00:00"
+    assert bt.tradeseries[0].trades[1].open_dt == "2025-01-12 12:00:00"
+    assert bt.tradeseries[0].trades[2].open_dt == "2025-01-20 12:00:00"
+    assert bt.chart_tf.earliest_candle == "2025-01-01 18:00:00"
+    assert bt.chart_tf.latest_candle == "2025-01-31 16:00:00"
+    assert bt.chart_1m.earliest_candle == "2025-01-01 18:00:00"
+    assert bt.chart_1m.latest_candle == "2025-01-31 16:59:00"
+    # Add out of bounds trades and confirm it gets removed with no changes
+    # to dates.  This ensures an interrupted restrict_dates() run can be
+    # rerun without additional intervention.
+    bt.tradeseries[0].add_trade(create_trade(open_dt="2024-12-10 12:00:00",
+                                             timeframe="e1h",
+                                             trading_hours="eth",
+                                             name=test_name
+                                             ))
+    bt.tradeseries[0].add_trade(create_trade(open_dt="2025-02-10 12:00:00",
+                                             timeframe="e1h",
+                                             trading_hours="eth",
+                                             name=test_name
+                                             ))
+    assert len(bt.tradeseries[0].trades) == 5
+    bt.restrict_dates(new_start_dt="2025-01-01 18:00:00",
+                      new_end_dt="2025-01-31 16:59:00",
+                      update_storage=False,
+                      )
+    assert len(bt.tradeseries[0].trades) == 3
 
-    # Confirm restricting start date a little works with no trade change
+    # Confirm restricting start date a small amount works with no trade change
     bt.restrict_dates(new_start_dt="2025-01-01 22:00:00",
                       new_end_dt="2025-01-31 16:59:00",
                       update_storage=False,
