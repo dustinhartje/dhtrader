@@ -659,6 +659,13 @@ class TradeSeries():
 
         return None
 
+    def count_trades(self):
+        """Return the number of Trades currently attached"""
+        if self.trades is None:
+            return 0
+        else:
+            return len(self.trades)
+
     def restrict_dates(self,
                        new_start_dt: str,
                        new_end_dt: str,
@@ -1045,6 +1052,20 @@ class Backtest():
                     ))
 
         return result
+
+    def count_tradeseries(self):
+        """Return the number of TradeSeries currently attached"""
+        if self.tradeseries is None:
+            return 0
+        else:
+            return len(self.tradeseries)
+
+    def count_trades(self):
+        """Return the number of Trades currently attached"""
+        count = 0
+        for ts in self.tradeseries:
+            count += ts.count_trades()
+        return count
 
     def update_tradeseries(self,
                            ts,
