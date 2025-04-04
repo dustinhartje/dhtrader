@@ -47,9 +47,13 @@ def logd(msg: str):
 
 ##############################################################################
 # Non-class specific functions
-def drop_collection(collection: str):
+def list_mongo_collections():
+    return dhm.list_collections()
+
+
+def drop_mongo_collection(collection: str):
     """Used for brute force cleanup of storage, it will wipe all data from the
-    named collection.  WIELD THIS POWER CAREFULLY!!!"""
+    named collection in mongo.  WIELD THIS POWER CAREFULLY!!!"""
     return dhm.drop_collection(collection=collection)
 
 

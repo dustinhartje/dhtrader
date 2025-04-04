@@ -2,4 +2,6 @@
 
 set -eo pipefail
 
+# F401: imported module not used in code
+# E402: module level import not at top of file
 flake8 . --exclude=v1/* --extend-ignore=F401,E402
