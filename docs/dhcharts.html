@@ -21,7 +21,8 @@
 <a href="dhutil.html">dhutil</a><br>
 </td><td width="25%" valign=top><a href="datetime.html">datetime</a><br>
 <a href="json.html">json</a><br>
-</td><td width="25%" valign=top><a href="sys.html">sys</a><br>
+</td><td width="25%" valign=top><a href="logging.html">logging</a><br>
+<a href="sys.html">sys</a><br>
 </td><td width="25%" valign=top></td></tr></table></td></tr></table><p>
 <table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
 <tr bgcolor="#ee77aa">
@@ -56,14 +57,14 @@
 <font color="#000000" face="helvetica, arial"><a name="Candle">class <strong>Candle</strong></a>(<a href="builtins.html#object">builtins.object</a>)</font></td></tr>
     
 <tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
-<td colspan=2><tt><a href="#Candle">Candle</a>(c_datetime,&nbsp;c_timeframe:&nbsp;str,&nbsp;c_open:&nbsp;float,&nbsp;c_high:&nbsp;float,&nbsp;c_low:&nbsp;float,&nbsp;c_close:&nbsp;float,&nbsp;c_volume:&nbsp;int,&nbsp;c_symbol:&nbsp;str,&nbsp;c_tags:&nbsp;list&nbsp;=&nbsp;None,&nbsp;c_epoch:&nbsp;int&nbsp;=&nbsp;None,&nbsp;c_date:&nbsp;str&nbsp;=&nbsp;None,&nbsp;c_time:&nbsp;str&nbsp;=&nbsp;None)<br>
+<td colspan=2><tt><a href="#Candle">Candle</a>(c_datetime,&nbsp;c_timeframe:&nbsp;str,&nbsp;c_open:&nbsp;float,&nbsp;c_high:&nbsp;float,&nbsp;c_low:&nbsp;float,&nbsp;c_close:&nbsp;float,&nbsp;c_volume:&nbsp;int,&nbsp;c_symbol,&nbsp;c_tags:&nbsp;list&nbsp;=&nbsp;None,&nbsp;c_epoch:&nbsp;int&nbsp;=&nbsp;None,&nbsp;c_date:&nbsp;str&nbsp;=&nbsp;None,&nbsp;c_time:&nbsp;str&nbsp;=&nbsp;None)<br>
 &nbsp;<br>
 <br>&nbsp;</tt></td></tr>
 <tr><td>&nbsp;</td>
 <td width="100%">Methods defined here:<br>
 <dl><dt><a name="Candle-__eq__"><strong>__eq__</strong></a>(self, other)</dt><dd><tt>Return&nbsp;self==value.</tt></dd></dl>
 
-<dl><dt><a name="Candle-__init__"><strong>__init__</strong></a>(self, c_datetime, c_timeframe: str, c_open: float, c_high: float, c_low: float, c_close: float, c_volume: int, c_symbol: str, c_tags: list = None, c_epoch: int = None, c_date: str = None, c_time: str = None)</dt><dd><tt>Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</tt></dd></dl>
+<dl><dt><a name="Candle-__init__"><strong>__init__</strong></a>(self, c_datetime, c_timeframe: str, c_open: float, c_high: float, c_low: float, c_close: float, c_volume: int, c_symbol, c_tags: list = None, c_epoch: int = None, c_date: str = None, c_time: str = None)</dt><dd><tt>Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</tt></dd></dl>
 
 <dl><dt><a name="Candle-__ne__"><strong>__ne__</strong></a>(self, other)</dt><dd><tt>Return&nbsp;self!=value.</tt></dd></dl>
 
@@ -71,7 +72,22 @@
 
 <dl><dt><a name="Candle-__str__"><strong>__str__</strong></a>(self)</dt><dd><tt>Return&nbsp;str(self).</tt></dd></dl>
 
+<dl><dt><a name="Candle-contains_datetime"><strong>contains_datetime</strong></a>(self, d)</dt><dd><tt>Return&nbsp;True&nbsp;if&nbsp;the&nbsp;datetime&nbsp;provided&nbsp;occurs&nbsp;in&nbsp;this&nbsp;candle</tt></dd></dl>
+
+<dl><dt><a name="Candle-contains_price"><strong>contains_price</strong></a>(self, p)</dt><dd><tt>Return&nbsp;True&nbsp;if&nbsp;the&nbsp;price&nbsp;provided&nbsp;falls&nbsp;at&nbsp;or&nbsp;between&nbsp;the&nbsp;high&nbsp;and<br>
+low&nbsp;of&nbsp;this&nbsp;candle</tt></dd></dl>
+
+<dl><dt><a name="Candle-pretty"><strong>pretty</strong></a>(self)</dt><dd><tt>Attempts&nbsp;to&nbsp;return&nbsp;an&nbsp;indented&nbsp;multiline&nbsp;version&nbsp;of&nbsp;this&nbsp;<a href="builtins.html#object">object</a>,<br>
+meant&nbsp;to&nbsp;provide&nbsp;an&nbsp;easy&nbsp;to&nbsp;read&nbsp;output&nbsp;for&nbsp;console&nbsp;or&nbsp;other&nbsp;purposes.</tt></dd></dl>
+
 <dl><dt><a name="Candle-store"><strong>store</strong></a>(self)</dt></dl>
+
+<dl><dt><a name="Candle-to_clean_dict"><strong>to_clean_dict</strong></a>(self)</dt><dd><tt>Converts&nbsp;to&nbsp;JSON&nbsp;string&nbsp;then&nbsp;back&nbsp;to&nbsp;a&nbsp;python&nbsp;dict.&nbsp;&nbsp;This&nbsp;helps<br>
+to&nbsp;normalize&nbsp;types&nbsp;(I'm&nbsp;looking&nbsp;at&nbsp;YOU&nbsp;datetime)&nbsp;while&nbsp;ensuring<br>
+a&nbsp;portable&nbsp;python&nbsp;data&nbsp;structure</tt></dd></dl>
+
+<dl><dt><a name="Candle-to_json"><strong>to_json</strong></a>(self)</dt><dd><tt>returns&nbsp;a&nbsp;json&nbsp;version&nbsp;of&nbsp;this&nbsp;<a href="builtins.html#object">object</a>&nbsp;while&nbsp;normalizing<br>
+custom&nbsp;types&nbsp;(like&nbsp;datetime&nbsp;to&nbsp;string)</tt></dd></dl>
 
 <hr>
 Data descriptors defined here:<br>
@@ -92,12 +108,16 @@ Data and other attributes defined here:<br>
 <font color="#000000" face="helvetica, arial"><a name="Chart">class <strong>Chart</strong></a>(<a href="builtins.html#object">builtins.object</a>)</font></td></tr>
     
 <tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
-<td colspan=2><tt><a href="#Chart">Chart</a>(c_timeframe:&nbsp;str,&nbsp;c_symbol:&nbsp;str,&nbsp;c_start:&nbsp;str&nbsp;=&nbsp;None,&nbsp;c_end:&nbsp;str&nbsp;=&nbsp;None,&nbsp;c_candles:&nbsp;list&nbsp;=&nbsp;None,&nbsp;autoload:&nbsp;bool&nbsp;=&nbsp;False)<br>
+<td colspan=2><tt><a href="#Chart">Chart</a>(c_timeframe:&nbsp;str,&nbsp;c_trading_hours:&nbsp;str,&nbsp;c_symbol,&nbsp;c_start:&nbsp;str&nbsp;=&nbsp;None,&nbsp;c_end:&nbsp;str&nbsp;=&nbsp;None,&nbsp;c_candles:&nbsp;list&nbsp;=&nbsp;None,&nbsp;autoload:&nbsp;bool&nbsp;=&nbsp;False)<br>
 &nbsp;<br>
 <br>&nbsp;</tt></td></tr>
 <tr><td>&nbsp;</td>
 <td width="100%">Methods defined here:<br>
-<dl><dt><a name="Chart-__init__"><strong>__init__</strong></a>(self, c_timeframe: str, c_symbol: str, c_start: str = None, c_end: str = None, c_candles: list = None, autoload: bool = False)</dt><dd><tt>Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</tt></dd></dl>
+<dl><dt><a name="Chart-__eq__"><strong>__eq__</strong></a>(self, other)</dt><dd><tt>Return&nbsp;self==value.</tt></dd></dl>
+
+<dl><dt><a name="Chart-__init__"><strong>__init__</strong></a>(self, c_timeframe: str, c_trading_hours: str, c_symbol, c_start: str = None, c_end: str = None, c_candles: list = None, autoload: bool = False)</dt><dd><tt>Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</tt></dd></dl>
+
+<dl><dt><a name="Chart-__ne__"><strong>__ne__</strong></a>(self, other)</dt><dd><tt>Return&nbsp;self!=value.</tt></dd></dl>
 
 <dl><dt><a name="Chart-__repr__"><strong>__repr__</strong></a>(self)</dt><dd><tt>Return&nbsp;repr(self).</tt></dd></dl>
 
@@ -107,15 +127,21 @@ Data and other attributes defined here:<br>
 
 <dl><dt><a name="Chart-load_candles"><strong>load_candles</strong></a>(self)</dt><dd><tt>Load&nbsp;candles&nbsp;from&nbsp;central&nbsp;storage&nbsp;based&nbsp;on&nbsp;current&nbsp;attributes</tt></dd></dl>
 
+<dl><dt><a name="Chart-pretty"><strong>pretty</strong></a>(self, suppress_candles: bool = True)</dt><dd><tt>Attempts&nbsp;to&nbsp;return&nbsp;an&nbsp;indented&nbsp;multiline&nbsp;version&nbsp;of&nbsp;this&nbsp;<a href="builtins.html#object">object</a>,<br>
+meant&nbsp;to&nbsp;provide&nbsp;an&nbsp;easy&nbsp;to&nbsp;read&nbsp;output&nbsp;for&nbsp;console&nbsp;or&nbsp;other&nbsp;purposes.</tt></dd></dl>
+
+<dl><dt><a name="Chart-restrict_dates"><strong>restrict_dates</strong></a>(self, new_start_dt: str, new_end_dt: str)</dt><dd><tt>Reduce&nbsp;the&nbsp;date&nbsp;range&nbsp;of&nbsp;the&nbsp;<a href="#Chart">Chart</a>&nbsp;and&nbsp;remove&nbsp;any&nbsp;Candles&nbsp;that&nbsp;are<br>
+no&nbsp;longer&nbsp;in&nbsp;bounds</tt></dd></dl>
+
 <dl><dt><a name="Chart-review_candles"><strong>review_candles</strong></a>(self)</dt></dl>
 
 <dl><dt><a name="Chart-sort_candles"><strong>sort_candles</strong></a>(self)</dt></dl>
 
-<dl><dt><a name="Chart-to_clean_dict"><strong>to_clean_dict</strong></a>(self)</dt><dd><tt>Converts&nbsp;to&nbsp;JSON&nbsp;string&nbsp;then&nbsp;back&nbsp;to&nbsp;a&nbsp;python&nbsp;dict.&nbsp;&nbsp;This&nbsp;helps<br>
+<dl><dt><a name="Chart-to_clean_dict"><strong>to_clean_dict</strong></a>(self, suppress_candles: bool = True)</dt><dd><tt>Converts&nbsp;to&nbsp;JSON&nbsp;string&nbsp;then&nbsp;back&nbsp;to&nbsp;a&nbsp;python&nbsp;dict.&nbsp;&nbsp;This&nbsp;helps<br>
 to&nbsp;normalize&nbsp;types&nbsp;(I'm&nbsp;looking&nbsp;at&nbsp;YOU&nbsp;datetime)&nbsp;while&nbsp;ensuring<br>
 a&nbsp;portable&nbsp;python&nbsp;data&nbsp;structure</tt></dd></dl>
 
-<dl><dt><a name="Chart-to_json"><strong>to_json</strong></a>(self)</dt><dd><tt>returns&nbsp;a&nbsp;json&nbsp;version&nbsp;of&nbsp;this&nbsp;<a href="builtins.html#object">object</a>&nbsp;while&nbsp;normalizing<br>
+<dl><dt><a name="Chart-to_json"><strong>to_json</strong></a>(self, suppress_candles: bool = True)</dt><dd><tt>returns&nbsp;a&nbsp;json&nbsp;version&nbsp;of&nbsp;this&nbsp;<a href="builtins.html#object">object</a>&nbsp;while&nbsp;normalizing<br>
 custom&nbsp;types&nbsp;(like&nbsp;datetime&nbsp;to&nbsp;string)</tt></dd></dl>
 
 <hr>
@@ -126,6 +152,10 @@ Data descriptors defined here:<br>
 <dl><dt><strong>__weakref__</strong></dt>
 <dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
 </dl>
+<hr>
+Data and other attributes defined here:<br>
+<dl><dt><strong>__hash__</strong> = None</dl>
+
 </td></tr></table> <p>
 <table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
 <tr bgcolor="#ffc8d8">
@@ -140,11 +170,25 @@ Data descriptors defined here:<br>
 <td width="100%">Methods defined here:<br>
 <dl><dt><a name="Day-__init__"><strong>__init__</strong></a>(self, d_symbol, d_date, d_charts: list = None, d_open_eth: float = None, d_open_rth: float = None, d_high_eth: float = None, d_high_rth: float = None, d_low_eth: float = None, d_low_rth: float = None, d_close_eth: float = None, d_close_rth: float = None, d_volume_eth: int = None, d_volume_rth: int = None, d_tags: list = None, d_pattern_rth=None)</dt><dd><tt>Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</tt></dd></dl>
 
+<dl><dt><a name="Day-__repr__"><strong>__repr__</strong></a>(self)</dt><dd><tt>Return&nbsp;repr(self).</tt></dd></dl>
+
+<dl><dt><a name="Day-__str__"><strong>__str__</strong></a>(self)</dt><dd><tt>Return&nbsp;str(self).</tt></dd></dl>
+
 <dl><dt><a name="Day-add_chart"><strong>add_chart</strong></a>(self, new_chart)</dt></dl>
 
 <dl><dt><a name="Day-get_chart"><strong>get_chart</strong></a>(self, timeframe: str)</dt></dl>
 
+<dl><dt><a name="Day-pretty"><strong>pretty</strong></a>(self)</dt><dd><tt>Attempts&nbsp;to&nbsp;return&nbsp;an&nbsp;indented&nbsp;multiline&nbsp;version&nbsp;of&nbsp;this&nbsp;<a href="builtins.html#object">object</a>,<br>
+meant&nbsp;to&nbsp;provide&nbsp;an&nbsp;easy&nbsp;to&nbsp;read&nbsp;output&nbsp;for&nbsp;console&nbsp;or&nbsp;other&nbsp;purposes.</tt></dd></dl>
+
 <dl><dt><a name="Day-recalc_from_1m"><strong>recalc_from_1m</strong></a>(self)</dt></dl>
+
+<dl><dt><a name="Day-to_clean_dict"><strong>to_clean_dict</strong></a>(self)</dt><dd><tt>Converts&nbsp;to&nbsp;JSON&nbsp;string&nbsp;then&nbsp;back&nbsp;to&nbsp;a&nbsp;python&nbsp;dict.&nbsp;&nbsp;This&nbsp;helps<br>
+to&nbsp;normalize&nbsp;types&nbsp;(I'm&nbsp;looking&nbsp;at&nbsp;YOU&nbsp;datetime)&nbsp;while&nbsp;ensuring<br>
+a&nbsp;portable&nbsp;python&nbsp;data&nbsp;structure</tt></dd></dl>
+
+<dl><dt><a name="Day-to_json"><strong>to_json</strong></a>(self)</dt><dd><tt>returns&nbsp;a&nbsp;json&nbsp;version&nbsp;of&nbsp;this&nbsp;<a href="builtins.html#object">object</a>&nbsp;while&nbsp;normalizing<br>
+custom&nbsp;types&nbsp;(like&nbsp;datetime&nbsp;to&nbsp;string)</tt></dd></dl>
 
 <dl><dt><a name="Day-update_chart"><strong>update_chart</strong></a>(self, new_chart)</dt></dl>
 
@@ -163,7 +207,7 @@ Data descriptors defined here:<br>
 <font color="#000000" face="helvetica, arial"><a name="Event">class <strong>Event</strong></a>(<a href="builtins.html#object">builtins.object</a>)</font></td></tr>
     
 <tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
-<td colspan=2><tt><a href="#Event">Event</a>(start_dt,&nbsp;end_dt,&nbsp;symbol:&nbsp;str,&nbsp;category:&nbsp;str,&nbsp;tags:&nbsp;list&nbsp;=&nbsp;None,&nbsp;notes:&nbsp;str&nbsp;=&nbsp;'')<br>
+<td colspan=2><tt><a href="#Event">Event</a>(start_dt,&nbsp;end_dt,&nbsp;symbol,&nbsp;category:&nbsp;str,&nbsp;tags:&nbsp;list&nbsp;=&nbsp;None,&nbsp;notes:&nbsp;str&nbsp;=&nbsp;'')<br>
 &nbsp;<br>
 Classifies&nbsp;periods&nbsp;of&nbsp;time&nbsp;that&nbsp;are&nbsp;notable&nbsp;and&nbsp;may&nbsp;need&nbsp;to&nbsp;be<br>
 correlated&nbsp;or&nbsp;excluded&nbsp;from&nbsp;charts&nbsp;during&nbsp;analysis.&nbsp;&nbsp;May&nbsp;include&nbsp;holiday<br>
@@ -175,13 +219,26 @@ combination&nbsp;of&nbsp;start_dt&nbsp;+&nbsp;category&nbsp;is&nbsp;used&nbsp;to
 storage&nbsp;to&nbsp;prevent&nbsp;duplication.<br>&nbsp;</tt></td></tr>
 <tr><td>&nbsp;</td>
 <td width="100%">Methods defined here:<br>
-<dl><dt><a name="Event-__init__"><strong>__init__</strong></a>(self, start_dt, end_dt, symbol: str, category: str, tags: list = None, notes: str = '')</dt><dd><tt>Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</tt></dd></dl>
+<dl><dt><a name="Event-__init__"><strong>__init__</strong></a>(self, start_dt, end_dt, symbol, category: str, tags: list = None, notes: str = '')</dt><dd><tt>Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</tt></dd></dl>
 
 <dl><dt><a name="Event-__repr__"><strong>__repr__</strong></a>(self)</dt><dd><tt>Return&nbsp;repr(self).</tt></dd></dl>
 
 <dl><dt><a name="Event-__str__"><strong>__str__</strong></a>(self)</dt><dd><tt>Return&nbsp;str(self).</tt></dd></dl>
 
+<dl><dt><a name="Event-contains_datetime"><strong>contains_datetime</strong></a>(self, dt)</dt><dd><tt>Determine&nbsp;if&nbsp;the&nbsp;given&nbsp;datetime&nbsp;(dt)&nbsp;falls&nbsp;within&nbsp;this&nbsp;<a href="#Event">Event</a>'s<br>
+timeframe,&nbsp;returning&nbsp;True&nbsp;or&nbsp;False.</tt></dd></dl>
+
+<dl><dt><a name="Event-pretty"><strong>pretty</strong></a>(self)</dt><dd><tt>Attempts&nbsp;to&nbsp;return&nbsp;an&nbsp;indented&nbsp;multiline&nbsp;version&nbsp;of&nbsp;this&nbsp;<a href="builtins.html#object">object</a>,<br>
+meant&nbsp;to&nbsp;provide&nbsp;an&nbsp;easy&nbsp;to&nbsp;read&nbsp;output&nbsp;for&nbsp;console&nbsp;or&nbsp;other&nbsp;purposes.</tt></dd></dl>
+
 <dl><dt><a name="Event-store"><strong>store</strong></a>(self)</dt></dl>
+
+<dl><dt><a name="Event-to_clean_dict"><strong>to_clean_dict</strong></a>(self)</dt><dd><tt>Converts&nbsp;to&nbsp;JSON&nbsp;string&nbsp;then&nbsp;back&nbsp;to&nbsp;a&nbsp;python&nbsp;dict.&nbsp;&nbsp;This&nbsp;helps<br>
+to&nbsp;normalize&nbsp;types&nbsp;(I'm&nbsp;looking&nbsp;at&nbsp;YOU&nbsp;datetime)&nbsp;while&nbsp;ensuring<br>
+a&nbsp;portable&nbsp;python&nbsp;data&nbsp;structure</tt></dd></dl>
+
+<dl><dt><a name="Event-to_json"><strong>to_json</strong></a>(self)</dt><dd><tt>returns&nbsp;a&nbsp;json&nbsp;version&nbsp;of&nbsp;this&nbsp;<a href="builtins.html#object">object</a>&nbsp;while&nbsp;normalizing<br>
+custom&nbsp;types&nbsp;(like&nbsp;datetime&nbsp;to&nbsp;string)</tt></dd></dl>
 
 <hr>
 Data descriptors defined here:<br>
@@ -198,15 +255,19 @@ Data descriptors defined here:<br>
 <font color="#000000" face="helvetica, arial"><a name="Indicator">class <strong>Indicator</strong></a>(<a href="builtins.html#object">builtins.object</a>)</font></td></tr>
     
 <tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
-<td colspan=2><tt><a href="#Indicator">Indicator</a>(name:&nbsp;str,&nbsp;description:&nbsp;str,&nbsp;timeframe:&nbsp;str,&nbsp;trading_hours:&nbsp;str,&nbsp;symbol:&nbsp;str,&nbsp;calc_version:&nbsp;str,&nbsp;calc_details:&nbsp;str,&nbsp;start_dt='2024-01-01&nbsp;00:00:00',&nbsp;end_dt=None,&nbsp;candle_chart=None,&nbsp;parameters={})<br>
+<td colspan=2><tt><a href="#Indicator">Indicator</a>(name:&nbsp;str,&nbsp;description:&nbsp;str,&nbsp;timeframe:&nbsp;str,&nbsp;trading_hours:&nbsp;str,&nbsp;symbol,&nbsp;calc_version:&nbsp;str,&nbsp;calc_details:&nbsp;str,&nbsp;start_dt='2024-01-01&nbsp;00:00:00',&nbsp;end_dt=None,&nbsp;ind_id=None,&nbsp;autoload_chart=True,&nbsp;candle_chart=None,&nbsp;datapoints:&nbsp;list&nbsp;=&nbsp;None,&nbsp;parameters={})<br>
 &nbsp;<br>
 <br>&nbsp;</tt></td></tr>
 <tr><td>&nbsp;</td>
 <td width="100%">Methods defined here:<br>
-<dl><dt><a name="Indicator-__init__"><strong>__init__</strong></a>(self, name: str, description: str, timeframe: str, trading_hours: str, symbol: str, calc_version: str, calc_details: str, start_dt='2024-01-01 00:00:00', end_dt=None, candle_chart=None, parameters={})</dt><dd><tt>Base&nbsp;class&nbsp;for&nbsp;indicators.&nbsp;&nbsp;Names&nbsp;should&nbsp;be&nbsp;short&nbsp;and&nbsp;simple<br>
+<dl><dt><a name="Indicator-__eq__"><strong>__eq__</strong></a>(self, other)</dt><dd><tt>Return&nbsp;self==value.</tt></dd></dl>
+
+<dl><dt><a name="Indicator-__init__"><strong>__init__</strong></a>(self, name: str, description: str, timeframe: str, trading_hours: str, symbol, calc_version: str, calc_details: str, start_dt='2024-01-01 00:00:00', end_dt=None, ind_id=None, autoload_chart=True, candle_chart=None, datapoints: list = None, parameters={})</dt><dd><tt>Base&nbsp;class&nbsp;for&nbsp;indicators.&nbsp;&nbsp;Names&nbsp;should&nbsp;be&nbsp;short&nbsp;and&nbsp;simple<br>
 abbreviations&nbsp;as&nbsp;they&nbsp;are&nbsp;used&nbsp;in&nbsp;tagging&nbsp;and&nbsp;storage,&nbsp;think&nbsp;like<br>
 sma,&nbsp;hod,&nbsp;vwap,&nbsp;etc.&nbsp;&nbsp;This&nbsp;class&nbsp;won't&nbsp;be&nbsp;used&nbsp;directly,&nbsp;use&nbsp;it's<br>
 child&nbsp;classes&nbsp;which&nbsp;will&nbsp;be&nbsp;indicator&nbsp;type&nbsp;specific</tt></dd></dl>
+
+<dl><dt><a name="Indicator-__ne__"><strong>__ne__</strong></a>(self, other)</dt><dd><tt>Return&nbsp;self!=value.</tt></dd></dl>
 
 <dl><dt><a name="Indicator-__repr__"><strong>__repr__</strong></a>(self)</dt><dd><tt>Return&nbsp;repr(self).</tt></dd></dl>
 
@@ -217,12 +278,42 @@ accpet&nbsp;only&nbsp;a&nbsp;list&nbsp;of&nbsp;Candles,&nbsp;sort&nbsp;it,&nbsp;
 datapoints&nbsp;from&nbsp;the&nbsp;candles.&nbsp;&nbsp;Copy&nbsp;and&nbsp;modify&nbsp;this&nbsp;method&nbsp;as&nbsp;needed<br>
 in&nbsp;subclasses.</tt></dd></dl>
 
-<dl><dt><a name="Indicator-get_info"><strong>get_info</strong></a>(self)</dt></dl>
+<dl><dt><a name="Indicator-get_datapoint"><strong>get_datapoint</strong></a>(self, dt, offset: int = 0)</dt><dd><tt>Returns&nbsp;a&nbsp;single&nbsp;datapoint&nbsp;based&nbsp;on&nbsp;datetime&nbsp;provided.&nbsp;&nbsp;Because<br>
+this&nbsp;is&nbsp;typically&nbsp;based&nbsp;on&nbsp;candle&nbsp;close,&nbsp;we&nbsp;often&nbsp;want&nbsp;the&nbsp;previous<br>
+datapoint&nbsp;from&nbsp;the&nbsp;candle&nbsp;we&nbsp;are&nbsp;working&nbsp;through&nbsp;in&nbsp;a&nbsp;backtest&nbsp;so<br>
+offset&nbsp;is&nbsp;allowed&nbsp;to&nbsp;go&nbsp;back&nbsp;or&nbsp;forward&nbsp;in&nbsp;the&nbsp;list&nbsp;by&nbsp;the&nbsp;provided<br>
+value.&nbsp;&nbsp;Wrapper&nbsp;methods&nbsp;assist&nbsp;with&nbsp;the&nbsp;most&nbsp;common&nbsp;previous&nbsp;and<br>
+next&nbsp;requests.</tt></dd></dl>
+
+<dl><dt><a name="Indicator-get_info"><strong>get_info</strong></a>(self, pretty: bool = False)</dt><dd><tt>Provide&nbsp;a&nbsp;basic&nbsp;overview&nbsp;of&nbsp;this&nbsp;<a href="builtins.html#object">object</a></tt></dd></dl>
+
+<dl><dt><a name="Indicator-load_datapoints"><strong>load_datapoints</strong></a>(self)</dt><dd><tt>Load&nbsp;any&nbsp;datapoints&nbsp;available&nbsp;from&nbsp;central&nbsp;storage&nbsp;by&nbsp;ind_id,<br>
+start_dt,&nbsp;and&nbsp;end_dt.</tt></dd></dl>
 
 <dl><dt><a name="Indicator-load_underlying_chart"><strong>load_underlying_chart</strong></a>(self)</dt><dd><tt>Load&nbsp;the&nbsp;underlying&nbsp;candle&nbsp;chart&nbsp;from&nbsp;central&nbsp;storage</tt></dd></dl>
 
-<dl><dt><a name="Indicator-store"><strong>store</strong></a>(self)</dt><dd><tt>uses&nbsp;DHStore&nbsp;functionality&nbsp;to&nbsp;store&nbsp;metadata&nbsp;and&nbsp;time&nbsp;series<br>
-datapoints&nbsp;in&nbsp;the&nbsp;default&nbsp;storage&nbsp;system&nbsp;(probably&nbsp;mongo)</tt></dd></dl>
+<dl><dt><a name="Indicator-next_datapoint"><strong>next_datapoint</strong></a>(self, dt)</dt><dd><tt>Wrapper&nbsp;for&nbsp;get_datapoint</tt></dd></dl>
+
+<dl><dt><a name="Indicator-pretty"><strong>pretty</strong></a>(self, suppress_datapoints: bool = True, suppress_chart_candles: bool = True)</dt><dd><tt>Attempts&nbsp;to&nbsp;return&nbsp;an&nbsp;indented&nbsp;multiline&nbsp;version&nbsp;of&nbsp;this&nbsp;<a href="builtins.html#object">object</a>,<br>
+meant&nbsp;to&nbsp;provide&nbsp;an&nbsp;easy&nbsp;to&nbsp;read&nbsp;output&nbsp;for&nbsp;console&nbsp;or&nbsp;other&nbsp;purposes.<br>
+Optionally&nbsp;suppress_datapoints&nbsp;to&nbsp;reduce&nbsp;output&nbsp;size&nbsp;when&nbsp;not&nbsp;needed.</tt></dd></dl>
+
+<dl><dt><a name="Indicator-prev_datapoint"><strong>prev_datapoint</strong></a>(self, dt)</dt><dd><tt>Wrapper&nbsp;for&nbsp;get_datapoint</tt></dd></dl>
+
+<dl><dt><a name="Indicator-store"><strong>store</strong></a>(self, store_datapoints: bool = True, fast_dps_check: bool = False, show_progress: bool = False)</dt><dd><tt>uses&nbsp;DHStore&nbsp;functionality&nbsp;to&nbsp;store&nbsp;metadata&nbsp;and&nbsp;time&nbsp;series<br>
+datapoints&nbsp;into&nbsp;central&nbsp;storage</tt></dd></dl>
+
+<dl><dt><a name="Indicator-sub_eq"><strong>sub_eq</strong></a>(self, other)</dt><dd><tt>Placeholder&nbsp;method&nbsp;for&nbsp;subclasses&nbsp;to&nbsp;add&nbsp;additional&nbsp;attributes<br>
+or&nbsp;conditions&nbsp;required&nbsp;to&nbsp;evaluate&nbsp;__eq__&nbsp;for&nbsp;this&nbsp;class.&nbsp;&nbsp;Any<br>
+comparison&nbsp;of&nbsp;parameters&nbsp;should&nbsp;be&nbsp;done&nbsp;here&nbsp;as&nbsp;they&nbsp;are&nbsp;subclass<br>
+specific.</tt></dd></dl>
+
+<dl><dt><a name="Indicator-to_clean_dict"><strong>to_clean_dict</strong></a>(self, suppress_datapoints: bool = True, suppress_chart_candles: bool = True)</dt><dd><tt>Converts&nbsp;to&nbsp;JSON&nbsp;string&nbsp;then&nbsp;back&nbsp;to&nbsp;a&nbsp;python&nbsp;dict.&nbsp;&nbsp;This&nbsp;helps<br>
+to&nbsp;normalize&nbsp;types&nbsp;(I'm&nbsp;looking&nbsp;at&nbsp;YOU&nbsp;datetime)&nbsp;while&nbsp;ensuring<br>
+a&nbsp;portable&nbsp;python&nbsp;data&nbsp;structure</tt></dd></dl>
+
+<dl><dt><a name="Indicator-to_json"><strong>to_json</strong></a>(self, suppress_datapoints: bool = True, suppress_chart_candles: bool = True)</dt><dd><tt>returns&nbsp;a&nbsp;json&nbsp;version&nbsp;of&nbsp;this&nbsp;<a href="builtins.html#object">object</a>&nbsp;while&nbsp;normalizing<br>
+custom&nbsp;types&nbsp;(like&nbsp;datetime&nbsp;to&nbsp;string).</tt></dd></dl>
 
 <hr>
 Data descriptors defined here:<br>
@@ -232,6 +323,10 @@ Data descriptors defined here:<br>
 <dl><dt><strong>__weakref__</strong></dt>
 <dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
 </dl>
+<hr>
+Data and other attributes defined here:<br>
+<dl><dt><strong>__hash__</strong> = None</dl>
+
 </td></tr></table> <p>
 <table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
 <tr bgcolor="#ffc8d8">
@@ -244,11 +339,27 @@ Data descriptors defined here:<br>
 <br>&nbsp;</tt></td></tr>
 <tr><td>&nbsp;</td>
 <td width="100%">Methods defined here:<br>
+<dl><dt><a name="IndicatorDataPoint-__eq__"><strong>__eq__</strong></a>(self, other)</dt><dd><tt>Return&nbsp;self==value.</tt></dd></dl>
+
 <dl><dt><a name="IndicatorDataPoint-__init__"><strong>__init__</strong></a>(self, dt: str, value: float, ind_id: str, epoch: int = None)</dt><dd><tt>Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</tt></dd></dl>
+
+<dl><dt><a name="IndicatorDataPoint-__ne__"><strong>__ne__</strong></a>(self, other)</dt><dd><tt>Return&nbsp;self!=value.</tt></dd></dl>
 
 <dl><dt><a name="IndicatorDataPoint-__repr__"><strong>__repr__</strong></a>(self)</dt><dd><tt>Return&nbsp;repr(self).</tt></dd></dl>
 
 <dl><dt><a name="IndicatorDataPoint-__str__"><strong>__str__</strong></a>(self)</dt><dd><tt>Return&nbsp;str(self).</tt></dd></dl>
+
+<dl><dt><a name="IndicatorDataPoint-pretty"><strong>pretty</strong></a>(self)</dt><dd><tt>Attempts&nbsp;to&nbsp;return&nbsp;an&nbsp;indented&nbsp;multiline&nbsp;version&nbsp;of&nbsp;this&nbsp;<a href="builtins.html#object">object</a>,<br>
+meant&nbsp;to&nbsp;provide&nbsp;an&nbsp;easy&nbsp;to&nbsp;read&nbsp;output&nbsp;for&nbsp;console&nbsp;or&nbsp;other&nbsp;purposes.</tt></dd></dl>
+
+<dl><dt><a name="IndicatorDataPoint-store"><strong>store</strong></a>(self, checker=None)</dt><dd><tt>Optionally&nbsp;provide&nbsp;an&nbsp;<a href="#IndicatorDataPoint">IndicatorDataPoint</a>&nbsp;as&nbsp;'checker'&nbsp;if&nbsp;you&nbsp;want<br>
+a&nbsp;test&nbsp;for&nbsp;this&nbsp;to&nbsp;compare,&nbsp;before&nbsp;running&nbsp;the&nbsp;storage&nbsp;operation&nbsp;as<br>
+many&nbsp;queries&nbsp;slow&nbsp;down&nbsp;large&nbsp;batches.&nbsp;&nbsp;This&nbsp;is&nbsp;meant&nbsp;to&nbsp;be&nbsp;provided&nbsp;by<br>
+a&nbsp;wrapper&nbsp;performing&nbsp;periodic&nbsp;updates&nbsp;that&nbsp;may&nbsp;be&nbsp;attempting&nbsp;to&nbsp;store<br>
+duplicate&nbsp;already&nbsp;in&nbsp;central&nbsp;storage.&nbsp;&nbsp;The&nbsp;wrapper&nbsp;should&nbsp;retrieve&nbsp;all<br>
+datapoints&nbsp;that&nbsp;might&nbsp;match&nbsp;from&nbsp;storage&nbsp;first&nbsp;and&nbsp;provide&nbsp;them&nbsp;for<br>
+comparison&nbsp;to&nbsp;help&nbsp;this&nbsp;method&nbsp;avoid&nbsp;extra&nbsp;work.&nbsp;&nbsp;There's&nbsp;probably<br>
+a&nbsp;more&nbsp;elegant&nbsp;way&nbsp;to&nbsp;do&nbsp;this,&nbsp;but&nbsp;this&nbsp;will&nbsp;work&nbsp;and&nbsp;is&nbsp;easy&nbsp;enough.</tt></dd></dl>
 
 <dl><dt><a name="IndicatorDataPoint-to_clean_dict"><strong>to_clean_dict</strong></a>(self)</dt><dd><tt>Converts&nbsp;to&nbsp;JSON&nbsp;string&nbsp;then&nbsp;back&nbsp;to&nbsp;a&nbsp;python&nbsp;dict.&nbsp;&nbsp;This&nbsp;helps<br>
 to&nbsp;normalize&nbsp;types&nbsp;(I'm&nbsp;looking&nbsp;at&nbsp;YOU&nbsp;datetime)&nbsp;while&nbsp;ensuring<br>
@@ -265,6 +376,10 @@ Data descriptors defined here:<br>
 <dl><dt><strong>__weakref__</strong></dt>
 <dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
 </dl>
+<hr>
+Data and other attributes defined here:<br>
+<dl><dt><strong>__hash__</strong> = None</dl>
+
 </td></tr></table> <p>
 <table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
 <tr bgcolor="#ffc8d8">
@@ -272,7 +387,7 @@ Data descriptors defined here:<br>
 <font color="#000000" face="helvetica, arial"><a name="IndicatorEMA">class <strong>IndicatorEMA</strong></a>(<a href="dhcharts.html#Indicator">Indicator</a>)</font></td></tr>
     
 <tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
-<td colspan=2><tt><a href="#IndicatorEMA">IndicatorEMA</a>(description,&nbsp;timeframe,&nbsp;trading_hours,&nbsp;symbol,&nbsp;calc_version,&nbsp;calc_details,&nbsp;start_dt='2024-01-01&nbsp;00:00:00',&nbsp;end_dt=None,&nbsp;candle_chart=None,&nbsp;name='EMA',&nbsp;parameters={})<br>
+<td colspan=2><tt><a href="#IndicatorEMA">IndicatorEMA</a>(description,&nbsp;timeframe,&nbsp;trading_hours,&nbsp;symbol,&nbsp;calc_version,&nbsp;calc_details,&nbsp;start_dt='2024-01-01&nbsp;00:00:00',&nbsp;end_dt=None,&nbsp;ind_id=None,&nbsp;autoload_chart=True,&nbsp;candle_chart=None,&nbsp;name='EMA',&nbsp;datapoints=None,&nbsp;parameters={})<br>
 &nbsp;<br>
 <br>&nbsp;</tt></td></tr>
 <tr><td>&nbsp;</td>
@@ -283,7 +398,7 @@ Data descriptors defined here:<br>
 </dl>
 <hr>
 Methods defined here:<br>
-<dl><dt><a name="IndicatorEMA-__init__"><strong>__init__</strong></a>(self, description, timeframe, trading_hours, symbol, calc_version, calc_details, start_dt='2024-01-01 00:00:00', end_dt=None, candle_chart=None, name='EMA', parameters={})</dt><dd><tt>Base&nbsp;class&nbsp;for&nbsp;indicators.&nbsp;&nbsp;Names&nbsp;should&nbsp;be&nbsp;short&nbsp;and&nbsp;simple<br>
+<dl><dt><a name="IndicatorEMA-__init__"><strong>__init__</strong></a>(self, description, timeframe, trading_hours, symbol, calc_version, calc_details, start_dt='2024-01-01 00:00:00', end_dt=None, ind_id=None, autoload_chart=True, candle_chart=None, name='EMA', datapoints=None, parameters={})</dt><dd><tt>Base&nbsp;class&nbsp;for&nbsp;indicators.&nbsp;&nbsp;Names&nbsp;should&nbsp;be&nbsp;short&nbsp;and&nbsp;simple<br>
 abbreviations&nbsp;as&nbsp;they&nbsp;are&nbsp;used&nbsp;in&nbsp;tagging&nbsp;and&nbsp;storage,&nbsp;think&nbsp;like<br>
 sma,&nbsp;hod,&nbsp;vwap,&nbsp;etc.&nbsp;&nbsp;This&nbsp;class&nbsp;won't&nbsp;be&nbsp;used&nbsp;directly,&nbsp;use&nbsp;it's<br>
 child&nbsp;classes&nbsp;which&nbsp;will&nbsp;be&nbsp;indicator&nbsp;type&nbsp;specific</tt></dd></dl>
@@ -293,16 +408,50 @@ to&nbsp;using&nbsp;the&nbsp;'close'&nbsp;value&nbsp;of&nbsp;each&nbsp;candle&nbs
 
 <hr>
 Methods inherited from <a href="dhcharts.html#Indicator">Indicator</a>:<br>
+<dl><dt><a name="IndicatorEMA-__eq__"><strong>__eq__</strong></a>(self, other)</dt><dd><tt>Return&nbsp;self==value.</tt></dd></dl>
+
+<dl><dt><a name="IndicatorEMA-__ne__"><strong>__ne__</strong></a>(self, other)</dt><dd><tt>Return&nbsp;self!=value.</tt></dd></dl>
+
 <dl><dt><a name="IndicatorEMA-__repr__"><strong>__repr__</strong></a>(self)</dt><dd><tt>Return&nbsp;repr(self).</tt></dd></dl>
 
 <dl><dt><a name="IndicatorEMA-__str__"><strong>__str__</strong></a>(self)</dt><dd><tt>Return&nbsp;str(self).</tt></dd></dl>
 
-<dl><dt><a name="IndicatorEMA-get_info"><strong>get_info</strong></a>(self)</dt></dl>
+<dl><dt><a name="IndicatorEMA-get_datapoint"><strong>get_datapoint</strong></a>(self, dt, offset: int = 0)</dt><dd><tt>Returns&nbsp;a&nbsp;single&nbsp;datapoint&nbsp;based&nbsp;on&nbsp;datetime&nbsp;provided.&nbsp;&nbsp;Because<br>
+this&nbsp;is&nbsp;typically&nbsp;based&nbsp;on&nbsp;candle&nbsp;close,&nbsp;we&nbsp;often&nbsp;want&nbsp;the&nbsp;previous<br>
+datapoint&nbsp;from&nbsp;the&nbsp;candle&nbsp;we&nbsp;are&nbsp;working&nbsp;through&nbsp;in&nbsp;a&nbsp;backtest&nbsp;so<br>
+offset&nbsp;is&nbsp;allowed&nbsp;to&nbsp;go&nbsp;back&nbsp;or&nbsp;forward&nbsp;in&nbsp;the&nbsp;list&nbsp;by&nbsp;the&nbsp;provided<br>
+value.&nbsp;&nbsp;Wrapper&nbsp;methods&nbsp;assist&nbsp;with&nbsp;the&nbsp;most&nbsp;common&nbsp;previous&nbsp;and<br>
+next&nbsp;requests.</tt></dd></dl>
+
+<dl><dt><a name="IndicatorEMA-get_info"><strong>get_info</strong></a>(self, pretty: bool = False)</dt><dd><tt>Provide&nbsp;a&nbsp;basic&nbsp;overview&nbsp;of&nbsp;this&nbsp;<a href="builtins.html#object">object</a></tt></dd></dl>
+
+<dl><dt><a name="IndicatorEMA-load_datapoints"><strong>load_datapoints</strong></a>(self)</dt><dd><tt>Load&nbsp;any&nbsp;datapoints&nbsp;available&nbsp;from&nbsp;central&nbsp;storage&nbsp;by&nbsp;ind_id,<br>
+start_dt,&nbsp;and&nbsp;end_dt.</tt></dd></dl>
 
 <dl><dt><a name="IndicatorEMA-load_underlying_chart"><strong>load_underlying_chart</strong></a>(self)</dt><dd><tt>Load&nbsp;the&nbsp;underlying&nbsp;candle&nbsp;chart&nbsp;from&nbsp;central&nbsp;storage</tt></dd></dl>
 
-<dl><dt><a name="IndicatorEMA-store"><strong>store</strong></a>(self)</dt><dd><tt>uses&nbsp;DHStore&nbsp;functionality&nbsp;to&nbsp;store&nbsp;metadata&nbsp;and&nbsp;time&nbsp;series<br>
-datapoints&nbsp;in&nbsp;the&nbsp;default&nbsp;storage&nbsp;system&nbsp;(probably&nbsp;mongo)</tt></dd></dl>
+<dl><dt><a name="IndicatorEMA-next_datapoint"><strong>next_datapoint</strong></a>(self, dt)</dt><dd><tt>Wrapper&nbsp;for&nbsp;get_datapoint</tt></dd></dl>
+
+<dl><dt><a name="IndicatorEMA-pretty"><strong>pretty</strong></a>(self, suppress_datapoints: bool = True, suppress_chart_candles: bool = True)</dt><dd><tt>Attempts&nbsp;to&nbsp;return&nbsp;an&nbsp;indented&nbsp;multiline&nbsp;version&nbsp;of&nbsp;this&nbsp;<a href="builtins.html#object">object</a>,<br>
+meant&nbsp;to&nbsp;provide&nbsp;an&nbsp;easy&nbsp;to&nbsp;read&nbsp;output&nbsp;for&nbsp;console&nbsp;or&nbsp;other&nbsp;purposes.<br>
+Optionally&nbsp;suppress_datapoints&nbsp;to&nbsp;reduce&nbsp;output&nbsp;size&nbsp;when&nbsp;not&nbsp;needed.</tt></dd></dl>
+
+<dl><dt><a name="IndicatorEMA-prev_datapoint"><strong>prev_datapoint</strong></a>(self, dt)</dt><dd><tt>Wrapper&nbsp;for&nbsp;get_datapoint</tt></dd></dl>
+
+<dl><dt><a name="IndicatorEMA-store"><strong>store</strong></a>(self, store_datapoints: bool = True, fast_dps_check: bool = False, show_progress: bool = False)</dt><dd><tt>uses&nbsp;DHStore&nbsp;functionality&nbsp;to&nbsp;store&nbsp;metadata&nbsp;and&nbsp;time&nbsp;series<br>
+datapoints&nbsp;into&nbsp;central&nbsp;storage</tt></dd></dl>
+
+<dl><dt><a name="IndicatorEMA-sub_eq"><strong>sub_eq</strong></a>(self, other)</dt><dd><tt>Placeholder&nbsp;method&nbsp;for&nbsp;subclasses&nbsp;to&nbsp;add&nbsp;additional&nbsp;attributes<br>
+or&nbsp;conditions&nbsp;required&nbsp;to&nbsp;evaluate&nbsp;__eq__&nbsp;for&nbsp;this&nbsp;class.&nbsp;&nbsp;Any<br>
+comparison&nbsp;of&nbsp;parameters&nbsp;should&nbsp;be&nbsp;done&nbsp;here&nbsp;as&nbsp;they&nbsp;are&nbsp;subclass<br>
+specific.</tt></dd></dl>
+
+<dl><dt><a name="IndicatorEMA-to_clean_dict"><strong>to_clean_dict</strong></a>(self, suppress_datapoints: bool = True, suppress_chart_candles: bool = True)</dt><dd><tt>Converts&nbsp;to&nbsp;JSON&nbsp;string&nbsp;then&nbsp;back&nbsp;to&nbsp;a&nbsp;python&nbsp;dict.&nbsp;&nbsp;This&nbsp;helps<br>
+to&nbsp;normalize&nbsp;types&nbsp;(I'm&nbsp;looking&nbsp;at&nbsp;YOU&nbsp;datetime)&nbsp;while&nbsp;ensuring<br>
+a&nbsp;portable&nbsp;python&nbsp;data&nbsp;structure</tt></dd></dl>
+
+<dl><dt><a name="IndicatorEMA-to_json"><strong>to_json</strong></a>(self, suppress_datapoints: bool = True, suppress_chart_candles: bool = True)</dt><dd><tt>returns&nbsp;a&nbsp;json&nbsp;version&nbsp;of&nbsp;this&nbsp;<a href="builtins.html#object">object</a>&nbsp;while&nbsp;normalizing<br>
+custom&nbsp;types&nbsp;(like&nbsp;datetime&nbsp;to&nbsp;string).</tt></dd></dl>
 
 <hr>
 Data descriptors inherited from <a href="dhcharts.html#Indicator">Indicator</a>:<br>
@@ -312,6 +461,10 @@ Data descriptors inherited from <a href="dhcharts.html#Indicator">Indicator</a>:
 <dl><dt><strong>__weakref__</strong></dt>
 <dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
 </dl>
+<hr>
+Data and other attributes inherited from <a href="dhcharts.html#Indicator">Indicator</a>:<br>
+<dl><dt><strong>__hash__</strong> = None</dl>
+
 </td></tr></table> <p>
 <table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
 <tr bgcolor="#ffc8d8">
@@ -319,7 +472,7 @@ Data descriptors inherited from <a href="dhcharts.html#Indicator">Indicator</a>:
 <font color="#000000" face="helvetica, arial"><a name="IndicatorSMA">class <strong>IndicatorSMA</strong></a>(<a href="dhcharts.html#Indicator">Indicator</a>)</font></td></tr>
     
 <tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
-<td colspan=2><tt><a href="#IndicatorSMA">IndicatorSMA</a>(description,&nbsp;timeframe,&nbsp;trading_hours,&nbsp;symbol,&nbsp;calc_version,&nbsp;calc_details,&nbsp;start_dt='2024-01-01&nbsp;00:00:00',&nbsp;end_dt=None,&nbsp;candle_chart=None,&nbsp;name='SMA',&nbsp;parameters={})<br>
+<td colspan=2><tt><a href="#IndicatorSMA">IndicatorSMA</a>(description,&nbsp;timeframe,&nbsp;trading_hours,&nbsp;symbol,&nbsp;calc_version,&nbsp;calc_details,&nbsp;start_dt='2024-01-01&nbsp;00:00:00',&nbsp;end_dt=None,&nbsp;ind_id=None,&nbsp;autoload_chart=True,&nbsp;candle_chart=None,&nbsp;name='SMA',&nbsp;datapoints=None,&nbsp;parameters={})<br>
 &nbsp;<br>
 <br>&nbsp;</tt></td></tr>
 <tr><td>&nbsp;</td>
@@ -330,7 +483,7 @@ Data descriptors inherited from <a href="dhcharts.html#Indicator">Indicator</a>:
 </dl>
 <hr>
 Methods defined here:<br>
-<dl><dt><a name="IndicatorSMA-__init__"><strong>__init__</strong></a>(self, description, timeframe, trading_hours, symbol, calc_version, calc_details, start_dt='2024-01-01 00:00:00', end_dt=None, candle_chart=None, name='SMA', parameters={})</dt><dd><tt>Base&nbsp;class&nbsp;for&nbsp;indicators.&nbsp;&nbsp;Names&nbsp;should&nbsp;be&nbsp;short&nbsp;and&nbsp;simple<br>
+<dl><dt><a name="IndicatorSMA-__init__"><strong>__init__</strong></a>(self, description, timeframe, trading_hours, symbol, calc_version, calc_details, start_dt='2024-01-01 00:00:00', end_dt=None, ind_id=None, autoload_chart=True, candle_chart=None, name='SMA', datapoints=None, parameters={})</dt><dd><tt>Base&nbsp;class&nbsp;for&nbsp;indicators.&nbsp;&nbsp;Names&nbsp;should&nbsp;be&nbsp;short&nbsp;and&nbsp;simple<br>
 abbreviations&nbsp;as&nbsp;they&nbsp;are&nbsp;used&nbsp;in&nbsp;tagging&nbsp;and&nbsp;storage,&nbsp;think&nbsp;like<br>
 sma,&nbsp;hod,&nbsp;vwap,&nbsp;etc.&nbsp;&nbsp;This&nbsp;class&nbsp;won't&nbsp;be&nbsp;used&nbsp;directly,&nbsp;use&nbsp;it's<br>
 child&nbsp;classes&nbsp;which&nbsp;will&nbsp;be&nbsp;indicator&nbsp;type&nbsp;specific</tt></dd></dl>
@@ -340,16 +493,50 @@ the&nbsp;'close'&nbsp;value&nbsp;of&nbsp;each&nbsp;candle.</tt></dd></dl>
 
 <hr>
 Methods inherited from <a href="dhcharts.html#Indicator">Indicator</a>:<br>
+<dl><dt><a name="IndicatorSMA-__eq__"><strong>__eq__</strong></a>(self, other)</dt><dd><tt>Return&nbsp;self==value.</tt></dd></dl>
+
+<dl><dt><a name="IndicatorSMA-__ne__"><strong>__ne__</strong></a>(self, other)</dt><dd><tt>Return&nbsp;self!=value.</tt></dd></dl>
+
 <dl><dt><a name="IndicatorSMA-__repr__"><strong>__repr__</strong></a>(self)</dt><dd><tt>Return&nbsp;repr(self).</tt></dd></dl>
 
 <dl><dt><a name="IndicatorSMA-__str__"><strong>__str__</strong></a>(self)</dt><dd><tt>Return&nbsp;str(self).</tt></dd></dl>
 
-<dl><dt><a name="IndicatorSMA-get_info"><strong>get_info</strong></a>(self)</dt></dl>
+<dl><dt><a name="IndicatorSMA-get_datapoint"><strong>get_datapoint</strong></a>(self, dt, offset: int = 0)</dt><dd><tt>Returns&nbsp;a&nbsp;single&nbsp;datapoint&nbsp;based&nbsp;on&nbsp;datetime&nbsp;provided.&nbsp;&nbsp;Because<br>
+this&nbsp;is&nbsp;typically&nbsp;based&nbsp;on&nbsp;candle&nbsp;close,&nbsp;we&nbsp;often&nbsp;want&nbsp;the&nbsp;previous<br>
+datapoint&nbsp;from&nbsp;the&nbsp;candle&nbsp;we&nbsp;are&nbsp;working&nbsp;through&nbsp;in&nbsp;a&nbsp;backtest&nbsp;so<br>
+offset&nbsp;is&nbsp;allowed&nbsp;to&nbsp;go&nbsp;back&nbsp;or&nbsp;forward&nbsp;in&nbsp;the&nbsp;list&nbsp;by&nbsp;the&nbsp;provided<br>
+value.&nbsp;&nbsp;Wrapper&nbsp;methods&nbsp;assist&nbsp;with&nbsp;the&nbsp;most&nbsp;common&nbsp;previous&nbsp;and<br>
+next&nbsp;requests.</tt></dd></dl>
+
+<dl><dt><a name="IndicatorSMA-get_info"><strong>get_info</strong></a>(self, pretty: bool = False)</dt><dd><tt>Provide&nbsp;a&nbsp;basic&nbsp;overview&nbsp;of&nbsp;this&nbsp;<a href="builtins.html#object">object</a></tt></dd></dl>
+
+<dl><dt><a name="IndicatorSMA-load_datapoints"><strong>load_datapoints</strong></a>(self)</dt><dd><tt>Load&nbsp;any&nbsp;datapoints&nbsp;available&nbsp;from&nbsp;central&nbsp;storage&nbsp;by&nbsp;ind_id,<br>
+start_dt,&nbsp;and&nbsp;end_dt.</tt></dd></dl>
 
 <dl><dt><a name="IndicatorSMA-load_underlying_chart"><strong>load_underlying_chart</strong></a>(self)</dt><dd><tt>Load&nbsp;the&nbsp;underlying&nbsp;candle&nbsp;chart&nbsp;from&nbsp;central&nbsp;storage</tt></dd></dl>
 
-<dl><dt><a name="IndicatorSMA-store"><strong>store</strong></a>(self)</dt><dd><tt>uses&nbsp;DHStore&nbsp;functionality&nbsp;to&nbsp;store&nbsp;metadata&nbsp;and&nbsp;time&nbsp;series<br>
-datapoints&nbsp;in&nbsp;the&nbsp;default&nbsp;storage&nbsp;system&nbsp;(probably&nbsp;mongo)</tt></dd></dl>
+<dl><dt><a name="IndicatorSMA-next_datapoint"><strong>next_datapoint</strong></a>(self, dt)</dt><dd><tt>Wrapper&nbsp;for&nbsp;get_datapoint</tt></dd></dl>
+
+<dl><dt><a name="IndicatorSMA-pretty"><strong>pretty</strong></a>(self, suppress_datapoints: bool = True, suppress_chart_candles: bool = True)</dt><dd><tt>Attempts&nbsp;to&nbsp;return&nbsp;an&nbsp;indented&nbsp;multiline&nbsp;version&nbsp;of&nbsp;this&nbsp;<a href="builtins.html#object">object</a>,<br>
+meant&nbsp;to&nbsp;provide&nbsp;an&nbsp;easy&nbsp;to&nbsp;read&nbsp;output&nbsp;for&nbsp;console&nbsp;or&nbsp;other&nbsp;purposes.<br>
+Optionally&nbsp;suppress_datapoints&nbsp;to&nbsp;reduce&nbsp;output&nbsp;size&nbsp;when&nbsp;not&nbsp;needed.</tt></dd></dl>
+
+<dl><dt><a name="IndicatorSMA-prev_datapoint"><strong>prev_datapoint</strong></a>(self, dt)</dt><dd><tt>Wrapper&nbsp;for&nbsp;get_datapoint</tt></dd></dl>
+
+<dl><dt><a name="IndicatorSMA-store"><strong>store</strong></a>(self, store_datapoints: bool = True, fast_dps_check: bool = False, show_progress: bool = False)</dt><dd><tt>uses&nbsp;DHStore&nbsp;functionality&nbsp;to&nbsp;store&nbsp;metadata&nbsp;and&nbsp;time&nbsp;series<br>
+datapoints&nbsp;into&nbsp;central&nbsp;storage</tt></dd></dl>
+
+<dl><dt><a name="IndicatorSMA-sub_eq"><strong>sub_eq</strong></a>(self, other)</dt><dd><tt>Placeholder&nbsp;method&nbsp;for&nbsp;subclasses&nbsp;to&nbsp;add&nbsp;additional&nbsp;attributes<br>
+or&nbsp;conditions&nbsp;required&nbsp;to&nbsp;evaluate&nbsp;__eq__&nbsp;for&nbsp;this&nbsp;class.&nbsp;&nbsp;Any<br>
+comparison&nbsp;of&nbsp;parameters&nbsp;should&nbsp;be&nbsp;done&nbsp;here&nbsp;as&nbsp;they&nbsp;are&nbsp;subclass<br>
+specific.</tt></dd></dl>
+
+<dl><dt><a name="IndicatorSMA-to_clean_dict"><strong>to_clean_dict</strong></a>(self, suppress_datapoints: bool = True, suppress_chart_candles: bool = True)</dt><dd><tt>Converts&nbsp;to&nbsp;JSON&nbsp;string&nbsp;then&nbsp;back&nbsp;to&nbsp;a&nbsp;python&nbsp;dict.&nbsp;&nbsp;This&nbsp;helps<br>
+to&nbsp;normalize&nbsp;types&nbsp;(I'm&nbsp;looking&nbsp;at&nbsp;YOU&nbsp;datetime)&nbsp;while&nbsp;ensuring<br>
+a&nbsp;portable&nbsp;python&nbsp;data&nbsp;structure</tt></dd></dl>
+
+<dl><dt><a name="IndicatorSMA-to_json"><strong>to_json</strong></a>(self, suppress_datapoints: bool = True, suppress_chart_candles: bool = True)</dt><dd><tt>returns&nbsp;a&nbsp;json&nbsp;version&nbsp;of&nbsp;this&nbsp;<a href="builtins.html#object">object</a>&nbsp;while&nbsp;normalizing<br>
+custom&nbsp;types&nbsp;(like&nbsp;datetime&nbsp;to&nbsp;string).</tt></dd></dl>
 
 <hr>
 Data descriptors inherited from <a href="dhcharts.html#Indicator">Indicator</a>:<br>
@@ -359,6 +546,10 @@ Data descriptors inherited from <a href="dhcharts.html#Indicator">Indicator</a>:
 <dl><dt><strong>__weakref__</strong></dt>
 <dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
 </dl>
+<hr>
+Data and other attributes inherited from <a href="dhcharts.html#Indicator">Indicator</a>:<br>
+<dl><dt><strong>__hash__</strong> = None</dl>
+
 </td></tr></table> <p>
 <table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
 <tr bgcolor="#ffc8d8">
@@ -366,12 +557,73 @@ Data descriptors inherited from <a href="dhcharts.html#Indicator">Indicator</a>:
 <font color="#000000" face="helvetica, arial"><a name="Symbol">class <strong>Symbol</strong></a>(<a href="builtins.html#object">builtins.object</a>)</font></td></tr>
     
 <tr bgcolor="#ffc8d8"><td rowspan=2><tt>&nbsp;&nbsp;&nbsp;</tt></td>
-<td colspan=2><tt><a href="#Symbol">Symbol</a>(ticker:&nbsp;str,&nbsp;name:&nbsp;str,&nbsp;leverage_ratio:&nbsp;float)<br>
+<td colspan=2><tt><a href="#Symbol">Symbol</a>(ticker:&nbsp;str,&nbsp;name:&nbsp;str,&nbsp;leverage_ratio:&nbsp;float,&nbsp;tick_size:&nbsp;float)<br>
 &nbsp;<br>
-<br>&nbsp;</tt></td></tr>
+Represents&nbsp;basic&nbsp;mechanics&nbsp;of&nbsp;a&nbsp;tradeable&nbsp;symbol&nbsp;a.k.a.&nbsp;ticker.&nbsp;&nbsp;This<br>
+might&nbsp;be&nbsp;a&nbsp;specific&nbsp;stock&nbsp;or&nbsp;future.<br>&nbsp;</tt></td></tr>
 <tr><td>&nbsp;</td>
 <td width="100%">Methods defined here:<br>
-<dl><dt><a name="Symbol-__init__"><strong>__init__</strong></a>(self, ticker: str, name: str, leverage_ratio: float)</dt><dd><tt>Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</tt></dd></dl>
+<dl><dt><a name="Symbol-__eq__"><strong>__eq__</strong></a>(self, other)</dt><dd><tt>Return&nbsp;self==value.</tt></dd></dl>
+
+<dl><dt><a name="Symbol-__init__"><strong>__init__</strong></a>(self, ticker: str, name: str, leverage_ratio: float, tick_size: float)</dt><dd><tt>Initialize&nbsp;self.&nbsp;&nbsp;See&nbsp;help(type(self))&nbsp;for&nbsp;accurate&nbsp;signature.</tt></dd></dl>
+
+<dl><dt><a name="Symbol-__ne__"><strong>__ne__</strong></a>(self, other)</dt><dd><tt>Return&nbsp;self!=value.</tt></dd></dl>
+
+<dl><dt><a name="Symbol-__repr__"><strong>__repr__</strong></a>(self)</dt><dd><tt>Return&nbsp;repr(self).</tt></dd></dl>
+
+<dl><dt><a name="Symbol-__str__"><strong>__str__</strong></a>(self)</dt><dd><tt>Return&nbsp;str(self).</tt></dd></dl>
+
+<dl><dt><a name="Symbol-get_market_boundary"><strong>get_market_boundary</strong></a>(self, target_dt, trading_hours: str, boundary: str, order: str, adjust_for_events: bool = True, events: list = None)</dt><dd><tt>Returns&nbsp;the&nbsp;previous&nbsp;or&nbsp;next&nbsp;market&nbsp;open&nbsp;or&nbsp;close&nbsp;datetime&nbsp;for<br>
+either&nbsp;regular&nbsp;trading&nbsp;hours&nbsp;(rth)&nbsp;or&nbsp;extended/globex&nbsp;trading&nbsp;hours<br>
+(eth).&nbsp;&nbsp;Optionally&nbsp;factors&nbsp;in&nbsp;events&nbsp;passed&nbsp;in&nbsp;to&nbsp;skip&nbsp;ahead&nbsp;or&nbsp;back<br>
+when&nbsp;an&nbsp;<a href="#Event">Event</a>&nbsp;(such&nbsp;as&nbsp;a&nbsp;market&nbsp;closure)&nbsp;would&nbsp;impact&nbsp;the&nbsp;datetime<br>
+returned.&nbsp;&nbsp;This&nbsp;requires&nbsp;the&nbsp;caller&nbsp;to&nbsp;determine&nbsp;event&nbsp;criteria&nbsp;and<br>
+build&nbsp;the&nbsp;list&nbsp;rather&nbsp;than&nbsp;making&nbsp;assumptions.<br>
+&nbsp;<br>
+Typically&nbsp;this&nbsp;method&nbsp;does&nbsp;not&nbsp;need&nbsp;to&nbsp;be&nbsp;called&nbsp;directly,&nbsp;instead<br>
+reference&nbsp;it&nbsp;via&nbsp;the&nbsp;wrapper&nbsp;methods&nbsp;below&nbsp;that&nbsp;provide&nbsp;better&nbsp;context<br>
+and&nbsp;auto-include&nbsp;most&nbsp;of&nbsp;the&nbsp;parameters&nbsp;needed&nbsp;for&nbsp;streamlined&nbsp;code.<br>
+&nbsp;<br>
+Note&nbsp;that&nbsp;the&nbsp;current&nbsp;iteration&nbsp;only&nbsp;skips&nbsp;ahead&nbsp;to&nbsp;the&nbsp;next&nbsp;standard<br>
+open&nbsp;or&nbsp;close&nbsp;if&nbsp;an&nbsp;event&nbsp;overlaps&nbsp;rather&nbsp;than&nbsp;evaluating&nbsp;the<br>
+boundaries&nbsp;of&nbsp;the&nbsp;event&nbsp;itself.&nbsp;&nbsp;This&nbsp;should&nbsp;have&nbsp;minimal&nbsp;impact&nbsp;on<br>
+backtest&nbsp;results&nbsp;over&nbsp;meaningful&nbsp;periods&nbsp;of&nbsp;time&nbsp;and&nbsp;it's&nbsp;presumed<br>
+one&nbsp;would&nbsp;probably&nbsp;not&nbsp;want&nbsp;to&nbsp;trade&nbsp;these&nbsp;periods&nbsp;anyways.</tt></dd></dl>
+
+<dl><dt><a name="Symbol-get_next_eth_close"><strong>get_next_eth_close</strong></a>(self, target_dt, adjust_for_events: bool = True, events: list = None)</dt><dd><tt>Simple&nbsp;wrapper&nbsp;for&nbsp;<a href="#Symbol-get_market_boundary">get_market_boundary</a>()</tt></dd></dl>
+
+<dl><dt><a name="Symbol-get_next_eth_open"><strong>get_next_eth_open</strong></a>(self, target_dt, adjust_for_events: bool = True, events: list = None)</dt><dd><tt>Simple&nbsp;wrapper&nbsp;for&nbsp;<a href="#Symbol-get_market_boundary">get_market_boundary</a>()</tt></dd></dl>
+
+<dl><dt><a name="Symbol-get_next_rth_close"><strong>get_next_rth_close</strong></a>(self, target_dt, adjust_for_events: bool = True, events: list = None)</dt><dd><tt>Simple&nbsp;wrapper&nbsp;for&nbsp;<a href="#Symbol-get_market_boundary">get_market_boundary</a>()</tt></dd></dl>
+
+<dl><dt><a name="Symbol-get_next_rth_open"><strong>get_next_rth_open</strong></a>(self, target_dt, adjust_for_events: bool = True, events: list = None)</dt><dd><tt>Simple&nbsp;wrapper&nbsp;for&nbsp;<a href="#Symbol-get_market_boundary">get_market_boundary</a>()</tt></dd></dl>
+
+<dl><dt><a name="Symbol-get_next_tick_down"><strong>get_next_tick_down</strong></a>(self, f: float)</dt><dd><tt>Returns&nbsp;the&nbsp;next&nbsp;tick&nbsp;available&nbsp;at&nbsp;or&nbsp;below&nbsp;the&nbsp;provided&nbsp;value</tt></dd></dl>
+
+<dl><dt><a name="Symbol-get_next_tick_up"><strong>get_next_tick_up</strong></a>(self, f: float)</dt><dd><tt>Returns&nbsp;the&nbsp;next&nbsp;tick&nbsp;available&nbsp;at&nbsp;or&nbsp;above&nbsp;the&nbsp;provided&nbsp;value</tt></dd></dl>
+
+<dl><dt><a name="Symbol-get_previous_eth_close"><strong>get_previous_eth_close</strong></a>(self, target_dt, adjust_for_events: bool = True, events: list = None)</dt><dd><tt>Simple&nbsp;wrapper&nbsp;for&nbsp;<a href="#Symbol-get_market_boundary">get_market_boundary</a>()</tt></dd></dl>
+
+<dl><dt><a name="Symbol-get_previous_eth_open"><strong>get_previous_eth_open</strong></a>(self, target_dt, adjust_for_events: bool = True, events: list = None)</dt><dd><tt>Simple&nbsp;wrapper&nbsp;for&nbsp;<a href="#Symbol-get_market_boundary">get_market_boundary</a>()</tt></dd></dl>
+
+<dl><dt><a name="Symbol-get_previous_rth_close"><strong>get_previous_rth_close</strong></a>(self, target_dt, adjust_for_events: bool = True, events: list = None)</dt><dd><tt>Simple&nbsp;wrapper&nbsp;for&nbsp;<a href="#Symbol-get_market_boundary">get_market_boundary</a>()</tt></dd></dl>
+
+<dl><dt><a name="Symbol-get_previous_rth_open"><strong>get_previous_rth_open</strong></a>(self, target_dt, adjust_for_events: bool = True, events: list = None)</dt><dd><tt>Simple&nbsp;wrapper&nbsp;for&nbsp;<a href="#Symbol-get_market_boundary">get_market_boundary</a>()</tt></dd></dl>
+
+<dl><dt><a name="Symbol-market_is_open"><strong>market_is_open</strong></a>(self, trading_hours: str, target_dt, check_closed_events: bool = True, events: list = None)</dt><dd><tt>Returns&nbsp;True&nbsp;if&nbsp;target_dt&nbsp;is&nbsp;within&nbsp;market&nbsp;hours&nbsp;and&nbsp;no&nbsp;Events&nbsp;with<br>
+category&nbsp;'Closed'&nbsp;overlap&nbsp;as&nbsp;pulled&nbsp;from&nbsp;central&nbsp;storage</tt></dd></dl>
+
+<dl><dt><a name="Symbol-pretty"><strong>pretty</strong></a>(self)</dt><dd><tt>Attempts&nbsp;to&nbsp;return&nbsp;an&nbsp;indented&nbsp;multiline&nbsp;version&nbsp;of&nbsp;this&nbsp;<a href="builtins.html#object">object</a>,<br>
+meant&nbsp;to&nbsp;provide&nbsp;an&nbsp;easy&nbsp;to&nbsp;read&nbsp;output&nbsp;for&nbsp;console&nbsp;or&nbsp;other&nbsp;purposes.</tt></dd></dl>
+
+<dl><dt><a name="Symbol-set_times"><strong>set_times</strong></a>(self)</dt><dd><tt>Sets&nbsp;times&nbsp;for&nbsp;known&nbsp;<a href="#Symbol">Symbol</a>&nbsp;objects.</tt></dd></dl>
+
+<dl><dt><a name="Symbol-to_clean_dict"><strong>to_clean_dict</strong></a>(self)</dt><dd><tt>Converts&nbsp;to&nbsp;JSON&nbsp;string&nbsp;then&nbsp;back&nbsp;to&nbsp;a&nbsp;python&nbsp;dict.&nbsp;&nbsp;This&nbsp;helps<br>
+to&nbsp;normalize&nbsp;types&nbsp;(I'm&nbsp;looking&nbsp;at&nbsp;YOU&nbsp;datetime)&nbsp;while&nbsp;ensuring<br>
+a&nbsp;portable&nbsp;python&nbsp;data&nbsp;structure</tt></dd></dl>
+
+<dl><dt><a name="Symbol-to_json"><strong>to_json</strong></a>(self)</dt><dd><tt>returns&nbsp;a&nbsp;json&nbsp;version&nbsp;of&nbsp;this&nbsp;<a href="builtins.html#object">object</a>&nbsp;while&nbsp;normalizing<br>
+custom&nbsp;types&nbsp;(like&nbsp;datetime&nbsp;to&nbsp;string)</tt></dd></dl>
 
 <hr>
 Data descriptors defined here:<br>
@@ -381,6 +633,10 @@ Data descriptors defined here:<br>
 <dl><dt><strong>__weakref__</strong></dt>
 <dd><tt>list&nbsp;of&nbsp;weak&nbsp;references&nbsp;to&nbsp;the&nbsp;object&nbsp;(if&nbsp;defined)</tt></dd>
 </dl>
+<hr>
+Data and other attributes defined here:<br>
+<dl><dt><strong>__hash__</strong> = None</dl>
+
 </td></tr></table></td></tr></table><p>
 <table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
 <tr bgcolor="#eeaa77">
@@ -392,6 +648,11 @@ Data descriptors defined here:<br>
 represents&nbsp;the&nbsp;earliest&nbsp;time&nbsp;candles&nbsp;should&nbsp;be&nbsp;imported&nbsp;for&nbsp;among&nbsp;other<br>
 things,&nbsp;setting&nbsp;a&nbsp;limit&nbsp;on&nbsp;how&nbsp;far&nbsp;back&nbsp;these&nbsp;modules&nbsp;can&nbsp;look&nbsp;to&nbsp;keep<br>
 performance&nbsp;and&nbsp;resource&nbsp;needs&nbsp;reasonable.</tt></dd></dl>
+ <dl><dt><a name="-logc"><strong>logc</strong></a>(msg: str)</dt></dl>
+ <dl><dt><a name="-logd"><strong>logd</strong></a>(msg: str)</dt></dl>
+ <dl><dt><a name="-loge"><strong>loge</strong></a>(msg: str)</dt></dl>
+ <dl><dt><a name="-logi"><strong>logi</strong></a>(msg: str)</dt></dl>
+ <dl><dt><a name="-logw"><strong>logw</strong></a>(msg: str)</dt></dl>
 </td></tr></table><p>
 <table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
 <tr bgcolor="#55aa55">
@@ -400,5 +661,6 @@ performance&nbsp;and&nbsp;resource&nbsp;needs&nbsp;reasonable.</tt></dd></dl>
     
 <tr><td bgcolor="#55aa55"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
 <td width="100%"><strong>BEGINNING_OF_TIME</strong> = '2024-01-01 00:00:00'<br>
-<strong>CANDLE_TIMEFRAMES</strong> = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w']</td></tr></table>
+<strong>CANDLE_TIMEFRAMES</strong> = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w']<br>
+<strong>log</strong> = &lt;Logger dhcharts (WARNING)&gt;</td></tr></table>
 </body></html>

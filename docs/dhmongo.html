@@ -27,9 +27,10 @@
 <tr><td bgcolor="#aa55cc"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
 <td width="100%"><table width="100%" summary="list"><tr><td width="25%" valign=top><a href="dhcharts.html">dhcharts</a><br>
 <a href="dhutil.html">dhutil</a><br>
-</td><td width="25%" valign=top><a href="os.html">os</a><br>
-<a href="pymongo.html">pymongo</a><br>
-</td><td width="25%" valign=top><a href="sys.html">sys</a><br>
+</td><td width="25%" valign=top><a href="logging.html">logging</a><br>
+<a href="os.html">os</a><br>
+</td><td width="25%" valign=top><a href="pymongo.html">pymongo</a><br>
+<a href="sys.html">sys</a><br>
 </td><td width="25%" valign=top></td></tr></table></td></tr></table><p>
 <table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
 <tr bgcolor="#eeaa77">
@@ -37,10 +38,14 @@
 <font color="#ffffff" face="helvetica, arial"><big><strong>Functions</strong></big></font></td></tr>
     
 <tr><td bgcolor="#eeaa77"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
-<td width="100%"><dl><dt><a name="-delete_backtests"><strong>delete_backtests</strong></a>(symbol: str, field: str, value, collection: str)</dt><dd><tt>Delete&nbsp;all&nbsp;backtests&nbsp;records&nbsp;in&nbsp;mongo&nbsp;with&nbsp;'field'&nbsp;matching&nbsp;'value'.<br>
+<td width="100%"><dl><dt><a name="-count_records_by_field"><strong>count_records_by_field</strong></a>(collection: str, field: str)</dt><dd><tt>Return&nbsp;aggregation&nbsp;with&nbsp;count&nbsp;of&nbsp;records&nbsp;split&nbsp;by&nbsp;a&nbsp;single&nbsp;field.</tt></dd></dl>
+ <dl><dt><a name="-delete_backtests"><strong>delete_backtests</strong></a>(symbol: str, field: str, value, collection: str)</dt><dd><tt>Delete&nbsp;all&nbsp;backtests&nbsp;records&nbsp;in&nbsp;mongo&nbsp;with&nbsp;'field'&nbsp;matching&nbsp;'value'.<br>
 Typically&nbsp;used&nbsp;to&nbsp;delete&nbsp;by&nbsp;bt_id&nbsp;field.</tt></dd></dl>
  <dl><dt><a name="-delete_indicator"><strong>delete_indicator</strong></a>(ind_id: str, meta_collection: str, dp_collection: str)</dt><dd><tt>Remove&nbsp;a&nbsp;single&nbsp;indicator&nbsp;and&nbsp;all&nbsp;of&nbsp;it's&nbsp;datapoints&nbsp;from&nbsp;central<br>
 storage&nbsp;based&nbsp;on&nbsp;it's&nbsp;ind_id&nbsp;attribute</tt></dd></dl>
+ <dl><dt><a name="-delete_one_document"><strong>delete_one_document</strong></a>(query: dict, collection: str)</dt><dd><tt>Delete&nbsp;a&nbsp;single&nbsp;document&nbsp;from&nbsp;storage&nbsp;using&nbsp;the&nbsp;provided&nbsp;query.&nbsp;&nbsp;This<br>
+is&nbsp;primarily&nbsp;called&nbsp;by&nbsp;more&nbsp;specific&nbsp;functions&nbsp;in&nbsp;dhstore.py&nbsp;for&nbsp;individual<br>
+object&nbsp;types&nbsp;using&nbsp;relevant&nbsp;parameters&nbsp;to&nbsp;build&nbsp;the&nbsp;query&nbsp;there.</tt></dd></dl>
  <dl><dt><a name="-delete_trades"><strong>delete_trades</strong></a>(symbol: str, field: str, value, collection: str)</dt><dd><tt>Delete&nbsp;all&nbsp;trade&nbsp;records&nbsp;with&nbsp;'field'&nbsp;matching&nbsp;'value'.&nbsp;&nbsp;Typically<br>
 used&nbsp;to&nbsp;delete&nbsp;by&nbsp;name,&nbsp;ts_id,&nbsp;or&nbsp;bt_id&nbsp;fields.<br>
 &nbsp;<br>
@@ -50,34 +55,52 @@ Example&nbsp;to&nbsp;delete&nbsp;all&nbsp;trade&nbsp;records&nbsp;with&nbsp;name
 Typically&nbsp;used&nbsp;to&nbsp;delete&nbsp;by&nbsp;ts_id,&nbsp;or&nbsp;bt_id&nbsp;fields.</tt></dd></dl>
  <dl><dt><a name="-drop_candles"><strong>drop_candles</strong></a>(timeframe: str, symbol: str, earliest_dt: str, latest_dt: str)</dt><dd><tt>Delete&nbsp;candles&nbsp;from&nbsp;mongo&nbsp;for&nbsp;a&nbsp;specific&nbsp;datetime&nbsp;range.</tt></dd></dl>
  <dl><dt><a name="-drop_collection"><strong>drop_collection</strong></a>(collection: str)</dt><dd><tt>Irretrievable&nbsp;drops&nbsp;a&nbsp;collection&nbsp;from&nbsp;the&nbsp;store.&nbsp;&nbsp;Use&nbsp;carefully!</tt></dd></dl>
+ <dl><dt><a name="-get_all_records_by_collection"><strong>get_all_records_by_collection</strong></a>(collection: str)</dt><dd><tt>Return&nbsp;all&nbsp;records&nbsp;from&nbsp;a&nbsp;collection,&nbsp;typically&nbsp;wrapped&nbsp;by&nbsp;more<br>
+specific&nbsp;functions&nbsp;in&nbsp;dhstore&nbsp;such&nbsp;as&nbsp;get_all_trades().</tt></dd></dl>
+ <dl><dt><a name="-get_backtests_by_field"><strong>get_backtests_by_field</strong></a>(field: str, value, collection: str)</dt><dd><tt>Returns&nbsp;a&nbsp;list&nbsp;of&nbsp;Backtest()&nbsp;matching&nbsp;the&nbsp;field=value&nbsp;provided.</tt></dd></dl>
  <dl><dt><a name="-get_candles"><strong>get_candles</strong></a>(start_epoch: int, end_epoch: int, timeframe: str, symbol: str)</dt><dd><tt>Returns&nbsp;a&nbsp;list&nbsp;of&nbsp;candle&nbsp;docs&nbsp;within&nbsp;the&nbsp;start&nbsp;and&nbsp;end&nbsp;epochs&nbsp;given<br>
 inclusive&nbsp;of&nbsp;both&nbsp;epochs</tt></dd></dl>
  <dl><dt><a name="-get_events"><strong>get_events</strong></a>(symbol: str, start_epoch: int, end_epoch: int, categories: list = None, tags: list = None)</dt><dd><tt>Returns&nbsp;a&nbsp;list&nbsp;of&nbsp;events&nbsp;starting&nbsp;within&nbsp;the&nbsp;start&nbsp;and&nbsp;end&nbsp;epochs&nbsp;given<br>
 inclusive&nbsp;of&nbsp;both&nbsp;epochs.&nbsp;&nbsp;Note&nbsp;this&nbsp;will&nbsp;return&nbsp;events&nbsp;that&nbsp;end&nbsp;after<br>
 end_epoch&nbsp;so&nbsp;long&nbsp;as&nbsp;they&nbsp;start&nbsp;before&nbsp;or&nbsp;on&nbsp;it.</tt></dd></dl>
- <dl><dt><a name="-get_indicator_datapoints"><strong>get_indicator_datapoints</strong></a>(ind_id: str, dp_collection: str, earliest_dt: str = None, latest_dt: str = None)</dt><dd><tt>retrieves&nbsp;all&nbsp;datapoints&nbsp;for&nbsp;the&nbsp;given&nbsp;ind_id&nbsp;that&nbsp;fall&nbsp;within<br>
+ <dl><dt><a name="-get_indicator"><strong>get_indicator</strong></a>(ind_id: str, meta_collection: str, autoload_datapoints: bool)</dt><dd><tt>Returns&nbsp;an&nbsp;indicator&nbsp;based&nbsp;on&nbsp;ind_id</tt></dd></dl>
+ <dl><dt><a name="-get_indicator_datapoints"><strong>get_indicator_datapoints</strong></a>(ind_id: str, dp_collection: str, earliest_dt: str = None, latest_dt: str = None)</dt><dd><tt>Retrieves&nbsp;all&nbsp;datapoints&nbsp;for&nbsp;the&nbsp;given&nbsp;ind_id&nbsp;that&nbsp;fall&nbsp;within<br>
 the&nbsp;range&nbsp;of&nbsp;earliest_dt&nbsp;and&nbsp;latest_dt&nbsp;(inclusive&nbsp;of&nbsp;both),&nbsp;returning<br>
 them&nbsp;as&nbsp;a&nbsp;chronologially&nbsp;sorted&nbsp;list</tt></dd></dl>
+ <dl><dt><a name="-get_trades_by_field"><strong>get_trades_by_field</strong></a>(field: str, value, collection: str)</dt><dd><tt>Returns&nbsp;all&nbsp;Trade()&nbsp;objects&nbsp;matching&nbsp;the&nbsp;field=value&nbsp;provided.</tt></dd></dl>
+ <dl><dt><a name="-get_tradeseries_by_field"><strong>get_tradeseries_by_field</strong></a>(field: str, value, collection: str)</dt><dd><tt>Returns&nbsp;a&nbsp;list&nbsp;of&nbsp;TradeSeries()&nbsp;matching&nbsp;the&nbsp;field=value&nbsp;provided.</tt></dd></dl>
  <dl><dt><a name="-list_collections"><strong>list_collections</strong></a>()</dt><dd><tt>List&nbsp;all&nbsp;current&nbsp;collections&nbsp;in&nbsp;mongo</tt></dd></dl>
  <dl><dt><a name="-list_indicators"><strong>list_indicators</strong></a>(meta_collection: str)</dt><dd><tt>Lists&nbsp;all&nbsp;available&nbsp;indicators&nbsp;in&nbsp;mongo&nbsp;based&nbsp;on&nbsp;metadata</tt></dd></dl>
+ <dl><dt><a name="-logc"><strong>logc</strong></a>(msg: str)</dt></dl>
+ <dl><dt><a name="-logd"><strong>logd</strong></a>(msg: str)</dt></dl>
+ <dl><dt><a name="-loge"><strong>loge</strong></a>(msg: str)</dt></dl>
+ <dl><dt><a name="-logi"><strong>logi</strong></a>(msg: str)</dt></dl>
+ <dl><dt><a name="-logw"><strong>logw</strong></a>(msg: str)</dt></dl>
  <dl><dt><a name="-review_backtests"><strong>review_backtests</strong></a>(symbol: str, collection: str)</dt><dd><tt>Provides&nbsp;aggregate&nbsp;summary&nbsp;data&nbsp;about&nbsp;backtests&nbsp;in&nbsp;mongo</tt></dd></dl>
  <dl><dt><a name="-review_candles"><strong>review_candles</strong></a>(timeframe: str, symbol: str)</dt><dd><tt>Provides&nbsp;aggregate&nbsp;summary&nbsp;data&nbsp;about&nbsp;candles&nbsp;in&nbsp;central&nbsp;storage</tt></dd></dl>
  <dl><dt><a name="-review_database"><strong>review_database</strong></a>()</dt><dd><tt>Quick&nbsp;function&nbsp;to&nbsp;gather&nbsp;useful&nbsp;information&nbsp;about&nbsp;the&nbsp;state&nbsp;of&nbsp;mongo</tt></dd></dl>
  <dl><dt><a name="-review_indicators"><strong>review_indicators</strong></a>(meta_collection: str, dp_collection: str)</dt><dd><tt>Return&nbsp;a&nbsp;more&nbsp;detailed&nbsp;overview&nbsp;of&nbsp;indicators&nbsp;in&nbsp;storage</tt></dd></dl>
- <dl><dt><a name="-review_trades"><strong>review_trades</strong></a>(symbol: str, collection: str)</dt><dd><tt>Provides&nbsp;aggregate&nbsp;summary&nbsp;data&nbsp;about&nbsp;trades&nbsp;in&nbsp;mongo</tt></dd></dl>
- <dl><dt><a name="-review_tradeseries"><strong>review_tradeseries</strong></a>(symbol: str, collection: str)</dt><dd><tt>Provides&nbsp;aggregate&nbsp;summary&nbsp;data&nbsp;about&nbsp;tradeseries&nbsp;in&nbsp;mongo</tt></dd></dl>
+ <dl><dt><a name="-review_trades"><strong>review_trades</strong></a>(symbol: str, collection: str, bt_id: str = None, ts_id: str = None)</dt><dd><tt>Provides&nbsp;aggregate&nbsp;summary&nbsp;data&nbsp;about&nbsp;trades&nbsp;in&nbsp;mongo</tt></dd></dl>
+ <dl><dt><a name="-review_tradeseries"><strong>review_tradeseries</strong></a>(symbol: str, collection: str, bt_id: str)</dt><dd><tt>Provides&nbsp;aggregate&nbsp;summary&nbsp;data&nbsp;about&nbsp;tradeseries&nbsp;in&nbsp;mongo</tt></dd></dl>
  <dl><dt><a name="-store_backtest"><strong>store_backtest</strong></a>(backtest: dict, collection: str)</dt><dd><tt>Store&nbsp;one&nbsp;Backtest&nbsp;object&nbsp;in&nbsp;mongo</tt></dd></dl>
  <dl><dt><a name="-store_candle"><strong>store_candle</strong></a>(c_datetime, c_timeframe: str, c_open: float, c_high: float, c_low: float, c_close: float, c_volume: int, c_symbol: str, c_epoch: int, c_date: str, c_time: str)</dt><dd><tt>Stores&nbsp;a&nbsp;single&nbsp;candle&nbsp;object&nbsp;in&nbsp;mongo.&nbsp;&nbsp;Overwrites&nbsp;if&nbsp;it&nbsp;exists.</tt></dd></dl>
  <dl><dt><a name="-store_event"><strong>store_event</strong></a>(start_dt, end_dt, symbol: str, category: str, tags: list, notes: str, start_epoch: int, end_epoch: int)</dt><dd><tt>Write&nbsp;a&nbsp;single&nbsp;dhcharts.Event()&nbsp;to&nbsp;mongo</tt></dd></dl>
- <dl><dt><a name="-store_indicator"><strong>store_indicator</strong></a>(ind_id: str, name: str, description: str, timeframe: str, trading_hours: str, symbol: str, calc_version: str, calc_details: str, parameters: dict, datapoints: list, meta_collection: str, dp_collection: str, overwrite_dp: bool = False)</dt><dd><tt>Store&nbsp;indicator&nbsp;meta&nbsp;and&nbsp;datapoints&nbsp;in&nbsp;mongo.&nbsp;&nbsp;overwrite_dp&nbsp;(default<br>
-false)&nbsp;forces&nbsp;wipe&nbsp;and&nbsp;recreation&nbsp;of&nbsp;all&nbsp;stored&nbsp;datapoints.&nbsp;&nbsp;This&nbsp;can&nbsp;take<br>
-2+&nbsp;hours&nbsp;for&nbsp;a&nbsp;year&nbsp;of&nbsp;data&nbsp;at&nbsp;5&nbsp;minute&nbsp;granularity&nbsp;so&nbsp;use&nbsp;only&nbsp;for&nbsp;new<br>
-indicators&nbsp;or&nbsp;in&nbsp;dire&nbsp;circumstances.</tt></dd></dl>
+ <dl><dt><a name="-store_indicator"><strong>store_indicator</strong></a>(indicator: dict, meta_collection: str)</dt><dd><tt>Store&nbsp;indicator&nbsp;meta&nbsp;in&nbsp;mongo</tt></dd></dl>
+ <dl><dt><a name="-store_indicator_datapoints"><strong>store_indicator_datapoints</strong></a>(datapoints: list, collection: str)</dt><dd><tt>Store&nbsp;one&nbsp;or&nbsp;more&nbsp;IndicatorDatapoint&nbsp;objects&nbsp;in&nbsp;mongo</tt></dd></dl>
  <dl><dt><a name="-store_trades"><strong>store_trades</strong></a>(trades: list, collection: str)</dt><dd><tt>Store&nbsp;one&nbsp;or&nbsp;more&nbsp;trades&nbsp;in&nbsp;mongo</tt></dd></dl>
  <dl><dt><a name="-store_tradeseries"><strong>store_tradeseries</strong></a>(series: dict, collection: str)</dt><dd><tt>Store&nbsp;one&nbsp;TradeSeries&nbsp;object&nbsp;in&nbsp;mongo</tt></dd></dl>
  <dl><dt><a name="-test_basics"><strong>test_basics</strong></a>()</dt><dd><tt>runs&nbsp;a&nbsp;few&nbsp;basics&nbsp;tests,&nbsp;mostly&nbsp;used&nbsp;during&nbsp;initial&nbsp;development<br>
 to&nbsp;confirm&nbsp;functionality&nbsp;as&nbsp;desired.&nbsp;&nbsp;Also&nbsp;dumps&nbsp;a&nbsp;basic&nbsp;summary<br>
 of&nbsp;the&nbsp;database&nbsp;for&nbsp;quick&nbsp;checks&nbsp;at&nbsp;the&nbsp;end</tt></dd></dl>
+ <dl><dt><a name="-update_records_value"><strong>update_records_value</strong></a>(search: dict, update_field: str, update_value: str, collection: str)</dt><dd><tt>Using&nbsp;'search',&nbsp;which&nbsp;should&nbsp;be&nbsp;a&nbsp;dict&nbsp;representing&nbsp;a&nbsp;mongo&nbsp;filter,<br>
+update&nbsp;all&nbsp;matching&nbsp;records&nbsp;update_field&nbsp;with&nbsp;the&nbsp;new&nbsp;update_value<br>
+&nbsp;<br>
+Example:<br>
+To&nbsp;replace&nbsp;bt_id&nbsp;'foo'&nbsp;with&nbsp;'bar'&nbsp;on&nbsp;all&nbsp;backtests&nbsp;currently&nbsp;matching&nbsp;'foo'<br>
+update_record_value(search={"bt_id":&nbsp;"foo"},<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;update_field="bt_id",<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;update_value="bar",<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;collection="backtests")</tt></dd></dl>
 </td></tr></table><p>
 <table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
 <tr bgcolor="#55aa55">
@@ -89,5 +112,6 @@ of&nbsp;the&nbsp;database&nbsp;for&nbsp;quick&nbsp;checks&nbsp;at&nbsp;the&nbsp;
 <strong>MONGO_DB</strong> = 'Cluster0'<br>
 <strong>MONGO_ENV_FILE</strong> = 'mongo.env'<br>
 <strong>db</strong> = Database(MongoClient(host=['ac-xm65fnp-shard-00-...et='atlas-kmcvwc-shard-0', tls=True), 'MONGO_DB')<br>
-<strong>mc</strong> = MongoClient(host=['ac-xm65fnp-shard-00-01.mtukdk...in', replicaset='atlas-kmcvwc-shard-0', tls=True)</td></tr></table>
+<strong>log</strong> = &lt;Logger dhmongo (WARNING)&gt;<br>
+<strong>mc</strong> = MongoClient(host=['ac-xm65fnp-shard-00-00.mtukdk...in', replicaset='atlas-kmcvwc-shard-0', tls=True)</td></tr></table>
 </body></html>

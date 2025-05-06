@@ -717,6 +717,7 @@ class TradeSeries():
         ending balance."""
         # Make sure trades are in order or results can't be trusted
         self.sort_trades()
+        # All vars start at the opening balance provided
         balance_close = balance_open
         balance_high = balance_open
         balance_low = balance_open

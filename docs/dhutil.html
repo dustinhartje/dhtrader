@@ -20,9 +20,11 @@
 <td width="100%"><table width="100%" summary="list"><tr><td width="25%" valign=top><a href="csv.html">csv</a><br>
 <a href="dhcharts.html">dhcharts</a><br>
 </td><td width="25%" valign=top><a href="dhstore.html">dhstore</a><br>
+<a href="json.html">json</a><br>
+</td><td width="25%" valign=top><a href="logging.html">logging</a><br>
 <a href="re.html">re</a><br>
 </td><td width="25%" valign=top><a href="sys.html">sys</a><br>
-</td><td width="25%" valign=top></td></tr></table></td></tr></table><p>
+</td></tr></table></td></tr></table><p>
 <table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
 <tr bgcolor="#ee77aa">
 <td colspan=3 valign=bottom>&nbsp;<br>
@@ -55,9 +57,25 @@
 
 <dl><dt><a name="OperationTimer-__str__"><strong>__str__</strong></a>(self)</dt><dd><tt>Return&nbsp;str(self).</tt></dd></dl>
 
+<dl><dt><a name="OperationTimer-pretty"><strong>pretty</strong></a>(self)</dt><dd><tt>Attempts&nbsp;to&nbsp;return&nbsp;an&nbsp;indented&nbsp;multiline&nbsp;version&nbsp;of&nbsp;this&nbsp;<a href="builtins.html#object">object</a>,<br>
+meant&nbsp;to&nbsp;provide&nbsp;an&nbsp;easy&nbsp;to&nbsp;read&nbsp;output&nbsp;for&nbsp;console&nbsp;or&nbsp;other&nbsp;purposes.<br>
+Optionally&nbsp;suppress_datapoints&nbsp;to&nbsp;reduce&nbsp;output&nbsp;size&nbsp;when&nbsp;not&nbsp;needed.</tt></dd></dl>
+
 <dl><dt><a name="OperationTimer-start"><strong>start</strong></a>(self)</dt></dl>
 
 <dl><dt><a name="OperationTimer-stop"><strong>stop</strong></a>(self)</dt></dl>
+
+<dl><dt><a name="OperationTimer-summary"><strong>summary</strong></a>(self)</dt><dd><tt>Provide&nbsp;a&nbsp;one&nbsp;line&nbsp;str&nbsp;summary&nbsp;of&nbsp;the&nbsp;timer's&nbsp;current&nbsp;status,&nbsp;useful<br>
+for&nbsp;monotiring&nbsp;running&nbsp;timers&nbsp;or&nbsp;final&nbsp;review.</tt></dd></dl>
+
+<dl><dt><a name="OperationTimer-to_clean_dict"><strong>to_clean_dict</strong></a>(self)</dt><dd><tt>Converts&nbsp;to&nbsp;JSON&nbsp;string&nbsp;then&nbsp;back&nbsp;to&nbsp;a&nbsp;python&nbsp;dict.&nbsp;&nbsp;This&nbsp;helps<br>
+to&nbsp;normalize&nbsp;types&nbsp;(I'm&nbsp;looking&nbsp;at&nbsp;YOU&nbsp;datetime)&nbsp;while&nbsp;ensuring<br>
+a&nbsp;portable&nbsp;python&nbsp;data&nbsp;structure</tt></dd></dl>
+
+<dl><dt><a name="OperationTimer-to_json"><strong>to_json</strong></a>(self)</dt><dd><tt>returns&nbsp;a&nbsp;json&nbsp;version&nbsp;of&nbsp;this&nbsp;<a href="builtins.html#object">object</a>&nbsp;while&nbsp;normalizing<br>
+custom&nbsp;types&nbsp;(like&nbsp;datetime&nbsp;to&nbsp;string)</tt></dd></dl>
+
+<dl><dt><a name="OperationTimer-update_elapsed"><strong>update_elapsed</strong></a>(self)</dt></dl>
 
 <hr>
 Data descriptors defined here:<br>
@@ -74,14 +92,20 @@ Data descriptors defined here:<br>
 <font color="#ffffff" face="helvetica, arial"><big><strong>Functions</strong></big></font></td></tr>
     
 <tr><td bgcolor="#eeaa77"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
-<td width="100%"><dl><dt><a name="-compare_candles_vs_csv"><strong>compare_candles_vs_csv</strong></a>(filepath, timeframe: str = '1m', symbol: str = 'ES', diff_threshold: float = 0.5, start_dt=None, end_dt=None)</dt><dd><tt>Check&nbsp;stored&nbsp;candles&nbsp;against&nbsp;a&nbsp;CSV&nbsp;source&nbsp;file,&nbsp;primarily&nbsp;used&nbsp;to<br>
+<td width="100%"><dl><dt><a name="-check_tf_th_compatibility"><strong>check_tf_th_compatibility</strong></a>(tf, th, exit=True)</dt><dd><tt>Confirm&nbsp;that&nbsp;a&nbsp;given&nbsp;timeframe&nbsp;(tf)&nbsp;and&nbsp;trading&nbsp;hours&nbsp;(th)&nbsp;are<br>
+compatible.&nbsp;&nbsp;Usually&nbsp;we&nbsp;want&nbsp;to&nbsp;exit&nbsp;if&nbsp;this&nbsp;is&nbsp;not&nbsp;so&nbsp;as&nbsp;data&nbsp;cannot&nbsp;be<br>
+trusted&nbsp;otherwise.</tt></dd></dl>
+ <dl><dt><a name="-compare_candles_vs_csv"><strong>compare_candles_vs_csv</strong></a>(filepath, timeframe: str = '1m', symbol: str = 'ES', diff_threshold: float = 0.5, start_dt=None, end_dt=None)</dt><dd><tt>Check&nbsp;stored&nbsp;candles&nbsp;against&nbsp;a&nbsp;CSV&nbsp;source&nbsp;file,&nbsp;primarily&nbsp;used&nbsp;to<br>
 confirm&nbsp;calculated&nbsp;higher&nbsp;timeframes&nbsp;against&nbsp;data&nbsp;provider&nbsp;equivalents<br>
 where&nbsp;available&nbsp;to&nbsp;sanity&nbsp;check&nbsp;calculation&nbsp;process</tt></dd></dl>
+ <dl><dt><a name="-dow_name"><strong>dow_name</strong></a>(dow: int)</dt><dd><tt>Return&nbsp;the&nbsp;human&nbsp;name&nbsp;for&nbsp;a&nbsp;day&nbsp;of&nbsp;the&nbsp;week&nbsp;given&nbsp;it's&nbsp;index&nbsp;as<br>
+represented&nbsp;in&nbsp;datetime.weekday()</tt></dd></dl>
  <dl><dt><a name="-dt_as_dt"><strong>dt_as_dt</strong></a>(d)</dt><dd><tt>return&nbsp;a&nbsp;datetime&nbsp;<a href="builtins.html#object">object</a>&nbsp;regardless&nbsp;of&nbsp;datetime&nbsp;or&nbsp;string&nbsp;input</tt></dd></dl>
  <dl><dt><a name="-dt_as_str"><strong>dt_as_str</strong></a>(d)</dt><dd><tt>return&nbsp;a&nbsp;string&nbsp;<a href="builtins.html#object">object</a>&nbsp;regardless&nbsp;of&nbsp;datetime&nbsp;or&nbsp;string&nbsp;input</tt></dd></dl>
+ <dl><dt><a name="-dt_as_time"><strong>dt_as_time</strong></a>(time: str)</dt><dd><tt>Return&nbsp;a&nbsp;datetime.time&nbsp;<a href="builtins.html#object">object</a>&nbsp;for&nbsp;the&nbsp;given&nbsp;%H:%M:%S&nbsp;string</tt></dd></dl>
  <dl><dt><a name="-dt_from_epoch"><strong>dt_from_epoch</strong></a>(d)</dt><dd><tt>return&nbsp;a&nbsp;datetime&nbsp;<a href="builtins.html#object">object</a>&nbsp;from&nbsp;an&nbsp;epoch&nbsp;integer</tt></dd></dl>
  <dl><dt><a name="-dt_to_epoch"><strong>dt_to_epoch</strong></a>(d)</dt><dd><tt>return&nbsp;an&nbsp;epoch&nbsp;integer&nbsp;from&nbsp;a&nbsp;datetime&nbsp;or&nbsp;string</tt></dd></dl>
- <dl><dt><a name="-expected_candle_datetimes"><strong>expected_candle_datetimes</strong></a>(start_dt, end_dt, symbol: str, timeframe: str, exclude_categories: list = None)</dt><dd><tt>Return&nbsp;a&nbsp;sorted&nbsp;list&nbsp;of&nbsp;datetimes&nbsp;within&nbsp;the&nbsp;provided&nbsp;start_dt&nbsp;and<br>
+ <dl><dt><a name="-expected_candle_datetimes"><strong>expected_candle_datetimes</strong></a>(start_dt, end_dt, timeframe: str, symbol='ES', exclude_categories: list = None)</dt><dd><tt>Return&nbsp;a&nbsp;sorted&nbsp;list&nbsp;of&nbsp;datetimes&nbsp;within&nbsp;the&nbsp;provided&nbsp;start_dt&nbsp;and<br>
 end_dt&nbsp;(inclusive&nbsp;of&nbsp;both)&nbsp;that&nbsp;should&nbsp;exist&nbsp;for&nbsp;the&nbsp;given&nbsp;symbol&nbsp;based&nbsp;on<br>
 standard&nbsp;market&nbsp;hours,&nbsp;after&nbsp;removing&nbsp;any&nbsp;known&nbsp;Closed&nbsp;events.<br>
 Optionally&nbsp;also&nbsp;exclude&nbsp;anything&nbsp;within&nbsp;known&nbsp;Event&nbsp;times&nbsp;matching<br>
@@ -89,8 +113,14 @@ exclude_categories.</tt></dd></dl>
  <dl><dt><a name="-generate_zero_volume_candle"><strong>generate_zero_volume_candle</strong></a>(c_datetime, timeframe: str = '1m', symbol: str = 'ES')</dt><dd><tt>Returns&nbsp;a&nbsp;zero&nbsp;volume&nbsp;candle&nbsp;with&nbsp;OHLC&nbsp;values&nbsp;all&nbsp;set&nbsp;to&nbsp;the&nbsp;prior<br>
 candle's&nbsp;closing&nbsp;value.&nbsp;&nbsp;Primarily&nbsp;used&nbsp;to&nbsp;fill&nbsp;gaps&nbsp;in&nbsp;1m&nbsp;candle&nbsp;storage<br>
 where&nbsp;data&nbsp;providers&nbsp;sometimes&nbsp;omit&nbsp;candles&nbsp;with&nbsp;zero&nbsp;trading&nbsp;volume.</tt></dd></dl>
- <dl><dt><a name="-next_candle_start"><strong>next_candle_start</strong></a>(dt, timeframe: str = '1m')</dt><dd><tt>returns&nbsp;the&nbsp;next&nbsp;datetime&nbsp;that&nbsp;represents&nbsp;a&nbsp;proper&nbsp;candle&nbsp;start<br>
-for&nbsp;the&nbsp;given&nbsp;datetime.&nbsp;&nbsp;May&nbsp;return&nbsp;the&nbsp;same&nbsp;as&nbsp;input</tt></dd></dl>
+ <dl><dt><a name="-logc"><strong>logc</strong></a>(msg: str)</dt></dl>
+ <dl><dt><a name="-logd"><strong>logd</strong></a>(msg: str)</dt></dl>
+ <dl><dt><a name="-loge"><strong>loge</strong></a>(msg: str)</dt></dl>
+ <dl><dt><a name="-logi"><strong>logi</strong></a>(msg: str)</dt></dl>
+ <dl><dt><a name="-logw"><strong>logw</strong></a>(msg: str)</dt></dl>
+ <dl><dt><a name="-next_candle_start"><strong>next_candle_start</strong></a>(dt, trading_hours: str, symbol: str = 'ES', timeframe: str = '1m', events: list = None)</dt><dd><tt>Returns&nbsp;the&nbsp;next&nbsp;datetime&nbsp;that&nbsp;represents&nbsp;a&nbsp;proper&nbsp;candle&nbsp;start<br>
+after&nbsp;the&nbsp;given&nbsp;datetime&nbsp;(dt).&nbsp;&nbsp;Will&nbsp;not&nbsp;return&nbsp;given&nbsp;datetime&nbsp;even&nbsp;if<br>
+it&nbsp;starts&nbsp;a&nbsp;candle.</tt></dd></dl>
  <dl><dt><a name="-prompt_yn"><strong>prompt_yn</strong></a>(msg)</dt></dl>
  <dl><dt><a name="-rangify_candle_times"><strong>rangify_candle_times</strong></a>(times: list, timeframe: str)</dt><dd><tt>Takes&nbsp;a&nbsp;list&nbsp;of&nbsp;datetimes&nbsp;and&nbsp;returns&nbsp;a&nbsp;list&nbsp;of&nbsp;aggregated&nbsp;datetime<br>
 ranges.&nbsp;&nbsp;Primarily&nbsp;intended&nbsp;to&nbsp;make&nbsp;human&nbsp;review&nbsp;sane&nbsp;on&nbsp;large&nbsp;sets&nbsp;of<br>
@@ -100,7 +130,7 @@ dhcharts.Candle&nbsp;objects.&nbsp;&nbsp;Assumes&nbsp;format&nbsp;matches&nbsp;F
 standard&nbsp;of&nbsp;no&nbsp;header&nbsp;row&nbsp;the&nbsp;the&nbsp;following&nbsp;order&nbsp;of&nbsp;fields:<br>
 datetime,open,high,low,close,volume<br>
 This&nbsp;will&nbsp;fail&nbsp;badly&nbsp;if&nbsp;the&nbsp;format&nbsp;of&nbsp;the&nbsp;source&nbsp;file&nbsp;is&nbsp;incorrect!</tt></dd></dl>
- <dl><dt><a name="-remediate_candle_gaps"><strong>remediate_candle_gaps</strong></a>(timeframe: str = '1m', symbol: str = 'ES', prompt: bool = True, fix_obvious: bool = False, fix_unclear: bool = False, dry_run=False)</dt><dd><tt>Identifies&nbsp;gaps&nbsp;for&nbsp;review&nbsp;in&nbsp;stored&nbsp;candles&nbsp;and&nbsp;offers&nbsp;to&nbsp;store&nbsp;zero<br>
+ <dl><dt><a name="-remediate_candle_gaps"><strong>remediate_candle_gaps</strong></a>(timeframe: str = '1m', symbol='ES', prompt: bool = True, fix_obvious: bool = False, fix_unclear: bool = False, dry_run=False)</dt><dd><tt>Identifies&nbsp;gaps&nbsp;for&nbsp;review&nbsp;in&nbsp;stored&nbsp;candles&nbsp;and&nbsp;offers&nbsp;to&nbsp;store&nbsp;zero<br>
 volume&nbsp;candles&nbsp;in&nbsp;their&nbsp;place.&nbsp;&nbsp;Currently&nbsp;only&nbsp;supports&nbsp;1m&nbsp;as&nbsp;the&nbsp;other<br>
 timeframes&nbsp;are&nbsp;calced&nbsp;from&nbsp;these,&nbsp;but&nbsp;I&nbsp;wrote&nbsp;in&nbsp;timeframe&nbsp;to&nbsp;keep<br>
 consistent&nbsp;argument&nbsp;flows&nbsp;and&nbsp;allow&nbsp;future&nbsp;expansion&nbsp;optionality.<br>
@@ -119,6 +149,10 @@ for&nbsp;quick&nbsp;manual&nbsp;gap&nbsp;fill&nbsp;operations&nbsp;via&nbsp;pyth
  <dl><dt><a name="-summarize_candles"><strong>summarize_candles</strong></a>(timeframe: str, symbol: str = 'ES', candles: list = None)</dt></dl>
  <dl><dt><a name="-test_basics"><strong>test_basics</strong></a>()</dt><dd><tt>runs&nbsp;a&nbsp;few&nbsp;basics&nbsp;tests,&nbsp;mostly&nbsp;used&nbsp;during&nbsp;initial&nbsp;development<br>
 to&nbsp;confirm&nbsp;functionality&nbsp;as&nbsp;desired</tt></dd></dl>
+ <dl><dt><a name="-this_candle_start"><strong>this_candle_start</strong></a>(dt, timeframe: str = '1m')</dt><dd><tt>Returns&nbsp;the&nbsp;datetime&nbsp;that&nbsp;represents&nbsp;a&nbsp;proper&nbsp;candle&nbsp;start<br>
+in&nbsp;which&nbsp;the&nbsp;given&nbsp;datetime&nbsp;would&nbsp;exit&nbsp;in&nbsp;this&nbsp;timeframe.&nbsp;&nbsp;May&nbsp;return&nbsp;the<br>
+same&nbsp;as&nbsp;input.&nbsp;&nbsp;This&nbsp;does&nbsp;not&nbsp;confirm&nbsp;market&nbsp;open&nbsp;like&nbsp;<a href="#-next_candle_start">next_candle_start</a>()<br>
+since&nbsp;it&nbsp;may&nbsp;not&nbsp;be&nbsp;able&nbsp;to&nbsp;provide&nbsp;an&nbsp;answer&nbsp;in&nbsp;some&nbsp;cases..</tt></dd></dl>
  <dl><dt><a name="-timeframe_delta"><strong>timeframe_delta</strong></a>(timeframe: str)</dt><dd><tt>return&nbsp;a&nbsp;timedelta&nbsp;<a href="builtins.html#object">object</a>&nbsp;based&nbsp;on&nbsp;the&nbsp;candle&nbsp;timeframe&nbsp;given</tt></dd></dl>
  <dl><dt><a name="-valid_event_category"><strong>valid_event_category</strong></a>(c, exit=True)</dt></dl>
  <dl><dt><a name="-valid_timeframe"><strong>valid_timeframe</strong></a>(t, exit=True)</dt></dl>
@@ -132,5 +166,6 @@ to&nbsp;confirm&nbsp;functionality&nbsp;as&nbsp;desired</tt></dd></dl>
 <tr><td bgcolor="#55aa55"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
 <td width="100%"><strong>EVENT_CATEGORIES</strong> = ['Closed', 'Data', 'Unplanned', 'LowVolume', 'Rollover']<br>
 <strong>TIMEFRAMES</strong> = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w', '1mo']<br>
-<strong>TRADING_HOURS</strong> = ['rth', 'eth']</td></tr></table>
+<strong>TRADING_HOURS</strong> = ['rth', 'eth']<br>
+<strong>log</strong> = &lt;Logger dhutil (WARNING)&gt;</td></tr></table>
 </body></html>
