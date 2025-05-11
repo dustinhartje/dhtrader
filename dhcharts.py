@@ -1201,6 +1201,7 @@ class Indicator():
         self.candle_chart = candle_chart
         if self.candle_chart is None and self.autoload_chart:
             self.load_underlying_chart()
+        self.sort_datapoints()
 
     def __eq__(self, other):
         return (self.name == other.name
@@ -1333,10 +1334,29 @@ class Indicator():
                 earliest_dt=self.start_dt,
                 latest_dt=self.end_dt,
                 )
+        self.sort_datapoints()
+
+    def sort_datapoints(self):
+        """Sort attached datapoints in chronological order"""
+        if len(self.datapoints) == 0:
+            return False
+        self.datapoints.sort(key=lambda dp: dp.epoch)
+
+    def datapoint_indexes_by_epoch(self):
+        result = {}
+        for i, dp in enumerate(self.datapoints):
+            result[dp.epoch] = i
+        return result
+
+    def datapoint_indexes_by_dt(self):
+        result = {}
+        for i, dp in enumerate(self.datapoints):
+            result[dp.dt] = i
+        return result
 
     def calculate(self):
         """This method will be specific to each type of indicator.  It should
-        accpet only a list of Candles, sort it, and calculate new indicator
+        accept only a list of Candles, sort it, and calculate new indicator
         datapoints from the candles.  Copy and modify this method as needed
         in subclasses."""
         if self.candle_chart is None:
@@ -1369,6 +1389,7 @@ class Indicator():
                                                       value=hod,
                                                       ind_id=self.ind_id,
                                                       ))
+        self.sort_datapoints()
 
         return True
 
