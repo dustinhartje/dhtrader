@@ -127,6 +127,28 @@ def sort_dict(d: dict):
     return sorted_dict
 
 
+def diff_dicts(dict1, dict2):
+    """
+    Compares two dictionaries and returns a dictionary of differences in the
+    form of tuples representing the values found in each dict in the order
+    that the dicts were pass in.
+
+    This will present None if a key in one dict was not found in the other.
+
+    It will return {} if no differences were found.
+    """
+    diff = {}
+    all_keys = set(dict1.keys()) | set(dict2.keys())
+    for key in all_keys:
+        if key not in dict1:
+            diff[key] = (None, dict2[key])
+        elif key not in dict2:
+            diff[key] = (dict1[key], None)
+        elif dict1[key] != dict2[key]:
+            diff[key] = (dict1[key], dict2[key])
+    return diff
+
+
 def prompt_yn(msg):
     p = ""
     while p not in ["Y", "y", "N", "n"]:
