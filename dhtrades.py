@@ -1,5 +1,5 @@
 import json
-from datetime import datetime as dt
+from datetime import timedelta, datetime as dt
 from copy import deepcopy
 import logging
 import dhutil as dhu
@@ -776,6 +776,106 @@ class TradeSeries():
                 "drawdown_low": drawdown_low,
                 "liquidated": liquidated,
                 }
+
+    def stats(self):
+        """Return useful statistics calculated from the attached Trades"""
+        sequence = ""
+        profits = 0
+        losses = 0
+        days_traded = set()
+        stop_ticks = None
+        profit_ticks = None
+        offset_ticks = None
+        for t in self.trades:
+            # Record stop/profit/loss ticks as long as they are consistent
+            # throughout the TradeSeries
+            if stop_ticks is None:
+                stop_ticks = t.stop_ticks
+            if stop_ticks != t.stop_ticks:
+                stop_ticks = "varies"
+            if profit_ticks is None:
+                profit_ticks = t.prof_ticks
+            if profit_ticks != t.prof_ticks:
+                profit_ticks = "varies"
+            if offset_ticks is None:
+                offset_ticks = t.offset_ticks
+            if offset_ticks != t.offset_ticks:
+                offset_ticks = "varies"
+            # Add date to days_traded set
+            days_traded.add(dhu.dt_as_dt(t.open_dt).date())
+            # Update profitability
+            if t.profitable:
+                profits += 1
+                sequence = "".join([sequence, "g"])
+            else:
+                losses += 1
+                sequence = "".join([sequence, "L"])
+        total_trades = len(self.trades)
+        success_percent = round(profits/total_trades, 4)*100
+        if stop_ticks == "varies" or profit_ticks == "varies":
+            risk_reward = "varies"
+        else:
+            risk_reward = round(stop_ticks/profit_ticks, 2)
+        trading_days = len(days_traded)
+        total_days = (dhu.dt_as_dt(self.end_dt)
+                      - dhu.dt_as_dt(self.start_dt)).days
+        total_weeks = round(total_days/7, 2)
+        trades_per_day = round(total_trades/total_days, 2)
+        trades_per_trading_day = round(total_trades/trading_days, 2)
+        trades_per_week = round(total_trades/total_weeks, 2)
+
+        return {"gl_sequence": sequence,
+                "profitable_trades": profits,
+                "losing_trades": losses,
+                "total_trades": total_trades,
+                "success_percent": success_percent,
+                "risk_reward": risk_reward,
+                "trading_days": trading_days,
+                "total_days": total_days,
+                "total_weeks": total_weeks,
+                "trades_per_week": trades_per_week,
+                "trades_per_day": trades_per_day,
+                "trades_per_trading_day": trades_per_trading_day,
+                "stop_ticks": stop_ticks,
+                "profit_ticks": profit_ticks,
+                "offset_ticks": offset_ticks,
+                }
+
+    def weekly_stats(self):
+        """Return useful statistics calculated from the attached Trades
+        aggregated into weekly buckets using Monday as the start of the week
+        and Monday's date as the name of each bucket."""
+        # Build a dict of weeks with zeroes as default values to ensure we
+        # represent non-traded weeks in the result rather than leave gaps
+        template = {"total_trades": 0,
+                    "profitable_trades": 0,
+                    "losing_trades": 0,
+                    "gl_in_ticks": 0,
+                    "success_rate": "nil",
+                    }
+        result = dhu.dict_of_weeks(start_dt=self.start_dt,
+                                   end_dt=self.end_dt,
+                                   template=template)
+        # Loop through trades to aggregate stats
+        for t in self.trades:
+            d = dhu.dt_as_dt(t.open_dt)
+            w = str(d.date() - timedelta(days=d.weekday()))
+            result[w]["total_trades"] += 1
+            if t.profitable:
+                result[w]["profitable_trades"] += 1
+                result[w]["gl_in_ticks"] += t.prof_ticks
+            else:
+                result[w]["losing_trades"] += 1
+                result[w]["gl_in_ticks"] -= t.stop_ticks
+        # Calculate success rates
+        for k in result.keys():
+            if result[k]["total_trades"] > 0:
+                srate = round(result[k]["profitable_trades"]
+                              / result[k]["total_trades"]
+                              * 100, 0)
+                result[k]["success_rate"] = srate
+
+        return result
 
 
 class Backtest():

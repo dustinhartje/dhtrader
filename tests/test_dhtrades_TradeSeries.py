@@ -167,7 +167,7 @@ def test_TradeSeries_add_sort_and_get_trades():
     assert ts.get_trade_by_open_dt("2025-01-04 08:35:00") is None
 
 
-def test_TradeSeries_balance_impact():
+def test_TradeSeries_balance_impact_and_stats():
     # Test a TradeSeries with winning and losing trades that does not liquidate
     ts = create_tradeseries()
     t = create_trade(open_dt="2025-01-02 12:30:00",
@@ -220,6 +220,22 @@ def test_TradeSeries_balance_impact():
     assert r["balance_high"] == 81362.80
     assert r["balance_low"] == 43987.60
     assert r["liquidated"] is False
+    s = ts.stats()
+    assert s["gl_sequence"] == "ggg"
+    assert s["profitable_trades"] == 3
+    assert s["losing_trades"] == 0
+    assert s["total_trades"] == 3
+    assert s["success_percent"] == 100
+    assert s["risk_reward"] == "varies"
+    assert s["trading_days"] == 1
+    assert s["total_days"] == 31
+    assert s["total_weeks"] == 4.43
+    assert s["trades_per_week"] == 0.68
+    assert s["trades_per_day"] == 0.1
+    assert s["trades_per_trading_day"] == 3.0
+    assert s["stop_ticks"] == "varies"
+    assert s["profit_ticks"] == "varies"
+    assert s["offset_ticks"] == 0
     # Test a TradeSeries with all losing trades that does liquidate
     # after setting two sequential new highs
     ts = create_tradeseries()
@@ -250,6 +266,60 @@ def test_TradeSeries_balance_impact():
     assert r["balance_high"] == 14187.60
     assert r["balance_low"] == -318.60
     assert r["liquidated"] is True
+    s = ts.stats()
+    assert s["gl_sequence"] == "LLL"
+    assert s["profitable_trades"] == 0
+    assert s["losing_trades"] == 3
+    assert s["total_trades"] == 3
+    assert s["success_percent"] == 0
+    assert s["risk_reward"] == "varies"
+    assert s["trading_days"] == 1
+    assert s["total_days"] == 31
+    assert s["total_weeks"] == 4.43
+    assert s["trades_per_week"] == 0.68
+    assert s["trades_per_day"] == 0.1
+    assert s["trades_per_trading_day"] == 3.0
+    assert s["stop_ticks"] == "varies"
+    assert s["profit_ticks"] == 4000
+    assert s["offset_ticks"] == 0
+    # Change a few things up just to cover bases a bit more
+    # NOTE - Changes are not consistent with all other Trade attributes
+    ts.end_dt = "2025-01-08 17:00:00"
+    ts.trades[2].open_dt = "2025-01-07 12:31:00"
+    ts.trades[2].close_dt = "2025-01-07 14:30:00"
+    ts.trades[0].stop_ticks = 1000
+    ts.trades[1].stop_ticks = 1000
+    ts.trades[2].stop_ticks = 1000
+    ts.trades[1].profitable = True
+    ts.trades[1].exit_price = 5080
+    s = ts.stats()
+    assert s["gl_sequence"] == "LgL"
+    assert s["profitable_trades"] == 1
+    assert s["losing_trades"] == 2
+    assert s["total_trades"] == 3
+    assert s["success_percent"] == 33.33
+    assert s["risk_reward"] == 0.25
+    assert s["trading_days"] == 2
+    assert s["total_days"] == 7
+    assert s["total_weeks"] == 1
+    assert s["trades_per_week"] == 3.0
+    assert s["trades_per_day"] == 0.43
+    assert s["trades_per_trading_day"] == 1.5
+    assert s["stop_ticks"] == 1000
+    assert s["profit_ticks"] == 4000
+    assert s["offset_ticks"] == 0
+    # Confirm weekly_stats() also
+    assert ts.weekly_stats() == {'2024-12-30': {'total_trades': 2,
+                                                'profitable_trades': 1,
+                                                'losing_trades': 1,
+                                                'gl_in_ticks': 3000,
+                                                'success_rate': 50.0},
+                                 '2025-01-06': {'total_trades': 1,
+                                                'profitable_trades': 0,
+                                                'losing_trades': 1,
+                                                'gl_in_ticks': -1000,
+                                                'success_rate': 0.0}
+                                 }
 
 
 def test_TradeSeries_drawdown_impact():

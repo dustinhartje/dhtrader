@@ -279,6 +279,22 @@ def timeframe_delta(timeframe: str):
         raise ValueError(f"timeframe: {timeframe} not supported")
 
 
+def dict_of_weeks(start_dt, end_dt, template):
+    """return a template dictionary with keys for each week that exist in
+    the provided timeframe from start_dt to end_dt, with a value equal to the
+    template passed in.  Generally this will be used for aggregating weekly
+    stats."""
+    start_dt = dt_as_dt(start_dt)
+    end_dt = dt_as_dt(end_dt)
+    adder = timedelta(weeks=1)
+    week_dt = start_dt.date() - timedelta(days=start_dt.weekday())
+    result = {}
+    while week_dt < end_dt.date():
+        result[f"{week_dt}"] = deepcopy(template)
+        week_dt += adder
+    return result
+
+
 def next_candle_start(dt,
                       trading_hours: str,
                       symbol: str = "ES",
