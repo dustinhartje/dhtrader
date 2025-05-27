@@ -140,6 +140,8 @@ def review_trades(symbol: str = "ES",
                   bt_id: str = None,
                   ts_id: str = None,
                   include_epochs: bool = False,
+                  check_integrity: bool = False,
+                  list_duplicates: bool = False,
                   pretty: bool = False,
                   ):
     """Provides aggregate summary data about trades in central storage,
@@ -159,12 +161,58 @@ def review_trades(symbol: str = "ES",
             t.pop("earliest_epoch")
             t.pop("latest_epoch")
 
+    if check_integrity:
+        print("Checking integrity of all Trades in storage")
+        time_full = dhu.OperationTimer(
+                name="Trade integrity check full run timer")
+        time_fetch = dhu.OperationTimer(
+                name="Trade integrity check fetch timer")
+        print("Fetching all Trades from storage")
+        trades = get_all_trades()
+        time_fetch.stop()
+        print(time_fetch.summary())
+        print("Comparing to identify trades with duplicate ts_id & open_dt "
+              "combinations")
+        unique = set()
+        duplicates = []
+        for t in trades:
+            this = (t.ts_id, t.open_dt)
+            if this in unique:
+                duplicates.append(this)
+            else:
+                unique.add(this)
+        time_comp = dhu.OperationTimer(
+                name="Trade integrity check compare timer")
+        time_comp.stop()
+        print(time_comp.summary())
+        if len(duplicates) > 0:
+            status = "ERROR"
+            status_details = f"{len(duplicates)} duplicate trades found"
+        else:
+            status = "OK"
+            status_details = "No duplicates found"
+        integrity = {"status": status,
+                     "status_details": status_details,
+                     "total_trade_count": len(trades),
+                     "unique_trade_count": len(unique),
+                     "duplicate_trade_count": len(duplicates),
+                     }
+        if list_duplicates:
+            integrity["all_duplicates"] = duplicates
+        time_full.stop()
+        print(time_full.summary())
+    else:
+        integrity = {"status": "integrity checks were not run"}
+
+    result = {"integrity_check": integrity,
+              "trades_summary": review,
+              }
     if pretty:
-        return json.dumps(review,
+        return json.dumps(result,
                           indent=4,
                           )
     else:
-        return review
+        return result
 
 
 def delete_one_trade(symbol: str,
