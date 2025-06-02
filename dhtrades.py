@@ -783,24 +783,23 @@ class TradeSeries():
         profits = 0
         losses = 0
         days_traded = set()
-        stop_ticks = None
-        profit_ticks = None
-        offset_ticks = None
+        ticks = set()
+        rr = {"max": None, "min": None, "total_risk": 0, "total_reward": 0}
         for t in self.trades:
-            # Record stop/profit/loss ticks as long as they are consistent
-            # throughout the TradeSeries
-            if stop_ticks is None:
-                stop_ticks = t.stop_ticks
-            if stop_ticks != t.stop_ticks:
-                stop_ticks = "varies"
-            if profit_ticks is None:
-                profit_ticks = t.prof_ticks
-            if profit_ticks != t.prof_ticks:
-                profit_ticks = "varies"
-            if offset_ticks is None:
-                offset_ticks = t.offset_ticks
-            if offset_ticks != t.offset_ticks:
-                offset_ticks = "varies"
+            ticks.add((("stop", t.stop_ticks),
+                      ("prof", t.prof_ticks),
+                      ("offset", t.offset_ticks)))
+            this_rr = round(t.stop_ticks/t.prof_ticks, 2)
+            if rr["max"] is None:
+                rr["max"] = this_rr
+            else:
+                rr["max"] = max(rr["max"], this_rr)
+            if rr["min"] is None:
+                rr["min"] = this_rr
+            else:
+                rr["min"] = min(rr["min"], this_rr)
+            rr["total_risk"] += t.stop_ticks
+            rr["total_reward"] += t.prof_ticks
             # Add date to days_traded set
             days_traded.add(dhu.dt_as_dt(t.open_dt).date())
             # Update profitability
@@ -812,10 +811,9 @@ class TradeSeries():
                 sequence = "".join([sequence, "L"])
         total_trades = len(self.trades)
         success_percent = round(profits/total_trades, 4)*100
-        if stop_ticks == "varies" or profit_ticks == "varies":
-            risk_reward = "varies"
-        else:
-            risk_reward = round(stop_ticks/profit_ticks, 2)
+        risk_reward = round(rr["total_risk"] / rr["total_reward"], 2)
+        min_risk_reward = rr["min"]
+        max_risk_reward = rr["max"]
         trading_days = len(days_traded)
         total_days = (dhu.dt_as_dt(self.end_dt)
                       - dhu.dt_as_dt(self.start_dt)).days
@@ -830,15 +828,15 @@ class TradeSeries():
                 "total_trades": total_trades,
                 "success_percent": success_percent,
                 "risk_reward": risk_reward,
+                "min_risk_reward": min_risk_reward,
+                "max_risk_reward": max_risk_reward,
                 "trading_days": trading_days,
                 "total_days": total_days,
                 "total_weeks": total_weeks,
                 "trades_per_week": trades_per_week,
                 "trades_per_day": trades_per_day,
                 "trades_per_trading_day": trades_per_trading_day,
-                "stop_ticks": stop_ticks,
-                "profit_ticks": profit_ticks,
-                "offset_ticks": offset_ticks,
+                "trade_ticks": ticks,
                 }
 
     def weekly_stats(self):
