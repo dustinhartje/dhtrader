@@ -556,7 +556,7 @@ def test_Trade_create_and_verify_pretty():
     # Check line counts of pretty output, won't change unless class changes
     trade = create_trade()
     assert isinstance(trade, dht.Trade)
-    assert len(trade.pretty().splitlines()) == 26
+    assert len(trade.pretty().splitlines()) == 27
 
 
 def test_Trade_tick_and_target_calculations_correct():

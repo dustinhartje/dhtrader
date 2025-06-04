@@ -177,7 +177,7 @@ def test_Backtest_create_and_verify_pretty():
     bt.update_tradeseries(ts)
     # With TradeSeries and Trdes shown
     assert len(bt.pretty(suppress_tradeseries=False,
-                         suppress_trades=False).splitlines()) == 59
+                         suppress_trades=False).splitlines()) == 60
 
 
 def test_Backtest_load_charts():

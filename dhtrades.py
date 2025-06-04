@@ -143,6 +143,24 @@ class Trade():
         else:
             self.flipper = 0  # If this happens there's a bug somewhere
         self.open_epoch = dhu.dt_to_epoch(self.open_dt)
+        # Mark Trades that open in the first minute of their timeframe bar
+        # These can be difficult to trade quickly against changing indicators
+        if self.timeframe == "5m":
+            start_mins = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
+        elif self.timeframe == "15m":
+            start_mins = [0, 15, 30, 45]
+        elif self.timeframe == "e1h":
+            start_mins = [0]
+        elif self.timeframe == "r1h":
+            start_mins = [30]
+        else:
+            start_mins = None
+            self.first_min_open = False
+        if start_mins is not None:
+            if dhu.dt_as_dt(self.open_dt).minute in start_mins:
+                self.first_min_open = True
+            else:
+                self.first_min_open = False
         # Calc or confirm ticks and targets to prevent later innaccuracies
         if self.prof_ticks is None:
             if self.prof_target is None:
@@ -219,6 +237,7 @@ class Trade():
         else:
             raise ValueError("stop_ticks must be an integer but we got "
                              f"{self.stop_ticks}")
+
         # If closing attributes were passed, run close() to ensure all
         # related attributes that may not have been passed in are finalized.
         if self.exit_price is not None:
@@ -711,6 +730,7 @@ class TradeSeries():
                        contracts: int,
                        contract_value: float,
                        contract_fee: float,
+                       include_first_min: bool = True,
                        ):
         """Runs through current trades list, calculating changes to a running
         account balance starting with balance_open.  Returns high, low, and
@@ -723,14 +743,15 @@ class TradeSeries():
         balance_low = balance_open
         liquidated = False
         for t in self.trades:
-            r = t.balance_impact(balance_open=balance_close,
-                                 contracts=contracts,
-                                 contract_value=contract_value,
-                                 contract_fee=contract_fee,
-                                 )
-            balance_high = max(balance_high, r["balance_high"])
-            balance_low = min(balance_low, r["balance_low"])
-            balance_close = r["balance_close"]
+            if not t.first_min_open or include_first_min:
+                r = t.balance_impact(balance_open=balance_close,
+                                     contracts=contracts,
+                                     contract_value=contract_value,
+                                     contract_fee=contract_fee,
+                                     )
+                balance_high = max(balance_high, r["balance_high"])
+                balance_low = min(balance_low, r["balance_low"])
+                balance_close = r["balance_close"]
         if balance_low <= 0:
             liquidated = True
 
@@ -747,6 +768,7 @@ class TradeSeries():
                         contracts: int,
                         contract_value: float,
                         contract_fee: float,
+                        include_first_min: bool = True,
                         ):
         """Runs through current trades list, calculating changes to a running
         account drawdown starting with drawdown_open.  Returns high, low, and
@@ -758,15 +780,16 @@ class TradeSeries():
         drawdown_low = drawdown_open
         liquidated = False
         for t in self.trades:
-            r = t.drawdown_impact(drawdown_open=drawdown_close,
-                                  drawdown_limit=drawdown_limit,
-                                  contracts=contracts,
-                                  contract_value=contract_value,
-                                  contract_fee=contract_fee,
-                                  )
-            drawdown_high = max(drawdown_high, r["drawdown_high"])
-            drawdown_low = min(drawdown_low, r["drawdown_low"])
-            drawdown_close = r["drawdown_close"]
+            if not t.first_min_open or include_first_min:
+                r = t.drawdown_impact(drawdown_open=drawdown_close,
+                                      drawdown_limit=drawdown_limit,
+                                      contracts=contracts,
+                                      contract_value=contract_value,
+                                      contract_fee=contract_fee,
+                                      )
+                drawdown_high = max(drawdown_high, r["drawdown_high"])
+                drawdown_low = min(drawdown_low, r["drawdown_low"])
+                drawdown_close = r["drawdown_close"]
         if drawdown_low <= 0:
             liquidated = True
 
@@ -777,39 +800,42 @@ class TradeSeries():
                 "liquidated": liquidated,
                 }
 
-    def stats(self):
+    def stats(self, include_first_min=True):
         """Return useful statistics calculated from the attached Trades"""
         sequence = ""
+        total_trades = 0
         profits = 0
         losses = 0
         days_traded = set()
         ticks = set()
         rr = {"max": None, "min": None, "total_risk": 0, "total_reward": 0}
         for t in self.trades:
-            ticks.add((("stop", t.stop_ticks),
-                      ("prof", t.prof_ticks),
-                      ("offset", t.offset_ticks)))
-            this_rr = round(t.stop_ticks/t.prof_ticks, 2)
-            if rr["max"] is None:
-                rr["max"] = this_rr
-            else:
-                rr["max"] = max(rr["max"], this_rr)
-            if rr["min"] is None:
-                rr["min"] = this_rr
-            else:
-                rr["min"] = min(rr["min"], this_rr)
-            rr["total_risk"] += t.stop_ticks
-            rr["total_reward"] += t.prof_ticks
-            # Add date to days_traded set
-            days_traded.add(dhu.dt_as_dt(t.open_dt).date())
-            # Update profitability
-            if t.profitable:
-                profits += 1
-                sequence = "".join([sequence, "g"])
-            else:
-                losses += 1
-                sequence = "".join([sequence, "L"])
-        total_trades = len(self.trades)
+            if not t.first_min_open or include_first_min:
+                total_trades += 1
+                # Risk reward calcs
+                ticks.add((("stop", t.stop_ticks),
+                          ("prof", t.prof_ticks),
+                          ("offset", t.offset_ticks)))
+                this_rr = round(t.stop_ticks/t.prof_ticks, 2)
+                if rr["max"] is None:
+                    rr["max"] = this_rr
+                else:
+                    rr["max"] = max(rr["max"], this_rr)
+                if rr["min"] is None:
+                    rr["min"] = this_rr
+                else:
+                    rr["min"] = min(rr["min"], this_rr)
+                rr["total_risk"] += t.stop_ticks
+                rr["total_reward"] += t.prof_ticks
+                # Add date to days_traded set
+                days_traded.add(dhu.dt_as_dt(t.open_dt).date())
+                # Update profitability
+                if t.profitable:
+                    profits += 1
+                    sequence = "".join([sequence, "g"])
+                else:
+                    losses += 1
+                    sequence = "".join([sequence, "L"])
         success_percent = round(profits/total_trades, 4)*100
         risk_reward = round(rr["total_risk"] / rr["total_reward"], 2)
         min_risk_reward = rr["min"]
@@ -839,7 +865,7 @@ class TradeSeries():
                 "trade_ticks": ticks,
                 }
 
-    def weekly_stats(self):
+    def weekly_stats(self, include_first_min: bool = True):
         """Return useful statistics calculated from the attached Trades
         aggregated into weekly buckets using Monday as the start of the week
         and Monday's date as the name of each bucket."""
@@ -856,15 +882,16 @@ class TradeSeries():
                                    template=template)
         # Loop through trades to aggregate stats
         for t in self.trades:
-            d = dhu.dt_as_dt(t.open_dt)
-            w = str(d.date() - timedelta(days=d.weekday()))
-            result[w]["total_trades"] += 1
-            if t.profitable:
-                result[w]["profitable_trades"] += 1
-                result[w]["gl_in_ticks"] += t.prof_ticks
-            else:
-                result[w]["losing_trades"] += 1
-                result[w]["gl_in_ticks"] -= t.stop_ticks
+            if not t.first_min_open or include_first_min:
+                d = dhu.dt_as_dt(t.open_dt)
+                w = str(d.date() - timedelta(days=d.weekday()))
+                result[w]["total_trades"] += 1
+                if t.profitable:
+                    result[w]["profitable_trades"] += 1
+                    result[w]["gl_in_ticks"] += t.prof_ticks
+                else:
+                    result[w]["losing_trades"] += 1
+                    result[w]["gl_in_ticks"] -= t.stop_ticks
         # Calculate success rates
         for k in result.keys():
             if result[k]["total_trades"] > 0:

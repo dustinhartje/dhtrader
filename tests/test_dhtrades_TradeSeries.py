@@ -139,7 +139,7 @@ def test_TradeSeries_create_and_verify_pretty():
     assert len(ts.pretty().splitlines()) == 14
     ts.add_trade(test_trade)
     # With trades shown
-    assert len(ts.pretty(suppress_trades=False).splitlines()) == 39
+    assert len(ts.pretty(suppress_trades=False).splitlines()) == 40
 
 
 def test_TradeSeries_add_sort_and_get_trades():
