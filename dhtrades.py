@@ -340,7 +340,7 @@ class Trade():
         close_price = None
         # Calculate updates based on direction
         if self.direction == "long":
-            # Close on stop to be conservative even if profit_target also hit
+            # Close on stop to be conservative even if profit_target hit
             if candle.c_low <= self.stop_target:
                 close_price = self.stop_target
                 self.low_price = min(self.low_price, self.stop_target)
@@ -348,18 +348,29 @@ class Trade():
                 self.low_price = min(self.low_price, candle.c_low)
             # Now if we passed the profit target we can close at a gain
             # Exact tag doesn't guarantee fill so we must see a tick past
-            if candle.c_high >= (self.prof_target + tick):
-                if close_price is None:
-                    close_price = self.prof_target
-                # Even if we closed on a stop, assume the worst case that
-                # we got to profit_target but did not get filled before
-                # falling to stop_target.  This has the most conservative
-                # /worst case effect on drawdown impacts.
-                self.high_price = max(self.high_price, self.prof_target)
+            if dhu.dt_as_dt(self.open_dt) == dhu.dt_as_dt(candle.c_datetime):
+                # if we're still in the entry minute, we need to compare the
+                # closing price to be sure it tagged profit after the entry
+                if candle.c_close >= (self.prof_target + tick):
+                    if close_price is None:
+                        close_price = self.prof_target
+                    self.high_price = max(self.high_price, self.prof_target)
+                else:
+                    self.high_price = max(self.high_price, candle.c_close)
             else:
-                self.high_price = max(self.high_price, candle.c_high)
+                # Otherwise we compare against the candle high
+                if candle.c_high >= (self.prof_target + tick):
+                    if close_price is None:
+                        close_price = self.prof_target
+                    # Even if we closed on a stop, assume the worst case that
+                    # we got to profit_target but did not get filled before
+                    # falling to stop_target.  This has the most conservative
+                    # /worst case effect on drawdown impacts.
+                    self.high_price = max(self.high_price, self.prof_target)
+                else:
+                    self.high_price = max(self.high_price, candle.c_high)
         elif self.direction == "short":
-            # Close on stop to be conservative even if profit_target also hit
+            # Close on stop to be conservative even if profit_target hit
             if candle.c_high >= self.stop_target:
                 close_price = self.stop_target
                 self.high_price = max(self.high_price, self.stop_target)
@@ -367,16 +378,27 @@ class Trade():
                 self.high_price = max(self.high_price, candle.c_high)
             # Now if we passed the profit target we can close at a gain
             # Exact tag doesn't guarantee fill so we must see a tick past
-            if candle.c_low <= (self.prof_target - tick):
-                if close_price is None:
-                    close_price = self.prof_target
-                # Even if we closed on a stop_target, assume worst case that
-                # we got to profit_target but did not get filled before
-                # falling to stop_target.  This has the most conservative
-                # /worst case effect on drawdown impacts.
-                self.low_price = min(self.low_price, self.prof_target)
+            if dhu.dt_as_dt(self.open_dt) == dhu.dt_as_dt(candle.c_datetime):
+                # if we're still in the entry minute, we need to compare the
+                # closing price to be sure it tagged profit after the entry
+                if candle.c_close <= (self.prof_target - tick):
+                    if close_price is None:
+                        close_price = self.prof_target
+                    self.low_price = min(self.low_price, self.prof_target)
+                else:
+                    self.low_price = min(self.low_price, candle.c_close)
             else:
-                self.low_price = min(self.low_price, candle.c_low)
+                # Otherwise we compare against the candle low
+                if candle.c_low <= (self.prof_target - tick):
+                    if close_price is None:
+                        close_price = self.prof_target
+                    # Even if we closed on a stop_target, assume worst case
+                    # that we got to profit_target but did not get filled
+                    # before falling to stop_target.  This has the most
+                    # conservative/worst case effect on drawdown impacts.
+                    self.low_price = min(self.low_price, self.prof_target)
+                else:
+                    self.low_price = min(self.low_price, candle.c_low)
 
         # Close the trade if we hit a target
         if close_price is not None:

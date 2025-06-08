@@ -873,6 +873,48 @@ def test_Trade_candle_update_closes_trades_correctly():
     assert t.exit_price == 5125
     assert t.drawdown_impact(1000, 3000, 1, 50, 3.10) is not None
     assert t.balance_impact(1000, 1, 50, 3.10) is not None
+    # Long trade does not close during entry minute when 1m bar closes under
+    # the profit target.  It should wait for the next bar to confirm profit.
+    t = create_trade(direction="long", stop_ticks=20, prof_ticks=20)
+    c = dhc.Candle(c_datetime="2025-01-02 12:00:00", c_timeframe="1m",
+                   c_open=5000, c_high=5050, c_low=4999, c_close=5000,
+                   c_volume=100, c_symbol="ES")
+    status = t.candle_update(c)
+    assert not status["closed"]
+    c = dhc.Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+                   c_open=5000, c_high=5050, c_low=4999, c_close=5050,
+                   c_volume=100, c_symbol="ES")
+    status = t.candle_update(c)
+    assert status["closed"]
+    # Long trade does close during entry minute when 1m bar closes over the
+    # profit target
+    t = create_trade(direction="long", stop_ticks=20, prof_ticks=20)
+    c = dhc.Candle(c_datetime="2025-01-02 12:00:00", c_timeframe="1m",
+                   c_open=5000, c_high=5050, c_low=4999, c_close=5050,
+                   c_volume=100, c_symbol="ES")
+    status = t.candle_update(c)
+    assert status["closed"]
+    # Short trade does not close during entry minute when 1m bar closes over
+    # the profit target.  It should wait for the next bar to confirm profit.
+    t = create_trade(direction="short", stop_ticks=20, prof_ticks=20)
+    c = dhc.Candle(c_datetime="2025-01-02 12:00:00", c_timeframe="1m",
+                   c_open=5000, c_high=5001, c_low=4950, c_close=5000,
+                   c_volume=100, c_symbol="ES")
+    status = t.candle_update(c)
+    assert not status["closed"]
+    c = dhc.Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+                   c_open=5000, c_high=5001, c_low=4950, c_close=5050,
+                   c_volume=100, c_symbol="ES")
+    status = t.candle_update(c)
+    assert status["closed"]
+    # Short trade does close during entry minute when 1m bar closes under the
+    # profit target
+    t = create_trade(direction="short", stop_ticks=20, prof_ticks=20)
+    c = dhc.Candle(c_datetime="2025-01-02 12:00:00", c_timeframe="1m",
+                   c_open=5000, c_high=5001, c_low=4950, c_close=4950,
+                   c_volume=100, c_symbol="ES")
+    status = t.candle_update(c)
+    assert status["closed"]
 
 
 def test_Trade_sets_high_low_exit_prices_correctly():
