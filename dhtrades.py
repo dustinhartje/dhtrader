@@ -872,21 +872,28 @@ class TradeSeries():
                     sequence = "".join([sequence, "L"])
         if total_trades > 0:
             success_percent = round(profits/total_trades, 4)*100
+            trading_days = len(days_traded)
+            total_days = (dhu.dt_as_dt(self.end_dt)
+                          - dhu.dt_as_dt(self.start_dt)).days
+            total_weeks = round(total_days/7, 2)
+            trades_per_day = round(total_trades/total_days, 2)
+            trades_per_trading_day = round(total_trades/trading_days, 2)
+            trades_per_week = round(total_trades/total_weeks, 2)
         else:
-            success_percent = None
+            success_percent = 0
+            trading_days = 0
+            total_days = 0
+            total_weeks = 0
+            trades_per_day = 0
+            trades_per_trading_day = 0
+            trades_per_week = 0
+
         if rr["total_reward"] > 0:
             risk_reward = round(rr["total_risk"] / rr["total_reward"], 2)
         else:
             risk_reward = None
         min_risk_reward = rr["min"]
         max_risk_reward = rr["max"]
-        trading_days = len(days_traded)
-        total_days = (dhu.dt_as_dt(self.end_dt)
-                      - dhu.dt_as_dt(self.start_dt)).days
-        total_weeks = round(total_days/7, 2)
-        trades_per_day = round(total_trades/total_days, 2)
-        trades_per_trading_day = round(total_trades/trading_days, 2)
-        trades_per_week = round(total_trades/total_weeks, 2)
 
         return {"gl_sequence": sequence,
                 "profitable_trades": profits,
@@ -917,6 +924,9 @@ class TradeSeries():
                     "gl_in_ticks": 0,
                     "success_rate": "nil",
                     }
+        # If no Trades, no stats can be gleaned
+        if len(self.trades) == 0:
+            return {}
         self.sort_trades()
         w_start = self.trades[0].open_dt
         w_end = self.trades[-1].open_dt
