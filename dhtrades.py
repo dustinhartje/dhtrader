@@ -870,8 +870,14 @@ class TradeSeries():
                 else:
                     losses += 1
                     sequence = "".join([sequence, "L"])
-        success_percent = round(profits/total_trades, 4)*100
-        risk_reward = round(rr["total_risk"] / rr["total_reward"], 2)
+        if total_trades > 0:
+            success_percent = round(profits/total_trades, 4)*100
+        else:
+            success_percent = None
+        if rr["total_reward"] > 0:
+            risk_reward = round(rr["total_risk"] / rr["total_reward"], 2)
+        else:
+            risk_reward = None
         min_risk_reward = rr["min"]
         max_risk_reward = rr["max"]
         trading_days = len(days_traded)
