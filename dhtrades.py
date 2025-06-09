@@ -300,7 +300,6 @@ class Trade():
         """Converts to JSON string then back to a python dict.  This helps
         to normalize types (I'm looking at YOU datetime) while ensuring
         a portable python data structure"""
-
         return json.loads(self.to_json())
 
     def pretty(self):
@@ -308,13 +307,17 @@ class Trade():
         meant to provide an easy to read output for console or other purposes.
         Optionally suppress_datapoints to reduce output size when not needed.
         """
-        return json.dumps(self.to_clean_dict(),
-                          indent=4,
-                          )
+        return json.dumps(self.to_clean_dict(), indent=4)
+
+    def brief(self):
+        """Return a single line summary string of this Trade's vitals"""
+        return (f"{self.open_dt} - {self.close_dt} | "
+                f"{dhu.dt_as_dt(self.open_dt).strftime('%A')} | "
+                f"entry={self.entry_price} | exit={self.exit_price} | "
+                f"profitable={self.profitable}")
 
     def store(self):
         """Store this Trade in central storage"""
-
         return dhs.store_trades(trades=[self])
 
     def delete_from_storage(self):
@@ -641,6 +644,15 @@ class TradeSeries():
         return json.dumps(self.to_clean_dict(suppress_trades=suppress_trades),
                           indent=4,
                           )
+
+    def trades_brief(self):
+        """Return a list of one line brief summaries of all Trades' vitals
+        in this TradeSeries"""
+        result = []
+        for t in self.trades:
+            result.append(t.brief())
+
+        return result
 
     def update_bt_id(self, bt_id):
         """Update bt_id on this and any attached Trade objects.  Typicaly
