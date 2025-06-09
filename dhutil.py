@@ -289,7 +289,7 @@ def dict_of_weeks(start_dt, end_dt, template):
     adder = timedelta(weeks=1)
     week_dt = start_dt.date() - timedelta(days=start_dt.weekday())
     result = {}
-    while week_dt < end_dt.date():
+    while week_dt <= end_dt.date():
         result[f"{week_dt}"] = deepcopy(template)
         week_dt += adder
     return result

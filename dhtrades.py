@@ -917,8 +917,11 @@ class TradeSeries():
                     "gl_in_ticks": 0,
                     "success_rate": "nil",
                     }
-        result = dhu.dict_of_weeks(start_dt=self.start_dt,
-                                   end_dt=self.end_dt,
+        self.sort_trades()
+        w_start = self.trades[0].open_dt
+        w_end = self.trades[-1].open_dt
+        result = dhu.dict_of_weeks(start_dt=w_start,
+                                   end_dt=w_end,
                                    template=template)
         # Loop through trades to aggregate stats
         for t in self.trades:
