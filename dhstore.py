@@ -347,15 +347,25 @@ def delete_tradeseries(symbol: str,
                        field: str,
                        value,
                        collection: str = COLL_TRADESERIES,
+                       coll_trades=COLL_TRADES,
+                       include_trades: bool = False,
                        ):
     """Delete all tradeseries records in central storage with 'field' matching
     'value'.  Typically used to delete by ts_id, or bt_id fields.
     """
-    result = dhm.delete_tradeseries(symbol=symbol,
-                                    collection=collection,
-                                    field=field,
-                                    value=value,
-                                    )
+    result = {}
+    result["tradeseries"] = dhm.delete_tradeseries(
+            symbol=symbol,
+            collection=collection,
+            field=field,
+            value=value,
+            )
+    if include_trades:
+        result["trades"] = delete_trades(symbol=symbol,
+                                         field=field,
+                                         value=value,
+                                         collection=coll_trades,
+                                         )
 
     return result
 
@@ -429,15 +439,29 @@ def delete_backtests(symbol: str,
                      field: str,
                      value,
                      collection: str = COLL_BACKTESTS,
+                     coll_tradeseries: str = COLL_TRADESERIES,
+                     coll_trades: str = COLL_TRADES,
+                     include_tradeseries: bool = False,
+                     include_trades: bool = False,
                      ):
     """Delete all backtests records in central storage with 'field' matching
     'value'.  Typically used to delete by bt_id field.
     """
-    result = dhm.delete_backtests(symbol=symbol,
-                                  collection=collection,
-                                  field=field,
-                                  value=value,
-                                  )
+    result = {}
+    result["backtests"] = dhm.delete_backtests(symbol=symbol,
+                                               collection=collection,
+                                               field=field,
+                                               value=value,
+                                               )
+    if include_tradeseries:
+        result["tradeseries"] = delete_tradeseries(
+                symbol=symbol,
+                field=field,
+                value=value,
+                collection=coll_tradeseries,
+                coll_trades=coll_trades,
+                include_trades=include_trades,
+                )
 
     return result
 

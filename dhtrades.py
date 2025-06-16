@@ -10,26 +10,6 @@ log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
 
-def logi(msg: str):
-    log.info(msg)
-
-
-def logw(msg: str):
-    log.warning(msg)
-
-
-def loge(msg: str):
-    log.error(msg)
-
-
-def logc(msg: str):
-    log.critical(msg)
-
-
-def logd(msg: str):
-    log.debug(msg)
-
-
 class Trade():
     """Represents a single trade that could have been made.
 
