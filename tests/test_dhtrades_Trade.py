@@ -103,7 +103,7 @@ def add_1m_candle(trade, dt, c_open, c_high, c_low, c_close):
                                    ))
 
 
-def test_dhtrades_Trade_confirm_observed_results():
+def test_Trade_confirm_observed_results():
     """Confirm the results of a number of live trades match the values that
     were seen "in the wild".  All of the trades in this test were performed
     in an Apex trading account with drawdown and balance before/after recorded
@@ -145,13 +145,14 @@ def test_dhtrades_Trade_confirm_observed_results():
     assert t.high_price == 5753.25
     assert t.low_price == 5747.75
     assert t.exit_price == 5749.75
+    assert t.parent_bar_secs() == 172
     bal = t.balance_impact(245483.93, 2, 50, 3.10)
-    draw = t.drawdown_impact(1757.28, 6500, 2, 50, 3.10)
     assert bal["balance_open"] == 245483.93
     assert bal["balance_close"] == 245502.73
     assert bal["balance_low"] == 245302.73
     assert bal["balance_high"] == 245852.73
     assert bal["gain_loss"] == 18.8
+    draw = t.drawdown_impact(1757.28, 6500, 2, 50, 3.10)
     assert draw["drawdown_open"] == 1757.28
     assert draw["drawdown_close"] == 1776.08
     assert draw["drawdown_low"] == 1576.08
@@ -170,13 +171,14 @@ def test_dhtrades_Trade_confirm_observed_results():
     assert t.high_price == 5749.50
     assert t.low_price == 5747
     assert t.exit_price == 5748.50
+    assert t.parent_bar_secs() == 185
     bal = t.balance_impact(245502.73, 1, 50, 3.10)
-    draw = t.drawdown_impact(1776.08, 6500, 1, 50, 3.10)
     assert bal["balance_open"] == 245502.73
     assert bal["balance_close"] == 245462.13
     assert bal["balance_low"] == 245387.13
     assert bal["balance_high"] == 245512.13
     assert bal["gain_loss"] == -40.6
+    draw = t.drawdown_impact(1776.08, 6500, 1, 50, 3.10)
     assert draw["drawdown_open"] == 1776.08
     assert draw["drawdown_close"] == 1735.48
     assert draw["drawdown_low"] == 1660.48
@@ -195,13 +197,14 @@ def test_dhtrades_Trade_confirm_observed_results():
     assert t.high_price == 5747
     assert t.low_price == 5745
     assert t.exit_price == 5746
+    assert t.parent_bar_secs() == 153
     bal = t.balance_impact(245462.13, 1, 50, 3.10)
-    draw = t.drawdown_impact(1735.48, 6500, 1, 50, 3.10)
     assert bal["balance_open"] == 245462.13
     assert bal["balance_close"] == 245459.03
     assert bal["balance_low"] == 245409.03
     assert bal["balance_high"] == 245509.03
     assert bal["gain_loss"] == -3.1
+    draw = t.drawdown_impact(1735.48, 6500, 1, 50, 3.10)
     assert draw["drawdown_open"] == 1735.48
     assert draw["drawdown_close"] == 1732.38
     assert draw["drawdown_low"] == 1682.38
@@ -220,13 +223,14 @@ def test_dhtrades_Trade_confirm_observed_results():
     assert t.high_price == 5747.75
     assert t.low_price == 5745.75
     assert t.exit_price == 5746.75
+    assert t.parent_bar_secs() == 65
     bal = t.balance_impact(245459.03, 1, 50, 3.10)
-    draw = t.drawdown_impact(1732.38, 6500, 1, 50, 3.10)
     assert bal["balance_open"] == 245459.03
     assert bal["balance_close"] == 245480.93
     assert bal["balance_low"] == 245430.93
     assert bal["balance_high"] == 245530.93
     assert bal["gain_loss"] == 21.90
+    draw = t.drawdown_impact(1732.38, 6500, 1, 50, 3.10)
     assert draw["drawdown_open"] == 1732.38
     assert draw["drawdown_close"] == 1754.28
     assert draw["drawdown_low"] == 1704.28
@@ -243,13 +247,14 @@ def test_dhtrades_Trade_confirm_observed_results():
     assert t.high_price == 5751.25
     assert t.low_price == 5750.50
     assert t.exit_price == 5750.75
+    assert t.parent_bar_secs() == 61
     bal = t.balance_impact(245656.13, 1, 50, 3.10)
-    draw = t.drawdown_impact(1929.48, 6500, 1, 50, 3.10)
     assert bal["balance_open"] == 245656.13
     assert bal["balance_close"] == 245628.03
     assert bal["balance_low"] == 245615.53
     assert bal["balance_high"] == 245653.03
     assert bal["gain_loss"] == -28.10
+    draw = t.drawdown_impact(1929.48, 6500, 1, 50, 3.10)
     assert draw["drawdown_open"] == 1929.48
     assert draw["drawdown_close"] == 1901.38
     assert draw["drawdown_low"] == 1888.88
@@ -269,13 +274,14 @@ def test_dhtrades_Trade_confirm_observed_results():
     assert t.high_price == 5752.50
     assert t.low_price == 5751.50
     assert t.exit_price == 5751.50
+    assert t.parent_bar_secs() == 164
     bal = t.balance_impact(245506.03, 3, 50, 3.10)
-    draw = t.drawdown_impact(1779.38, 6500, 3, 50, 3.10)
     assert bal["balance_open"] == 245506.03
     assert bal["balance_close"] == 245609.23
     assert bal["balance_low"] == 245459.23
     assert bal["balance_high"] == 245609.23
     assert bal["gain_loss"] == 103.20
+    draw = t.drawdown_impact(1779.38, 6500, 3, 50, 3.10)
     assert draw["drawdown_open"] == 1779.38
     assert draw["drawdown_close"] == 1882.58
     assert draw["drawdown_low"] == 1732.58
@@ -297,13 +303,14 @@ def test_dhtrades_Trade_confirm_observed_results():
     assert t.high_price == 5751.75
     assert t.low_price == 5750.50
     assert t.exit_price == 5751.75
+    assert t.parent_bar_secs() == 245
     bal = t.balance_impact(245628.03, 1, 50, 3.10)
-    draw = t.drawdown_impact(1901.38, 6500, 1, 50, 3.10)
     assert bal["balance_open"] == 245628.03
     assert bal["balance_close"] == 245562.43
     assert bal["balance_low"] == 245562.43
     assert bal["balance_high"] == 245624.93
     assert bal["gain_loss"] == -65.60
+    draw = t.drawdown_impact(1901.38, 6500, 1, 50, 3.10)
     assert draw["drawdown_open"] == 1901.38
     assert draw["drawdown_close"] == 1835.78
     assert draw["drawdown_low"] == 1835.78
@@ -321,13 +328,14 @@ def test_dhtrades_Trade_confirm_observed_results():
     assert t.high_price == 5753.75
     assert t.low_price == 5752.25
     assert t.exit_price == 5753.25
+    assert t.parent_bar_secs() == 3
     bal = t.balance_impact(245562.43, 1, 50, 3.10)
-    draw = t.drawdown_impact(1835.78, 6500, 1, 50, 3.10)
     assert bal["balance_open"] == 245562.43
     assert bal["balance_close"] == 245534.33
     assert bal["balance_low"] == 245509.33
     assert bal["balance_high"] == 245584.33
     assert bal["gain_loss"] == -28.10
+    draw = t.drawdown_impact(1835.78, 6500, 1, 50, 3.10)
     assert draw["drawdown_open"] == 1835.78
     assert draw["drawdown_close"] == 1807.68
     assert draw["drawdown_low"] == 1782.68
@@ -345,13 +353,14 @@ def test_dhtrades_Trade_confirm_observed_results():
     assert t.high_price == 5754.75
     assert t.low_price == 5754
     assert t.exit_price == 5754.25
+    assert t.parent_bar_secs() == 176
     bal = t.balance_impact(245534.33, 1, 50, 3.10)
-    draw = t.drawdown_impact(1807.68, 6500, 1, 50, 3.10)
     assert bal["balance_open"] == 245534.33
     assert bal["balance_close"] == 245531.23
     assert bal["balance_low"] == 245506.23
     assert bal["balance_high"] == 245543.73
     assert bal["gain_loss"] == -3.10
+    draw = t.drawdown_impact(1807.68, 6500, 1, 50, 3.10)
     assert draw["drawdown_open"] == 1807.68
     assert draw["drawdown_close"] == 1804.58
     assert draw["drawdown_low"] == 1779.58
@@ -371,13 +380,14 @@ def test_dhtrades_Trade_confirm_observed_results():
     assert t.high_price == 5755
     assert t.low_price == 5753.50
     assert t.exit_price == 5754
+    assert t.parent_bar_secs() == 84
     bal = t.balance_impact(245531.23, 1, 50, 3.10)
-    draw = t.drawdown_impact(1804.58, 6500, 1, 50, 3.10)
     assert bal["balance_open"] == 245531.23
     assert bal["balance_close"] == 245553.13
     assert bal["balance_low"] == 245503.13
     assert bal["balance_high"] == 245578.13
     assert bal["gain_loss"] == 21.90
+    draw = t.drawdown_impact(1804.58, 6500, 1, 50, 3.10)
     assert draw["drawdown_open"] == 1804.58
     assert draw["drawdown_close"] == 1826.48
     assert draw["drawdown_low"] == 1776.48
@@ -404,13 +414,14 @@ def test_dhtrades_Trade_confirm_observed_results():
     assert t.high_price == 5756.25
     assert t.low_price == 5750.50
     assert t.exit_price == 5751
+    assert t.parent_bar_secs() == 2
     bal = t.balance_impact(250000, 1, 50, 3.10)
-    draw = t.drawdown_impact(6500, 6500, 1, 50, 3.10)
     assert bal["balance_open"] == 250000
     assert bal["balance_close"] == 249734.40
     assert bal["balance_low"] == 249709.40
     assert bal["balance_high"] == 249996.90
     assert bal["gain_loss"] == -265.60
+    draw = t.drawdown_impact(6500, 6500, 1, 50, 3.10)
     assert draw["drawdown_open"] == 6500
     assert draw["drawdown_close"] == 6234.40
     assert draw["drawdown_low"] == 6209.40
@@ -432,13 +443,14 @@ def test_dhtrades_Trade_confirm_observed_results():
     assert t.high_price == 5749.25
     assert t.low_price == 5747.50
     assert t.exit_price == 5747.50
+    assert t.parent_bar_secs() == 133
     bal = t.balance_impact(250000, 1, 50, 3.10)
-    draw = t.drawdown_impact(6500, 6500, 1, 50, 3.10)
     assert bal["balance_open"] == 250000
     assert bal["balance_close"] == 250034.40
     assert bal["balance_low"] == 249946.90
     assert bal["balance_high"] == 250034.40
     assert bal["gain_loss"] == 34.40
+    draw = t.drawdown_impact(6500, 6500, 1, 50, 3.10)
     assert draw["drawdown_open"] == 6500
     assert draw["drawdown_close"] == 6500
     assert draw["drawdown_low"] == 6446.90
@@ -474,13 +486,14 @@ def test_dhtrades_Trade_confirm_observed_results():
     assert t.high_price == 5752.75
     assert t.low_price == 5746
     assert t.exit_price == 5747.25
+    assert t.parent_bar_secs() == 41
     bal = t.balance_impact(249734.40, 1, 50, 3.10)
-    draw = t.drawdown_impact(6234.40, 6500, 1, 50, 3.10)
     assert bal["balance_open"] == 249734.40
     assert bal["balance_close"] == 249993.80
     assert bal["balance_low"] == 249718.80
     assert bal["balance_high"] == 250056.30
     assert bal["gain_loss"] == 259.40
+    draw = t.drawdown_impact(6234.40, 6500, 1, 50, 3.10)
     assert draw["drawdown_open"] == 6234.40
     # Github Issue 33 (multiple lines in this file)
     # calculating as 6493.80, observed 6448.45, off by 45.35
@@ -506,13 +519,14 @@ def test_dhtrades_Trade_confirm_observed_results():
     assert t.high_price == 5633.75
     assert t.low_price == 5623.75
     assert t.exit_price == 5631.50
+    assert t.parent_bar_secs() == 109
     bal = t.balance_impact(249706.40, 2, 50, 3.10)
-    draw = t.drawdown_impact(6161.05, 6500, 2, 50, 3.10)
     assert bal["balance_open"] == 249706.40
     assert bal["balance_close"] == 250275.20
     assert bal["balance_low"] == 249500.20
     assert bal["balance_high"] == 250500.20
     assert bal["gain_loss"] == 568.80
+    draw = t.drawdown_impact(6161.05, 6500, 2, 50, 3.10)
     assert draw["drawdown_open"] == 6161.05
     # Github Issue 33 (multiple lines in this file)
     # calculating as 6500, observed 6321.90, off by 178.10
@@ -534,13 +548,14 @@ def test_dhtrades_Trade_confirm_observed_results():
     assert t.high_price == 5633.25
     assert t.low_price == 5627.50
     assert t.exit_price == 5628.75
+    assert t.parent_bar_secs() == 88
     bal = t.balance_impact(250275.20, 3, 50, 3.10)
-    draw = t.drawdown_impact(6321.90, 6500, 3, 50, 3.10)
     assert bal["balance_open"] == 250275.20
     assert bal["balance_close"] == 250378.40
     assert bal["balance_low"] == 249703.40
     assert bal["balance_high"] == 250565.90
     assert bal["gain_loss"] == 103.20
+    draw = t.drawdown_impact(6321.90, 6500, 3, 50, 3.10)
     assert draw["drawdown_open"] == 6321.90
     # Github Issue 33 (multiple lines in this file)
     # calculating as 6425.10, observed 6382.85, off by 42.25
@@ -980,6 +995,20 @@ def test_Trade_sets_high_low_exit_prices_correctly():
     assert t.low_price == 4900
     assert t.exit_price == 5125
     assert not t.is_open
+
+
+def test_Trade_parent_bar_secs():
+    """Test method parent_bar_secs() returns accurate on several timeframes"""
+    t = create_trade(open_dt="2025-01-02 11:52:44", timeframe="1m")
+    assert t.parent_bar_secs() == 44
+    t = create_trade(open_dt="2025-01-02 11:52:44", timeframe="5m")
+    assert t.parent_bar_secs() == 164
+    t = create_trade(open_dt="2025-01-02 11:52:44", timeframe="15m")
+    assert t.parent_bar_secs() == 464
+    t = create_trade(open_dt="2025-01-02 11:52:44", timeframe="e1h")
+    assert t.parent_bar_secs() == 3164
+    t = create_trade(open_dt="2025-01-02 11:52:44", timeframe="r1h")
+    assert t.parent_bar_secs() == 1364
 
 
 def test_Trade_store_retrieve_delete():
