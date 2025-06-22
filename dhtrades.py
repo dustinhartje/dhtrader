@@ -1317,13 +1317,15 @@ class Backtest():
         self.end_dt = dhu.dt_as_str(new_end_dt)
         if update_storage:
             self.store(store_tradeseries=False, store_trades=False)
-        # Update the attached Charts for the new dates as well
-        self.chart_tf.restrict_dates(new_start_dt=new_start_dt,
-                                     new_end_dt=new_end_dt,
-                                     )
-        self.chart_1m.restrict_dates(new_start_dt=new_start_dt,
-                                     new_end_dt=new_end_dt,
-                                     )
+        # Update the attached Charts for the new dates as well if loaded
+        if self.chart_tf is not None:
+            self.chart_tf.restrict_dates(new_start_dt=new_start_dt,
+                                         new_end_dt=new_end_dt,
+                                         )
+        if self.chart_1m is not None:
+            self.chart_1m.restrict_dates(new_start_dt=new_start_dt,
+                                         new_end_dt=new_end_dt,
+                                         )
         # Update all attached TradeSeries
         for ts in self.tradeseries:
             ts.restrict_dates(new_start_dt=new_start_dt,
