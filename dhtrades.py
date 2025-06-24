@@ -650,6 +650,14 @@ class TradeSeries():
         for t in self.trades:
             t.bt_id = bt_id
 
+    def load_trades(self):
+        """Clear all attached Trades then retrieve and attach all Trades
+        matching this ts_id from storage"""
+
+        self.trades = dhs.get_trades_by_field(field="ts_id",
+                                              value=self.ts_id)
+        self.sort_trades()
+
     def store(self,
               store_trades: bool = False
               ):

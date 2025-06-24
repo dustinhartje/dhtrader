@@ -321,11 +321,83 @@ def review_tradeseries(symbol: str = "ES",
                        bt_id: str = None,
                        include_trades: bool = False,
                        pretty: bool = False,
+                       check_integrity: bool = False,
                        ):
     """Provides aggregate summary data about tradeseries in central storage,
     optionally filtering by bt_id.  Earliest start_dt and latest end_dt are
     returned as strings.  pretty=True returns in a print friendly, multiline,
     indented string format."""
+    if check_integrity:
+        if bt_id is None:
+            print("Fetching all TradeSeries from storage")
+            all_ts = get_all_tradeseries()
+        else:
+            print(f"Fetching all TradeSeries for {bt_id} from storage")
+            all_ts = get_tradeseries_by_field(field="bt_id",
+                                              value=bt_id,
+                                              include_trades=False)
+        print("Loading all Trades into TradeSeries and checking for issues")
+        bar_total = len(all_ts)
+        bar_eta = progressbar.ETA(format_not_started='--:--:--',
+                                  format_finished='Time: %(elapsed)8s',
+                                  format='Remaining: %(eta)8s',
+                                  format_zero='Remaining: 00:00:00',
+                                  format_na='Remaining: N/A',
+                                  )
+        bar_label = (f"%(value)d of {bar_total} checked in "
+                     "%(elapsed)s ")
+        widgets = [progressbar.Percentage(),
+                   progressbar.Bar(),
+                   progressbar.FormatLabel(bar_label),
+                   bar_eta,
+                   ]
+        bar = progressbar.ProgressBar(
+                widgets=widgets,
+                max_value=bar_total).start()
+        # Loop through all TradeSeries/Trades, noting any issues found
+        trade_overlaps = []
+        for i, ts in enumerate(all_ts):
+            ts.load_trades()
+            last_trade = None
+            last_close_tf = None
+            for t in ts.trades:
+                # Capture the parent timeframe bars that we open and close in
+                open_tf = dhu.this_candle_start(dt=t.open_dt,
+                                                timeframe=ts.timeframe)
+                close_tf = dhu.this_candle_start(dt=t.close_dt,
+                                                 timeframe=ts.timeframe)
+                if last_trade is not None:
+                    # Check if we opened in the same timeframe bar as the
+                    # prior Trade closed in (not expected)
+                    if open_tf == last_close_tf:
+                        issue = {"issue_type": "Trade timeframe bar overlap",
+                                 "ts_id": ts.ts_id,
+                                 "timeframe": ts.timeframe,
+                                 "trade_open": str(t.open_dt),
+                                 "trade_open_tf": str(open_tf),
+                                 "prev_trade_open": str(last_trade.open_dt),
+                                 "prev_trade_close": str(last_trade.close_dt),
+                                 "prev_trade_close_tf": str(last_close_tf),
+                                 }
+                        trade_overlaps.append(issue)
+                # Config last vars with current values for next Trade in loop
+                last_trade = t
+                last_close_tf = close_tf
+            bar.update(i)
+            # Reclaim memory
+            ts.trades.clear()
+        bar.finish()
+        # Finalize integrity status
+        if len(trade_overlaps) > 0:
+            status = "ERRORS"
+            issues = {"trade_overlaps": trade_overlaps}
+        else:
+            status = "OK"
+            issues = None
+        integrity = {"status": status, "issues": issues}
+    else:
+        integrity = {"status": None, "issues": None}
+    # Standard review shows key details of TradeSeries and optionally Trades
     review = dhm.review_tradeseries(symbol=symbol,
                                     collection=collection,
                                     bt_id=bt_id,
@@ -335,12 +407,12 @@ def review_tradeseries(symbol: str = "ES",
             ts["trades"] = review_trades(symbol=symbol,
                                          bt_id=ts["_id"]["bt_id"],
                                          )
+    result = {"review": review, "integrity": integrity}
     if pretty:
-        return json.dumps(review,
-                          indent=4,
-                          )
-    else:
-        return review
+        result = json.dumps(result,
+                            indent=4,
+                            )
+    return result
 
 
 def delete_tradeseries(symbol: str,
