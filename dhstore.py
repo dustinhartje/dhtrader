@@ -9,6 +9,7 @@ import progressbar
 from collections import Counter, defaultdict
 from datetime import datetime as dt
 from datetime import timedelta
+from copy import deepcopy
 import logging
 import dhcharts as dhc
 import dhtrades as dht
@@ -23,26 +24,6 @@ COLL_IND_DPS = "indicators_datapoints"
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
-
-
-def logi(msg: str):
-    log.info(msg)
-
-
-def logw(msg: str):
-    log.warning(msg)
-
-
-def loge(msg: str):
-    log.error(msg)
-
-
-def logc(msg: str):
-    log.critical(msg)
-
-
-def logd(msg: str):
-    log.debug(msg)
 
 
 ##############################################################################
@@ -141,14 +122,23 @@ def review_trades(symbol: str = "ES",
                   ts_id: str = None,
                   include_epochs: bool = False,
                   check_integrity: bool = False,
-                  list_duplicates: bool = False,
+                  multi_ok: list = None,
+                  list_issues: bool = False,
                   pretty: bool = False,
                   ):
     """Provides aggregate summary data about trades in central storage,
     optionally filtering by bt_id and/or ts_id.  Earliest and latest dates
     are returned as strings and include_epochs can optionally also provide them
-    as epochs.  pretty=True returns in a print friendly, multiline, indended
+    as epochs.
+
+    multi_ok should be a list of strings that can appear in a Trade's ts_id,
+    typically all or part of a Backtest's bt_id.  A trade that matches any
+    string in this list will not be flagged for spanning multiple days.
+
+    pretty=True returns in a print friendly, multiline, indended
     string format."""
+    if multi_ok is None:
+        multi_ok = []
     review = dhm.review_trades(symbol=symbol,
                                collection=collection,
                                bt_id=bt_id,
@@ -162,51 +152,110 @@ def review_trades(symbol: str = "ES",
             t.pop("latest_epoch")
 
     if check_integrity:
-        print("Checking integrity of all Trades in storage")
+        dhu.log_say("Checking integrity of all Trades in storage")
         time_full = dhu.OperationTimer(
                 name="Trade integrity check full run timer")
-        time_fetch = dhu.OperationTimer(
-                name="Trade integrity check fetch timer")
-        print("Fetching all Trades from storage")
-        trades = get_all_trades()
-        time_fetch.stop()
-        print(time_fetch.summary())
-        print("Comparing to identify trades with duplicate ts_id & open_dt "
-              "combinations")
-        unique = set()
-        duplicates = []
-        for t in trades:
-            this = (t.ts_id, t.open_dt)
-            if this in unique:
-                duplicates.append(this)
-            else:
-                unique.add(this)
-        time_comp = dhu.OperationTimer(
-                name="Trade integrity check compare timer")
-        time_comp.stop()
-        print(time_comp.summary())
-        if len(duplicates) > 0:
-            status = "ERROR"
-            status_details = f"{len(duplicates)} duplicate trades found"
+
+        # Get all TradeSeries in storage to loop through
+        if bt_id is None and ts_id is None:
+            all_ts = get_all_tradeseries()
+        elif ts_id is None:
+            all_ts = get_tradeseries_by_field(field="bt_id",
+                                              value=bt_id,
+                                              include_trades=False)
+        elif bt_id is None:
+            all_ts = get_tradeseries_by_field(field="ts_id",
+                                              value=ts_id,
+                                              include_trades=False)
         else:
-            status = "OK"
-            status_details = "No duplicates found"
+            raise ValueError("Integrity check supports bt_id or ts_id, not "
+                             f"both!  We got ts_id={ts_id} bt_id={bt_id}")
+        duplicates = []
+        multidays = []
+        total_trades = 0
+        unique_trades = 0
+
+        # Start a progress bar
+        bar_total = len(all_ts)
+        bar_eta = progressbar.ETA(format_not_started='--:--:--',
+                                  format_finished='Time: %(elapsed)8s',
+                                  format='Remaining: %(eta)8s',
+                                  format_zero='Remaining: 00:00:00',
+                                  format_na='Remaining: N/A',
+                                  )
+        bar_label = (f"%(value)d of {bar_total} checked in "
+                     "%(elapsed)s ")
+        widgets = [progressbar.Percentage(),
+                   progressbar.Bar(),
+                   progressbar.FormatLabel(bar_label),
+                   bar_eta,
+                   ]
+        bar = progressbar.ProgressBar(
+                widgets=widgets,
+                max_value=bar_total).start()
+
+        # Loop through all TradeSeries, checking for duplicates and multidays
+        for i, x in enumerate(all_ts):
+            log.info(f"Checking stored Trade integrity for ts_id={x.ts_id}")
+            bar.update(i)
+            unique = set()
+            ts = deepcopy(x)
+            ts.load_trades()
+            # Determine if this ts_id allows multiday trades
+            check_multi = True
+            for x in multi_ok:
+                if x in ts.ts_id:
+                    check_multi = False
+                    break
+            # Check for duplicate Trades w/matching ts_id and open_dt values
+            for t in ts.trades:
+                total_trades += 1
+                this = (t.ts_id, t.open_dt)
+                if this in unique:
+                    duplicates.append(this)
+                    log.warning(f"Duplicate Trades found in storage: {this}")
+                else:
+                    unique.add(this)
+                    unique_trades += 1
+                if check_multi:
+                    open_date = dhu.dt_as_dt(t.open_dt).date()
+                    close_date = dhu.dt_as_dt(t.close_dt).date()
+                    if open_date != close_date:
+                        this = {"ts_id": t.ts_id,
+                                "open_dt": t.open_dt,
+                                "close_dt": t.close_dt}
+                        log.warning("Unapproved multiday trade found in "
+                                    f"storage: {this}")
+                        multidays.append(this)
+        bar.finish()
+
+        # Output findings
+        status = "OK"
+        issues = []
+        if len(duplicates) > 0:
+            status = "ERRORS"
+            issues.append(f"{len(duplicates)} duplicate trades found")
+        if len(multidays) > 0:
+            status = "ERRORS"
+            issues.append(f"{len(multidays)} invalid multiday trades found")
+        if len(issues) == 0:
+            issues = None
         integrity = {"status": status,
-                     "status_details": status_details,
-                     "total_trade_count": len(trades),
-                     "unique_trade_count": len(unique),
-                     "duplicate_trade_count": len(duplicates),
+                     "issues": issues,
+                     "total_trades": total_trades,
+                     "unique_trades": unique_trades,
+                     "duplicate_trades": len(duplicates),
+                     "invalid_multiday_trades": len(multidays)
                      }
-        if list_duplicates:
-            integrity["all_duplicates"] = duplicates
+        if list_issues:
+            integrity["duplicates_list"] = duplicates
+            integrity["multidays_list"] = multidays
         time_full.stop()
         print(time_full.summary())
     else:
         integrity = {"status": "integrity checks were not run"}
 
-    result = {"integrity_check": integrity,
-              "trades_summary": review,
-              }
+    result = {"integrity": integrity, "review": review}
     if pretty:
         return json.dumps(result,
                           indent=4,
@@ -407,7 +456,7 @@ def review_tradeseries(symbol: str = "ES",
             ts["trades"] = review_trades(symbol=symbol,
                                          bt_id=ts["_id"]["bt_id"],
                                          )
-    result = {"review": review, "integrity": integrity}
+    result = {"integrity": integrity, "review": review}
     if pretty:
         result = json.dumps(result,
                             indent=4,

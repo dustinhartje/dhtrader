@@ -23,26 +23,6 @@ log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
 
-def logi(msg: str):
-    log.info(msg)
-
-
-def logw(msg: str):
-    log.warning(msg)
-
-
-def loge(msg: str):
-    log.error(msg)
-
-
-def logc(msg: str):
-    log.critical(msg)
-
-
-def logd(msg: str):
-    log.debug(msg)
-
-
 # Establish mongo connection parameters and client
 MONGO_ENV_FILE = 'mongo.env'
 load_dotenv(find_dotenv(MONGO_ENV_FILE))

@@ -15,26 +15,6 @@ log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
 
-def logi(msg: str):
-    log.info(msg)
-
-
-def logw(msg: str):
-    log.warning(msg)
-
-
-def loge(msg: str):
-    log.error(msg)
-
-
-def logc(msg: str):
-    log.critical(msg)
-
-
-def logd(msg: str):
-    log.debug(msg)
-
-
 def bot():
     """Return universal beginning of time for this and other modules.  This
     represents the earliest time candles should be imported for among other
@@ -1372,7 +1352,7 @@ class Indicator():
         # class is not meant to be used directly.  You should create a
         # subclass and rewrite this method based on the specific needs of
         # your target indicator.
-        logi("Parent class calculations are for testing purposes only")
+        dhu.log_say("Parent class calculations are for testing purposes only")
         # For demo purposes, let's calculate the high of the day
         self.datapoints = []
         hod = 0

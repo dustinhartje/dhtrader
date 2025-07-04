@@ -18,24 +18,19 @@ log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
 
-def logi(msg: str):
-    log.info(msg)
-
-
-def logw(msg: str):
-    log.warning(msg)
-
-
-def loge(msg: str):
-    log.error(msg)
-
-
-def logc(msg: str):
-    log.critical(msg)
-
-
-def logd(msg: str):
-    log.debug(msg)
+def log_say(msg, level="info"):
+    """Log messages while also printing to console"""
+    print(msg)
+    if level == "debug":
+        log.debug(msg)
+    if level == "info":
+        log.info(msg)
+    if level == "warn":
+        log.warn(msg)
+    if level == "error":
+        log.error(msg)
+    if level == "critical":
+        log.critical(msg)
 
 
 class OperationTimer():
