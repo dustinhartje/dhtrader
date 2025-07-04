@@ -124,6 +124,8 @@ def review_trades(symbol: str = "ES",
                   check_integrity: bool = False,
                   multi_ok: list = None,
                   list_issues: bool = False,
+                  out_path: str = None,
+                  out_file: str = "trade_integrity_results.json",
                   pretty: bool = False,
                   ):
     """Provides aggregate summary data about trades in central storage,
@@ -248,14 +250,26 @@ def review_trades(symbol: str = "ES",
                      "invalid_multiday_trades": len(multidays)
                      }
         if list_issues:
-            integrity["duplicates_list"] = duplicates
-            integrity["multidays_list"] = multidays
+            integrity["duplicates"] = duplicates
+            integrity["multidays"] = multidays
         time_full.stop()
         print(time_full.summary())
     else:
         integrity = {"status": "integrity checks were not run"}
 
     result = {"integrity": integrity, "review": review}
+    if out_path is not None:
+        # Write result and any issues found to disk
+        filename = "/".join([out_path, out_file])
+        blob = deepcopy(result)
+        # Add issue details for disk output if not already included
+        if not list_issues:
+            blob["duplicates"] = duplicates
+            blob["multidays"] = multidays
+        with open(filename, "w") as f:
+            f.write(json.dumps(blob))
+        dhu.log_say(f"Wrote integrity results and issues to {filename}")
+
     if pretty:
         return json.dumps(result,
                           indent=4,
