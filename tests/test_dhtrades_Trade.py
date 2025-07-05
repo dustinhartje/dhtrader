@@ -41,6 +41,7 @@ def create_trade(open_dt="2025-01-02 12:00:00",
     # and calculated attributes.  For further testing in test_* functions using
     # these objects, run create_trade() to create then update them after.
     r = dht.Trade(open_dt=open_dt,
+                  close_dt=None,
                   direction=direction,
                   timeframe=timeframe,
                   trading_hours=trading_hours,
@@ -1009,6 +1010,91 @@ def test_Trade_parent_bar_secs():
     assert t.parent_bar_secs() == 3164
     t = create_trade(open_dt="2025-01-02 11:52:44", timeframe="r1h")
     assert t.parent_bar_secs() == 1364
+
+
+def test_Trade_closed_intraday():
+    """Confirms .closed_intraday() method returns correct values for all known
+    scenarios"""
+    # RTH trade closes same day before rth close
+    t = create_trade(open_dt="2025-01-05 12:00:00",
+                     trading_hours="rth")
+    t.close(dt="2025-01-05 12:05:00", price=5000)
+    assert t.closed_intraday() is True
+    # RTH trade closes same day after close
+    t = create_trade(open_dt="2025-01-06 12:00:00",
+                     trading_hours="rth")
+    t.close(dt="2025-01-06 20:00:00", price=5000)
+    assert t.closed_intraday() is False
+    # RTH trade closes next day early before rth open
+    t = create_trade(open_dt="2025-01-06 12:00:00",
+                     trading_hours="rth")
+    t.close(dt="2025-01-07 04:00:00", price=5000)
+    assert t.closed_intraday() is False
+    # RTH trade closes next day after rth open
+    t = create_trade(open_dt="2025-01-06 12:00:00",
+                     trading_hours="rth")
+    t.close(dt="2025-01-07 11:00:00", price=5000)
+    assert t.closed_intraday() is False
+    # RTH trade opens midday, closes 1 second before market close
+    t = create_trade(open_dt="2025-01-06 14:00:00",
+                     trading_hours="rth")
+    t.close(dt="2025-01-06 16:59:59", price=5000)
+    assert t.closed_intraday() is False
+    # RTH trade opens midday, closes at exact open of next day
+    t = create_trade(open_dt="2025-01-06 14:00:00",
+                     trading_hours="rth")
+    t.close(dt="2025-01-07 09:30:00", price=5000)
+    assert t.closed_intraday() is False
+    # RTH trade closes several days later during market hours
+    t = create_trade(open_dt="2025-01-06 12:00:00",
+                     trading_hours="rth")
+    t.close(dt="2025-01-09 14:00:00", price=5000)
+    assert t.closed_intraday() is False
+    # ETH trade opens early before rth open, closes midday before close
+    t = create_trade(open_dt="2025-01-06 04:00:00",
+                     trading_hours="eth")
+    t.close(dt="2025-01-06 14:00:00", price=5000)
+    assert t.closed_intraday() is True
+    # ETH trade opens early before rth open, closes same day after close
+    t = create_trade(open_dt="2025-01-06 04:00:00",
+                     trading_hours="eth")
+    t.close(dt="2025-01-06 19:00:00", price=5000)
+    assert t.closed_intraday() is False
+    # ETH trade opens early before rth open, closes in last minute of day
+    t = create_trade(open_dt="2025-01-06 04:00:00",
+                     trading_hours="eth")
+    t.close(dt="2025-01-06 16:59:00", price=5000)
+    assert t.closed_intraday() is True
+    # ETH trade opens early before rth open, closes at exact open of next day
+    t = create_trade(open_dt="2025-01-06 04:00:00",
+                     trading_hours="eth")
+    t.close(dt="2025-01-06 18:00:00", price=5000)
+    assert t.closed_intraday() is False
+    # ETH trade opens late after eth open, closes same day before midnight
+    t = create_trade(open_dt="2025-01-06 19:00:00",
+                     trading_hours="eth")
+    t.close(dt="2025-01-06 21:30:00", price=5000)
+    assert t.closed_intraday() is True
+    # ETH trade opens late after eth open, closes next morning before rth open
+    t = create_trade(open_dt="2025-01-06 19:00:00",
+                     trading_hours="eth")
+    t.close(dt="2025-01-07 04:00:00", price=5000)
+    assert t.closed_intraday() is True
+    # ETH trade opens late after eth open, closes next day after rth open
+    t = create_trade(open_dt="2025-01-06 19:00:00",
+                     trading_hours="eth")
+    t.close(dt="2025-01-07 14:00:00", price=5000)
+    assert t.closed_intraday() is True
+    # ETH trade opens late after eth open, closes next day after next open
+    t = create_trade(open_dt="2025-01-06 19:00:00",
+                     trading_hours="eth")
+    t.close(dt="2025-01-07 20:00:00", price=5000)
+    assert t.closed_intraday() is False
+    # ETH trade closes several days later
+    t = create_trade(open_dt="2025-01-06 12:00:00",
+                     trading_hours="eth")
+    t.close(dt="2025-01-09 15:25:00", price=5000)
+    assert t.closed_intraday() is False
 
 
 def test_Trade_store_retrieve_delete():

@@ -316,6 +316,21 @@ class Trade():
                                                       ))
         return self.open_epoch - start
 
+    def closed_intraday(self):
+        """Returns true if Trade closes on the same market trading day that it
+        was opened on"""
+        # Return False if the trade is still open
+        if self.is_open:
+            return False
+        else:
+            next_close = self.symbol.get_next_close(
+                            target_dt=self.open_dt,
+                            trading_hours=self.trading_hours)
+            if dhu.dt_as_dt(self.close_dt) <= next_close:
+                return True
+            else:
+                return False
+
     def candle_update(self,
                       candle,
                       ):

@@ -372,112 +372,60 @@ class Symbol():
 
         return r
 
-    def get_next_eth_open(self,
+    def get_next_open(self,
+                      target_dt,
+                      trading_hours,
+                      adjust_for_events: bool = True,
+                      events: list = None,
+                      ):
+        """Simple wrapper for get_market_boundary()"""
+        return self.get_market_boundary(target_dt=target_dt,
+                                        trading_hours=trading_hours,
+                                        boundary="open",
+                                        order="next",
+                                        adjust_for_events=adjust_for_events,
+                                        events=events,
+                                        )
+
+    def get_previous_open(self,
                           target_dt,
+                          trading_hours,
                           adjust_for_events: bool = True,
                           events: list = None,
                           ):
         """Simple wrapper for get_market_boundary()"""
         return self.get_market_boundary(target_dt=target_dt,
-                                        trading_hours="eth",
-                                        boundary="open",
-                                        order="next",
-                                        adjust_for_events=adjust_for_events,
-                                        events=events,
-                                        )
-
-    def get_previous_eth_open(self,
-                              target_dt,
-                              adjust_for_events: bool = True,
-                              events: list = None,
-                              ):
-        """Simple wrapper for get_market_boundary()"""
-        return self.get_market_boundary(target_dt=target_dt,
-                                        trading_hours="eth",
+                                        trading_hours=trading_hours,
                                         boundary="open",
                                         order="previous",
                                         adjust_for_events=adjust_for_events,
                                         events=events,
                                         )
 
-    def get_next_eth_close(self,
+    def get_next_close(self,
+                       target_dt,
+                       trading_hours,
+                       adjust_for_events: bool = True,
+                       events: list = None,
+                       ):
+        """Simple wrapper for get_market_boundary()"""
+        return self.get_market_boundary(target_dt=target_dt,
+                                        trading_hours=trading_hours,
+                                        boundary="close",
+                                        order="next",
+                                        adjust_for_events=adjust_for_events,
+                                        events=events,
+                                        )
+
+    def get_previous_close(self,
                            target_dt,
+                           trading_hours,
                            adjust_for_events: bool = True,
                            events: list = None,
                            ):
         """Simple wrapper for get_market_boundary()"""
         return self.get_market_boundary(target_dt=target_dt,
-                                        trading_hours="eth",
-                                        boundary="close",
-                                        order="next",
-                                        adjust_for_events=adjust_for_events,
-                                        events=events,
-                                        )
-
-    def get_previous_eth_close(self,
-                               target_dt,
-                               adjust_for_events: bool = True,
-                               events: list = None,
-                               ):
-        """Simple wrapper for get_market_boundary()"""
-        return self.get_market_boundary(target_dt=target_dt,
-                                        trading_hours="eth",
-                                        boundary="close",
-                                        order="previous",
-                                        adjust_for_events=adjust_for_events,
-                                        events=events,
-                                        )
-
-    def get_next_rth_open(self,
-                          target_dt,
-                          adjust_for_events: bool = True,
-                          events: list = None,
-                          ):
-        """Simple wrapper for get_market_boundary()"""
-        return self.get_market_boundary(target_dt=target_dt,
-                                        trading_hours="rth",
-                                        boundary="open",
-                                        order="next",
-                                        adjust_for_events=adjust_for_events,
-                                        events=events,
-                                        )
-
-    def get_previous_rth_open(self,
-                              target_dt,
-                              adjust_for_events: bool = True,
-                              events: list = None,
-                              ):
-        """Simple wrapper for get_market_boundary()"""
-        return self.get_market_boundary(target_dt=target_dt,
-                                        trading_hours="rth",
-                                        boundary="open",
-                                        order="previous",
-                                        adjust_for_events=adjust_for_events,
-                                        events=events,
-                                        )
-
-    def get_next_rth_close(self,
-                           target_dt,
-                           adjust_for_events: bool = True,
-                           events: list = None,
-                           ):
-        """Simple wrapper for get_market_boundary()"""
-        return self.get_market_boundary(target_dt=target_dt,
-                                        trading_hours="rth",
-                                        boundary="close",
-                                        order="next",
-                                        adjust_for_events=adjust_for_events,
-                                        events=events,
-                                        )
-
-    def get_previous_rth_close(self,
-                               target_dt,
-                               adjust_for_events: bool = True,
-                               events: list = None,
-                               ):
-        """Simple wrapper for get_market_boundary()"""
-        return self.get_market_boundary(target_dt=target_dt,
-                                        trading_hours="rth",
+                                        trading_hours=trading_hours,
                                         boundary="close",
                                         order="previous",
                                         adjust_for_events=adjust_for_events,

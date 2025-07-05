@@ -210,8 +210,8 @@ def test_TradeSeries_and_Trade_integrity_checks():
 
     # Add a multiday Trade and confirm Trades integrity check fails
     # Store TradeSeries with a Trade that spans multiple days
-    ts_fail = TradeSeries(start_dt="2025-01-05 00:00:00",
-                          end_dt="2025-01-07 00:00:00",
+    ts_fail = TradeSeries(start_dt="2025-01-06 00:00:00",
+                          end_dt="2025-01-08 00:00:00",
                           timeframe="e1h",
                           trading_hours="eth",
                           symbol="ES",
@@ -220,14 +220,14 @@ def test_TradeSeries_and_Trade_integrity_checks():
                           ts_id=f"{bt}_multiday_fail",
                           bt_id=bt)
     ts_fail.add_trade(Trade(
-        open_dt="2025-01-05 10:03:24", direction="long",
-        close_dt="2025-01-06 11:45:32", timeframe="e1h", trading_hours="eth",
+        open_dt="2025-01-06 10:03:24", direction="long",
+        close_dt="2025-01-07 11:45:32", timeframe="e1h", trading_hours="eth",
         entry_price=5000, exit_price=5001, high_price=5005, low_price=4995,
         prof_target=5001, stop_target=4000,
         ts_id=ts_fail.ts_id, bt_id=ts_fail.bt_id))
     ts_fail.add_trade(Trade(
-        open_dt="2025-01-06 11:53:18", direction="long",
-        close_dt="2025-01-06 12:32:15", timeframe="e1h", trading_hours="eth",
+        open_dt="2025-01-07 11:53:18", direction="long",
+        close_dt="2025-01-07 12:32:15", timeframe="e1h", trading_hours="eth",
         entry_price=5000, exit_price=5001, high_price=5005, low_price=4995,
         prof_target=5001, stop_target=4000,
         ts_id=ts_fail.ts_id, bt_id=ts_fail.bt_id))
@@ -254,8 +254,8 @@ def test_TradeSeries_and_Trade_integrity_checks():
     assert len(stored) == 0
 
     # Confirm duplicate trades fail during Trade integrity check
-    ts_fail = TradeSeries(start_dt="2025-01-05 00:00:00",
-                          end_dt="2025-01-07 00:00:00",
+    ts_fail = TradeSeries(start_dt="2025-01-06 00:00:00",
+                          end_dt="2025-01-08 00:00:00",
                           timeframe="e1h",
                           trading_hours="eth",
                           symbol="ES",
@@ -264,14 +264,14 @@ def test_TradeSeries_and_Trade_integrity_checks():
                           ts_id=f"{bt}_multiday_fail",
                           bt_id=bt)
     ts_fail.add_trade(Trade(
-        open_dt="2025-01-05 10:03:24", direction="long",
-        close_dt="2025-01-05 11:45:32", timeframe="e1h", trading_hours="eth",
+        open_dt="2025-01-06 10:03:24", direction="long",
+        close_dt="2025-01-06 11:45:32", timeframe="e1h", trading_hours="eth",
         entry_price=5000, exit_price=5001, high_price=5005, low_price=4995,
         prof_target=5001, stop_target=4000,
         ts_id=ts_fail.ts_id, bt_id=ts_fail.bt_id))
     ts_fail.add_trade(Trade(
-        open_dt="2025-01-05 10:03:24", direction="long",
-        close_dt="2025-01-05 12:32:15", timeframe="e1h", trading_hours="eth",
+        open_dt="2025-01-06 10:03:24", direction="long",
+        close_dt="2025-01-06 12:32:15", timeframe="e1h", trading_hours="eth",
         entry_price=5000, exit_price=5001, high_price=5005, low_price=4995,
         prof_target=5001, stop_target=4000,
         ts_id=ts_fail.ts_id, bt_id=ts_fail.bt_id))
@@ -282,16 +282,16 @@ def test_TradeSeries_and_Trade_integrity_checks():
     # by design.  Therefor we only see the second Trade in storage
     stored = dhs.get_trades_by_field(field="bt_id", value=bt)
     assert len(stored) == 1
-    assert stored[0].open_dt == "2025-01-05 10:03:24"
-    assert stored[0].close_dt == "2025-01-05 12:32:15"
+    assert stored[0].open_dt == "2025-01-06 10:03:24"
+    assert stored[0].close_dt == "2025-01-06 12:32:15"
     # Run the first trade's .store() method to try to write it directly
     ts_fail.trades[0].store()
     stored = dhs.get_trades_by_field(field="bt_id", value=bt)
     # Now we should still have only 1 trade, but it's the first not the second
     # this time due to another overwrite
     assert len(stored) == 1
-    assert stored[0].open_dt == "2025-01-05 10:03:24"
-    assert stored[0].close_dt == "2025-01-05 11:45:32"
+    assert stored[0].open_dt == "2025-01-06 10:03:24"
+    assert stored[0].close_dt == "2025-01-06 11:45:32"
     # Change the name attribute to allow it to store itself without replacing
     ts_fail.trades[0].name = "{bt}_multiday_fail_duplicate"
     ts_fail.trades[0].store()

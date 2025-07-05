@@ -608,73 +608,97 @@ def test_Symbol_get_market_boundary():
     # 2024-03-20 12:00:00.  This confirms non-weekend mechanics are working
     t = dt_as_dt("2024-03-20 12:00:00")
     # Next ETH Open
-    assert dt_as_str(sym.get_next_eth_open(t)) == "2024-03-20 18:00:00"
+    assert dt_as_str(sym.get_next_open(target_dt=t,
+                     trading_hours="eth")) == "2024-03-20 18:00:00"
     # Next ETH Close
-    assert dt_as_str(sym.get_next_eth_close(t)) == "2024-03-20 16:59:00"
+    assert dt_as_str(sym.get_next_close(target_dt=t,
+                     trading_hours="eth")) == "2024-03-20 16:59:00"
     # Previous ETH Open
-    assert dt_as_str(sym.get_previous_eth_open(t)) == "2024-03-19 18:00:00"
+    assert dt_as_str(sym.get_previous_open(target_dt=t,
+                     trading_hours="eth")) == "2024-03-19 18:00:00"
     # Previous ETH Close
-    assert dt_as_str(sym.get_previous_eth_close(t)) == "2024-03-19 16:59:00"
+    assert dt_as_str(sym.get_previous_close(target_dt=t,
+                     trading_hours="eth")) == "2024-03-19 16:59:00"
     # Next RTH Open
-    assert dt_as_str(sym.get_next_rth_open(t)) == "2024-03-21 09:30:00"
+    assert dt_as_str(sym.get_next_open(target_dt=t,
+                     trading_hours="rth")) == "2024-03-21 09:30:00"
     # Next RTH Close
-    assert dt_as_str(sym.get_next_rth_close(t)) == "2024-03-20 16:14:00"
+    assert dt_as_str(sym.get_next_close(target_dt=t,
+                     trading_hours="rth")) == "2024-03-20 16:14:00"
     # Previous RTH Open
-    assert dt_as_str(sym.get_previous_rth_open(t)) == "2024-03-20 09:30:00"
+    assert dt_as_str(sym.get_previous_open(target_dt=t,
+                     trading_hours="rth")) == "2024-03-20 09:30:00"
     # Previous RTH Close
-    assert dt_as_str(sym.get_previous_rth_close(t)) == "2024-03-19 16:14:00"
+    assert dt_as_str(sym.get_previous_close(target_dt=t,
+                     trading_hours="rth")) == "2024-03-19 16:14:00"
 
     # Testing Next boundaries from Thursday noon 2024-03-21 12:00:00
     # (should hit Thursday/Friday)")
     # Confirms we don't slip into or over the weekend due to miscalculations
     t = dt_as_dt("2024-03-21 12:00:00")
     # Next ETH Open
-    assert dt_as_str(sym.get_next_eth_open(t)) == "2024-03-21 18:00:00"
+    assert dt_as_str(sym.get_next_open(target_dt=t,
+                     trading_hours="eth")) == "2024-03-21 18:00:00"
     # Next RTH Open
-    assert dt_as_str(sym.get_next_rth_open(t)) == "2024-03-22 09:30:00"
+    assert dt_as_str(sym.get_next_open(target_dt=t,
+                     trading_hours="rth")) == "2024-03-22 09:30:00"
     # Next ETH Close
-    assert dt_as_str(sym.get_next_eth_close(t)) == "2024-03-21 16:59:00"
+    assert dt_as_str(sym.get_next_close(target_dt=t,
+                     trading_hours="eth")) == "2024-03-21 16:59:00"
     # Next RTH Close
-    assert dt_as_str(sym.get_next_rth_close(t)) == "2024-03-21 16:14:00"
+    assert dt_as_str(sym.get_next_close(target_dt=t,
+                     trading_hours="rth")) == "2024-03-21 16:14:00"
 
     # Testing Next boundaries from Friday noon 2024-03-22 12:00:00
     # (should hit Sunday/Monday)
     # This confirms we span the weekend as expected when appropriate
     t = dt_as_dt("2024-03-22 12:00:00")
     # Next ETH Open
-    assert dt_as_str(sym.get_next_eth_open(t)) == "2024-03-24 18:00:00"
+    assert dt_as_str(sym.get_next_open(target_dt=t,
+                     trading_hours="eth")) == "2024-03-24 18:00:00"
     # Next RTH Open
-    assert dt_as_str(sym.get_next_rth_open(t)) == "2024-03-25 09:30:00"
+    assert dt_as_str(sym.get_next_open(target_dt=t,
+                     trading_hours="rth")) == "2024-03-25 09:30:00"
     # Next ETH Close
-    assert dt_as_str(sym.get_next_eth_close(t)) == "2024-03-22 16:59:00"
+    assert dt_as_str(sym.get_next_close(target_dt=t,
+                     trading_hours="eth")) == "2024-03-22 16:59:00"
     # Next RTH Close
-    assert dt_as_str(sym.get_next_rth_close(t)) == "2024-03-22 16:14:00"
+    assert dt_as_str(sym.get_next_close(target_dt=t,
+                     trading_hours="rth")) == "2024-03-22 16:14:00"
 
     # Testing Previous boundaries from Tuesday noon 2024-03-19 12:00:00
     # (should hit Monday/Tuesday)
     # Confirms we don't slip into or over the weekend due to miscalculations
     t = dt_as_dt("2024-03-19 12:00:00")
     # Previous ETH Open
-    assert dt_as_str(sym.get_previous_eth_open(t)) == "2024-03-18 18:00:00"
+    assert dt_as_str(sym.get_previous_open(target_dt=t,
+                     trading_hours="eth")) == "2024-03-18 18:00:00"
     # Previous RTH Open
-    assert dt_as_str(sym.get_previous_rth_open(t)) == "2024-03-19 09:30:00"
+    assert dt_as_str(sym.get_previous_open(target_dt=t,
+                     trading_hours="rth")) == "2024-03-19 09:30:00"
     # Previous ETH Close
-    assert dt_as_str(sym.get_previous_eth_close(t)) == "2024-03-18 16:59:00"
+    assert dt_as_str(sym.get_previous_close(target_dt=t,
+                     trading_hours="eth")) == "2024-03-18 16:59:00"
     # Previous RTH Close
-    assert dt_as_str(sym.get_previous_rth_close(t)) == "2024-03-18 16:14:00"
+    assert dt_as_str(sym.get_previous_close(target_dt=t,
+                     trading_hours="rth")) == "2024-03-18 16:14:00"
 
     # Testing Previous boundaries from Monday noon 2024-03-18 12:00:00
     # (should hit Friday/Sunday)
     # This confirms we span the weekend as expected when appropriate
     t = dt_as_dt("2024-03-18 12:00:00")
     # Previous ETH Open
-    assert dt_as_str(sym.get_previous_eth_open(t)) == "2024-03-17 18:00:00"
+    assert dt_as_str(sym.get_previous_open(target_dt=t,
+                     trading_hours="eth")) == "2024-03-17 18:00:00"
     # Previous RTH Open
-    assert dt_as_str(sym.get_previous_rth_open(t)) == "2024-03-18 09:30:00"
+    assert dt_as_str(sym.get_previous_open(target_dt=t,
+                     trading_hours="rth")) == "2024-03-18 09:30:00"
     # Previous ETH Close
-    assert dt_as_str(sym.get_previous_eth_close(t)) == "2024-03-15 16:59:00"
+    assert dt_as_str(sym.get_previous_close(target_dt=t,
+                     trading_hours="eth")) == "2024-03-15 16:59:00"
     # Previous RTH Close
-    assert dt_as_str(sym.get_previous_rth_close(t)) == "2024-03-15 16:14:00"
+    assert dt_as_str(sym.get_previous_close(target_dt=t,
+                     trading_hours="rth")) == "2024-03-15 16:14:00"
 
     # Setting up a few events to test that boundary mechanics respect
     events = [dhc.Event(start_dt="2024-03-28 17:00:00",
@@ -704,16 +728,20 @@ def test_Symbol_get_market_boundary():
     # This confirms we cross the event and weekend where appropriate.
     t = dt_as_dt("2024-03-28 12:00:00")
     # Next ETH Open
-    assert dt_as_str(sym.get_next_eth_open(t,
+    assert dt_as_str(sym.get_next_open(target_dt=t,
+                     trading_hours="eth",
                      events=events)) == "2024-03-31 18:00:00"
     # Next RTH Open
-    assert dt_as_str(sym.get_next_rth_open(t,
+    assert dt_as_str(sym.get_next_open(target_dt=t,
+                     trading_hours="rth",
                      events=events)) == "2024-04-01 09:30:00"
     # Next ETH Close
-    assert dt_as_str(sym.get_next_eth_close(t,
+    assert dt_as_str(sym.get_next_close(target_dt=t,
+                     trading_hours="eth",
                      events=events)) == "2024-03-28 16:59:00"
     # Next RTH Close
-    assert dt_as_str(sym.get_next_rth_close(t,
+    assert dt_as_str(sym.get_next_close(target_dt=t,
+                     trading_hours="rth",
                      events=events)) == "2024-03-28 16:14:00"
 
     # Testing same closure window from within using Friday at Noon
@@ -721,28 +749,36 @@ def test_Symbol_get_market_boundary():
     # Confirms times inside a closure are moved outside of it in both direction
     t = dt_as_dt("2024-03-29 12:00:00")
     # Next ETH Close
-    assert dt_as_str(sym.get_next_eth_close(t,
+    assert dt_as_str(sym.get_next_close(target_dt=t,
+                     trading_hours="eth",
                      events=events)) == "2024-04-01 16:59:00"
     # Next RTH Close
-    assert dt_as_str(sym.get_next_rth_close(t,
+    assert dt_as_str(sym.get_next_close(target_dt=t,
+                     trading_hours="rth",
                      events=events)) == "2024-04-01 16:14:00"
     # Previous ETH Close
-    assert dt_as_str(sym.get_previous_eth_close(t,
+    assert dt_as_str(sym.get_previous_close(target_dt=t,
+                     trading_hours="eth",
                      events=events)) == "2024-03-28 16:59:00"
     # Previous RTH Close
-    assert dt_as_str(sym.get_previous_rth_close(t,
+    assert dt_as_str(sym.get_previous_close(target_dt=t,
+                     trading_hours="rth",
                      events=events)) == "2024-03-28 16:14:00"
     # Next ETH Open
-    assert dt_as_str(sym.get_next_eth_open(t,
+    assert dt_as_str(sym.get_next_open(target_dt=t,
+                     trading_hours="eth",
                      events=events)) == "2024-03-31 18:00:00"
     # Next RTH Open
-    assert dt_as_str(sym.get_next_rth_open(t,
+    assert dt_as_str(sym.get_next_open(target_dt=t,
+                     trading_hours="rth",
                      events=events)) == "2024-04-01 09:30:00"
     # Previous ETH Open
-    assert dt_as_str(sym.get_previous_eth_open(t,
+    assert dt_as_str(sym.get_previous_open(target_dt=t,
+                     trading_hours="eth",
                      events=events)) == "2024-03-27 18:00:00"
     # Previous RTH Open
-    assert dt_as_str(sym.get_previous_rth_open(t,
+    assert dt_as_str(sym.get_previous_open(target_dt=t,
+                     trading_hours="rth",
                      events=events)) == "2024-03-28 09:30:00"
 
     # Testing same closure window from the following Monday at Noon
@@ -750,44 +786,56 @@ def test_Symbol_get_market_boundary():
     # This confirms Previous crosses the event to the prior week.
     t = dt_as_dt("2024-04-01 12:00:00")
     # Previous ETH Open
-    assert dt_as_str(sym.get_previous_eth_open(t,
+    assert dt_as_str(sym.get_previous_open(target_dt=t,
+                     trading_hours="eth",
                      events=events)) == "2024-03-31 18:00:00"
     # Previous RTH Open
-    assert dt_as_str(sym.get_previous_rth_open(t,
+    assert dt_as_str(sym.get_previous_open(target_dt=t,
+                     trading_hours="rth",
                      events=events)) == "2024-04-01 09:30:00"
     # Previous ETH Close
-    assert dt_as_str(sym.get_previous_eth_close(t,
+    assert dt_as_str(sym.get_previous_close(target_dt=t,
+                     trading_hours="eth",
                      events=events)) == "2024-03-28 16:59:00"
     # Previous RTH Close
-    assert dt_as_str(sym.get_previous_rth_close(t,
+    assert dt_as_str(sym.get_previous_close(target_dt=t,
+                     trading_hours="rth",
                      events=events)) == "2024-03-28 16:14:00"
     # Testing nested closure window from within both using
     # 2024-03-18 14:00:00
     # This confirms that multiple overlapping events don't muck it up.
     t = dt_as_dt("2024-03-18 14:00:00")
     # Next ETH Close
-    assert dt_as_str(sym.get_next_eth_close(t,
+    assert dt_as_str(sym.get_next_close(target_dt=t,
+                     trading_hours="eth",
                      events=events)) == "2024-03-20 16:59:00"
     # Next RTH Close
-    assert dt_as_str(sym.get_next_rth_close(t,
+    assert dt_as_str(sym.get_next_close(target_dt=t,
+                     trading_hours="rth",
                      events=events)) == "2024-03-20 16:14:00"
     # Previous ETH Close
-    assert dt_as_str(sym.get_previous_eth_close(t,
+    assert dt_as_str(sym.get_previous_close(target_dt=t,
+                     trading_hours="eth",
                      events=events)) == "2024-03-15 16:59:00"
     # Previous RTH Close
-    assert dt_as_str(sym.get_previous_rth_close(t,
+    assert dt_as_str(sym.get_previous_close(target_dt=t,
+                     trading_hours="rth",
                      events=events)) == "2024-03-15 16:14:00"
     # Next ETH Open
-    assert dt_as_str(sym.get_next_eth_open(t,
+    assert dt_as_str(sym.get_next_open(target_dt=t,
+                     trading_hours="eth",
                      events=events)) == "2024-03-20 18:00:00"
     # Next RTH Open
-    assert dt_as_str(sym.get_next_rth_open(t,
+    assert dt_as_str(sym.get_next_open(target_dt=t,
+                     trading_hours="rth",
                      events=events)) == "2024-03-20 09:30:00"
     # Previous ETH Open
-    assert dt_as_str(sym.get_previous_eth_open(t,
+    assert dt_as_str(sym.get_previous_open(target_dt=t,
+                     trading_hours="eth",
                      events=events)) == "2024-03-17 18:00:00"
     # Previous RTH Open
-    assert dt_as_str(sym.get_previous_rth_open(t,
+    assert dt_as_str(sym.get_previous_open(target_dt=t,
+                     trading_hours="rth",
                      events=events)) == "2024-03-15 09:30:00"
 
     # Testing nested closure window from within outer only using
@@ -795,28 +843,36 @@ def test_Symbol_get_market_boundary():
     # This confirms that multiple overlapping events don't muck it up.
     t = dt_as_dt("2024-03-18 10:00:00")
     # Next ETH Close
-    assert dt_as_str(sym.get_next_eth_close(t,
+    assert dt_as_str(sym.get_next_close(target_dt=t,
+                     trading_hours="eth",
                      events=events)) == "2024-03-20 16:59:00"
     # Next RTH Close
-    assert dt_as_str(sym.get_next_rth_close(t,
+    assert dt_as_str(sym.get_next_close(target_dt=t,
+                     trading_hours="rth",
                      events=events)) == "2024-03-20 16:14:00"
     # Previous ETH Close
-    assert dt_as_str(sym.get_previous_eth_close(t,
+    assert dt_as_str(sym.get_previous_close(target_dt=t,
+                     trading_hours="eth",
                      events=events)) == "2024-03-15 16:59:00"
     # Previous RTH Close
-    assert dt_as_str(sym.get_previous_rth_close(t,
+    assert dt_as_str(sym.get_previous_close(target_dt=t,
+                     trading_hours="rth",
                      events=events)) == "2024-03-15 16:14:00"
     # Next ETH Open
-    assert dt_as_str(sym.get_next_eth_open(t,
+    assert dt_as_str(sym.get_next_open(target_dt=t,
+                     trading_hours="eth",
                      events=events)) == "2024-03-20 18:00:00"
     # Next RTH Open
-    assert dt_as_str(sym.get_next_rth_open(t,
+    assert dt_as_str(sym.get_next_open(target_dt=t,
+                     trading_hours="rth",
                      events=events)) == "2024-03-20 09:30:00"
     # Previous ETH Open
-    assert dt_as_str(sym.get_previous_eth_open(t,
+    assert dt_as_str(sym.get_previous_open(target_dt=t,
+                     trading_hours="eth",
                      events=events)) == "2024-03-17 18:00:00"
     # Previous RTH Open
-    assert dt_as_str(sym.get_previous_rth_open(t,
+    assert dt_as_str(sym.get_previous_open(target_dt=t,
+                     trading_hours="rth",
                      events=events)) == "2024-03-15 09:30:00"
 
     # Testing nested closure window from within outer only using
@@ -824,26 +880,34 @@ def test_Symbol_get_market_boundary():
     # This confirms that multiple overlapping events don't muck it up.
     t = dt_as_dt("2024-03-19 06:00:00")
     # Next ETH Close
-    assert dt_as_str(sym.get_next_eth_close(t,
+    assert dt_as_str(sym.get_next_close(target_dt=t,
+                     trading_hours="eth",
                      events=events)) == "2024-03-20 16:59:00"
     # Next RTH Close
-    assert dt_as_str(sym.get_next_rth_close(t,
+    assert dt_as_str(sym.get_next_close(target_dt=t,
+                     trading_hours="rth",
                      events=events)) == "2024-03-20 16:14:00"
     # Previous ETH Close
-    assert dt_as_str(sym.get_previous_eth_close(t,
+    assert dt_as_str(sym.get_previous_close(target_dt=t,
+                     trading_hours="eth",
                      events=events)) == "2024-03-15 16:59:00"
     # Previous RTH Close
-    assert dt_as_str(sym.get_previous_rth_close(t,
+    assert dt_as_str(sym.get_previous_close(target_dt=t,
+                     trading_hours="rth",
                      events=events)) == "2024-03-15 16:14:00"
     # Next ETH Open
-    assert dt_as_str(sym.get_next_eth_open(t,
+    assert dt_as_str(sym.get_next_open(target_dt=t,
+                     trading_hours="eth",
                      events=events)) == "2024-03-20 18:00:00"
     # Next RTH Open
-    assert dt_as_str(sym.get_next_rth_open(t,
+    assert dt_as_str(sym.get_next_open(target_dt=t,
+                     trading_hours="rth",
                      events=events)) == "2024-03-20 09:30:00"
     # Previous ETH Open
-    assert dt_as_str(sym.get_previous_eth_open(t,
+    assert dt_as_str(sym.get_previous_open(target_dt=t,
+                     trading_hours="eth",
                      events=events)) == "2024-03-17 18:00:00"
     # Previous RTH Open
-    assert dt_as_str(sym.get_previous_rth_open(t,
+    assert dt_as_str(sym.get_previous_open(target_dt=t,
+                     trading_hours="rth",
                      events=events)) == "2024-03-15 09:30:00"

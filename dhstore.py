@@ -220,9 +220,7 @@ def review_trades(symbol: str = "ES",
                     unique.add(this)
                     unique_trades += 1
                 if check_multi:
-                    open_date = dhu.dt_as_dt(t.open_dt).date()
-                    close_date = dhu.dt_as_dt(t.close_dt).date()
-                    if open_date != close_date:
+                    if not t.closed_intraday():
                         this = {"ts_id": t.ts_id,
                                 "open_dt": t.open_dt,
                                 "close_dt": t.close_dt}
