@@ -906,6 +906,10 @@ class TradeSeries():
             risk_reward = None
         min_risk_reward = rr["min"]
         max_risk_reward = rr["max"]
+        # Convert ticks to a sorted list of dictionaries to aid unittests
+        # and json conversions
+        ticks_list = sorted([dict(x) for x in list(ticks)],
+                            key=lambda y: (y['stop'], y['prof'], y['offset']))
 
         return {"gl_sequence": sequence,
                 "profitable_trades": profits,
@@ -921,7 +925,7 @@ class TradeSeries():
                 "trades_per_week": trades_per_week,
                 "trades_per_day": trades_per_day,
                 "trades_per_trading_day": trades_per_trading_day,
-                "trade_ticks": ticks,
+                "trade_ticks": ticks_list,
                 }
 
     def weekly_stats(self, include_first_min: bool = True):

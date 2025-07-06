@@ -233,9 +233,9 @@ def test_TradeSeries_balance_impact_and_stats():
     assert s["trades_per_week"] == 0.68
     assert s["trades_per_day"] == 0.1
     assert s["trades_per_trading_day"] == 3.0
-    assert s["trade_ticks"] == {(('stop', 200), ('prof', 200), ('offset', 0)),
-                                (('stop', 200), ('prof', 328), ('offset', 0)),
-                                (('stop', 400), ('prof', 100), ('offset', 0))}
+    assert s["trade_ticks"] == [{'stop': 200, 'prof': 200, 'offset': 0},
+                                {'stop': 200, 'prof': 328, 'offset': 0},
+                                {'stop': 400, 'prof': 100, 'offset': 0}]
     # Test a TradeSeries with all losing trades that does liquidate
     # after setting two sequential new highs
     ts = create_tradeseries()
@@ -279,9 +279,9 @@ def test_TradeSeries_balance_impact_and_stats():
     assert s["trades_per_week"] == 0.68
     assert s["trades_per_day"] == 0.1
     assert s["trades_per_trading_day"] == 3.0
-    assert s["trade_ticks"] == {(('stop', 80), ('prof', 4000), ('offset', 0)),
-                                (('stop', 32), ('prof', 4000), ('offset', 0)),
-                                (('stop', 100), ('prof', 4000), ('offset', 0))}
+    assert s["trade_ticks"] == [{'stop': 32, 'prof': 4000, 'offset': 0},
+                                {'stop': 80, 'prof': 4000, 'offset': 0},
+                                {'stop': 100, 'prof': 4000, 'offset': 0}]
     # Change a few things up just to cover bases a bit more
     # NOTE - Changes are not consistent with all other Trade attributes
     ts.end_dt = "2025-01-08 17:00:00"
@@ -305,7 +305,7 @@ def test_TradeSeries_balance_impact_and_stats():
     assert s["trades_per_week"] == 3.0
     assert s["trades_per_day"] == 0.43
     assert s["trades_per_trading_day"] == 1.5
-    expected_trade_ticks = {(('stop', 1000), ('prof', 4000), ('offset', 0))}
+    expected_trade_ticks = [{'stop': 1000, 'prof': 4000, 'offset': 0}]
     assert s["trade_ticks"] == expected_trade_ticks
     # Confirm weekly_stats() also
     assert ts.weekly_stats() == {'2024-12-30': {'total_trades': 2,
