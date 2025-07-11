@@ -293,6 +293,7 @@ class Trade():
         """Return a single line summary string of this Trade's vitals"""
         return (f"{self.open_dt} - {self.close_dt} | "
                 f"{dhu.dt_as_dt(self.open_dt).strftime('%A')} | "
+                f"{self.direction} | "
                 f"entry={self.entry_price} | exit={self.exit_price} | "
                 f"profitable={self.profitable}")
 
