@@ -659,6 +659,11 @@ class TradeSeries():
 
         return result
 
+    def list_trades(self):
+        """Prints the results of trades_brief()"""
+        for t in self.trades_brief():
+            print(t)
+
     def update_bt_id(self, bt_id):
         """Update bt_id on this and any attached Trade objects.  Typicaly
         called by a Backtest when adding this object to it's list."""
