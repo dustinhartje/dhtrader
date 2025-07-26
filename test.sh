@@ -4,7 +4,7 @@ if [ "$1" = "-h" ] || [ "$1" = "--help" ] || [ "$1" = "-?" ]; then
     echo "To run a single test file: test.sh tests/test_file.py"
     echo "To run a single test: test.sh tests/test_file.py::test_name"
 else
-    pytest -svv --durations=0 "$@"
+    pytest -svv --durations=0 --show-capture=stdout "$@"
 fi
 
 ls tests/hide_* &>/dev/null
