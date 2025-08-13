@@ -35,7 +35,7 @@
 <font color="#ffffff" face="helvetica, arial"><big><strong>Functions</strong></big></font></td></tr>
     
 <tr><td bgcolor="#eeaa77"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
-<td width="100%"><dl><dt><a name="-delete_backtests"><strong>delete_backtests</strong></a>(symbol: str, field: str, value, collection: str = 'backtests')</dt><dd><tt>Delete&nbsp;all&nbsp;backtests&nbsp;records&nbsp;in&nbsp;central&nbsp;storage&nbsp;with&nbsp;'field'&nbsp;matching<br>
+<td width="100%"><dl><dt><a name="-delete_backtests"><strong>delete_backtests</strong></a>(symbol: str, field: str, value, collection: str = 'backtests', coll_tradeseries: str = 'tradeseries', coll_trades: str = 'trades', include_tradeseries: bool = False, include_trades: bool = False)</dt><dd><tt>Delete&nbsp;all&nbsp;backtests&nbsp;records&nbsp;in&nbsp;central&nbsp;storage&nbsp;with&nbsp;'field'&nbsp;matching<br>
 'value'.&nbsp;&nbsp;Typically&nbsp;used&nbsp;to&nbsp;delete&nbsp;by&nbsp;bt_id&nbsp;field.</tt></dd></dl>
  <dl><dt><a name="-delete_indicator"><strong>delete_indicator</strong></a>(ind_id: str, meta_collection: str = 'indicators_meta', dp_collection: str = 'indicators_datapoints')</dt><dd><tt>Remove&nbsp;a&nbsp;single&nbsp;indicator&nbsp;and&nbsp;all&nbsp;of&nbsp;it's&nbsp;datapoints&nbsp;from&nbsp;central<br>
 storage&nbsp;based&nbsp;on&nbsp;it's&nbsp;ind_id&nbsp;attribute</tt></dd></dl>
@@ -46,7 +46,7 @@ used&nbsp;to&nbsp;delete&nbsp;by&nbsp;name,&nbsp;ts_id,&nbsp;or&nbsp;bt_id&nbsp;
 &nbsp;<br>
 Example&nbsp;to&nbsp;delete&nbsp;all&nbsp;trade&nbsp;records&nbsp;with&nbsp;name=="DELETEME":<br>
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#-delete_trades">delete_trades</a>(symbol="ES",&nbsp;field="name",&nbsp;value="DELETEME")</tt></dd></dl>
- <dl><dt><a name="-delete_tradeseries"><strong>delete_tradeseries</strong></a>(symbol: str, field: str, value, collection: str = 'tradeseries')</dt><dd><tt>Delete&nbsp;all&nbsp;tradeseries&nbsp;records&nbsp;in&nbsp;central&nbsp;storage&nbsp;with&nbsp;'field'&nbsp;matching<br>
+ <dl><dt><a name="-delete_tradeseries"><strong>delete_tradeseries</strong></a>(symbol: str, field: str, value, collection: str = 'tradeseries', coll_trades='trades', include_trades: bool = False)</dt><dd><tt>Delete&nbsp;all&nbsp;tradeseries&nbsp;records&nbsp;in&nbsp;central&nbsp;storage&nbsp;with&nbsp;'field'&nbsp;matching<br>
 'value'.&nbsp;&nbsp;Typically&nbsp;used&nbsp;to&nbsp;delete&nbsp;by&nbsp;ts_id,&nbsp;or&nbsp;bt_id&nbsp;fields.</tt></dd></dl>
  <dl><dt><a name="-drop_candles"><strong>drop_candles</strong></a>(timeframe: str, symbol: str, earliest_dt=None, latest_dt=None)</dt><dd><tt>Deletes&nbsp;candles&nbsp;from&nbsp;central&nbsp;storage&nbsp;either&nbsp;en&nbsp;masse&nbsp;or&nbsp;for&nbsp;a<br>
 specific&nbsp;datetime&nbsp;range.</tt></dd></dl>
@@ -86,11 +86,6 @@ future&nbsp;I'm&nbsp;deprioritizing&nbsp;that&nbsp;work.</tt></dd></dl>
  <dl><dt><a name="-list_indicators_names"><strong>list_indicators_names</strong></a>(meta_collection: str = 'indicators_meta')</dt><dd><tt>Return&nbsp;a&nbsp;simple&nbsp;list&nbsp;of&nbsp;indicators&nbsp;(ind_id&nbsp;only)&nbsp;in&nbsp;storage</tt></dd></dl>
  <dl><dt><a name="-list_mongo_collections"><strong>list_mongo_collections</strong></a>()</dt><dd><tt>##############################################################################<br>
 #&nbsp;Non-class&nbsp;specific&nbsp;functions</tt></dd></dl>
- <dl><dt><a name="-logc"><strong>logc</strong></a>(msg: str)</dt></dl>
- <dl><dt><a name="-logd"><strong>logd</strong></a>(msg: str)</dt></dl>
- <dl><dt><a name="-loge"><strong>loge</strong></a>(msg: str)</dt></dl>
- <dl><dt><a name="-logi"><strong>logi</strong></a>(msg: str)</dt></dl>
- <dl><dt><a name="-logw"><strong>logw</strong></a>(msg: str)</dt></dl>
  <dl><dt><a name="-reconstruct_trade"><strong>reconstruct_trade</strong></a>(t)</dt><dd><tt>Takes&nbsp;a&nbsp;dictionary&nbsp;and&nbsp;builds&nbsp;a&nbsp;Trade()&nbsp;object&nbsp;from&nbsp;it.&nbsp;&nbsp;Primarily&nbsp;used<br>
 by&nbsp;other&nbsp;functions&nbsp;to&nbsp;convert&nbsp;results&nbsp;retrieved&nbsp;from&nbsp;storage.</tt></dd></dl>
  <dl><dt><a name="-reconstruct_tradeseries"><strong>reconstruct_tradeseries</strong></a>(ts)</dt><dd><tt>Takes&nbsp;a&nbsp;dictionary&nbsp;and&nbsp;builds&nbsp;a&nbsp;Trade()&nbsp;object&nbsp;from&nbsp;it.&nbsp;&nbsp;Primarily&nbsp;used<br>
@@ -100,12 +95,18 @@ by&nbsp;other&nbsp;functions&nbsp;to&nbsp;convert&nbsp;results&nbsp;retrieved&nb
 with&nbsp;options&nbsp;to&nbsp;further&nbsp;check&nbsp;completeness/integrity&nbsp;of&nbsp;candle&nbsp;data&nbsp;and<br>
 provide&nbsp;remediation</tt></dd></dl>
  <dl><dt><a name="-review_indicators"><strong>review_indicators</strong></a>(meta_collection: str = 'indicators_meta', dp_collection: str = 'indicators_datapoints')</dt><dd><tt>Return&nbsp;a&nbsp;more&nbsp;detailed&nbsp;overview&nbsp;of&nbsp;indicators&nbsp;in&nbsp;storage</tt></dd></dl>
- <dl><dt><a name="-review_trades"><strong>review_trades</strong></a>(symbol: str = 'ES', collection: str = 'trades', bt_id: str = None, ts_id: str = None, include_epochs: bool = False, pretty: bool = False)</dt><dd><tt>Provides&nbsp;aggregate&nbsp;summary&nbsp;data&nbsp;about&nbsp;trades&nbsp;in&nbsp;central&nbsp;storage,<br>
+ <dl><dt><a name="-review_trades"><strong>review_trades</strong></a>(symbol: str = 'ES', collection: str = 'trades', bt_id: str = None, ts_id: str = None, include_epochs: bool = False, check_integrity: bool = False, multi_ok: list = None, list_issues: bool = False, out_path: str = None, out_file: str = 'trade_integrity_results.json', pretty: bool = False)</dt><dd><tt>Provides&nbsp;aggregate&nbsp;summary&nbsp;data&nbsp;about&nbsp;trades&nbsp;in&nbsp;central&nbsp;storage,<br>
 optionally&nbsp;filtering&nbsp;by&nbsp;bt_id&nbsp;and/or&nbsp;ts_id.&nbsp;&nbsp;Earliest&nbsp;and&nbsp;latest&nbsp;dates<br>
 are&nbsp;returned&nbsp;as&nbsp;strings&nbsp;and&nbsp;include_epochs&nbsp;can&nbsp;optionally&nbsp;also&nbsp;provide&nbsp;them<br>
-as&nbsp;epochs.&nbsp;&nbsp;pretty=True&nbsp;returns&nbsp;in&nbsp;a&nbsp;print&nbsp;friendly,&nbsp;multiline,&nbsp;indended<br>
+as&nbsp;epochs.<br>
+&nbsp;<br>
+multi_ok&nbsp;should&nbsp;be&nbsp;a&nbsp;list&nbsp;of&nbsp;strings&nbsp;that&nbsp;can&nbsp;appear&nbsp;in&nbsp;a&nbsp;Trade's&nbsp;ts_id,<br>
+typically&nbsp;all&nbsp;or&nbsp;part&nbsp;of&nbsp;a&nbsp;Backtest's&nbsp;bt_id.&nbsp;&nbsp;A&nbsp;trade&nbsp;that&nbsp;matches&nbsp;any<br>
+string&nbsp;in&nbsp;this&nbsp;list&nbsp;will&nbsp;not&nbsp;be&nbsp;flagged&nbsp;for&nbsp;spanning&nbsp;multiple&nbsp;days.<br>
+&nbsp;<br>
+pretty=True&nbsp;returns&nbsp;in&nbsp;a&nbsp;print&nbsp;friendly,&nbsp;multiline,&nbsp;indended<br>
 string&nbsp;format.</tt></dd></dl>
- <dl><dt><a name="-review_tradeseries"><strong>review_tradeseries</strong></a>(symbol: str = 'ES', collection: str = 'tradeseries', bt_id: str = None, include_trades: bool = False, pretty: bool = False)</dt><dd><tt>Provides&nbsp;aggregate&nbsp;summary&nbsp;data&nbsp;about&nbsp;tradeseries&nbsp;in&nbsp;central&nbsp;storage,<br>
+ <dl><dt><a name="-review_tradeseries"><strong>review_tradeseries</strong></a>(symbol: str = 'ES', collection: str = 'tradeseries', bt_id: str = None, include_trades: bool = False, pretty: bool = False, check_integrity: bool = False)</dt><dd><tt>Provides&nbsp;aggregate&nbsp;summary&nbsp;data&nbsp;about&nbsp;tradeseries&nbsp;in&nbsp;central&nbsp;storage,<br>
 optionally&nbsp;filtering&nbsp;by&nbsp;bt_id.&nbsp;&nbsp;Earliest&nbsp;start_dt&nbsp;and&nbsp;latest&nbsp;end_dt&nbsp;are<br>
 returned&nbsp;as&nbsp;strings.&nbsp;&nbsp;pretty=True&nbsp;returns&nbsp;in&nbsp;a&nbsp;print&nbsp;friendly,&nbsp;multiline,<br>
 indented&nbsp;string&nbsp;format.</tt></dd></dl>

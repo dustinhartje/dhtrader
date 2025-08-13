@@ -71,11 +71,6 @@ them&nbsp;as&nbsp;a&nbsp;chronologially&nbsp;sorted&nbsp;list</tt></dd></dl>
  <dl><dt><a name="-get_tradeseries_by_field"><strong>get_tradeseries_by_field</strong></a>(field: str, value, collection: str)</dt><dd><tt>Returns&nbsp;a&nbsp;list&nbsp;of&nbsp;TradeSeries()&nbsp;matching&nbsp;the&nbsp;field=value&nbsp;provided.</tt></dd></dl>
  <dl><dt><a name="-list_collections"><strong>list_collections</strong></a>()</dt><dd><tt>List&nbsp;all&nbsp;current&nbsp;collections&nbsp;in&nbsp;mongo</tt></dd></dl>
  <dl><dt><a name="-list_indicators"><strong>list_indicators</strong></a>(meta_collection: str)</dt><dd><tt>Lists&nbsp;all&nbsp;available&nbsp;indicators&nbsp;in&nbsp;mongo&nbsp;based&nbsp;on&nbsp;metadata</tt></dd></dl>
- <dl><dt><a name="-logc"><strong>logc</strong></a>(msg: str)</dt></dl>
- <dl><dt><a name="-logd"><strong>logd</strong></a>(msg: str)</dt></dl>
- <dl><dt><a name="-loge"><strong>loge</strong></a>(msg: str)</dt></dl>
- <dl><dt><a name="-logi"><strong>logi</strong></a>(msg: str)</dt></dl>
- <dl><dt><a name="-logw"><strong>logw</strong></a>(msg: str)</dt></dl>
  <dl><dt><a name="-review_backtests"><strong>review_backtests</strong></a>(symbol: str, collection: str)</dt><dd><tt>Provides&nbsp;aggregate&nbsp;summary&nbsp;data&nbsp;about&nbsp;backtests&nbsp;in&nbsp;mongo</tt></dd></dl>
  <dl><dt><a name="-review_candles"><strong>review_candles</strong></a>(timeframe: str, symbol: str)</dt><dd><tt>Provides&nbsp;aggregate&nbsp;summary&nbsp;data&nbsp;about&nbsp;candles&nbsp;in&nbsp;central&nbsp;storage</tt></dd></dl>
  <dl><dt><a name="-review_database"><strong>review_database</strong></a>()</dt><dd><tt>Quick&nbsp;function&nbsp;to&nbsp;gather&nbsp;useful&nbsp;information&nbsp;about&nbsp;the&nbsp;state&nbsp;of&nbsp;mongo</tt></dd></dl>
@@ -113,5 +108,5 @@ update_record_value(search={"bt_id":&nbsp;"foo"},<br>
 <strong>MONGO_ENV_FILE</strong> = 'mongo.env'<br>
 <strong>db</strong> = Database(MongoClient(host=['ac-xm65fnp-shard-00-...et='atlas-kmcvwc-shard-0', tls=True), 'MONGO_DB')<br>
 <strong>log</strong> = &lt;Logger dhmongo (WARNING)&gt;<br>
-<strong>mc</strong> = MongoClient(host=['ac-xm65fnp-shard-00-00.mtukdk...in', replicaset='atlas-kmcvwc-shard-0', tls=True)</td></tr></table>
+<strong>mc</strong> = MongoClient(host=['ac-xm65fnp-shard-00-01.mtukdk...in', replicaset='atlas-kmcvwc-shard-0', tls=True)</td></tr></table>
 </body></html>

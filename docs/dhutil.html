@@ -98,6 +98,17 @@ trusted&nbsp;otherwise.</tt></dd></dl>
  <dl><dt><a name="-compare_candles_vs_csv"><strong>compare_candles_vs_csv</strong></a>(filepath, timeframe: str = '1m', symbol: str = 'ES', diff_threshold: float = 0.5, start_dt=None, end_dt=None)</dt><dd><tt>Check&nbsp;stored&nbsp;candles&nbsp;against&nbsp;a&nbsp;CSV&nbsp;source&nbsp;file,&nbsp;primarily&nbsp;used&nbsp;to<br>
 confirm&nbsp;calculated&nbsp;higher&nbsp;timeframes&nbsp;against&nbsp;data&nbsp;provider&nbsp;equivalents<br>
 where&nbsp;available&nbsp;to&nbsp;sanity&nbsp;check&nbsp;calculation&nbsp;process</tt></dd></dl>
+ <dl><dt><a name="-dict_of_weeks"><strong>dict_of_weeks</strong></a>(start_dt, end_dt, template)</dt><dd><tt>return&nbsp;a&nbsp;template&nbsp;dictionary&nbsp;with&nbsp;keys&nbsp;for&nbsp;each&nbsp;week&nbsp;that&nbsp;exist&nbsp;in<br>
+the&nbsp;provided&nbsp;timeframe&nbsp;from&nbsp;start_dt&nbsp;to&nbsp;end_dt,&nbsp;with&nbsp;a&nbsp;value&nbsp;equal&nbsp;to&nbsp;the<br>
+template&nbsp;passed&nbsp;in.&nbsp;&nbsp;Generally&nbsp;this&nbsp;will&nbsp;be&nbsp;used&nbsp;for&nbsp;aggregating&nbsp;weekly<br>
+stats.</tt></dd></dl>
+ <dl><dt><a name="-diff_dicts"><strong>diff_dicts</strong></a>(dict1, dict2)</dt><dd><tt>Compares&nbsp;two&nbsp;dictionaries&nbsp;and&nbsp;returns&nbsp;a&nbsp;dictionary&nbsp;of&nbsp;differences&nbsp;in&nbsp;the<br>
+form&nbsp;of&nbsp;tuples&nbsp;representing&nbsp;the&nbsp;values&nbsp;found&nbsp;in&nbsp;each&nbsp;dict&nbsp;in&nbsp;the&nbsp;order<br>
+that&nbsp;the&nbsp;dicts&nbsp;were&nbsp;pass&nbsp;in.<br>
+&nbsp;<br>
+This&nbsp;will&nbsp;present&nbsp;None&nbsp;if&nbsp;a&nbsp;key&nbsp;in&nbsp;one&nbsp;dict&nbsp;was&nbsp;not&nbsp;found&nbsp;in&nbsp;the&nbsp;other.<br>
+&nbsp;<br>
+It&nbsp;will&nbsp;return&nbsp;{}&nbsp;if&nbsp;no&nbsp;differences&nbsp;were&nbsp;found.</tt></dd></dl>
  <dl><dt><a name="-dow_name"><strong>dow_name</strong></a>(dow: int)</dt><dd><tt>Return&nbsp;the&nbsp;human&nbsp;name&nbsp;for&nbsp;a&nbsp;day&nbsp;of&nbsp;the&nbsp;week&nbsp;given&nbsp;it's&nbsp;index&nbsp;as<br>
 represented&nbsp;in&nbsp;datetime.weekday()</tt></dd></dl>
  <dl><dt><a name="-dt_as_dt"><strong>dt_as_dt</strong></a>(d)</dt><dd><tt>return&nbsp;a&nbsp;datetime&nbsp;<a href="builtins.html#object">object</a>&nbsp;regardless&nbsp;of&nbsp;datetime&nbsp;or&nbsp;string&nbsp;input</tt></dd></dl>
@@ -113,11 +124,7 @@ exclude_categories.</tt></dd></dl>
  <dl><dt><a name="-generate_zero_volume_candle"><strong>generate_zero_volume_candle</strong></a>(c_datetime, timeframe: str = '1m', symbol: str = 'ES')</dt><dd><tt>Returns&nbsp;a&nbsp;zero&nbsp;volume&nbsp;candle&nbsp;with&nbsp;OHLC&nbsp;values&nbsp;all&nbsp;set&nbsp;to&nbsp;the&nbsp;prior<br>
 candle's&nbsp;closing&nbsp;value.&nbsp;&nbsp;Primarily&nbsp;used&nbsp;to&nbsp;fill&nbsp;gaps&nbsp;in&nbsp;1m&nbsp;candle&nbsp;storage<br>
 where&nbsp;data&nbsp;providers&nbsp;sometimes&nbsp;omit&nbsp;candles&nbsp;with&nbsp;zero&nbsp;trading&nbsp;volume.</tt></dd></dl>
- <dl><dt><a name="-logc"><strong>logc</strong></a>(msg: str)</dt></dl>
- <dl><dt><a name="-logd"><strong>logd</strong></a>(msg: str)</dt></dl>
- <dl><dt><a name="-loge"><strong>loge</strong></a>(msg: str)</dt></dl>
- <dl><dt><a name="-logi"><strong>logi</strong></a>(msg: str)</dt></dl>
- <dl><dt><a name="-logw"><strong>logw</strong></a>(msg: str)</dt></dl>
+ <dl><dt><a name="-log_say"><strong>log_say</strong></a>(msg, level='info')</dt><dd><tt>Log&nbsp;messages&nbsp;while&nbsp;also&nbsp;printing&nbsp;to&nbsp;console</tt></dd></dl>
  <dl><dt><a name="-next_candle_start"><strong>next_candle_start</strong></a>(dt, trading_hours: str, symbol: str = 'ES', timeframe: str = '1m', events: list = None)</dt><dd><tt>Returns&nbsp;the&nbsp;next&nbsp;datetime&nbsp;that&nbsp;represents&nbsp;a&nbsp;proper&nbsp;candle&nbsp;start<br>
 after&nbsp;the&nbsp;given&nbsp;datetime&nbsp;(dt).&nbsp;&nbsp;Will&nbsp;not&nbsp;return&nbsp;given&nbsp;datetime&nbsp;even&nbsp;if<br>
 it&nbsp;starts&nbsp;a&nbsp;candle.</tt></dd></dl>
