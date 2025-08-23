@@ -528,6 +528,16 @@ class Candle():
                           indent=4,
                           )
 
+    def brief(self):
+        """Return a single line summary string of this Candle's vitals"""
+        if isinstance(self.c_symbol, str):
+            ticker = self.c_symbol
+        else:
+            ticker = self.c_symbol.ticker
+        return (f"{ticker} {self.c_timeframe} {self.c_datetime} | "
+                f"O: {self.c_open} H: {self.c_high} L: {self.c_low} "
+                f"C: {self.c_close} V: {self.c_volume}")
+
     def __eq__(self, other):
         return (self.c_datetime == other.c_datetime
                 and self.c_timeframe == other.c_timeframe
