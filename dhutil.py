@@ -10,7 +10,8 @@ from tabulate import tabulate
 import dhcharts as dhc
 import dhstore as dhs
 
-TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w', '1mo']
+TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', 'r1d', 'e1d', 'r1w', 'e1w',
+              'r1mo', 'e1mo']
 TRADING_HOURS = ['rth', 'eth']
 EVENT_CATEGORIES = ['Closed', 'Data', 'Unplanned', 'LowVolume', 'Rollover']
 
@@ -185,10 +186,10 @@ def check_tf_th_compatibility(tf, th, exit=True):
     """
     result = True
     if th == "eth":
-        if tf in ["r1h", "r1d", "r1w"]:
+        if tf in ["r1h", "r1d", "r1w", "r1mo"]:
             result = False
     if th == "rth":
-        if tf in ["e1h", "e1d", "e1w"]:
+        if tf in ["e1h", "e1d", "e1w", "e1mo"]:
             result = False
     if exit and not result:
         raise ValueError(f"timeframe {tf} and trading_hours {th} cannot "
@@ -268,8 +269,10 @@ def timeframe_delta(timeframe: str):
         return timedelta(minutes=15)
     elif timeframe in ["r1h", "e1h"]:
         return timedelta(hours=1)
-    elif timeframe in ["1d", "r1d", "e1d"]:
+    elif timeframe in ["r1d", "e1d"]:
         return timedelta(days=1)
+    elif timeframe in ["r1w", "e1w"]:
+        return timedelta(weeks=1)
     else:
         raise ValueError(f"timeframe: {timeframe} not supported")
 
