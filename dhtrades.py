@@ -70,6 +70,7 @@ class Trade():
                  version: str = "1.0.0",
                  ts_id: str = None,
                  bt_id: str = None,
+                 tags: list = None,
                  ):
 
         # Passable attributes
@@ -114,6 +115,10 @@ class Trade():
         self.version = version
         self.ts_id = ts_id
         self.bt_id = bt_id
+        if tags is None:
+            self.tags = []
+        else:
+            self.tags = deepcopy(tags)
 
         # Calculated attributes
         if self.direction == "long":
@@ -563,6 +568,7 @@ class TradeSeries():
                  ts_id: str = None,
                  bt_id: str = None,
                  trades: list = None,
+                 tags: list = None,
                  ):
 
         self.start_dt = dhu.dt_as_str(start_dt)
@@ -591,6 +597,10 @@ class TradeSeries():
             for t in self.trades:
                 t.ts_id = self.ts_id
                 t.bt_id = self.bt_id
+        if tags is None:
+            self.tags = []
+        else:
+            self.tags = deepcopy(tags)
 
     def __eq__(self, other):
         return (self.start_dt == other.start_dt

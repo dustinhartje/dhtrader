@@ -72,6 +72,7 @@ def reconstruct_trade(t):
                      version=t["version"],
                      ts_id=t["ts_id"],
                      bt_id=t["bt_id"],
+                     tags=t["tags"],
                      )
 
 
@@ -326,6 +327,7 @@ def reconstruct_tradeseries(ts):
                            ts_id=ts["ts_id"],
                            bt_id=ts["bt_id"],
                            trades=[],
+                           tags=ts["tags"],
                            )
 
 
