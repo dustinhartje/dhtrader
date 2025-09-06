@@ -89,7 +89,7 @@ def get_all_records_by_collection(collection: str):
 def run_query(query, collection: str):
     """Run a standard mongo query and return the result"""
     c = db[collection]
-    return c.find(query)
+    return list(c.find(query))
 
 
 def count_records_by_field(collection: str,
@@ -104,6 +104,44 @@ def count_records_by_field(collection: str,
         r[field] = r.pop("_id")
 
     return result
+
+
+def list_values_by_regex_match(values_field: str,
+                               regex_field: str,
+                               regex: str,
+                               collection: str,
+                               ):
+    """Return aggregation with list of unique values in values_field split
+    by regex match or nomatch in regex_field.  An example usage: review tags
+    list based on whether or not a Trade closed in the autoclose timeframe
+    i.e. split by those that close at 15:55:00 for rth hours and those that
+    do not."""
+    c = db[collection]
+    pipeline = [
+        {
+            # Add a field to categorize by match vs no match
+            "$addFields": {
+                "matches_regex": {
+                    "$cond": {
+                        "if": {"$regexMatch":
+                               {"input": f"${regex_field}",
+                                "regex": regex}
+                               },
+                        "then": True,
+                        "else": False
+                    }
+                }
+            }
+        },
+        {
+            # Group and collect unique values
+            "$group": {
+                "_id": "$matches_regex",
+                "unique_values": {"$addToSet": f"${values_field}"}
+            }
+        }
+    ]
+    return list(c.aggregate(pipeline))
 
 
 def update_records_value(search: dict,
