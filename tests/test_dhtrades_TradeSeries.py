@@ -202,6 +202,9 @@ def test_TradeSeries_balance_impact_and_stats():
     assert s["avg_loss"] == 2500
     assert s["total_trades"] == 2
     assert s["success_percent"] == 50
+    assert s["duration_p20"] == 60
+    assert s["duration_median"] == 60
+    assert s["duration_p80"] == 60
     assert s["setup_risk_reward"] == 2
     assert s["effective_risk_reward"] == 2
     assert s["min_risk_reward"] == 1
@@ -255,6 +258,9 @@ def test_TradeSeries_balance_impact_and_stats():
     assert s["losing_trades"] == 0
     assert s["total_trades"] == 3
     assert s["success_percent"] == 100
+    assert s["duration_p20"] == 60
+    assert s["duration_median"] == 60
+    assert s["duration_p80"] == 60
     assert s["setup_risk_reward"] == 1.27
     assert s["avg_gain"] == 2616.67
     assert s["avg_loss"] is None
@@ -284,14 +290,14 @@ def test_TradeSeries_balance_impact_and_stats():
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4980, prof_target=6000,
                      )
-    add_1m_candle(t, "2025-01-02 12:31:00", 5000, 5100, 4900, 5000)
+    add_1m_candle(t, "2025-01-02 13:35:00", 5000, 5100, 4900, 5000)
     ts.add_trade(t)
     # Trade closes -25pts/-$1250 in loss with rr=0.0125
     t = create_trade(open_dt="2025-01-02 14:30:00",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4975, prof_target=6000,
                      )
-    add_1m_candle(t, "2025-01-02 12:31:00", 5000, 5000, 4900, 5000)
+    add_1m_candle(t, "2025-01-02 15:51:00", 5000, 5000, 4900, 5000)
     ts.add_trade(t)
     # Loses -$2650 before fees and -$9.30 in fees per contract (2)
     # Works out to -$5300 loss with -$18.60 in fees
@@ -312,6 +318,9 @@ def test_TradeSeries_balance_impact_and_stats():
     assert s["avg_loss"] == 883.33
     assert s["total_trades"] == 3
     assert s["success_percent"] == 0
+    assert s["duration_p20"] == 156
+    assert s["duration_median"] == 300
+    assert s["duration_p80"] == 3036
     assert s["setup_risk_reward"] == 0.02
     assert s["effective_risk_reward"] is None
     assert s["trading_days"] == 1
@@ -340,6 +349,9 @@ def test_TradeSeries_balance_impact_and_stats():
     assert s["losing_trades"] == 2
     assert s["total_trades"] == 3
     assert s["success_percent"] == 33.33
+    assert s["duration_p20"] == 156
+    assert s["duration_median"] == 300
+    assert s["duration_p80"] == 4404
     assert s["setup_risk_reward"] == 0.25
     assert s["avg_gain"] == 4000
     assert s["avg_loss"] == 825

@@ -2,6 +2,7 @@ import json
 from datetime import timedelta, datetime as dt
 from copy import deepcopy
 import logging
+import numpy as np
 import dhutil as dhu
 import dhstore as dhs
 import dhcharts as dhc
@@ -889,9 +890,11 @@ class TradeSeries():
         ticks = set()
         rr = {"max": None, "min": None, "total_risk": 0, "total_reward": 0}
         err = {"total_risk": 0, "total_reward": 0}
+        durations = []
         for t in self.trades:
             if not t.first_min_open or include_first_min:
                 total_trades += 1
+                durations.append(t.duration())
                 # Risk reward calcs
                 ticks.add((("stop", t.stop_ticks),
                           ("prof", t.prof_ticks),
@@ -918,6 +921,7 @@ class TradeSeries():
                     losses += 1
                     sequence = "".join([sequence, "L"])
                     err["total_risk"] -= t.gain_loss()
+        durations.sort()
         if total_trades > 0:
             success_percent = round(profits/total_trades, 4)*100
             trading_days = len(days_traded)
@@ -927,6 +931,9 @@ class TradeSeries():
             trades_per_day = round(total_trades/total_days, 2)
             trades_per_trading_day = round(total_trades/trading_days, 2)
             trades_per_week = round(total_trades/total_weeks, 2)
+            duration_p20 = round(np.percentile(durations, 20))
+            duration_median = round(np.median(durations))
+            duration_p80 = round(np.percentile(durations, 80))
         else:
             success_percent = 0
             trading_days = 0
@@ -935,6 +942,9 @@ class TradeSeries():
             trades_per_day = 0
             trades_per_trading_day = 0
             trades_per_week = 0
+            duration_p20 = 0
+            duration_median = 0
+            duration_p80 = 0
 
         if rr["total_reward"] > 0:
             risk_reward = round(rr["total_risk"] / rr["total_reward"], 2)
@@ -970,6 +980,9 @@ class TradeSeries():
                 "avg_loss": avg_loss,
                 "total_trades": total_trades,
                 "success_percent": success_percent,
+                "duration_p20": duration_p20,
+                "duration_median": duration_median,
+                "duration_p80": duration_p80,
                 "setup_risk_reward": risk_reward,
                 "effective_risk_reward": eff_risk_reward,
                 "min_risk_reward": min_risk_reward,
