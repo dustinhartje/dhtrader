@@ -540,6 +540,15 @@ class Trade():
         return ((self.exit_price - self.entry_price) * self.flipper
                 * contracts * self.symbol.leverage_ratio)
 
+    def duration(self):
+        """Return a datetime.timedelta object representing the duration of this
+        Trade from open_dt to close_dt in seconds"""
+        if self.is_open:
+            return None
+        else:
+            return (dhu.dt_to_epoch(self.close_dt)
+                    - dhu.dt_to_epoch(self.open_dt))
+
 
 class TradeSeries():
     """Represents a series of trades presumably following the same rules

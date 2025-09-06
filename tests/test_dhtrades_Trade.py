@@ -7,6 +7,7 @@ import dhtrades as dht
 import dhutil as dhu
 from dhutil import dt_as_dt, dt_as_str
 import dhstore as dhs
+from datetime import timedelta as td
 
 # TODO Tests needed (some of these have already been written partially/fully
 # Trade Drawdown calculations (see placeholder function below for details)
@@ -713,6 +714,19 @@ def test_Trade_gain_loss():
     t = create_trade(direction="short")
     t.close(price=5025, dt="2025-01-02 12:45:00")
     assert t.gain_loss(contracts=5) == -6250
+
+
+def test_Trade_duration():
+    """Confirms Trade.duration method math working as expected"""
+    t = create_trade(open_dt="2025-01-02 12:45:00")
+    t.close(price=5005, dt="2025-01-02 12:45:00")
+    assert t.duration() == 0
+    t.close(price=5005, dt="2025-01-02 12:46:00")
+    assert t.duration() == 60
+    t.close(price=5005, dt="2025-01-03 12:46:00")
+    assert t.duration() == 86460
+    t.close(price=5005, dt="2025-01-02 12:44:00")
+    assert t.duration() == -60
 
 
 def test_Trade_creation_long_close_at_profit():
