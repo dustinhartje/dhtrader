@@ -136,10 +136,10 @@ def test_TradeSeries_create_and_verify_pretty():
     ts = create_tradeseries()
     test_trade = create_trade()
     assert isinstance(ts, dht.TradeSeries)
-    assert len(ts.pretty().splitlines()) == 14
+    assert len(ts.pretty().splitlines()) == 15
     ts.add_trade(test_trade)
     # With trades shown
-    assert len(ts.pretty(suppress_trades=False).splitlines()) == 40
+    assert len(ts.pretty(suppress_trades=False).splitlines()) == 42
 
 
 def test_TradeSeries_add_sort_and_get_trades():
@@ -170,12 +170,14 @@ def test_TradeSeries_add_sort_and_get_trades():
 def test_TradeSeries_balance_impact_and_stats():
     # Test a TradeSeries with winning and losing trades that does not liquidate
     ts = create_tradeseries()
+    # Trade closes 25pts/$1250 in profit with rr=4
     t = create_trade(open_dt="2025-01-02 12:30:00",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4900, prof_target=5025,
                      )
     add_1m_candle(t, "2025-01-02 12:31:00", 5000, 5200, 5000, 5000)
     ts.add_trade(t)
+    # Trade closes -50pts/-$2500 in loss with rr=1
     t = create_trade(open_dt="2025-01-02 13:30:00",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4950, prof_target=5050,
@@ -186,31 +188,58 @@ def test_TradeSeries_balance_impact_and_stats():
                           contracts=1,
                           contract_value=50,
                           contract_fee=3.10)
+    # Loses -$1250 before fees and -$6.20 in fees per contract (1)
     assert r["balance_open"] == 3000
     assert r["balance_close"] == 1743.80
     assert r["balance_high"] == 4246.90
     assert r["balance_low"] == 1743.80
     assert r["liquidated"] is False
+    s = ts.stats()
+    assert s["gl_sequence"] == "gL"
+    assert s["profitable_trades"] == 1
+    assert s["avg_gain"] == 1250
+    assert s["losing_trades"] == 1
+    assert s["avg_loss"] == 2500
+    assert s["total_trades"] == 2
+    assert s["success_percent"] == 50
+    assert s["setup_risk_reward"] == 2
+    assert s["effective_risk_reward"] == 2
+    assert s["min_risk_reward"] == 1
+    assert s["max_risk_reward"] == 4
+    assert s["trading_days"] == 1
+    assert s["total_days"] == 31
+    assert s["total_weeks"] == 4.43
+    assert s["trades_per_week"] == 0.45
+    assert s["trades_per_day"] == 0.06
+    assert s["trades_per_trading_day"] == 2
+    assert s["trade_ticks"] == [{'stop': 200, 'prof': 200, 'offset': 0},
+                                {'stop': 400, 'prof': 100, 'offset': 0}]
+
     # Test a TradeSeries with all winning trades that does not liquidate
     ts = create_tradeseries()
+    # Trade closes 25pts/$1250 in profit with rr=4
     t = create_trade(open_dt="2025-01-02 12:30:00",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4900, prof_target=5025,
                      )
     add_1m_candle(t, "2025-01-02 12:31:00", 5000, 5200, 4970, 5000)
     ts.add_trade(t)
+    # Trade closes 50pts/$2500 in profit with rr=1
     t = create_trade(open_dt="2025-01-02 13:30:00",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4950, prof_target=5050,
                      )
     add_1m_candle(t, "2025-01-02 13:31:00", 5000, 5100, 4970, 5000)
     ts.add_trade(t)
+    # Trade closes 82pts/$4100 in profit with rr=0.61
     t = create_trade(open_dt="2025-01-02 14:30:00",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4950, prof_target=5082,
                      )
     add_1m_candle(t, "2025-01-02 14:31:00", 5000, 5100, 5000, 5000)
     ts.add_trade(t)
+    # Gains $7850 before fees and -$9.30 in fees per contract (4)
+    # Works out to $31400 gain with -$37.20 in fees
     r = ts.balance_impact(balance_open=50000,
                           contracts=4,
                           contract_value=50,
@@ -226,7 +255,10 @@ def test_TradeSeries_balance_impact_and_stats():
     assert s["losing_trades"] == 0
     assert s["total_trades"] == 3
     assert s["success_percent"] == 100
-    assert s["risk_reward"] == 1.27
+    assert s["setup_risk_reward"] == 1.27
+    assert s["avg_gain"] == 2616.67
+    assert s["avg_loss"] is None
+    assert s["effective_risk_reward"] is None
     assert s["trading_days"] == 1
     assert s["total_days"] == 31
     assert s["total_weeks"] == 4.43
@@ -236,27 +268,33 @@ def test_TradeSeries_balance_impact_and_stats():
     assert s["trade_ticks"] == [{'stop': 200, 'prof': 200, 'offset': 0},
                                 {'stop': 200, 'prof': 328, 'offset': 0},
                                 {'stop': 400, 'prof': 100, 'offset': 0}]
+
     # Test a TradeSeries with all losing trades that does liquidate
     # after setting two sequential new highs
     ts = create_tradeseries()
+    # Trade closes -8pts/-$400 in loss with rr=0.008
     t = create_trade(open_dt="2025-01-02 12:30:00",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4992, prof_target=6000,
                      )
     add_1m_candle(t, "2025-01-02 12:31:00", 5000, 5010, 4900, 5000)
     ts.add_trade(t)
+    # Trade closes -20pts/-$1000 in loss with rr=0.02
     t = create_trade(open_dt="2025-01-02 13:30:00",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4980, prof_target=6000,
                      )
     add_1m_candle(t, "2025-01-02 12:31:00", 5000, 5100, 4900, 5000)
     ts.add_trade(t)
+    # Trade closes -25pts/-$1250 in loss with rr=0.0125
     t = create_trade(open_dt="2025-01-02 14:30:00",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4975, prof_target=6000,
                      )
     add_1m_candle(t, "2025-01-02 12:31:00", 5000, 5000, 4900, 5000)
     ts.add_trade(t)
+    # Loses -$2650 before fees and -$9.30 in fees per contract (2)
+    # Works out to -$5300 loss with -$18.60 in fees
     r = ts.balance_impact(balance_open=5000,
                           contracts=2,
                           contract_value=50,
@@ -269,10 +307,13 @@ def test_TradeSeries_balance_impact_and_stats():
     s = ts.stats()
     assert s["gl_sequence"] == "LLL"
     assert s["profitable_trades"] == 0
+    assert s["avg_gain"] is None
     assert s["losing_trades"] == 3
+    assert s["avg_loss"] == 883.33
     assert s["total_trades"] == 3
     assert s["success_percent"] == 0
-    assert s["risk_reward"] == 0.02
+    assert s["setup_risk_reward"] == 0.02
+    assert s["effective_risk_reward"] is None
     assert s["trading_days"] == 1
     assert s["total_days"] == 31
     assert s["total_weeks"] == 4.43
@@ -282,6 +323,7 @@ def test_TradeSeries_balance_impact_and_stats():
     assert s["trade_ticks"] == [{'stop': 32, 'prof': 4000, 'offset': 0},
                                 {'stop': 80, 'prof': 4000, 'offset': 0},
                                 {'stop': 100, 'prof': 4000, 'offset': 0}]
+
     # Change a few things up just to cover bases a bit more
     # NOTE - Changes are not consistent with all other Trade attributes
     ts.end_dt = "2025-01-08 17:00:00"
@@ -298,7 +340,10 @@ def test_TradeSeries_balance_impact_and_stats():
     assert s["losing_trades"] == 2
     assert s["total_trades"] == 3
     assert s["success_percent"] == 33.33
-    assert s["risk_reward"] == 0.25
+    assert s["setup_risk_reward"] == 0.25
+    assert s["avg_gain"] == 4000
+    assert s["avg_loss"] == 825
+    assert s["effective_risk_reward"] == 0.21
     assert s["trading_days"] == 2
     assert s["total_days"] == 7
     assert s["total_weeks"] == 1
@@ -319,6 +364,82 @@ def test_TradeSeries_balance_impact_and_stats():
                                                 'gl_in_ticks': -1000,
                                                 'success_rate': 0.0}
                                  }
+
+
+def test_TradeSeries_non_target_closes_stats_and_effective_risk_reward_calc():
+    """Confirm effective_risk_reward calculations when trades close at prices
+       other than their expected targets.  This would typically happen when
+       auto closing a trade that is still open at the end of the day."""
+    ts = create_tradeseries()
+    # Long trade closing at partial profit +23pt at end of day
+    t = create_trade(open_dt="2025-01-02 12:30:00", direction="long",
+                     stop_ticks=None, prof_ticks=None,
+                     stop_target=4900, prof_target=5100,
+                     )
+    t.close(price=5023, dt="2025-01-02 15:55:00")
+    ts.add_trade(t)
+    # Short trade closing at partial profit +91.75pt at end of day
+    t = create_trade(open_dt="2025-01-03 12:30:00", direction="short",
+                     stop_ticks=None, prof_ticks=None,
+                     stop_target=5100, prof_target=4900,
+                     )
+    t.close(price=4908.25, dt="2025-01-03 15:55:00")
+    ts.add_trade(t)
+    # Long trade closing at partial loss -4.5pt at end of day
+    t = create_trade(open_dt="2025-01-04 12:30:00", direction="long",
+                     stop_ticks=None, prof_ticks=None,
+                     stop_target=4900, prof_target=5050,
+                     )
+    t.close(price=4995.5, dt="2025-01-04 15:55:00")
+    ts.add_trade(t)
+    # Short trade closing at partial loss -45pt at end of day
+    t = create_trade(open_dt="2025-01-05 12:30:00", direction="short",
+                     stop_ticks=None, prof_ticks=None,
+                     stop_target=5100, prof_target=4950,
+                     )
+    t.close(price=5045, dt="2025-01-05 15:55:00")
+    ts.add_trade(t)
+    # Long trade closing at profit target +50pt
+    t = create_trade(open_dt="2025-01-06 12:30:00", direction="long",
+                     stop_ticks=None, prof_ticks=None,
+                     stop_target=4900, prof_target=5050,
+                     )
+    t.close(price=5050, dt="2025-01-06 12:55:00")
+    ts.add_trade(t)
+    # Short trade closing at stop target -75pt
+    t = create_trade(open_dt="2025-01-07 12:30:00", direction="short",
+                     stop_ticks=None, prof_ticks=None,
+                     stop_target=5075, prof_target=4950,
+                     )
+    t.close(price=5075, dt="2025-01-07 12:55:00")
+    ts.add_trade(t)
+    # Long trade closing exactly break even at end of day
+    t = create_trade(open_dt="2025-01-08 12:30:00", direction="long",
+                     stop_ticks=None, prof_ticks=None,
+                     stop_target=4900, prof_target=5050,
+                     )
+    t.close(price=5000, dt="2025-01-08 15:55:00")
+    ts.add_trade(t)
+
+    s = ts.stats()
+    assert s["gl_sequence"] == "ggLLgLL"
+    assert s["profitable_trades"] == 3
+    assert s["avg_gain"] == 2745.83
+    assert s["losing_trades"] == 4
+    assert s["avg_loss"] == 1556.25
+    assert s["total_trades"] == 7
+    assert s["success_percent"] == 42.86
+    assert s["setup_risk_reward"] == 1.5
+    assert s["effective_risk_reward"] == 0.57
+    assert s["trading_days"] == 7
+    assert s["total_days"] == 31
+    assert s["total_weeks"] == 4.43
+    assert s["trades_per_week"] == 1.58
+    assert s["trades_per_day"] == 0.23
+    assert s["trades_per_trading_day"] == 1
+    assert s["trade_ticks"] == [{'stop': 300, 'prof': 200, 'offset': 0},
+                                {'stop': 400, 'prof': 200, 'offset': 0},
+                                {'stop': 400, 'prof': 400, 'offset': 0}]
 
 
 def test_TradeSeries_drawdown_impact():

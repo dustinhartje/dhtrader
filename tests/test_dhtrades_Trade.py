@@ -572,7 +572,7 @@ def test_Trade_create_and_verify_pretty():
     # Check line counts of pretty output, won't change unless class changes
     trade = create_trade()
     assert isinstance(trade, dht.Trade)
-    assert len(trade.pretty().splitlines()) == 27
+    assert len(trade.pretty().splitlines()) == 28
 
 
 def test_Trade_tick_and_target_calculations_correct():
@@ -695,6 +695,26 @@ def test_Trade_tick_and_target_calculations_correct():
                          )
 
 
+def test_Trade_gain_loss():
+    """Confirms Trade.gain_loss() method math working as expected"""
+    # Closing long trade at a gain
+    t = create_trade()
+    t.close(price=5005, dt="2025-01-02 12:45:00")
+    assert t.gain_loss(contracts=1) == 250
+    # Closing long trade at a loss
+    t = create_trade()
+    t.close(price=4800, dt="2025-01-02 12:45:00")
+    assert t.gain_loss(contracts=2) == -20000
+    # Closing short trade at a gain
+    t = create_trade(direction="short")
+    t.close(price=4950, dt="2025-01-02 12:45:00")
+    assert t.gain_loss(contracts=3) == 7500
+    # Closing short trade at a loss
+    t = create_trade(direction="short")
+    t.close(price=5025, dt="2025-01-02 12:45:00")
+    assert t.gain_loss(contracts=5) == -6250
+
+
 def test_Trade_creation_long_close_at_profit():
     # Create a trade (create_trade() covers creation assertions)
     t = create_trade(direction="long")
@@ -708,6 +728,7 @@ def test_Trade_creation_long_close_at_profit():
     # Confirm exit price, gain_loss, and drawdown calculate correctly
     assert t.exit_price == 5005
     assert bal["gain_loss"] == 246.9
+    assert t.gain_loss(contracts=1) == 250
     assert draw["drawdown_close"] == 3246.9
     assert not t.is_open
     assert t.profitable
@@ -725,6 +746,7 @@ def test_Trade_creation_long_close_at_loss():
     draw = t.drawdown_impact(1000, 6500, 1, 50, 3.10)
     assert t.exit_price == 4995
     assert bal["gain_loss"] == -253.10
+    assert t.gain_loss(contracts=1) == -250
     assert draw["drawdown_close"] == 746.90
     assert not t.is_open
     assert not t.profitable
@@ -746,6 +768,7 @@ def test_Trade_creation_short_close_at_profit():
     # Confirm exit price, gain_loss, and drawdown calculate correctly
     assert t.exit_price == 4995
     assert bal["gain_loss"] == 246.90
+    assert t.gain_loss(contracts=1) == 250
     assert draw["drawdown_close"] == 1246.90
     assert not t.is_open
     assert t.profitable
@@ -766,6 +789,7 @@ def test_Trade_creation_short_close_at_loss():
     draw = t.drawdown_impact(1000, 6500, 1, 50, 3.10)
     assert t.exit_price == 5005
     assert bal["gain_loss"] == -253.10
+    assert t.gain_loss(contracts=1) == -250
     assert draw["drawdown_close"] == 746.90
     assert not t.is_open
     assert not t.profitable

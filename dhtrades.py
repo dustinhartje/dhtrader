@@ -532,6 +532,14 @@ class Trade():
         else:
             self.profitable = False
 
+    def gain_loss(self,
+                  contracts: int = 1):
+        """Return the gain/loss for a given number of contracts, before fees"""
+        if self.is_open:
+            return None
+        return ((self.exit_price - self.entry_price) * self.flipper
+                * contracts * self.symbol.leverage_ratio)
+
 
 class TradeSeries():
     """Represents a series of trades presumably following the same rules
@@ -871,6 +879,7 @@ class TradeSeries():
         days_traded = set()
         ticks = set()
         rr = {"max": None, "min": None, "total_risk": 0, "total_reward": 0}
+        err = {"total_risk": 0, "total_reward": 0}
         for t in self.trades:
             if not t.first_min_open or include_first_min:
                 total_trades += 1
@@ -895,9 +904,11 @@ class TradeSeries():
                 if t.profitable:
                     profits += 1
                     sequence = "".join([sequence, "g"])
+                    err["total_reward"] += t.gain_loss()
                 else:
                     losses += 1
                     sequence = "".join([sequence, "L"])
+                    err["total_risk"] -= t.gain_loss()
         if total_trades > 0:
             success_percent = round(profits/total_trades, 4)*100
             trading_days = len(days_traded)
@@ -922,6 +933,22 @@ class TradeSeries():
             risk_reward = None
         min_risk_reward = rr["min"]
         max_risk_reward = rr["max"]
+        if profits == 0:
+            avg_gain = None
+        else:
+            avg_gain = err["total_reward"] / profits
+        if losses == 0:
+            avg_loss = None
+        else:
+            avg_loss = err["total_risk"] / losses
+        if avg_gain is None or avg_loss is None:
+            eff_risk_reward = None
+        else:
+            eff_risk_reward = round(avg_loss / avg_gain, 2)
+        if avg_gain is not None:
+            avg_gain = round(avg_gain, 2)
+        if avg_loss is not None:
+            avg_loss = round(avg_loss, 2)
         # Convert ticks to a sorted list of dictionaries to aid unittests
         # and json conversions
         ticks_list = sorted([dict(x) for x in list(ticks)],
@@ -929,10 +956,13 @@ class TradeSeries():
 
         return {"gl_sequence": sequence,
                 "profitable_trades": profits,
+                "avg_gain": avg_gain,
                 "losing_trades": losses,
+                "avg_loss": avg_loss,
                 "total_trades": total_trades,
                 "success_percent": success_percent,
-                "risk_reward": risk_reward,
+                "setup_risk_reward": risk_reward,
+                "effective_risk_reward": eff_risk_reward,
                 "min_risk_reward": min_risk_reward,
                 "max_risk_reward": max_risk_reward,
                 "trading_days": trading_days,
