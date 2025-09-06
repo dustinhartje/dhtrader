@@ -86,6 +86,12 @@ def get_all_records_by_collection(collection: str):
     return list(result)
 
 
+def run_query(query, collection: str):
+    """Run a standard mongo query and return the result"""
+    c = db[collection]
+    return c.find(query)
+
+
 def count_records_by_field(collection: str,
                            field: str,
                            ):
