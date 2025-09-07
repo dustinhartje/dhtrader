@@ -202,9 +202,9 @@ def test_TradeSeries_balance_impact_and_stats():
     assert s["avg_loss"] == 2500
     assert s["total_trades"] == 2
     assert s["success_percent"] == 50
-    assert s["duration_p20"] == 60
-    assert s["duration_median"] == 60
-    assert s["duration_p80"] == 60
+    assert s["duration_sec_p20"] == 60
+    assert s["duration_sec_median"] == 60
+    assert s["duration_sec_p80"] == 60
     assert s["setup_risk_reward"] == 2
     assert s["effective_risk_reward"] == 2
     assert s["min_risk_reward"] == 1
@@ -258,9 +258,9 @@ def test_TradeSeries_balance_impact_and_stats():
     assert s["losing_trades"] == 0
     assert s["total_trades"] == 3
     assert s["success_percent"] == 100
-    assert s["duration_p20"] == 60
-    assert s["duration_median"] == 60
-    assert s["duration_p80"] == 60
+    assert s["duration_sec_p20"] == 60
+    assert s["duration_sec_median"] == 60
+    assert s["duration_sec_p80"] == 60
     assert s["setup_risk_reward"] == 1.27
     assert s["avg_gain"] == 2616.67
     assert s["avg_loss"] is None
@@ -318,9 +318,9 @@ def test_TradeSeries_balance_impact_and_stats():
     assert s["avg_loss"] == 883.33
     assert s["total_trades"] == 3
     assert s["success_percent"] == 0
-    assert s["duration_p20"] == 156
-    assert s["duration_median"] == 300
-    assert s["duration_p80"] == 3036
+    assert s["duration_sec_p20"] == 156
+    assert s["duration_sec_median"] == 300
+    assert s["duration_sec_p80"] == 3036
     assert s["setup_risk_reward"] == 0.02
     assert s["effective_risk_reward"] is None
     assert s["trading_days"] == 1
@@ -349,9 +349,9 @@ def test_TradeSeries_balance_impact_and_stats():
     assert s["losing_trades"] == 2
     assert s["total_trades"] == 3
     assert s["success_percent"] == 33.33
-    assert s["duration_p20"] == 156
-    assert s["duration_median"] == 300
-    assert s["duration_p80"] == 4404
+    assert s["duration_sec_p20"] == 156
+    assert s["duration_sec_median"] == 300
+    assert s["duration_sec_p80"] == 4404
     assert s["setup_risk_reward"] == 0.25
     assert s["avg_gain"] == 4000
     assert s["avg_loss"] == 825

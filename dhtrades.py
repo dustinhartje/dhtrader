@@ -931,9 +931,9 @@ class TradeSeries():
             trades_per_day = round(total_trades/total_days, 2)
             trades_per_trading_day = round(total_trades/trading_days, 2)
             trades_per_week = round(total_trades/total_weeks, 2)
-            duration_p20 = round(np.percentile(durations, 20))
-            duration_median = round(np.median(durations))
-            duration_p80 = round(np.percentile(durations, 80))
+            duration_sec_p20 = round(np.percentile(durations, 20))
+            duration_sec_median = round(np.median(durations))
+            duration_sec_p80 = round(np.percentile(durations, 80))
         else:
             success_percent = 0
             trading_days = 0
@@ -942,9 +942,9 @@ class TradeSeries():
             trades_per_day = 0
             trades_per_trading_day = 0
             trades_per_week = 0
-            duration_p20 = 0
-            duration_median = 0
-            duration_p80 = 0
+            duration_sec_p20 = 0
+            duration_sec_median = 0
+            duration_sec_p80 = 0
 
         if rr["total_reward"] > 0:
             risk_reward = round(rr["total_risk"] / rr["total_reward"], 2)
@@ -980,9 +980,9 @@ class TradeSeries():
                 "avg_loss": avg_loss,
                 "total_trades": total_trades,
                 "success_percent": success_percent,
-                "duration_p20": duration_p20,
-                "duration_median": duration_median,
-                "duration_p80": duration_p80,
+                "duration_sec_p20": duration_sec_p20,
+                "duration_sec_median": duration_sec_median,
+                "duration_sec_p80": duration_sec_p80,
                 "setup_risk_reward": risk_reward,
                 "effective_risk_reward": eff_risk_reward,
                 "min_risk_reward": min_risk_reward,
