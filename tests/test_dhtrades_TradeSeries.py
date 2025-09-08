@@ -197,9 +197,9 @@ def test_TradeSeries_balance_impact_and_stats():
     s = ts.stats()
     assert s["gl_sequence"] == "gL"
     assert s["profitable_trades"] == 1
-    assert s["avg_gain"] == 1250
+    assert s["avg_gain_per_con"] == 1250
     assert s["losing_trades"] == 1
-    assert s["avg_loss"] == 2500
+    assert s["avg_loss_per_con"] == 2500
     assert s["total_trades"] == 2
     assert s["success_percent"] == 50
     assert s["duration_sec_p20"] == 60
@@ -262,8 +262,8 @@ def test_TradeSeries_balance_impact_and_stats():
     assert s["duration_sec_median"] == 60
     assert s["duration_sec_p80"] == 60
     assert s["setup_risk_reward"] == 1.27
-    assert s["avg_gain"] == 2616.67
-    assert s["avg_loss"] is None
+    assert s["avg_gain_per_con"] == 2616.67
+    assert s["avg_loss_per_con"] is None
     assert s["effective_risk_reward"] is None
     assert s["trading_days"] == 1
     assert s["total_days"] == 31
@@ -313,9 +313,9 @@ def test_TradeSeries_balance_impact_and_stats():
     s = ts.stats()
     assert s["gl_sequence"] == "LLL"
     assert s["profitable_trades"] == 0
-    assert s["avg_gain"] is None
+    assert s["avg_gain_per_con"] is None
     assert s["losing_trades"] == 3
-    assert s["avg_loss"] == 883.33
+    assert s["avg_loss_per_con"] == 883.33
     assert s["total_trades"] == 3
     assert s["success_percent"] == 0
     assert s["duration_sec_p20"] == 156
@@ -353,8 +353,8 @@ def test_TradeSeries_balance_impact_and_stats():
     assert s["duration_sec_median"] == 300
     assert s["duration_sec_p80"] == 4404
     assert s["setup_risk_reward"] == 0.25
-    assert s["avg_gain"] == 4000
-    assert s["avg_loss"] == 825
+    assert s["avg_gain_per_con"] == 4000
+    assert s["avg_loss_per_con"] == 825
     assert s["effective_risk_reward"] == 0.21
     assert s["trading_days"] == 2
     assert s["total_days"] == 7
@@ -436,9 +436,9 @@ def test_TradeSeries_non_target_closes_stats_and_effective_risk_reward_calc():
     s = ts.stats()
     assert s["gl_sequence"] == "ggLLgLL"
     assert s["profitable_trades"] == 3
-    assert s["avg_gain"] == 2745.83
+    assert s["avg_gain_per_con"] == 2745.83
     assert s["losing_trades"] == 4
-    assert s["avg_loss"] == 1556.25
+    assert s["avg_loss_per_con"] == 1556.25
     assert s["total_trades"] == 7
     assert s["success_percent"] == 42.86
     assert s["setup_risk_reward"] == 1.5

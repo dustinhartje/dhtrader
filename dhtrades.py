@@ -953,21 +953,21 @@ class TradeSeries():
         min_risk_reward = rr["min"]
         max_risk_reward = rr["max"]
         if profits == 0:
-            avg_gain = None
+            avg_gain_per_con = None
         else:
-            avg_gain = err["total_reward"] / profits
+            avg_gain_per_con = err["total_reward"] / profits
         if losses == 0:
-            avg_loss = None
+            avg_loss_per_con = None
         else:
-            avg_loss = err["total_risk"] / losses
-        if avg_gain is None or avg_loss is None:
+            avg_loss_per_con = err["total_risk"] / losses
+        if avg_gain_per_con is None or avg_loss_per_con is None:
             eff_risk_reward = None
         else:
-            eff_risk_reward = round(avg_loss / avg_gain, 2)
-        if avg_gain is not None:
-            avg_gain = round(avg_gain, 2)
-        if avg_loss is not None:
-            avg_loss = round(avg_loss, 2)
+            eff_risk_reward = round(avg_loss_per_con / avg_gain_per_con, 2)
+        if avg_gain_per_con is not None:
+            avg_gain_per_con = round(avg_gain_per_con, 2)
+        if avg_loss_per_con is not None:
+            avg_loss_per_con = round(avg_loss_per_con, 2)
         # Convert ticks to a sorted list of dictionaries to aid unittests
         # and json conversions
         ticks_list = sorted([dict(x) for x in list(ticks)],
@@ -975,9 +975,9 @@ class TradeSeries():
 
         return {"gl_sequence": sequence,
                 "profitable_trades": profits,
-                "avg_gain": avg_gain,
+                "avg_gain_per_con": avg_gain_per_con,
                 "losing_trades": losses,
-                "avg_loss": avg_loss,
+                "avg_loss_per_con": avg_loss_per_con,
                 "total_trades": total_trades,
                 "success_percent": success_percent,
                 "duration_sec_p20": duration_sec_p20,
