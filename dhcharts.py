@@ -9,7 +9,7 @@ from copy import deepcopy
 import logging
 
 CANDLE_TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w']
-BEGINNING_OF_TIME = "2024-01-01 00:00:00"
+BEGINNING_OF_TIME = "2022-01-01 00:00:00"
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
