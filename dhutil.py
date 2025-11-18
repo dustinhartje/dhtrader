@@ -588,7 +588,7 @@ def remediate_candle_gaps(timeframe: str = "1m",
                                 check_integrity=True,
                                 return_detail=True,
                                 )
-    candles = review["missing_candles_by_date"]
+    missing_candles = review["missing_candles_by_date"]
     count_date = review["missing_count_by_date"]
     dates = []
     fixed_obvious = []
@@ -605,20 +605,20 @@ def remediate_candle_gaps(timeframe: str = "1m",
         obvious_fix = []
         unclear_fix = []
         print("\n============================================================")
-        print(f"{d} - {len(candles[d])} missing candles")
-        for c in candles[d]:
+        print(f"{d} - {len(missing_candles[d])} missing candles")
+        for c in missing_candles[d]:
             c_dt = dt_as_dt(f"{d} {c}")
             pre_start = dt_to_epoch(c_dt - (delta * 5))
             pre_end = dt_to_epoch(c_dt - delta)
             post_start = dt_to_epoch(c_dt + delta)
             post_end = dt_to_epoch(c_dt + (delta * 5))
             pre_cans = dhs.get_candles(timeframe=timeframe,
-                                       symbol=symbol,
+                                       symbol=symbol.ticker,
                                        start_epoch=pre_start,
                                        end_epoch=pre_end,
                                        )
             post_cans = dhs.get_candles(timeframe=timeframe,
-                                        symbol=symbol,
+                                        symbol=symbol.ticker,
                                         start_epoch=post_start,
                                         end_epoch=post_end,
                                         )
