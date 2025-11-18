@@ -656,8 +656,8 @@ def remediate_candle_gaps(timeframe: str = "1m",
                 avg_vol = sum(adj_vols) / len(adj_vols)
             else:
                 avg_vol = 0
-            if ((c_dt.hour < 9 or c_dt.hour > 15) and len(pre_cans) == 5
-                    and len(post_cans) == 5 and 0 < avg_vol < 100):
+            if ((c_dt.hour < 9 or c_dt.hour > 15) and len(pre_cans) > 2
+                    and len(post_cans) > 2 and 0 < avg_vol < 200):
                 print(f"OBVIOUS: {c_dt.hour} len(pre_cans)={len(pre_cans)} "
                       f"len(post_cans)={len(post_cans)} avg_vol={avg_vol}")
                 obvious_fix.append({"c_dt": c_dt,
@@ -706,7 +706,8 @@ def remediate_candle_gaps(timeframe: str = "1m",
                     errored.append(c)
         # Now work through unclear candles that did not meed obvious criteria
         print("\n------------------------------------------------------------")
-        print(f"{len(unclear_fix)} Unclear candles require human review\n")
+        print(f"{len(unclear_fix)} Unclear candles require human review for "
+              f"{d}\n")
         for c in unclear_fix:
             print(tabulate([c["vols"]],
                            headers=c["times"],
