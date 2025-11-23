@@ -186,7 +186,7 @@ def review_trades(symbol: str = "ES",
                                   format_zero='Remaining: 00:00:00',
                                   format_na='Remaining: N/A',
                                   )
-        bar_label = (f"%(value)d of {bar_total} checked in "
+        bar_label = (f"%(value)d of {bar_total} TradeSeries checked in "
                      "%(elapsed)s ")
         widgets = [progressbar.Percentage(),
                    progressbar.Bar(),

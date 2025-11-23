@@ -36,7 +36,7 @@ if MONGO_DB is None:
 
 try:
     mc = pymongo.MongoClient(MONGO_CONN)
-    db = mc.MONGO_DB
+    db = mc[MONGO_DB]
 except Exception:
     print("\n\nWell that failed.  So sad!")
     print("\nThere's a good chance it's because my current IP address is not "
