@@ -38,10 +38,12 @@ def drop_mongo_collection(collection: str):
     return dhm.drop_collection(collection=collection)
 
 
-def get_all_records_by_collection(collection: str):
-    """Return all records from a given collection without attempting to
-    reconstruct them into dhtrader classes."""
-    return dhm.get_all_records_by_collection(collection=collection)
+def get_all_records_by_collection(collection: str,
+                                  limit=0):
+    """Return <limit> (default 0 == all) records from a given collection
+    without attempting to reconstruct them into dhtrader classes."""
+    return dhm.get_all_records_by_collection(collection=collection,
+                                             limit=limit)
 
 
 ##############################################################################
@@ -76,10 +78,12 @@ def reconstruct_trade(t):
                      )
 
 
-def get_all_trades(collection: str = COLL_TRADES):
-    "Get all stored trades and return as a list."""
+def get_all_trades(collection: str = COLL_TRADES,
+                   limit=0):
+    "Get <limit> (default 0 == all) stored trades and return as a list."""
     result = []
-    r = dhm.get_all_records_by_collection(collection=collection)
+    r = dhm.get_all_records_by_collection(collection=collection,
+                                          limit=limit)
     for t in r:
         result.append(reconstruct_trade(t))
 
@@ -89,12 +93,15 @@ def get_all_trades(collection: str = COLL_TRADES):
 def get_trades_by_field(field: str,
                         value,
                         collection: str = COLL_TRADES,
+                        limit=0,
                         ):
-    "Get all trades matching the provided ts_id and return as a list"""
+    """Returns Trade() objects matching the field=value provided.
+    Default limit=0 returns all objects, or set to return only top X. """
     result = []
     r = dhm.get_trades_by_field(field=field,
                                 value=value,
                                 collection=collection,
+                                limit=limit,
                                 )
     for t in r:
         result.append(reconstruct_trade(t))
@@ -331,10 +338,11 @@ def reconstruct_tradeseries(ts):
                            )
 
 
-def get_all_tradeseries(collection: str = COLL_TRADESERIES):
-    "Get all stored tradeseries and return as a list."""
+def get_all_tradeseries(collection: str = COLL_TRADESERIES,
+                        limit=0):
+    "Get <limit> (default 0 == all) stored tradeseries returned as a list."""
     result = []
-    r = dhm.get_all_records_by_collection(collection=collection)
+    r = dhm.get_all_records_by_collection(collection=collection, limit=limit)
     for t in r:
         result.append(reconstruct_tradeseries(t))
 
@@ -345,6 +353,7 @@ def get_tradeseries_by_field(field: str,
                              value,
                              collection: str = COLL_TRADESERIES,
                              collection_trades: str = COLL_TRADES,
+                             limit=0,
                              include_trades: bool = True,
                              ):
     """Returns a list of all TradeSeries matching the bt_id provided."""
@@ -352,6 +361,7 @@ def get_tradeseries_by_field(field: str,
     r = dhm.get_tradeseries_by_field(field=field,
                                      value=value,
                                      collection=collection,
+                                     limit=limit,
                                      )
     for t in r:
         ts = reconstruct_tradeseries(t)
@@ -507,17 +517,20 @@ def delete_tradeseries(symbol: str,
 
 ##############################################################################
 # Backtests
-def get_all_backtests(collection: str = COLL_BACKTESTS):
-    """Get all stored backtests and return as a list if dicts.  Because
-    dhtrader.Backtest() is meant to be subclassed we don't return Backtest()
-    objects here.  Subclass implementations can warp this function to convert
-    dicts into their subclass specific object types as needed."""
-    return dhm.get_all_records_by_collection(collection=collection)
+def get_all_backtests(collection: str = COLL_BACKTESTS,
+                      limit=0):
+    """Get <limit> (default 0 == all) stored backtests returned as a list of
+    dicts.  Because dhtrader.Backtest() is meant to be subclassed we don't
+    return Backtest() objects here.  Subclass implementations can warp this
+    function to convert dicts into their subclass object types as needed."""
+    return dhm.get_all_records_by_collection(collection=collection,
+                                             limit=limit)
 
 
 def get_backtests_by_field(field: str,
                            value,
                            collection: str = COLL_BACKTESTS,
+                           limit=0,
                            ):
     """Returns a list of Backtest() objects (as dictionaries), matching the
     field=value provided.  Because dhtrader.Backtest() is meant to be
@@ -527,6 +540,7 @@ def get_backtests_by_field(field: str,
     result = dhm.get_backtests_by_field(field=field,
                                         value=value,
                                         collection=collection,
+                                        limit=limit,
                                         )
 
     return result

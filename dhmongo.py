@@ -77,11 +77,12 @@ def drop_collection(collection: str):
     return result
 
 
-def get_all_records_by_collection(collection: str):
-    """Return all records from a collection, typically wrapped by more
-    specific functions in dhstore such as get_all_trades()."""
+def get_all_records_by_collection(collection: str,
+                                  limit=0):
+    """Return <limit> (default 0 == all) records from a collection, typically
+    wrapped by more specific functions in dhstore such as get_all_trades()."""
     c = db[collection]
-    result = c.find()
+    result = c.find().limit(limit)
 
     return list(result)
 
@@ -185,10 +186,11 @@ def delete_one_document(query: dict,
 def get_trades_by_field(field: str,
                         value,
                         collection: str,
+                        limit=0,
                         ):
-    """Returns all Trade() objects matching the field=value provided."""
+    """Returns <limit> (0 = all) Trade documents matching (field == value)."""
     c = db[collection]
-    result = c.find({field: value})
+    result = c.find({field: value}).limit(limit)
 
     return list(result)
 
@@ -269,10 +271,11 @@ def delete_trades(symbol: str,
 def get_tradeseries_by_field(field: str,
                              value,
                              collection: str,
+                             limit=0,
                              ):
     """Returns a list of TradeSeries() matching the field=value provided."""
     c = db[collection]
-    result = c.find({field: value})
+    result = c.find({field: value}).limit(limit)
 
     return list(result)
 
@@ -336,10 +339,11 @@ def delete_tradeseries(symbol: str,
 def get_backtests_by_field(field: str,
                            value,
                            collection: str,
+                           limit=0,
                            ):
     """Returns a list of Backtest() matching the field=value provided."""
     c = db[collection]
-    result = c.find({field: value})
+    result = c.find({field: value}).limit(limit)
 
     return list(result)
 
