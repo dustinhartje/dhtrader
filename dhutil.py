@@ -6,6 +6,7 @@ import sys
 import re
 import logging
 import json
+import progressbar
 from tabulate import tabulate
 import dhcharts as dhc
 import dhstore as dhs
@@ -108,6 +109,46 @@ class OperationTimer():
     def stop(self):
         self.end_dt = dt.now()
         self.update_elapsed()
+
+
+class ProgBar():
+    """Wrapper to make progress bars smoother to implement"""
+    def __init__(self,
+                 total: int,
+                 desc: str = "TradeSeries calculated",
+                 auto_start: bool = True,
+                 ):
+        self.total = total
+        self.desc = desc
+        self.auto_start = auto_start
+        if self.auto_start:
+            self.start()
+
+    def start(self):
+        bar_label = (f"%(value)d of {self.total} {self.desc} in %(elapsed)s ")
+        eta_widget = progressbar.ETA(
+                format_not_started='--:--:--',
+                format_finished='Time: %(elapsed)8s',
+                format='Remaining: %(eta)8s',
+                format_zero='Remaining: 00:00:00',
+                format_na='Remaining: N/A',
+                )
+        widgets = [progressbar.Percentage(),
+                   progressbar.Bar(),
+                   progressbar.FormatLabel(bar_label),
+                   eta_widget,
+                   ]
+        self.this_bar = progressbar.ProgressBar(widgets=widgets,
+                                                max_value=self.total).start()
+
+    def update(self, val):
+        self.this_bar.update(val)
+
+    def increment(self, val=1):
+        self.this_bar.increment(val)
+
+    def finish(self):
+        self.this_bar.finish()
 
 
 def sort_dict(d: dict):
