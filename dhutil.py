@@ -884,10 +884,13 @@ def compare_candles_vs_csv(filepath,
                            diff_threshold: float = 0.5,
                            start_dt=None,
                            end_dt=None,
+                           expect_missing: list = None
                            ):
     """Check stored candles against a CSV source file, primarily used to
     confirm calculated higher timeframes against data provider equivalents
     where available to sanity check calculation process"""
+    if expect_missing is None:
+        expect_missing = []
     # Determine start/end datetimes from stored candles if not provided
     if start_dt is None or end_dt is None:
         review = dhs.review_candles(timeframe=timeframe,
@@ -920,6 +923,7 @@ def compare_candles_vs_csv(filepath,
     stored = {}
     csved = {}
     missing = {}
+    missing_expected = {}
     extras = {}
     zeros = {}
     diffs = {}
@@ -930,7 +934,10 @@ def compare_candles_vs_csv(filepath,
     # Note any candles in the csv that aren't found in storage
     for k, v in csved.items():
         if k not in stored.keys():
-            missing[k] = v
+            if v.c_datetime in expect_missing:
+                missing_expected[k] = v
+            else:
+                missing[k] = v
     # Note any candles in storage that aren't found in the CSV
     for k, v in stored.items():
         if k not in csved.keys():
@@ -997,6 +1004,7 @@ def compare_candles_vs_csv(filepath,
     count_stored_candles = len(stored_cans)
     count_csv_candles = len(csv_cans)
     count_missing_storage = len(missing)
+    count_missing_expected = len(missing_expected)
     count_extras_storage = len(extras)
     count_zerovol_storage = len(zeros)
     count_diffs = 0
@@ -1008,14 +1016,16 @@ def compare_candles_vs_csv(filepath,
             or count_missing_storage > 0 or count_extras_storage > 0
             or count_diffs > 0):
         all_equal = False
-    count_csv_plus_zeros = count_csv_candles + count_zerovol_storage
-    if count_stored_candles != count_csv_plus_zeros:
+    count_csv_plus = (count_csv_candles + count_zerovol_storage
+                      - count_missing_expected)
+    if count_stored_candles != count_csv_plus:
         all_equal = False
     counts = {"stored_dupes": count_stored_dupes,
               "csv_dupes": count_csv_dupes,
               "stored_candles": count_stored_candles,
               "csv_candles": count_csv_candles,
               "missing_from_storage": count_missing_storage,
+              "missing_from_storage_expected": count_missing_expected,
               "extras_in_storage": count_extras_storage,
               "zero_vol_extras_in_storage": count_zerovol_storage,
               "diffs_from_csv": count_diffs,
@@ -1024,6 +1034,7 @@ def compare_candles_vs_csv(filepath,
     result = {"all_equal": all_equal,
               "counts": counts,
               "differences": diffs,
+              "missing_from_storage_expected": missing_expected,
               "missing_from_storage": missing,
               "extras_in_storage": extras,
               "zero_volume_storage_only": zeros,
