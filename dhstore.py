@@ -932,9 +932,6 @@ def get_symbol_by_ticker(ticker: str):
 
 def store_candle(candle):
     """Write a single dhcharts.Candle() to central storage"""
-    if not isinstance(candle, dhc.Candle):
-        raise TypeError(f"candle {type(candle)} must be a "
-                        "<class dhc.Candle> object")
     dhu.valid_timeframe(candle.c_timeframe)
     dhm.store_candle(c_datetime=candle.c_datetime,
                      c_timeframe=candle.c_timeframe,
