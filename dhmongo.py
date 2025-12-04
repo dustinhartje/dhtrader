@@ -69,12 +69,29 @@ def list_collections():
     return db.list_collection_names()
 
 
+def clear_collection(collection: str):
+    """Deletes all records from a collection but keeps the collection itself
+    and any indexes/settings intact."""
+    c = db[collection]
+    if not dhu.prompt_yn(f"Clear all records from collection "
+                         f"'{collection}'? This cannot be undone.  You should "
+                         "probably do a backup first..."):
+        return None
+
+    return c.delete_many({})
+
+
 def drop_collection(collection: str):
     """Irretrievable drops a collection from the store.  Use carefully!"""
     c = db[collection]
-    result = c.drop()
+    if not dhu.prompt_yn(f"Drop collection '{collection}'? This cannot be"
+                         "undone and will delete all data, indexes, and other "
+                         "collection settings. You probably actually want to "
+                         "use clear_collection() instead, right?  Are you "
+                         "SURE you want to drop this?"):
+        return None
 
-    return result
+    return c.drop()
 
 
 def get_all_records_by_collection(collection: str,
