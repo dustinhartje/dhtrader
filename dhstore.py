@@ -22,7 +22,7 @@ COLL_BACKTESTS = "backtests"
 COLL_IND_META = "indicators_meta"
 COLL_IND_DPS = "indicators_datapoints"
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("dhstore")
 log.addHandler(logging.NullHandler())
 
 

@@ -16,7 +16,7 @@ TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', 'r1d', 'e1d', 'r1w', 'e1w',
 TRADING_HOURS = ['rth', 'eth']
 EVENT_CATEGORIES = ['Closed', 'Data', 'Unplanned', 'LowVolume', 'Rollover']
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("dhutil")
 log.addHandler(logging.NullHandler())
 
 

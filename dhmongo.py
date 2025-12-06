@@ -19,7 +19,7 @@ from datetime import timedelta
 import dhutil as dhu
 import dhcharts as dhc
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("dhmongo")
 log.addHandler(logging.NullHandler())
 
 

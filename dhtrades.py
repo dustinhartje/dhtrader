@@ -7,7 +7,7 @@ import dhutil as dhu
 import dhstore as dhs
 import dhcharts as dhc
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("dhtrades")
 log.addHandler(logging.NullHandler())
 
 

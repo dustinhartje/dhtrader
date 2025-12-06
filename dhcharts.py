@@ -3,6 +3,7 @@ from datetime import timedelta
 import sys
 import json
 import dhutil as dhu
+from dhutil import log_say
 import dhstore as dhs
 from statistics import fmean
 from copy import deepcopy
@@ -11,7 +12,7 @@ import logging
 CANDLE_TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w']
 BEGINNING_OF_TIME = "2022-01-01 00:00:00"
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("dhcharts")
 log.addHandler(logging.NullHandler())
 
 
@@ -1310,7 +1311,7 @@ class Indicator():
         # class is not meant to be used directly.  You should create a
         # subclass and rewrite this method based on the specific needs of
         # your target indicator.
-        dhu.log_say("Parent class calculations are for testing purposes only")
+        log_say("Parent class calculations are for testing purposes only")
         # For demo purposes, let's calculate the high of the day
         self.datapoints = []
         hod = 0
