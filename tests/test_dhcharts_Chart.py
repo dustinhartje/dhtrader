@@ -69,6 +69,7 @@ def test_Chart_create_and_verify_pretty():
     assert len(out_chart.pretty(suppress_candles=False).splitlines()) == 35
 
 
+@pytest.mark.storage
 def test_Chart_restrict_dates():
     # Create a multimonth chart and confirm initial dates and candle count
     ch = dhc.Chart(c_timeframe="15m",

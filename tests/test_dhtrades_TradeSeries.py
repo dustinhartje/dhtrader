@@ -572,6 +572,7 @@ def test_TradeSeries_drawdown_impact():
     assert r["liquidated"] is False
 
 
+@pytest.mark.storage
 def test_TradeSeries_store_retrieve_and_delete():
     # Create a TradeSeries with 2 Trade objects to test with
     ts = create_tradeseries(name="DELETEME-TEST")

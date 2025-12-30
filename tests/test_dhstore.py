@@ -1,3 +1,4 @@
+import pytest
 import site
 site.addsitedir('modulepaths')
 import dhstore as dhs
@@ -60,6 +61,7 @@ def clear_storage_by_bt_id(bt_id):
     assert len(r) == 0
 
 
+@pytest.mark.storage
 def test_TradeSeries_and_Trade_integrity_checks():
     """Constructs objects that should fail storage integrity check requirements
     to ensure checks will fail as expected if problems arise in storage"""

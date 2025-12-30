@@ -1,10 +1,11 @@
+import sys
+import pytest
 import site
 # This hacky crap is needed to help imports between files in dhtrader
 # find each other when run by a script in another folder (even tests).
 site.addsitedir('modulepaths')
 import dhcharts as dhc
 import dhstore as dhs
-import sys
 
 
 # TODO think through which tests can be done simply by creating and calcing,
@@ -250,6 +251,7 @@ def Indicator_spotcheck_ES_eth_15m_EMA_close_l9_s2(i):
     # TODO Last candle before & after a holiday
 
 
+@pytest.mark.storage
 def test_Indicator_calculated_spotcheck_ES_eth_15m_EMA_close_l9_s2():
     ind_calced = dhs.get_indicator(ind_id="ES_eth_15m_EMA_close_l9_s2",
                                    autoload_datapoints=False,
@@ -261,6 +263,7 @@ def test_Indicator_calculated_spotcheck_ES_eth_15m_EMA_close_l9_s2():
     Indicator_spotcheck_ES_eth_15m_EMA_close_l9_s2(ind_calced)
 
 
+@pytest.mark.storage
 def test_Indicator_storage_spotcheck_ES_eth_15m_EMA_close_l9_s2():
     ind_stored = dhs.get_indicator(ind_id="ES_eth_15m_EMA_close_l9_s2",
                                    autoload_datapoints=False,
@@ -313,6 +316,7 @@ def Indicator_spotcheck_ES_eth_15m_EMA_close_l20_s2(i):
     # TODO Last candle before & after a holiday
 
 
+@pytest.mark.storage
 def test_Indicator_calculated_spotcheck_ES_eth_15m_EMA_close_l20_s2():
     ind_calced = dhs.get_indicator(ind_id="ES_eth_15m_EMA_close_l20_s2",
                                    autoload_datapoints=False,
@@ -324,6 +328,7 @@ def test_Indicator_calculated_spotcheck_ES_eth_15m_EMA_close_l20_s2():
     Indicator_spotcheck_ES_eth_15m_EMA_close_l20_s2(ind_calced)
 
 
+@pytest.mark.storage
 def test_Indicator_storage_spotcheck_ES_eth_15m_EMA_close_l20_s2():
     ind_stored = dhs.get_indicator(ind_id="ES_eth_15m_EMA_close_l20_s2",
                                    autoload_datapoints=False,
@@ -377,6 +382,7 @@ def Indicator_spotcheck_ES_eth_e1h_EMA_close_l9_s2(i):
     # TODO Last candle before & after a holiday
 
 
+@pytest.mark.storage
 def test_Indicator_calculated_spotcheck_ES_eth_e1h_EMA_close_l9_s2():
     ind_calced = dhs.get_indicator(ind_id="ES_eth_e1h_EMA_close_l9_s2",
                                    autoload_datapoints=False,
@@ -388,6 +394,7 @@ def test_Indicator_calculated_spotcheck_ES_eth_e1h_EMA_close_l9_s2():
     Indicator_spotcheck_ES_eth_e1h_EMA_close_l9_s2(ind_calced)
 
 
+@pytest.mark.storage
 def test_Indicator_storage_spotcheck_ES_eth_e1h_EMA_close_l9_s2():
     ind_stored = dhs.get_indicator(ind_id="ES_eth_e1h_EMA_close_l9_s2",
                                    autoload_datapoints=False,
@@ -447,6 +454,7 @@ def Indicator_spotcheck_ES_eth_e1h_EMA_close_l20_s2(i):
     # TODO Last candle before & after a holiday
 
 
+@pytest.mark.storage
 def test_Indicator_calculated_spotcheck_ES_eth_e1h_EMA_close_l20_s2():
     ind_calced = dhs.get_indicator(ind_id="ES_eth_e1h_EMA_close_l20_s2",
                                    autoload_datapoints=False,
@@ -458,6 +466,7 @@ def test_Indicator_calculated_spotcheck_ES_eth_e1h_EMA_close_l20_s2():
     Indicator_spotcheck_ES_eth_e1h_EMA_close_l20_s2(ind_calced)
 
 
+@pytest.mark.storage
 def test_Indicator_storage_spotcheck_ES_eth_e1h_EMA_close_l20_s2():
     ind_stored = dhs.get_indicator(ind_id="ES_eth_e1h_EMA_close_l20_s2",
                                    autoload_datapoints=False,

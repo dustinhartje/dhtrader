@@ -164,6 +164,7 @@ def clear_storage_by_name(name: str):
     assert len(s_tr) == 0
 
 
+@pytest.mark.storage
 def test_Backtest_create_and_verify_pretty():
     # Check line counts of pretty output, won't change unless class changes
     bt = create_backtest()
@@ -180,6 +181,7 @@ def test_Backtest_create_and_verify_pretty():
                          suppress_trades=False).splitlines()) == 62
 
 
+@pytest.mark.storage
 def test_Backtest_load_charts():
     bt = create_backtest(start_dt="2025-01-01 00:00:00",
                          end_dt="2025-01-07 17:30:00",
@@ -197,6 +199,7 @@ def test_Backtest_load_charts():
     assert bt.end_dt == "2025-01-07 16:59:00"
 
 
+@pytest.mark.storage
 def test_Backtest_restrict_dates():
     test_name = "DELETEME-RESTRICTTest"
     bt = create_backtest(name=test_name,
@@ -497,6 +500,7 @@ def test_Backtest_restrict_dates():
     clear_storage_by_name(name=test_name)
 
 
+@pytest.mark.storage
 def test_Backtest_add_and_remove_tradeseries_and_trades():
     test_name = "DELETEME-ARTSTest"
     ts1_name = "".join([test_name, "1"])
@@ -729,6 +733,7 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
     assert len(s_tr) == 0
 
 
+@pytest.mark.storage
 def test_Backtest_store_retrieve_load_tradeseries_and_delete():
     test_name = "DELETEME-STORELOADTest"
     # Create and link Backtest, TradeSeries, and Trade objects

@@ -1135,6 +1135,7 @@ def test_Trade_closed_intraday():
     assert t.closed_intraday() is False
 
 
+@pytest.mark.storage
 def test_Trade_store_retrieve_delete():
     # First make sure there are no DELETEME trades in storage currently
     dhs.delete_trades(symbol="ES", field="name", value="DELETEME-TEST")

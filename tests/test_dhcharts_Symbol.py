@@ -1,3 +1,4 @@
+import pytest
 import site
 # This hacky crap is needed to help imports between files in dhtrader
 # find each other when run by a script in another folder (even tests).
@@ -33,6 +34,12 @@ from dhutil import dt_as_dt, dt_as_str, dow_name
 SYMBOL = dhc.Symbol(ticker="ES", name="ES", leverage_ratio=50, tick_size=0.25)
 
 
+@pytest.mark.storage
+# TODO This only requires storage because dhcharts.Symbol.market_is_open uses
+#     dhcharts.Event which uses storage to load events.  This could be
+#     refactored to allow passing in a list of events and I could generate
+#     a static copy of the current events to load and use to speed this up
+#     and remove the storage requirement.  In theory.  Some day.
 def test_Symbol_market_is_open():
     # ETH
     # Monday through Thursday
