@@ -382,9 +382,9 @@ def next_candle_start(dt,
     return next_dt
 
 
-def this_candle_start(dt, timeframe: str = "1m"):
-    """Returns the datetime that represents a proper candle start
-    in which the given datetime would exit in this timeframe.  May return the
+def this_candle_start(dt, timeframe: str):
+    """Returns the datetime that represents a parent candle start
+    in which the given datetime would exist in this timeframe.  May return the
     same as input.  This does not confirm market open like next_candle_start()
     since it may not be able to provide an answer in some cases..
     """

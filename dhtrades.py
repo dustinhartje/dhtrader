@@ -314,13 +314,17 @@ class Trade():
                                     ts_id=self.ts_id,
                                     )
 
+    def parent_bar_dt(self):
+        """Returns the timeframe specific 'parent bar' (the bar within which
+        this Trade opened) opening datetime as a datetime object."""
+        return dhu.this_candle_start(self.open_dt,
+                                     timeframe=self.timeframe)
+
     def parent_bar_secs(self):
         """Returns the number of seconds that elapsed between the opening of
         the 'parent bar' (the timeframe specific bar within which this Trade
         opened) and the opening of this Trade."""
-        start = dhu.dt_to_epoch(dhu.this_candle_start(self.open_dt,
-                                                      timeframe=self.timeframe,
-                                                      ))
+        start = dhu.dt_to_epoch(self.parent_bar_dt())
         return self.open_epoch - start
 
     def closed_intraday(self):
