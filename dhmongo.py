@@ -493,11 +493,11 @@ def review_candles(timeframe: str,
         return result
 
 
-def drop_candles(timeframe: str,
-                 symbol: str,
-                 earliest_dt: str,
-                 latest_dt: str,
-                 ):
+def delete_candles(timeframe: str,
+                   symbol: str,
+                   earliest_dt: str,
+                   latest_dt: str,
+                   ):
     "Delete candles from mongo for a specific datetime range."""
     c = db[f"candles_{symbol}_{timeframe}"]
     start_epoch = dhu.dt_to_epoch(earliest_dt)

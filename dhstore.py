@@ -1142,21 +1142,21 @@ def review_candles(timeframe: str,
     return result
 
 
-def drop_candles(timeframe: str,
-                 symbol: str,
-                 earliest_dt=None,
-                 latest_dt=None,
-                 ):
+def delete_candles(timeframe: str,
+                   symbol: str,
+                   earliest_dt=None,
+                   latest_dt=None,
+                   ):
     """Deletes candles from central storage either en masse or for a
     specific datetime range."""
     if earliest_dt is None and latest_dt is None:
-        return dhm.drop_collection(f"candles_{symbol}_{timeframe}")
+        return dhm.clear_collection(f"candles_{symbol}_{timeframe}")
     else:
-        return dhm.drop_candles(timeframe=timeframe,
-                                symbol=symbol,
-                                earliest_dt=earliest_dt,
-                                latest_dt=latest_dt,
-                                )
+        return dhm.delete_candles(timeframe=timeframe,
+                                  symbol=symbol,
+                                  earliest_dt=earliest_dt,
+                                  latest_dt=latest_dt,
+                                  )
 
 
 ##############################################################################
@@ -1214,13 +1214,13 @@ def get_events(symbol="ES",
     return events
 
 
-def drop_events(symbol: str,
-                earliest_dt=None,
-                latest_dt=None,
-                ):
+def clear_events(symbol: str,
+                 earliest_dt=None,
+                 latest_dt=None,
+                 ):
     """Deletes events from central storage"""
     if earliest_dt is None and latest_dt is None:
-        return dhm.drop_collection(f"events_{symbol}")
+        return dhm.clear_collection(f"events_{symbol}")
     else:
         return "Sorry, Dusty hasn't written code for select timeframes yet"
 
@@ -1263,7 +1263,7 @@ def test_basics():
     for r in result:
         print(r.__dict__)
     print("\nAnd drop the test collection to clean up")
-    drop_candles(timeframe="1m", symbol="DELETEME")
+    dhm.drop_collection("candles_DELETEME_1m")
 
     print("\nLets check the collections list to confirm it no longer exists")
     collections = dhm.list_collections()
@@ -1291,7 +1291,7 @@ def test_basics():
     for r in result:
         print(r.__dict__)
     print("\nAnd drop the test collection to clean up")
-    drop_candles(timeframe="1m", symbol="DELETEME")
+    dhm.drop_collection("candles_DELETEME_1m")
 
     # Test candle integrity check process
     print("\nChecking integrity of stored r1h candles")
