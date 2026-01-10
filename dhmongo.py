@@ -500,6 +500,10 @@ def delete_candles(timeframe: str,
                    ):
     "Delete candles from mongo for a specific datetime range."""
     c = db[f"candles_{symbol}_{timeframe}"]
+    if earliest_dt is None:
+        earliest_dt = "1970-01-01 00:00:00"
+    if latest_dt is None:
+        latest_dt = dhu.dt_as_str(dt.now())
     start_epoch = dhu.dt_to_epoch(earliest_dt)
     end_epoch = dhu.dt_to_epoch(latest_dt)
     result = c.delete_many({"$and": [{"c_epoch": {"$gte": start_epoch}},
