@@ -776,7 +776,7 @@ def store_indicator(indicator,
     op_timer = dhu.OperationTimer(name="Indicator Storage Job")
     # First store/replace the indicator meta doc itself
     i = indicator.to_clean_dict()
-    i["datapoints"] = len(i["datapoints"])
+    i["datapoints"] = len(indicator.datapoints)
     result_ind = dhm.store_indicator(i,
                                      meta_collection=meta_collection,
                                      )
