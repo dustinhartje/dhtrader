@@ -1,12 +1,14 @@
 import datetime
-import site
 import pytest
+import json
+import site
 site.addsitedir('modulepaths')
 import dhcharts as dhc
 import dhtrades as dht
 import dhutil as dhu
 from dhutil import dt_as_dt, dt_as_str
 import dhstore as dhs
+from testdata.testdata import Rebuilder
 
 # TODO think through which tests can be done simply by creating and calcing,
 #      and which should pull data from storage to confirm live results
@@ -619,3 +621,31 @@ def test_TradeSeries_store_retrieve_and_delete():
     assert len(s_ts) == 0
     s_tr = dhs.get_trades_by_field(field="ts_id", value=ts.ts_id)
     assert len(s_tr) == 0
+
+
+@pytest.mark.historical
+def test_TradeSeries_historical():
+    """Rebuild a TradeSeries from historical candle data and compare methods
+    output to expected results manually calculated outside of dhtrader.
+
+    Tests methods:
+        TradeSeries.stats()
+    """
+    # Rebuild testdata/set1 short TradeSeries
+    ts = Rebuilder().rebuild_tradeseries(
+        in_file="testdata/set1/set1_tradeseries.json",
+        ts_ids="BacktestEMAReject-eth_e1h_9_s80-p160-o40",
+        bt_ids=None,
+        start_dt=None,
+        end_dt=None,
+        trades_file="testdata/set1/set1_trades.json"
+        )[0]
+    # Get expected stats results for comparison
+    e_file = "testdata/set1/expected/set1_ts_stats_shorts_fulllist.json"
+    with open(e_file, "r") as f:
+        expected_stats = json.load(f)
+    expected_stats["trade_ticks"] = expected_stats["trade_ticks"]
+    # Get actual stats results from method
+    actual_stats = ts.stats()
+    # Compare expected to actual results
+    assert actual_stats == expected_stats
