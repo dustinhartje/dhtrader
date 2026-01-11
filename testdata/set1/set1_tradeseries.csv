@@ -1,0 +1,3 @@
+bt_id,end_dt,name,params_str,start_dt,symbol,tags,timeframe,trades,trading_hours,ts_id
+BacktestEMABounce-eth_e1h_9,2025-12-19 17:00:00,BacktestEMABounce-eth_e1h_9,s80-p160-o0,2025-11-30 18:00:00,ES,[],e1h,"[""0 Trades suppressed for output sanity""]",eth,BacktestEMABounce-eth_e1h_9_s80-p160-o0
+BacktestEMAReject-eth_e1h_9,2025-12-19 17:00:00,BacktestEMAReject-eth_e1h_9,s80-p160-o40,2025-11-30 18:00:00,ES,[],e1h,"[""0 Trades suppressed for output sanity""]",eth,BacktestEMAReject-eth_e1h_9_s80-p160-o40

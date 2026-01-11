@@ -1,0 +1,17 @@
+{
+    "description": "3 weeks of ES 1m and e1h candles for the below BacktestIndTag and TradeSeries.  Includes all hours the market was open and all possible trades.  No deoverlapping or other processing has been done to this dataset.  Avoided holidays due to open Issue with early market closures not closing Trades at end of day.",
+    "start_dt": "2025-11-30 18:00:00",
+    "end_dt": "2025-12-19 17:00:00",
+    "timeframe": "e1h",
+    "trading_hours": "eth",
+    "symbol": "ES",
+    "ind_id": "ES_eth_e1h_EMA_close_l9_s2",
+    "bt_ids": [
+        "BacktestEMABounce-eth_e1h_9",
+        "BacktestEMAReject-eth_e1h_9"
+    ],
+    "ts_ids": [
+        "BacktestEMABounce-eth_e1h_9_s80-p160-o0",
+        "BacktestEMAReject-eth_e1h_9_s80-p160-o40"
+    ]
+}
