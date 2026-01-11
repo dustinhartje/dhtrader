@@ -929,8 +929,16 @@ class TradeSeries():
         if total_trades > 0:
             success_percent = round(profits/total_trades, 4)*100
             trading_days = len(days_traded)
-            total_days = (dhu.dt_as_dt(self.end_dt)
-                          - dhu.dt_as_dt(self.start_dt)).days
+            # total_days is fuzzy because start_dt and/or end_dt may be at a
+            # day boundary and either may or may not have valid trading hours.
+            # There are also edge cases around eth vs rth hours.  For
+            # simplicity, we assume both dates have valid hours and count them
+            # both from midnight to midnight using .date(), then add 1 to
+            # include the end date as a full day.  This may overstate
+            # total_days by up to 2 days in some cases which is typically not
+            # statistically meaningful for analysis on long time frames.
+            total_days = (dhu.dt_as_dt(self.end_dt).date()
+                          - dhu.dt_as_dt(self.start_dt).date()).days + 1
             total_weeks = round(total_days/7, 2)
             trades_per_day = round(total_trades/total_days, 2)
             trades_per_trading_day = round(total_trades/trading_days, 2)
