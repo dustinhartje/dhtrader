@@ -1,4 +1,6 @@
+from copy import copy
 import datetime
+import json
 import site
 import pytest
 site.addsitedir('modulepaths')
@@ -8,6 +10,7 @@ import dhutil as dhu
 from dhutil import dt_as_dt, dt_as_str
 import dhstore as dhs
 from datetime import timedelta as td
+from testdata.testdata import Rebuilder
 
 # TODO Tests needed (some of these have already been written partially/fully
 # Trade Drawdown calculations (see placeholder function below for details)
@@ -1154,3 +1157,38 @@ def test_Trade_store_retrieve_delete():
     dhs.delete_trades(symbol="ES", field="name", value="DELETEME-TEST")
     stored = dhs.get_trades_by_field(field="name", value="DELETEME-TEST")
     assert len(stored) == 0
+
+
+@pytest.mark.historical
+def test_Trade_historical():
+    """Rebuild a list of Trades from historical extracted data and compare
+    methods output to expected results manually calculated outside of dhtrader
+
+    Tests methods:
+        Trade.balance_impact()
+        Trade.drawdown_impact()
+    """
+    # Rebuild trades list from historical extracted data file
+    tf = "testdata/set1/set1_trades.json"
+    ts_id = "BacktestEMAReject-eth_e1h_9_s80-p160-o40"
+    trades = Rebuilder().rebuild_trades(in_file=tf,
+                                        ts_id=ts_id)
+
+    # Trade.balance_impact()
+    ef = "testdata/set1/expected/set1_trades_shorts_full_balanceimpact.json"
+    with open(ef, "r") as f:
+        expected_results = json.load(f)
+    for i, t in enumerate(trades):
+        actual_results = t.balance_impact(balance_open=100000,
+                                          contracts=2,
+                                          contract_value=50,
+                                          contract_fee=3.04)
+        print(f"\nactual_results={actual_results}")
+        print(f"\nexpected_results={expected_results[i]}")
+        expected = copy(expected_results[i])
+        # remove "open_dt" and "liquidated" keys from expected as they vary
+        if "open_dt" in expected:
+            expected.pop("open_dt")
+        if "liquidated" in expected:
+            expected.pop("liquidated")
+        assert actual_results == expected

@@ -1,0 +1,434 @@
+[
+    {
+        "open_dt": "2025-11-30 18:00:00",
+        "balance_open": 100000,
+        "balance_close": 103993.92,
+        "balance_high": 103993.92,
+        "balance_low": 99243.92,
+        "gain_loss": 3993.92
+    },
+    {
+        "open_dt": "2025-12-01 09:38:00",
+        "balance_open": 100000,
+        "balance_close": 97993.92,
+        "balance_high": 101493.92,
+        "balance_low": 97993.92,
+        "gain_loss": -2006.08
+    },
+    {
+        "open_dt": "2025-12-02 04:25:00",
+        "balance_open": 100000,
+        "balance_close": 97993.92,
+        "balance_high": 100443.92,
+        "balance_low": 97993.92,
+        "gain_loss": -2006.08
+    },
+    {
+        "open_dt": "2025-12-02 05:09:00",
+        "balance_open": 100000,
+        "balance_close": 97993.92,
+        "balance_high": 100343.92,
+        "balance_low": 97993.92,
+        "gain_loss": -2006.08
+    },
+    {
+        "open_dt": "2025-12-02 08:30:00",
+        "balance_open": 100000,
+        "balance_close": 100518.92,
+        "balance_high": 102743.92,
+        "balance_low": 98193.92,
+        "gain_loss": 518.92
+    },
+    {
+        "open_dt": "2025-12-02 10:00:00",
+        "balance_open": 100000,
+        "balance_close": 100968.92,
+        "balance_high": 103193.92,
+        "balance_low": 98643.92,
+        "gain_loss": 968.92
+    },
+    {
+        "open_dt": "2025-12-02 12:31:00",
+        "balance_open": 100000,
+        "balance_close": 101093.92,
+        "balance_high": 102693.92,
+        "balance_low": 99768.92,
+        "gain_loss": 1093.92
+    },
+    {
+        "open_dt": "2025-12-02 14:51:00",
+        "balance_open": 100000,
+        "balance_close": 100743.92,
+        "balance_high": 100793.92,
+        "balance_low": 99418.92,
+        "gain_loss": 743.92
+    },
+    {
+        "open_dt": "2025-12-02 15:13:00",
+        "balance_open": 100000,
+        "balance_close": 100943.92,
+        "balance_high": 100993.92,
+        "balance_low": 99618.92,
+        "gain_loss": 943.92
+    },
+    {
+        "open_dt": "2025-12-02 21:23:00",
+        "balance_open": 100000,
+        "balance_close": 99293.92,
+        "balance_high": 103643.92,
+        "balance_low": 98068.92,
+        "gain_loss": -706.08
+    },
+    {
+        "open_dt": "2025-12-02 22:35:00",
+        "balance_open": 100000,
+        "balance_close": 99468.92,
+        "balance_high": 103818.92,
+        "balance_low": 98243.92,
+        "gain_loss": -531.08
+    },
+    {
+        "open_dt": "2025-12-03 11:38:00",
+        "balance_open": 100000,
+        "balance_close": 99743.92,
+        "balance_high": 101843.92,
+        "balance_low": 98518.92,
+        "gain_loss": -256.08
+    },
+    {
+        "open_dt": "2025-12-03 12:21:00",
+        "balance_open": 100000,
+        "balance_close": 99693.92,
+        "balance_high": 100143.92,
+        "balance_low": 98468.92,
+        "gain_loss": -306.08
+    },
+    {
+        "open_dt": "2025-12-03 14:00:00",
+        "balance_open": 100000,
+        "balance_close": 100218.92,
+        "balance_high": 100393.92,
+        "balance_low": 98993.92,
+        "gain_loss": 218.92
+    },
+    {
+        "open_dt": "2025-12-04 09:08:00",
+        "balance_open": 100000,
+        "balance_close": 101368.92,
+        "balance_high": 103793.92,
+        "balance_low": 99343.92,
+        "gain_loss": 1368.92
+    },
+    {
+        "open_dt": "2025-12-04 20:41:00",
+        "balance_open": 100000,
+        "balance_close": 97993.92,
+        "balance_high": 101793.92,
+        "balance_low": 97993.92,
+        "gain_loss": -2006.08
+    },
+    {
+        "open_dt": "2025-12-04 21:15:00",
+        "balance_open": 100000,
+        "balance_close": 97993.92,
+        "balance_high": 102018.92,
+        "balance_low": 97993.92,
+        "gain_loss": -2006.08
+    },
+    {
+        "open_dt": "2025-12-04 22:58:00",
+        "balance_open": 100000,
+        "balance_close": 97993.92,
+        "balance_high": 102193.92,
+        "balance_low": 97993.92,
+        "gain_loss": -2006.08
+    },
+    {
+        "open_dt": "2025-12-04 23:07:00",
+        "balance_open": 100000,
+        "balance_close": 97993.92,
+        "balance_high": 102368.92,
+        "balance_low": 97993.92,
+        "gain_loss": -2006.08
+    },
+    {
+        "open_dt": "2025-12-05 09:31:00",
+        "balance_open": 100000,
+        "balance_close": 101318.92,
+        "balance_high": 101868.92,
+        "balance_low": 98018.92,
+        "gain_loss": 1318.92
+    },
+    {
+        "open_dt": "2025-12-05 11:00:00",
+        "balance_open": 100000,
+        "balance_close": 101793.92,
+        "balance_high": 102343.92,
+        "balance_low": 99768.92,
+        "gain_loss": 1793.92
+    },
+    {
+        "open_dt": "2025-12-09 11:16:00",
+        "balance_open": 100000,
+        "balance_close": 102293.92,
+        "balance_high": 102368.92,
+        "balance_low": 99768.92,
+        "gain_loss": 2293.92
+    },
+    {
+        "open_dt": "2025-12-09 12:05:00",
+        "balance_open": 100000,
+        "balance_close": 102443.92,
+        "balance_high": 102518.92,
+        "balance_low": 99943.92,
+        "gain_loss": 2443.92
+    },
+    {
+        "open_dt": "2025-12-10 11:27:00",
+        "balance_open": 100000,
+        "balance_close": 97993.92,
+        "balance_high": 101368.92,
+        "balance_low": 97993.92,
+        "gain_loss": -2006.08
+    },
+    {
+        "open_dt": "2025-12-10 12:55:00",
+        "balance_open": 100000,
+        "balance_close": 97993.92,
+        "balance_high": 101518.92,
+        "balance_low": 97993.92,
+        "gain_loss": -2006.08
+    },
+    {
+        "open_dt": "2025-12-10 14:00:00",
+        "balance_open": 100000,
+        "balance_close": 97993.92,
+        "balance_high": 100868.92,
+        "balance_low": 97993.92,
+        "gain_loss": -2006.08
+    },
+    {
+        "open_dt": "2025-12-11 04:54:00",
+        "balance_open": 100000,
+        "balance_close": 97993.92,
+        "balance_high": 100593.92,
+        "balance_low": 97993.92,
+        "gain_loss": -2006.08
+    },
+    {
+        "open_dt": "2025-12-11 06:46:00",
+        "balance_open": 100000,
+        "balance_close": 97993.92,
+        "balance_high": 102118.92,
+        "balance_low": 97993.92,
+        "gain_loss": -2006.08
+    },
+    {
+        "open_dt": "2025-12-11 09:11:00",
+        "balance_open": 100000,
+        "balance_close": 97993.92,
+        "balance_high": 102993.92,
+        "balance_low": 97993.92,
+        "gain_loss": -2006.08
+    },
+    {
+        "open_dt": "2025-12-11 10:11:00",
+        "balance_open": 100000,
+        "balance_close": 97993.92,
+        "balance_high": 100218.92,
+        "balance_low": 97993.92,
+        "gain_loss": -2006.08
+    },
+    {
+        "open_dt": "2025-12-11 19:30:00",
+        "balance_open": 100000,
+        "balance_close": 103993.92,
+        "balance_high": 103993.92,
+        "balance_low": 99143.92,
+        "gain_loss": 3993.92
+    },
+    {
+        "open_dt": "2025-12-11 20:16:00",
+        "balance_open": 100000,
+        "balance_close": 103993.92,
+        "balance_high": 103993.92,
+        "balance_low": 99268.92,
+        "gain_loss": 3993.92
+    },
+    {
+        "open_dt": "2025-12-11 21:08:00",
+        "balance_open": 100000,
+        "balance_close": 103993.92,
+        "balance_high": 103993.92,
+        "balance_low": 99468.92,
+        "gain_loss": 3993.92
+    },
+    {
+        "open_dt": "2025-12-12 00:56:00",
+        "balance_open": 100000,
+        "balance_close": 103993.92,
+        "balance_high": 103993.92,
+        "balance_low": 99868.92,
+        "gain_loss": 3993.92
+    },
+    {
+        "open_dt": "2025-12-15 03:31:00",
+        "balance_open": 100000,
+        "balance_close": 97993.92,
+        "balance_high": 99993.92,
+        "balance_low": 97993.92,
+        "gain_loss": -2006.08
+    },
+    {
+        "open_dt": "2025-12-15 08:43:00",
+        "balance_open": 100000,
+        "balance_close": 103993.92,
+        "balance_high": 103993.92,
+        "balance_low": 99268.92,
+        "gain_loss": 3993.92
+    },
+    {
+        "open_dt": "2025-12-15 09:01:00",
+        "balance_open": 100000,
+        "balance_close": 103993.92,
+        "balance_high": 103993.92,
+        "balance_low": 99518.92,
+        "gain_loss": 3993.92
+    },
+    {
+        "open_dt": "2025-12-16 05:37:00",
+        "balance_open": 100000,
+        "balance_close": 97993.92,
+        "balance_high": 100018.92,
+        "balance_low": 97993.92,
+        "gain_loss": -2006.08
+    },
+    {
+        "open_dt": "2025-12-16 06:01:00",
+        "balance_open": 100000,
+        "balance_close": 97993.92,
+        "balance_high": 100243.92,
+        "balance_low": 97993.92,
+        "gain_loss": -2006.08
+    },
+    {
+        "open_dt": "2025-12-16 09:16:00",
+        "balance_open": 100000,
+        "balance_close": 103993.92,
+        "balance_high": 103993.92,
+        "balance_low": 99243.92,
+        "gain_loss": 3993.92
+    },
+    {
+        "open_dt": "2025-12-16 15:30:00",
+        "balance_open": 100000,
+        "balance_close": 99518.92,
+        "balance_high": 99993.92,
+        "balance_low": 98818.92,
+        "gain_loss": -481.08
+    },
+    {
+        "open_dt": "2025-12-17 01:14:00",
+        "balance_open": 100000,
+        "balance_close": 97993.92,
+        "balance_high": 100293.92,
+        "balance_low": 97993.92,
+        "gain_loss": -2006.08
+    },
+    {
+        "open_dt": "2025-12-17 02:06:00",
+        "balance_open": 100000,
+        "balance_close": 97993.92,
+        "balance_high": 100468.92,
+        "balance_low": 97993.92,
+        "gain_loss": -2006.08
+    },
+    {
+        "open_dt": "2025-12-17 03:18:00",
+        "balance_open": 100000,
+        "balance_close": 103993.92,
+        "balance_high": 103993.92,
+        "balance_low": 98193.92,
+        "gain_loss": 3993.92
+    },
+    {
+        "open_dt": "2025-12-17 04:15:00",
+        "balance_open": 100000,
+        "balance_close": 103993.92,
+        "balance_high": 103993.92,
+        "balance_low": 98393.92,
+        "gain_loss": 3993.92
+    },
+    {
+        "open_dt": "2025-12-17 08:01:00",
+        "balance_open": 100000,
+        "balance_close": 103993.92,
+        "balance_high": 103993.92,
+        "balance_low": 99943.92,
+        "gain_loss": 3993.92
+    },
+    {
+        "open_dt": "2025-12-18 03:47:00",
+        "balance_open": 100000,
+        "balance_close": 97993.92,
+        "balance_high": 100493.92,
+        "balance_low": 97993.92,
+        "gain_loss": -2006.08
+    },
+    {
+        "open_dt": "2025-12-18 04:34:00",
+        "balance_open": 100000,
+        "balance_close": 97993.92,
+        "balance_high": 100068.92,
+        "balance_low": 97993.92,
+        "gain_loss": -2006.08
+    },
+    {
+        "open_dt": "2025-12-18 06:00:00",
+        "balance_open": 100000,
+        "balance_close": 97993.92,
+        "balance_high": 100568.92,
+        "balance_low": 97993.92,
+        "gain_loss": -2006.08
+    },
+    {
+        "open_dt": "2025-12-18 08:30:00",
+        "balance_open": 100000,
+        "balance_close": 97993.92,
+        "balance_high": 99993.92,
+        "balance_low": 97993.92,
+        "gain_loss": -2006.08
+    },
+    {
+        "open_dt": "2025-12-18 15:33:00",
+        "balance_open": 100000,
+        "balance_close": 100643.92,
+        "balance_high": 100768.92,
+        "balance_low": 99343.92,
+        "gain_loss": 643.92
+    },
+    {
+        "open_dt": "2025-12-19 02:13:00",
+        "balance_open": 100000,
+        "balance_close": 97993.92,
+        "balance_high": 101068.92,
+        "balance_low": 97993.92,
+        "gain_loss": -2006.08
+    },
+    {
+        "open_dt": "2025-12-19 03:02:00",
+        "balance_open": 100000,
+        "balance_close": 97993.92,
+        "balance_high": 101268.92,
+        "balance_low": 97993.92,
+        "gain_loss": -2006.08
+    },
+    {
+        "open_dt": "2025-12-19 09:29:00",
+        "balance_open": 100000,
+        "balance_close": 97993.92,
+        "balance_high": 100218.92,
+        "balance_low": 97993.92,
+        "gain_loss": -2006.08
+    }
+]
