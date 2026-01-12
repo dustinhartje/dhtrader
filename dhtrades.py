@@ -450,8 +450,8 @@ class Trade():
             max_loss = self.high_price - self.entry_price
         # Use these to calculate highest and lowest drawdown distances seen
         cmult = contracts * contract_value
-        drawdown_high = drawdown_open + (max_gain * cmult) - fees
-        drawdown_low = drawdown_open - (max_loss * cmult) - fees
+        drawdown_high = drawdown_open + (max_gain * cmult)
+        drawdown_low = drawdown_open - (max_loss * cmult)
         if drawdown_high > drawdown_limit:
             drawdown_trail_increase = drawdown_high - drawdown_limit
         else:
@@ -462,7 +462,7 @@ class Trade():
                           * self.flipper
                           * cmult)
                           + drawdown_open
-                          - (contracts * contract_fee))
+                          - fees)
         # Closing drawdown cannot exceed drawdown limit on account
         drawdown_close = min(drawdown_close, drawdown_limit)
         # Round results because float math anomalies create trailing decimals
