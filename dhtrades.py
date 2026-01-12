@@ -827,6 +827,7 @@ class TradeSeries():
         balance_high = balance_open
         balance_low = balance_open
         liquidated = False
+        gain_loss = 0.0
         for t in self.trades:
             if not t.first_min_open or include_first_min:
                 r = t.balance_impact(balance_open=balance_close,
@@ -837,6 +838,7 @@ class TradeSeries():
                 balance_high = max(balance_high, r["balance_high"])
                 balance_low = min(balance_low, r["balance_low"])
                 balance_close = r["balance_close"]
+                gain_loss += r["gain_loss"]
         if balance_low <= 0:
             liquidated = True
 
@@ -845,6 +847,7 @@ class TradeSeries():
                 "balance_high": balance_high,
                 "balance_low": balance_low,
                 "liquidated": liquidated,
+                "gain_loss": round(gain_loss, 2),
                 }
 
     def drawdown_impact(self,
