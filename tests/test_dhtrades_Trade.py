@@ -1183,12 +1183,26 @@ def test_Trade_historical():
                                           contracts=2,
                                           contract_value=50,
                                           contract_fee=3.04)
+        expected = copy(expected_results[i])
+        # remove "open_dt" and "liquidated" keys from expected as they vary
+        if "open_dt" in expected:
+            expected.pop("open_dt")
+        assert actual_results == expected
+
+    # Trade.drawdown_impact()
+    ef = "testdata/set1/expected/set1_trades_shorts_full_drawdownnimpact.json"
+    with open(ef, "r") as f:
+        expected_results = json.load(f)
+    for i, t in enumerate(trades):
+        actual_results = t.drawdown_impact(drawdown_open=6000,
+                                           drawdown_limit=6500,
+                                           contracts=2,
+                                           contract_value=50,
+                                           contract_fee=3.04)
         print(f"\nactual_results={actual_results}")
         print(f"\nexpected_results={expected_results[i]}")
         expected = copy(expected_results[i])
         # remove "open_dt" and "liquidated" keys from expected as they vary
         if "open_dt" in expected:
             expected.pop("open_dt")
-        if "liquidated" in expected:
-            expected.pop("liquidated")
         assert actual_results == expected

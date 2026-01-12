@@ -691,3 +691,10 @@ def test_TradeSeries_historical():
                                         contract_fee=3.04,
                                         include_first_min=True)
     assert actual_results == expected_results
+    #TODO need to update the TS specific columns in my spreadsheet with any
+    #     changes that were needed for the Trade version then export them to
+    #     update the expected results json files.
+    #TODO then work through any updates needed to reconcile the differences
+    #TODO when Trade and TS both are good, remove these comments and
+    #     commit/push.  Then move on to building backtesting repot tests for
+    #     dhanalyze stuff
