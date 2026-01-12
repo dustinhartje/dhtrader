@@ -654,7 +654,6 @@ def test_TradeSeries_historical():
     # Compare expected to actual results
     assert actual_stats == expected_stats
 
-    #TODO troubleshoot this after getting Trade.balance_impact() matching
     # .balance_impact() method
     ef = "testdata/set1/expected/set1_ts_balanceimpact_shorts_full.json"
     with open(ef, "r") as f:
@@ -662,24 +661,10 @@ def test_TradeSeries_historical():
     actual_results = ts.balance_impact(balance_open=100000,
                                        contracts=2,
                                        contract_value=50,
-                                       contract_fee=0,
+                                       contract_fee=3.04,
                                        include_first_min=True)
-    #assert actual_results == expected_results
-    # with 0 fee:
-    # -     'balance_close': 103846.68,
-    #  +     'balance_close': 104175.0,
-    #  -     'balance_high': 117245.32,
-    #  +     'balance_high': 118025.0,
-    #  -     'balance_low': 86967.6,
-    #  +     'balance_low': 87150.0,
+    assert actual_results == expected_results
 
-    # with 3.04 fee:
-    #  -     'balance_high': 117245.32,
-    #  +     'balance_high': 117739.24,
-    #  -     'balance_low': 86967.6,
-    #  +     'balance_low': 86961.52,
-
-    #TODO troubleshoot this after getting Trade.drawdown_impact() matching
     # .drawdown_impact() method
     ef = "testdata/set1/expected/set1_ts_drawdownimpact_shorts_full.json"
     with open(ef, "r") as f:
@@ -691,10 +676,3 @@ def test_TradeSeries_historical():
                                         contract_fee=3.04,
                                         include_first_min=True)
     assert actual_results == expected_results
-    #TODO need to update the TS specific columns in my spreadsheet with any
-    #     changes that were needed for the Trade version then export them to
-    #     update the expected results json files.
-    #TODO then work through any updates needed to reconcile the differences
-    #TODO when Trade and TS both are good, remove these comments and
-    #     commit/push.  Then move on to building backtesting repot tests for
-    #     dhanalyze stuff

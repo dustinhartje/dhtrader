@@ -1184,7 +1184,7 @@ def test_Trade_historical():
                                           contract_value=50,
                                           contract_fee=3.04)
         expected = copy(expected_results[i])
-        # remove "open_dt" and "liquidated" keys from expected as they vary
+        # remove "open_dt" which is included for debugging reference
         if "open_dt" in expected:
             expected.pop("open_dt")
         assert actual_results == expected
@@ -1199,8 +1199,6 @@ def test_Trade_historical():
                                            contracts=2,
                                            contract_value=50,
                                            contract_fee=3.04)
-        print(f"\nactual_results={actual_results}")
-        print(f"\nexpected_results={expected_results[i]}")
         expected = copy(expected_results[i])
         # remove "open_dt" and "liquidated" keys from expected as they vary
         if "open_dt" in expected:
