@@ -457,11 +457,12 @@ class Trade():
         else:
             drawdown_trail_increase = 0
         # Calculate the closing drawdown level i.e. where it will be after
-        # the trade is finished.
+        # the trade is finished including any adjustment for trailing increase
         drawdown_close = (((self.exit_price - self.entry_price)
                           * self.flipper
                           * cmult)
                           + drawdown_open
+                          - drawdown_trail_increase
                           - fees)
         # Closing drawdown cannot exceed drawdown limit on account
         drawdown_close = min(drawdown_close, drawdown_limit)
