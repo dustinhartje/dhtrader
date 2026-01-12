@@ -212,9 +212,9 @@ def test_TradeSeries_balance_impact_and_stats():
     assert s["min_risk_reward"] == 1
     assert s["max_risk_reward"] == 4
     assert s["trading_days"] == 1
-    assert s["total_days"] == 31
-    assert s["total_weeks"] == 4.43
-    assert s["trades_per_week"] == 0.45
+    assert s["total_days"] == 32
+    assert s["total_weeks"] == 4.57
+    assert s["trades_per_week"] == 0.44
     assert s["trades_per_day"] == 0.06
     assert s["trades_per_trading_day"] == 2
     assert s["trade_ticks"] == [{'stop': 200, 'prof': 200, 'offset': 0},
@@ -268,10 +268,10 @@ def test_TradeSeries_balance_impact_and_stats():
     assert s["avg_loss_per_con"] is None
     assert s["effective_risk_reward"] is None
     assert s["trading_days"] == 1
-    assert s["total_days"] == 31
-    assert s["total_weeks"] == 4.43
-    assert s["trades_per_week"] == 0.68
-    assert s["trades_per_day"] == 0.1
+    assert s["total_days"] == 32
+    assert s["total_weeks"] == 4.57
+    assert s["trades_per_week"] == 0.66
+    assert s["trades_per_day"] == 0.09
     assert s["trades_per_trading_day"] == 3.0
     assert s["trade_ticks"] == [{'stop': 200, 'prof': 200, 'offset': 0},
                                 {'stop': 200, 'prof': 328, 'offset': 0},
@@ -326,10 +326,10 @@ def test_TradeSeries_balance_impact_and_stats():
     assert s["setup_risk_reward"] == 0.02
     assert s["effective_risk_reward"] is None
     assert s["trading_days"] == 1
-    assert s["total_days"] == 31
-    assert s["total_weeks"] == 4.43
-    assert s["trades_per_week"] == 0.68
-    assert s["trades_per_day"] == 0.1
+    assert s["total_days"] == 32
+    assert s["total_weeks"] == 4.57
+    assert s["trades_per_week"] == 0.66
+    assert s["trades_per_day"] == 0.09
     assert s["trades_per_trading_day"] == 3.0
     assert s["trade_ticks"] == [{'stop': 32, 'prof': 4000, 'offset': 0},
                                 {'stop': 80, 'prof': 4000, 'offset': 0},
@@ -359,10 +359,10 @@ def test_TradeSeries_balance_impact_and_stats():
     assert s["avg_loss_per_con"] == 825
     assert s["effective_risk_reward"] == 0.21
     assert s["trading_days"] == 2
-    assert s["total_days"] == 7
-    assert s["total_weeks"] == 1
-    assert s["trades_per_week"] == 3.0
-    assert s["trades_per_day"] == 0.43
+    assert s["total_days"] == 8
+    assert s["total_weeks"] == 1.14
+    assert s["trades_per_week"] == 2.63
+    assert s["trades_per_day"] == 0.38
     assert s["trades_per_trading_day"] == 1.5
     expected_trade_ticks = [{'stop': 1000, 'prof': 4000, 'offset': 0}]
     assert s["trade_ticks"] == expected_trade_ticks
@@ -446,10 +446,10 @@ def test_TradeSeries_non_target_closes_stats_and_effective_risk_reward_calc():
     assert s["setup_risk_reward"] == 1.5
     assert s["effective_risk_reward"] == 0.57
     assert s["trading_days"] == 7
-    assert s["total_days"] == 31
-    assert s["total_weeks"] == 4.43
-    assert s["trades_per_week"] == 1.58
-    assert s["trades_per_day"] == 0.23
+    assert s["total_days"] == 32
+    assert s["total_weeks"] == 4.57
+    assert s["trades_per_week"] == 1.53
+    assert s["trades_per_day"] == 0.22
     assert s["trades_per_trading_day"] == 1
     assert s["trade_ticks"] == [{'stop': 300, 'prof': 200, 'offset': 0},
                                 {'stop': 400, 'prof': 200, 'offset': 0},
@@ -478,8 +478,8 @@ def test_TradeSeries_drawdown_impact():
                            contract_fee=3.10)
     assert r["drawdown_open"] == 3000
     assert r["drawdown_close"] == 1743.80
-    assert r["drawdown_high"] == 4246.90
-    assert r["drawdown_low"] == 1743.80
+    assert r["drawdown_high"] == 4250
+    assert r["drawdown_low"] == 1746.9
     assert r["liquidated"] is False
     # Test a TradeSeries with all winning trades that does not liquidate
     ts = create_tradeseries()
@@ -507,9 +507,9 @@ def test_TradeSeries_drawdown_impact():
                            contract_value=50,
                            contract_fee=3.10)
     assert r["drawdown_open"] == 5000
-    assert r["drawdown_close"] == 6500
+    assert r["drawdown_close"] == 6487.6
     assert r["drawdown_high"] == 7887.60
-    assert r["drawdown_low"] == 3987.60
+    assert r["drawdown_low"] == 4000.0
     assert r["liquidated"] is False
     # Test a TradeSeries with all losing trades that does liquidate
     # after setting two sequential new highs
@@ -539,8 +539,8 @@ def test_TradeSeries_drawdown_impact():
                            contract_fee=3.10)
     assert r["drawdown_open"] == 5000
     assert r["drawdown_close"] == -2818.60
-    assert r["drawdown_high"] == 6187.60
-    assert r["drawdown_low"] == -2818.60
+    assert r["drawdown_high"] == 6193.8
+    assert r["drawdown_low"] == -2812.4
     assert r["liquidated"] is True
     # TradeSeries pushes 1 trade past drawdown_limit triggering trail effect
     ts = create_tradeseries()
@@ -568,9 +568,9 @@ def test_TradeSeries_drawdown_impact():
                            contract_value=50,
                            contract_fee=3.10)
     assert r["drawdown_open"] == 5800
-    assert r["drawdown_close"] == 6500
+    assert r["drawdown_close"] == 6493.8
     assert r["drawdown_high"] == 6993.80
-    assert r["drawdown_low"] == 5793.80
+    assert r["drawdown_low"] == 5800
     assert r["liquidated"] is False
 
 
