@@ -367,12 +367,13 @@ def test_TradeSeries_balance_impact_and_stats():
     expected_trade_ticks = [{'stop': 1000, 'prof': 4000, 'offset': 0}]
     assert s["trade_ticks"] == expected_trade_ticks
     # Confirm weekly_stats() also
-    assert ts.weekly_stats() == {'2024-12-30': {'total_trades': 2,
+    print(ts.weekly_stats())
+    assert ts.weekly_stats() == {'2024-12-31': {'total_trades': 2,
                                                 'profitable_trades': 1,
                                                 'losing_trades': 1,
                                                 'gl_in_ticks': 3000,
                                                 'success_rate': 50.0},
-                                 '2025-01-06': {'total_trades': 1,
+                                 '2025-01-07': {'total_trades': 1,
                                                 'profitable_trades': 0,
                                                 'losing_trades': 1,
                                                 'gl_in_ticks': -1000,

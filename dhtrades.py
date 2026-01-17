@@ -1014,8 +1014,8 @@ class TradeSeries():
 
     def weekly_stats(self, include_first_min: bool = True):
         """Return useful statistics calculated from the attached Trades
-        aggregated into weekly buckets using Monday as the start of the week
-        and Monday's date as the name of each bucket."""
+        aggregated into weekly buckets using Sunday as the start of the week
+        and Sunday's date as the name of each bucket."""
         # Build a dict of weeks with zeroes as default values to ensure we
         # represent non-traded weeks in the result rather than leave gaps
         template = {"total_trades": 0,
@@ -1037,7 +1037,7 @@ class TradeSeries():
         for t in self.trades:
             if not t.first_min_open or include_first_min:
                 d = dhu.dt_as_dt(t.open_dt)
-                w = str(d.date() - timedelta(days=d.weekday()))
+                w = str(dhu.start_of_week_date(dt=d))
                 result[w]["total_trades"] += 1
                 if t.profitable:
                     result[w]["profitable_trades"] += 1

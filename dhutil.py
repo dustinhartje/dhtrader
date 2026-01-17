@@ -318,15 +318,38 @@ def timeframe_delta(timeframe: str):
         raise ValueError(f"timeframe: {timeframe} not supported")
 
 
+def start_of_week_date(dt):
+    """Return the date object for the starting Sunday of the week in which
+    the provided datetime exists."""
+    dt = dt_as_dt(dt)
+    if dt.weekday() == 6:
+        week_dt = dt.date()
+    else:
+        week_dt = dt.date() - timedelta(days=dt.weekday() + 1)
+    return week_dt
+
+
 def dict_of_weeks(start_dt, end_dt, template):
-    """return a template dictionary with keys for each week that exist in
+    """Return a template dictionary with keys for each week that exist in
     the provided timeframe from start_dt to end_dt, with a value equal to the
     template passed in.  Generally this will be used for aggregating weekly
-    stats."""
+    stats.  Sunday is used as the start of the week to match market behavior
+    and cover extended hours trading strategies.
+
+    template should be provided as a dictionary with default values for each
+    week.  For example:
+
+        template = {"total_trades": 0,
+                    "profitable_trades": 0,
+                    "losing_trades": 0,
+                    "gl_in_ticks": 0,
+                    "success_rate": "nil",
+                    }
+    """
     start_dt = dt_as_dt(start_dt)
     end_dt = dt_as_dt(end_dt)
     adder = timedelta(weeks=1)
-    week_dt = start_dt.date() - timedelta(days=start_dt.weekday())
+    week_dt = start_of_week_date(start_dt)
     result = {}
     while week_dt <= end_dt.date():
         result[f"{week_dt}"] = deepcopy(template)
