@@ -1,0 +1,23 @@
+{
+    "gl_sequence": "LggLLLgLLLLLLLLLLLLLLLLgLLLLLLLLLLLLLLLLLLLLLLLLgLLgggLLLLLLLLLLLLLLLLggLggg",
+    "profitable_trades": 13,
+    "avg_gain_per_con": 1434.62,
+    "losing_trades": 63,
+    "avg_loss_per_con": 913.2936508,
+    "total_trades": 76,
+    "success_percent": 17.11,
+    "duration_sec_p20": 4500,
+    "duration_sec_median": 16470,
+    "duration_sec_p80": 42900,
+    "setup_risk_reward": 0.5,
+    "effective_risk_reward": 0.64,
+    "min_risk_reward": 0.5,
+    "max_risk_reward": 0.5,
+    "trading_days": 17,
+    "total_days": 20,
+    "total_weeks": 2.86,
+    "trades_per_week": 26.57,
+    "trades_per_day": 3.8,
+    "trades_per_trading_day": 4.47,
+    "trade_ticks": [{"stop": 80, "prof": 160, "offset": 0}]
+}
