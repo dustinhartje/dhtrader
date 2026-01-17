@@ -1161,13 +1161,14 @@ def test_Trade_store_retrieve_delete():
 
 @pytest.mark.historical
 def test_Trade_historical():
-    """Rebuild a list of Trades from historical extracted data and compare
+    """Rebuild lists of Trades from historical extracted data and compare
     methods output to expected results manually calculated outside of dhtrader
 
     Tests methods:
         Trade.balance_impact()
         Trade.drawdown_impact()
     """
+    # SET1 SHORT TRADES NO REFINING ######################################
     # Rebuild trades list from historical extracted data file
     tf = "testdata/set1/set1_trades.json"
     ts_id = "BacktestEMAReject-eth_e1h_9_s80-p160-o40"
@@ -1190,7 +1191,45 @@ def test_Trade_historical():
         assert actual_results == expected
 
     # Trade.drawdown_impact()
-    ef = "testdata/set1/expected/set1_trades_shorts_full_drawdownnimpact.json"
+    ef = "testdata/set1/expected/set1_trades_shorts_full_drawdownimpact.json"
+    with open(ef, "r") as f:
+        expected_results = json.load(f)
+    for i, t in enumerate(trades):
+        actual_results = t.drawdown_impact(drawdown_open=6000,
+                                           drawdown_limit=6500,
+                                           contracts=2,
+                                           contract_value=50,
+                                           contract_fee=3.04)
+        expected = copy(expected_results[i])
+        # remove "open_dt" and "liquidated" keys from expected as they vary
+        if "open_dt" in expected:
+            expected.pop("open_dt")
+        assert actual_results == expected
+
+    # SET1 LONG TRADES NO REFINING ######################################
+    # Rebuild trades list from historical extracted data file
+    tf = "testdata/set1/set1_trades.json"
+    ts_id = "BacktestEMABounce-eth_e1h_9_s80-p160-o0"
+    trades = Rebuilder().rebuild_trades(in_file=tf,
+                                        ts_id=ts_id)
+
+    # Trade.balance_impact()
+    ef = "testdata/set1/expected/set1_trades_longs_full_balanceimpact.json"
+    with open(ef, "r") as f:
+        expected_results = json.load(f)
+    for i, t in enumerate(trades):
+        actual_results = t.balance_impact(balance_open=100000,
+                                          contracts=2,
+                                          contract_value=50,
+                                          contract_fee=3.04)
+        expected = copy(expected_results[i])
+        # remove "open_dt" which is included for debugging reference
+        if "open_dt" in expected:
+            expected.pop("open_dt")
+        assert actual_results == expected
+
+    # Trade.drawdown_impact()
+    ef = "testdata/set1/expected/set1_trades_longs_full_drawdownimpact.json"
     with open(ef, "r") as f:
         expected_results = json.load(f)
     for i, t in enumerate(trades):

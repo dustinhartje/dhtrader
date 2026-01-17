@@ -626,7 +626,7 @@ def test_TradeSeries_store_retrieve_and_delete():
 
 @pytest.mark.historical
 def test_TradeSeries_historical():
-    """Rebuild a TradeSeries from historical extracted data and compare methods
+    """Rebuild  TradeSeries from historical extracted data to compare methods
     output to expected results manually calculated outside of dhtrader
 
     Tests methods:
@@ -634,6 +634,7 @@ def test_TradeSeries_historical():
         TradeSeries.balance_impact()
         TradeSeries.drawdown_impact()
     """
+    # SET1 SHORT TRADES NO REFINING ######################################
     # Rebuild testdata/set1 short TradeSeries
     ts = Rebuilder().rebuild_tradeseries(
         in_file="testdata/set1/set1_tradeseries.json",
@@ -646,7 +647,7 @@ def test_TradeSeries_historical():
 
     # .stats() method
     # Get expected stats() results for comparison
-    ef = "testdata/set1/expected/set1_ts_stats_shorts_full.json"
+    ef = "testdata/set1/expected/set1_ts_shorts_full_stats.json"
     with open(ef, "r") as f:
         expected_stats = json.load(f)
     expected_stats["trade_ticks"] = expected_stats["trade_ticks"]
@@ -656,7 +657,7 @@ def test_TradeSeries_historical():
     assert actual_stats == expected_stats
 
     # .balance_impact() method
-    ef = "testdata/set1/expected/set1_ts_balanceimpact_shorts_full.json"
+    ef = "testdata/set1/expected/set1_ts_shorts_full_balanceimpact.json"
     with open(ef, "r") as f:
         expected_results = json.load(f)
     actual_results = ts.balance_impact(balance_open=100000,
@@ -667,7 +668,52 @@ def test_TradeSeries_historical():
     assert actual_results == expected_results
 
     # .drawdown_impact() method
-    ef = "testdata/set1/expected/set1_ts_drawdownimpact_shorts_full.json"
+    ef = "testdata/set1/expected/set1_ts_shorts_full_drawdownimpact.json"
+    with open(ef, "r") as f:
+        expected_results = json.load(f)
+    actual_results = ts.drawdown_impact(drawdown_open=6000,
+                                        drawdown_limit=6500,
+                                        contracts=2,
+                                        contract_value=50,
+                                        contract_fee=3.04,
+                                        include_first_min=True)
+    assert actual_results == expected_results
+
+    # SET1 LONG TRADES NO REFINING ######################################
+    # Rebuild testdata/set1 long TradeSeries
+    ts = Rebuilder().rebuild_tradeseries(
+        in_file="testdata/set1/set1_tradeseries.json",
+        ts_ids="BacktestEMABounce-eth_e1h_9_s80-p160-o0",
+        bt_ids=None,
+        start_dt=None,
+        end_dt=None,
+        trades_file="testdata/set1/set1_trades.json"
+        )[0]
+
+    # .stats() method
+    # Get expected stats() results for comparison
+    ef = "testdata/set1/expected/set1_ts_longs_full_stats.json"
+    with open(ef, "r") as f:
+        expected_stats = json.load(f)
+    expected_stats["trade_ticks"] = expected_stats["trade_ticks"]
+    # Get actual stats() results from method
+    actual_stats = ts.stats()
+    # Compare expected to actual results
+    assert actual_stats == expected_stats
+
+    # .balance_impact() method
+    ef = "testdata/set1/expected/set1_ts_longs_full_balanceimpact.json"
+    with open(ef, "r") as f:
+        expected_results = json.load(f)
+    actual_results = ts.balance_impact(balance_open=100000,
+                                       contracts=2,
+                                       contract_value=50,
+                                       contract_fee=3.04,
+                                       include_first_min=True)
+    assert actual_results == expected_results
+
+    # .drawdown_impact() method
+    ef = "testdata/set1/expected/set1_ts_longs_full_drawdownimpact.json"
     with open(ef, "r") as f:
         expected_results = json.load(f)
     actual_results = ts.drawdown_impact(drawdown_open=6000,

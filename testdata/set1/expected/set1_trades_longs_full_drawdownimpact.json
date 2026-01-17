@@ -1,278 +1,6 @@
 [
     {
-        "open_dt": "2025-11-30 18:00:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 6493.92,
-        "drawdown_trail_increase": 3500.0,
-        "drawdown_high": 10000.0,
-        "drawdown_low": 5250.0
-    },
-    {
-        "open_dt": "2025-12-01 09:38:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 2993.92,
-        "drawdown_trail_increase": 1000.0,
-        "drawdown_high": 7500.0,
-        "drawdown_low": 4000.0
-    },
-    {
-        "open_dt": "2025-12-02 04:25:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 3993.92,
-        "drawdown_trail_increase": 0.0,
-        "drawdown_high": 6450.0,
-        "drawdown_low": 4000.0
-    },
-    {
-        "open_dt": "2025-12-02 05:09:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 3993.92,
-        "drawdown_trail_increase": 0.0,
-        "drawdown_high": 6350.0,
-        "drawdown_low": 4000.0
-    },
-    {
-        "open_dt": "2025-12-02 08:30:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 4268.92,
-        "drawdown_trail_increase": 2250.0,
-        "drawdown_high": 8750.0,
-        "drawdown_low": 4200.0
-    },
-    {
-        "open_dt": "2025-12-02 10:00:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 4268.92,
-        "drawdown_trail_increase": 2700.0,
-        "drawdown_high": 9200.0,
-        "drawdown_low": 4650.0
-    },
-    {
-        "open_dt": "2025-12-02 12:31:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 4893.92,
-        "drawdown_trail_increase": 2200.0,
-        "drawdown_high": 8700.0,
-        "drawdown_low": 5775.0
-    },
-    {
-        "open_dt": "2025-12-02 14:51:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 6443.92,
-        "drawdown_trail_increase": 300.0,
-        "drawdown_high": 6800.0,
-        "drawdown_low": 5425.0
-    },
-    {
-        "open_dt": "2025-12-02 15:13:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 6443.92,
-        "drawdown_trail_increase": 500.0,
-        "drawdown_high": 7000.0,
-        "drawdown_low": 5625.0
-    },
-    {
-        "open_dt": "2025-12-02 21:23:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 2143.92,
-        "drawdown_trail_increase": 3150.0,
-        "drawdown_high": 9650.0,
-        "drawdown_low": 4075.0
-    },
-    {
-        "open_dt": "2025-12-02 22:35:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 2143.92,
-        "drawdown_trail_increase": 3325.0,
-        "drawdown_high": 9825.0,
-        "drawdown_low": 4250.0
-    },
-    {
-        "open_dt": "2025-12-03 11:38:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 4393.92,
-        "drawdown_trail_increase": 1350.0,
-        "drawdown_high": 7850.0,
-        "drawdown_low": 4525.0
-    },
-    {
-        "open_dt": "2025-12-03 12:21:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 5693.92,
-        "drawdown_trail_increase": 0.0,
-        "drawdown_high": 6150.0,
-        "drawdown_low": 4475.0
-    },
-    {
-        "open_dt": "2025-12-03 14:00:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 6218.92,
-        "drawdown_trail_increase": 0.0,
-        "drawdown_high": 6400.0,
-        "drawdown_low": 5000.0
-    },
-    {
-        "open_dt": "2025-12-04 09:08:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 4068.92,
-        "drawdown_trail_increase": 3300.0,
-        "drawdown_high": 9800.0,
-        "drawdown_low": 5350.0
-    },
-    {
-        "open_dt": "2025-12-04 20:41:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 2693.92,
-        "drawdown_trail_increase": 1300.0,
-        "drawdown_high": 7800.0,
-        "drawdown_low": 4000.0
-    },
-    {
-        "open_dt": "2025-12-04 21:15:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 2468.92,
-        "drawdown_trail_increase": 1525.0,
-        "drawdown_high": 8025.0,
-        "drawdown_low": 4000.0
-    },
-    {
-        "open_dt": "2025-12-04 22:58:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 2293.92,
-        "drawdown_trail_increase": 1700.0,
-        "drawdown_high": 8200.0,
-        "drawdown_low": 4000.0
-    },
-    {
-        "open_dt": "2025-12-04 23:07:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 2118.92,
-        "drawdown_trail_increase": 1875.0,
-        "drawdown_high": 8375.0,
-        "drawdown_low": 4000.0
-    },
-    {
-        "open_dt": "2025-12-05 09:31:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 5943.92,
-        "drawdown_trail_increase": 1375.0,
-        "drawdown_high": 7875.0,
-        "drawdown_low": 4025.0
-    },
-    {
-        "open_dt": "2025-12-05 11:00:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 5943.92,
-        "drawdown_trail_increase": 1850.0,
-        "drawdown_high": 8350.0,
-        "drawdown_low": 5775.0
-    },
-    {
-        "open_dt": "2025-12-09 11:16:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 6418.92,
-        "drawdown_trail_increase": 1875.0,
-        "drawdown_high": 8375.0,
-        "drawdown_low": 5775.0
-    },
-    {
-        "open_dt": "2025-12-09 12:05:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 6418.92,
-        "drawdown_trail_increase": 2025.0,
-        "drawdown_high": 8525.0,
-        "drawdown_low": 5950.0
-    },
-    {
-        "open_dt": "2025-12-10 11:27:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 3118.92,
-        "drawdown_trail_increase": 875.0,
-        "drawdown_high": 7375.0,
-        "drawdown_low": 4000.0
-    },
-    {
-        "open_dt": "2025-12-10 12:55:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 2968.92,
-        "drawdown_trail_increase": 1025.0,
-        "drawdown_high": 7525.0,
-        "drawdown_low": 4000.0
-    },
-    {
-        "open_dt": "2025-12-10 14:00:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 3618.92,
-        "drawdown_trail_increase": 375.0,
-        "drawdown_high": 6875.0,
-        "drawdown_low": 4000.0
-    },
-    {
-        "open_dt": "2025-12-11 04:54:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 3893.92,
-        "drawdown_trail_increase": 100.0,
-        "drawdown_high": 6600.0,
-        "drawdown_low": 4000.0
-    },
-    {
-        "open_dt": "2025-12-11 06:46:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 2368.92,
-        "drawdown_trail_increase": 1625.0,
-        "drawdown_high": 8125.0,
-        "drawdown_low": 4000.0
-    },
-    {
-        "open_dt": "2025-12-11 09:11:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 1493.92,
-        "drawdown_trail_increase": 2500.0,
-        "drawdown_high": 9000.0,
-        "drawdown_low": 4000.0
-    },
-    {
-        "open_dt": "2025-12-11 10:11:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 3993.92,
-        "drawdown_trail_increase": 0.0,
-        "drawdown_high": 6225.0,
-        "drawdown_low": 4000.0
-    },
-    {
-        "open_dt": "2025-12-11 19:30:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 6493.92,
-        "drawdown_trail_increase": 3500.0,
-        "drawdown_high": 10000.0,
-        "drawdown_low": 5150.0
-    },
-    {
-        "open_dt": "2025-12-11 20:16:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 6493.92,
-        "drawdown_trail_increase": 3500.0,
-        "drawdown_high": 10000.0,
-        "drawdown_low": 5275.0
-    },
-    {
-        "open_dt": "2025-12-11 21:08:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 6493.92,
-        "drawdown_trail_increase": 3500.0,
-        "drawdown_high": 10000.0,
-        "drawdown_low": 5475.0
-    },
-    {
-        "open_dt": "2025-12-12 00:56:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 6493.92,
-        "drawdown_trail_increase": 3500.0,
-        "drawdown_high": 10000.0,
-        "drawdown_low": 5875.0
-    },
-    {
-        "open_dt": "2025-12-15 03:31:00",
+        "open_dt": "2025-11-30 19:06:00",
         "drawdown_open": 6000,
         "drawdown_close": 3993.92,
         "drawdown_trail_increase": 0.0,
@@ -280,23 +8,39 @@
         "drawdown_low": 4000.0
     },
     {
-        "open_dt": "2025-12-15 08:43:00",
+        "open_dt": "2025-12-01 04:35:00",
         "drawdown_open": 6000,
-        "drawdown_close": 6493.92,
-        "drawdown_trail_increase": 3500.0,
-        "drawdown_high": 10000.0,
-        "drawdown_low": 5275.0
+        "drawdown_close": 3468.92,
+        "drawdown_trail_increase": 2925.0,
+        "drawdown_high": 9425.0,
+        "drawdown_low": 4350.0
     },
     {
-        "open_dt": "2025-12-15 09:01:00",
+        "open_dt": "2025-12-01 10:25:00",
         "drawdown_open": 6000,
-        "drawdown_close": 6493.92,
-        "drawdown_trail_increase": 3500.0,
-        "drawdown_high": 10000.0,
-        "drawdown_low": 5525.0
+        "drawdown_close": 3468.92,
+        "drawdown_trail_increase": 2850.0,
+        "drawdown_high": 9350.0,
+        "drawdown_low": 5150.0
     },
     {
-        "open_dt": "2025-12-16 05:37:00",
+        "open_dt": "2025-12-01 14:21:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 4793.92,
+        "drawdown_trail_increase": 0.0,
+        "drawdown_high": 6175.0,
+        "drawdown_low": 4625.0
+    },
+    {
+        "open_dt": "2025-12-02 10:29:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 2168.92,
+        "drawdown_trail_increase": 1825.0,
+        "drawdown_high": 8325.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-02 11:12:00",
         "drawdown_open": 6000,
         "drawdown_close": 3993.92,
         "drawdown_trail_increase": 0.0,
@@ -304,71 +48,151 @@
         "drawdown_low": 4000.0
     },
     {
-        "open_dt": "2025-12-16 06:01:00",
+        "open_dt": "2025-12-02 15:54:00",
         "drawdown_open": 6000,
-        "drawdown_close": 3993.92,
+        "drawdown_close": 6018.92,
         "drawdown_trail_increase": 0.0,
-        "drawdown_high": 6250.0,
+        "drawdown_high": 6025.0,
+        "drawdown_low": 5975.0
+    },
+    {
+        "open_dt": "2025-12-02 19:20:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 2418.92,
+        "drawdown_trail_increase": 1575.0,
+        "drawdown_high": 8075.0,
         "drawdown_low": 4000.0
     },
     {
-        "open_dt": "2025-12-16 09:16:00",
+        "open_dt": "2025-12-03 01:35:00",
         "drawdown_open": 6000,
-        "drawdown_close": 6493.92,
-        "drawdown_trail_increase": 3500.0,
-        "drawdown_high": 10000.0,
-        "drawdown_low": 5250.0
+        "drawdown_close": 3268.92,
+        "drawdown_trail_increase": 725.0,
+        "drawdown_high": 7225.0,
+        "drawdown_low": 4000.0
     },
     {
-        "open_dt": "2025-12-16 15:30:00",
+        "open_dt": "2025-12-03 02:45:00",
         "drawdown_open": 6000,
-        "drawdown_close": 5518.92,
+        "drawdown_close": 3343.92,
+        "drawdown_trail_increase": 650.0,
+        "drawdown_high": 7150.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-03 03:18:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 3393.92,
+        "drawdown_trail_increase": 600.0,
+        "drawdown_high": 7100.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-03 04:04:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 3468.92,
+        "drawdown_trail_increase": 525.0,
+        "drawdown_high": 7025.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-03 09:01:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 3993.92,
         "drawdown_trail_increase": 0.0,
         "drawdown_high": 6000.0,
-        "drawdown_low": 4825.0
-    },
-    {
-        "open_dt": "2025-12-17 01:14:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 3993.92,
-        "drawdown_trail_increase": 0.0,
-        "drawdown_high": 6300.0,
         "drawdown_low": 4000.0
     },
     {
-        "open_dt": "2025-12-17 02:06:00",
+        "open_dt": "2025-12-03 19:54:00",
         "drawdown_open": 6000,
-        "drawdown_close": 3993.92,
-        "drawdown_trail_increase": 0.0,
-        "drawdown_high": 6475.0,
+        "drawdown_close": 2443.92,
+        "drawdown_trail_increase": 1550.0,
+        "drawdown_high": 8050.0,
         "drawdown_low": 4000.0
     },
     {
-        "open_dt": "2025-12-17 03:18:00",
+        "open_dt": "2025-12-03 21:00:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 2468.92,
+        "drawdown_trail_increase": 1525.0,
+        "drawdown_high": 8025.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-03 22:02:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 2518.92,
+        "drawdown_trail_increase": 1475.0,
+        "drawdown_high": 7975.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-04 00:20:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 2543.92,
+        "drawdown_trail_increase": 1450.0,
+        "drawdown_high": 7950.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-04 03:00:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 2718.92,
+        "drawdown_trail_increase": 1275.0,
+        "drawdown_high": 7775.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-04 05:38:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 2768.92,
+        "drawdown_trail_increase": 1225.0,
+        "drawdown_high": 7725.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-04 08:31:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 2868.92,
+        "drawdown_trail_increase": 1125.0,
+        "drawdown_high": 7625.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-04 12:06:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 3618.92,
+        "drawdown_trail_increase": 375.0,
+        "drawdown_high": 6875.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-04 13:05:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 3693.92,
+        "drawdown_trail_increase": 300.0,
+        "drawdown_high": 6800.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-04 14:01:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 3993.92,
+        "drawdown_trail_increase": 0.0,
+        "drawdown_high": 6225.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-04 18:33:00",
         "drawdown_open": 6000,
         "drawdown_close": 6493.92,
         "drawdown_trail_increase": 3500.0,
         "drawdown_high": 10000.0,
-        "drawdown_low": 4200.0
+        "drawdown_low": 5325.0
     },
     {
-        "open_dt": "2025-12-17 04:15:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 6493.92,
-        "drawdown_trail_increase": 3500.0,
-        "drawdown_high": 10000.0,
-        "drawdown_low": 4400.0
-    },
-    {
-        "open_dt": "2025-12-17 08:01:00",
-        "drawdown_open": 6000,
-        "drawdown_close": 6493.92,
-        "drawdown_trail_increase": 3500.0,
-        "drawdown_high": 10000.0,
-        "drawdown_low": 5950.0
-    },
-    {
-        "open_dt": "2025-12-18 03:47:00",
+        "open_dt": "2025-12-05 04:40:00",
         "drawdown_open": 6000,
         "drawdown_close": 3993.92,
         "drawdown_trail_increase": 0.0,
@@ -376,23 +200,23 @@
         "drawdown_low": 4000.0
     },
     {
-        "open_dt": "2025-12-18 04:34:00",
+        "open_dt": "2025-12-05 05:57:00",
         "drawdown_open": 6000,
         "drawdown_close": 3993.92,
         "drawdown_trail_increase": 0.0,
-        "drawdown_high": 6075.0,
+        "drawdown_high": 6475.0,
         "drawdown_low": 4000.0
     },
     {
-        "open_dt": "2025-12-18 06:00:00",
+        "open_dt": "2025-12-05 07:22:00",
         "drawdown_open": 6000,
-        "drawdown_close": 3918.92,
-        "drawdown_trail_increase": 75.0,
-        "drawdown_high": 6575.0,
+        "drawdown_close": 3993.92,
+        "drawdown_trail_increase": 0.0,
+        "drawdown_high": 6250.0,
         "drawdown_low": 4000.0
     },
     {
-        "open_dt": "2025-12-18 08:30:00",
+        "open_dt": "2025-12-05 08:19:00",
         "drawdown_open": 6000,
         "drawdown_close": 3993.92,
         "drawdown_trail_increase": 0.0,
@@ -400,35 +224,387 @@
         "drawdown_low": 4000.0
     },
     {
-        "open_dt": "2025-12-18 15:33:00",
+        "open_dt": "2025-12-05 11:15:00",
         "drawdown_open": 6000,
-        "drawdown_close": 6368.92,
-        "drawdown_trail_increase": 275.0,
-        "drawdown_high": 6775.0,
-        "drawdown_low": 5350.0
+        "drawdown_close": 4643.92,
+        "drawdown_trail_increase": 525.0,
+        "drawdown_high": 7025.0,
+        "drawdown_low": 4625.0
     },
     {
-        "open_dt": "2025-12-19 02:13:00",
+        "open_dt": "2025-12-05 12:00:00",
         "drawdown_open": 6000,
-        "drawdown_close": 3418.92,
-        "drawdown_trail_increase": 575.0,
-        "drawdown_high": 7075.0,
+        "drawdown_close": 4643.92,
+        "drawdown_trail_increase": 500.0,
+        "drawdown_high": 7000.0,
+        "drawdown_low": 4600.0
+    },
+    {
+        "open_dt": "2025-12-05 13:20:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 4643.92,
+        "drawdown_trail_increase": 450.0,
+        "drawdown_high": 6950.0,
+        "drawdown_low": 4575.0
+    },
+    {
+        "open_dt": "2025-12-05 14:00:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 5068.92,
+        "drawdown_trail_increase": 0.0,
+        "drawdown_high": 6375.0,
+        "drawdown_low": 4550.0
+    },
+    {
+        "open_dt": "2025-12-05 15:01:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 5018.92,
+        "drawdown_trail_increase": 0.0,
+        "drawdown_high": 6175.0,
+        "drawdown_low": 4500.0
+    },
+    {
+        "open_dt": "2025-12-07 18:01:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 3168.92,
+        "drawdown_trail_increase": 825.0,
+        "drawdown_high": 7325.0,
         "drawdown_low": 4000.0
     },
     {
-        "open_dt": "2025-12-19 03:02:00",
+        "open_dt": "2025-12-07 19:00:00",
         "drawdown_open": 6000,
-        "drawdown_close": 3218.92,
-        "drawdown_trail_increase": 775.0,
-        "drawdown_high": 7275.0,
+        "drawdown_close": 3193.92,
+        "drawdown_trail_increase": 800.0,
+        "drawdown_high": 7300.0,
         "drawdown_low": 4000.0
     },
     {
-        "open_dt": "2025-12-19 09:29:00",
+        "open_dt": "2025-12-07 20:00:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 3193.92,
+        "drawdown_trail_increase": 800.0,
+        "drawdown_high": 7300.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-08 03:13:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 3918.92,
+        "drawdown_trail_increase": 75.0,
+        "drawdown_high": 6575.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-08 06:00:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 3818.92,
+        "drawdown_trail_increase": 175.0,
+        "drawdown_high": 6675.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-08 08:31:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 3943.92,
+        "drawdown_trail_increase": 50.0,
+        "drawdown_high": 6550.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-08 09:27:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 3993.92,
+        "drawdown_trail_increase": 0.0,
+        "drawdown_high": 6075.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-08 18:32:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 3968.92,
+        "drawdown_trail_increase": 700.0,
+        "drawdown_high": 7200.0,
+        "drawdown_low": 4400.0
+    },
+    {
+        "open_dt": "2025-12-08 20:05:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 3968.92,
+        "drawdown_trail_increase": 450.0,
+        "drawdown_high": 6950.0,
+        "drawdown_low": 4150.0
+    },
+    {
+        "open_dt": "2025-12-09 02:16:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 3968.92,
+        "drawdown_trail_increase": 600.0,
+        "drawdown_high": 7100.0,
+        "drawdown_low": 4300.0
+    },
+    {
+        "open_dt": "2025-12-09 03:41:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 3968.92,
+        "drawdown_trail_increase": 550.0,
+        "drawdown_high": 7050.0,
+        "drawdown_low": 4250.0
+    },
+    {
+        "open_dt": "2025-12-09 04:00:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 3968.92,
+        "drawdown_trail_increase": 525.0,
+        "drawdown_high": 7025.0,
+        "drawdown_low": 4225.0
+    },
+    {
+        "open_dt": "2025-12-09 07:00:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 3968.92,
+        "drawdown_trail_increase": 625.0,
+        "drawdown_high": 7125.0,
+        "drawdown_low": 4350.0
+    },
+    {
+        "open_dt": "2025-12-09 10:08:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 3968.92,
+        "drawdown_trail_increase": 800.0,
+        "drawdown_high": 7300.0,
+        "drawdown_low": 4700.0
+    },
+    {
+        "open_dt": "2025-12-09 12:23:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 4493.92,
+        "drawdown_trail_increase": 25.0,
+        "drawdown_high": 6525.0,
+        "drawdown_low": 4450.0
+    },
+    {
+        "open_dt": "2025-12-10 00:01:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 6493.92,
+        "drawdown_trail_increase": 3500.0,
+        "drawdown_high": 10000.0,
+        "drawdown_low": 4100.0
+    },
+    {
+        "open_dt": "2025-12-10 04:16:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 3893.92,
+        "drawdown_trail_increase": 100.0,
+        "drawdown_high": 6600.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-10 05:07:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 3993.92,
+        "drawdown_trail_increase": 0.0,
+        "drawdown_high": 6425.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-10 10:00:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 6493.92,
+        "drawdown_trail_increase": 3500.0,
+        "drawdown_high": 10000.0,
+        "drawdown_low": 4450.0
+    },
+    {
+        "open_dt": "2025-12-10 12:20:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 6493.92,
+        "drawdown_trail_increase": 3500.0,
+        "drawdown_high": 10000.0,
+        "drawdown_low": 5450.0
+    },
+    {
+        "open_dt": "2025-12-10 13:25:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 6493.92,
+        "drawdown_trail_increase": 3500.0,
+        "drawdown_high": 10000.0,
+        "drawdown_low": 5275.0
+    },
+    {
+        "open_dt": "2025-12-10 19:50:00",
         "drawdown_open": 6000,
         "drawdown_close": 3993.92,
         "drawdown_trail_increase": 0.0,
         "drawdown_high": 6225.0,
         "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-10 20:00:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 3993.92,
+        "drawdown_trail_increase": 0.0,
+        "drawdown_high": 6175.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-11 09:49:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 3993.92,
+        "drawdown_trail_increase": 0.0,
+        "drawdown_high": 6000.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-12 02:36:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 3743.92,
+        "drawdown_trail_increase": 250.0,
+        "drawdown_high": 6750.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-12 03:00:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 3743.92,
+        "drawdown_trail_increase": 250.0,
+        "drawdown_high": 6750.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-12 04:08:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 3993.92,
+        "drawdown_trail_increase": 0.0,
+        "drawdown_high": 6300.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-12 09:25:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 3993.92,
+        "drawdown_trail_increase": 0.0,
+        "drawdown_high": 6125.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-15 09:33:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 3993.92,
+        "drawdown_trail_increase": 0.0,
+        "drawdown_high": 6400.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-16 04:50:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 618.92,
+        "drawdown_trail_increase": 3375.0,
+        "drawdown_high": 9875.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-16 09:01:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 2768.92,
+        "drawdown_trail_increase": 1225.0,
+        "drawdown_high": 7725.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-16 10:02:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 3293.92,
+        "drawdown_trail_increase": 700.0,
+        "drawdown_high": 7200.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-16 21:08:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 1268.92,
+        "drawdown_trail_increase": 2725.0,
+        "drawdown_high": 9225.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-16 22:55:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 1368.92,
+        "drawdown_trail_increase": 2625.0,
+        "drawdown_high": 9125.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-16 23:19:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 1368.92,
+        "drawdown_trail_increase": 2625.0,
+        "drawdown_high": 9125.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-17 08:14:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 3468.92,
+        "drawdown_trail_increase": 525.0,
+        "drawdown_high": 7025.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-17 09:13:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 3993.92,
+        "drawdown_trail_increase": 0.0,
+        "drawdown_high": 6175.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-18 03:05:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 6493.92,
+        "drawdown_trail_increase": 3500.0,
+        "drawdown_high": 10000.0,
+        "drawdown_low": 5875.0
+    },
+    {
+        "open_dt": "2025-12-18 12:10:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 4118.92,
+        "drawdown_trail_increase": 2425.0,
+        "drawdown_high": 8925.0,
+        "drawdown_low": 4025.0
+    },
+    {
+        "open_dt": "2025-12-18 14:03:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 3643.92,
+        "drawdown_trail_increase": 350.0,
+        "drawdown_high": 6850.0,
+        "drawdown_low": 4000.0
+    },
+    {
+        "open_dt": "2025-12-19 00:04:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 6493.92,
+        "drawdown_trail_increase": 3500.0,
+        "drawdown_high": 10000.0,
+        "drawdown_low": 4925.0
+    },
+    {
+        "open_dt": "2025-12-19 06:09:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 6493.92,
+        "drawdown_trail_increase": 3500.0,
+        "drawdown_high": 10000.0,
+        "drawdown_low": 4850.0
+    },
+    {
+        "open_dt": "2025-12-19 07:05:00",
+        "drawdown_open": 6000,
+        "drawdown_close": 6493.92,
+        "drawdown_trail_increase": 3500.0,
+        "drawdown_high": 10000.0,
+        "drawdown_low": 4825.0
     }
 ]
