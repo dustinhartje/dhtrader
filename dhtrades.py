@@ -1041,10 +1041,11 @@ class TradeSeries():
                 result[w]["total_trades"] += 1
                 if t.profitable:
                     result[w]["profitable_trades"] += 1
-                    result[w]["gl_in_ticks"] += t.prof_ticks
                 else:
                     result[w]["losing_trades"] += 1
-                    result[w]["gl_in_ticks"] -= t.stop_ticks
+                result[w]["gl_in_ticks"] += ((t.exit_price - t.entry_price)
+                                             / self.symbol.tick_size
+                                             * t.flipper)
         # Calculate success rates
         for k in result.keys():
             if result[k]["total_trades"] > 0:
