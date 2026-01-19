@@ -695,7 +695,6 @@ def test_TradeSeries_historical():
     ef = "testdata/set1/expected/set1_ts_longs_full_stats.json"
     with open(ef, "r") as f:
         expected_stats = json.load(f)
-    expected_stats["trade_ticks"] = expected_stats["trade_ticks"]
     # Get actual stats() results from method
     actual_stats = ts.stats()
     # Compare expected to actual results
