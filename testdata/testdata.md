@@ -9,6 +9,7 @@
   - [Data Extraction (`extract_testdata.py`)](#data-extraction-extract_testdatapy)
   - [Data Rebuild Reference (`build_testdata.py`)](#data-rebuild-reference-build_testdatapy)
   - [Set Data File Types](#set-data-file-types)
+- [Expected Results Manual Validation](#expected-results-manual-validation)
 - [AI Run Validation](#ai-run-validation)
   - [Overview](#overview-1)
   - [Calculation and Comparison Prompt](#calculation-and-comparison-prompt)
@@ -86,6 +87,12 @@ Primarily used as reference for rebuilding setN data into dhtrader objects for t
 
 **setN_tradeseries.json / .csv**
 - All TradeSeries included in the set
+
+## Expected Results Manual Validation
+A Google Sheets document was used to manually calculate expected results for set1 outside of my code with minimal review of code during buildout to ensure unbiased fresh thinking of the intended application of each value.  This was fine tuned until all results matched up, with some minor bug fixing in dhtrader code (see commits in Jan 2026) and updates to the spreadsheet until everything matched up to give strong conviction that the code is calculating accurately as intended.
+
+The spreadsheet is not shared publically, this link is primarily for my personal reference in adding future testdata sets:
+https://docs.google.com/spreadsheets/d/1MF1AVOJpeCcAsDO4-50UG-Yrq5o7WnoUuN6byuanPis/edit?pli=1&gid=0#gid=0
 
 ## AI Run Validation
 
