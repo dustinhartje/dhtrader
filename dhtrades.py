@@ -1445,6 +1445,83 @@ class Backtest():
                               update_storage=update_storage,
                               )
 
+    def get_autoclose_time_by_date(self,
+                                   candle_date,
+                                   closed_events,
+                                   default_autoclose):
+        """Determine autoclose time for a specific date by checking for Closed
+        category events that indicate early market closes. Returns adjusted
+        autoclose time (5 min before close).  Note that autoclose may not be
+        implemented the same (or at all) in all subclasses.
+
+        Args:
+            candle_date (str): Date string in format "YYYY-MM-DD"
+            closed_events (list): List of Event objects with Closed category
+            default_autoclose (datetime.time): Default autoclose time to return
+                                               if no early close event found
+
+        Returns:
+            datetime.time: Adjusted autoclose time (5 minutes before actual
+                          close), or default_autoclose if no early close event
+                          found for this date.
+        """
+        # Get datetime.date object for candle_date
+        check_date = dt.strptime(candle_date, "%Y-%m-%d").date()
+
+        # Find events that start on this date with Closed category
+        for event in closed_events:
+            event_start_date = dhu.dt_as_dt(event.start_dt).date()
+            # Check if event starts on this date and is a Closed event
+            if (event_start_date == check_date and
+                    event.category == "Closed"):
+                close_time = dhu.dt_as_dt(event.start_dt).time()
+                # Calculate autoclose as 5 minutes before
+                close_dt = dt.combine(
+                    dt.today(), close_time
+                ) - timedelta(minutes=5)
+                autoclose_time = close_dt.time()
+                log.info(f"Early close event detected for {candle_date}:"
+                         f" market closes at {close_time}.  Setting "
+                         f"autoclose to {autoclose_time}")
+                return autoclose_time
+        # If no early close event found for this date, return default
+        return default_autoclose
+
+    def close_if_past_autoclose(self,
+                                trade,
+                                current_candle,
+                                prev_candle,
+                                autoclose_time,
+                                current_time,
+                                log_id=""):
+        """Failsafe safety check: Close trade if current 1m candle time
+        exceeds autoclose_time while trade is open. This catches edge cases
+        where trades extend past autoclose (e.g., from overnight sessions).
+        Uses previous candle's open for exit price.
+
+        Args:
+            trade: Trade object to potentially close
+            current_candle: Current Candle object being evaluated
+            prev_candle: Previous Candle object (or None on first iteration)
+            autoclose_time (datetime.time): Expected autoclose time
+            current_time (datetime.time): Current candle time
+            log_id (str): Backtest ID for logging
+
+        Returns:
+            bool: True if trade was closed by this method, False otherwise
+        """
+        if current_time > autoclose_time and not trade.is_closed:
+            cnow = f"candle={dhu.dt_as_str(prev_candle.c_datetime)}"
+            log.warn(f"{log_id} {cnow} action=failsafe_autoclose msg='"
+                     f"Forcing close: current time {current_time} exceeds"
+                     f" autoclose {autoclose_time}. Closing at previous"
+                     f" candle open: {prev_candle.c_open}'")
+            trade.close(price=prev_candle.c_open, dt=prev_candle.c_datetime)
+            trade.tags.append("autoclosed")
+            trade.tags.append("failsafe_close")
+            return True
+        return False
+
     def config_from_storage(self):
         """This class should be updated in subclasses to allow retrieval and
         configuration of itself from storage if there is a matching bt_id
