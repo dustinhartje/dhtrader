@@ -129,6 +129,15 @@ class Trade():
         else:
             self.flipper = 0  # If this happens there's a bug somewhere
         self.open_epoch = dhu.dt_to_epoch(self.open_dt)
+        self.open_date = str(dhu.dt_as_dt(self.open_dt).date())
+        self.open_time = str(dhu.dt_as_dt(self.open_dt).time())
+        if self.close_dt is not None:
+            self.close_date = str(dhu.dt_as_dt(self.close_dt).date())
+            self.close_time = str(dhu.dt_as_dt(self.close_dt).time())
+            self.close_time = self.close_time.split(".")[0]
+        else:
+            self.close_date = None
+            self.close_time = None
         # Mark Trades that open in the first minute of their timeframe bar
         # These can be difficult to trade quickly against changing indicators
         if self.timeframe == "5m":
@@ -532,6 +541,8 @@ class Trade():
         """
         self.is_open = False
         self.close_dt = dhu.dt_as_str(dt)
+        self.close_date = str(dhu.dt_as_dt(self.close_dt).date())
+        self.close_time = str(dhu.dt_as_dt(self.close_dt).time()).split(".")[0]
         self.exit_price = price
         if (self.exit_price - self.entry_price) * self.flipper > 0:
             self.profitable = True
