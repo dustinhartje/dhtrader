@@ -1462,8 +1462,9 @@ class Backtest():
                                    default_autoclose):
         """Determine autoclose time for a specific date by checking for Closed
         category events that indicate early market closes. Returns adjusted
-        autoclose time (5 min before close).  Note that autoclose may not be
-        implemented the same (or at all) in all subclasses.
+        autoclose time (5 min before close) only if the closure time is BEFORE
+        the default autoclose. Note that autoclose may not be implemented the
+        same (or at all) in all subclasses.
 
         Args:
             candle_date (str): Date string in format "YYYY-MM-DD"
@@ -1473,9 +1474,15 @@ class Backtest():
 
         Returns:
             datetime.time: Adjusted autoclose time (5 minutes before actual
-                          close), or default_autoclose if no early close event
-                          found for this date.
+                          close) if closure is before default, or
+                          default_autoclose if no early close event found or
+                          if closure time is after the default autoclose.
         """
+        # Ensure default_autoclose is a datetime.time object
+        if isinstance(default_autoclose, str):
+            default_autoclose = dhu.dt_as_dt(
+                f"2000-01-01 {default_autoclose}").time()
+
         # Get datetime.date object for candle_date
         check_date = dt.strptime(candle_date, "%Y-%m-%d").date()
 
@@ -1486,16 +1493,19 @@ class Backtest():
             if (event_start_date == check_date and
                     event.category == "Closed"):
                 close_time = dhu.dt_as_dt(event.start_dt).time()
-                # Calculate autoclose as 5 minutes before
-                close_dt = dt.combine(
-                    dt.today(), close_time
-                ) - timedelta(minutes=5)
-                autoclose_time = close_dt.time()
-                log.info(f"Early close event detected for {candle_date}:"
-                         f" market closes at {close_time}.  Setting "
-                         f"autoclose to {autoclose_time}")
-                return autoclose_time
-        # If no early close event found for this date, return default
+                # Only apply early close if it's actually before default
+                if close_time < default_autoclose:
+                    # Calculate autoclose as 5 minutes before
+                    close_dt = dt.combine(
+                        dt.today(), close_time
+                    ) - timedelta(minutes=5)
+                    autoclose_time = close_dt.time()
+                    log.info(f"Early close event detected for {candle_date}:"
+                             f" market closes at {close_time}.  Setting "
+                             f"autoclose to {autoclose_time}")
+                    return autoclose_time
+        # If no early close event found for this date, or if closure is after
+        # default autoclose, return default autoclose time
         return default_autoclose
 
     def close_if_past_autoclose(self,
