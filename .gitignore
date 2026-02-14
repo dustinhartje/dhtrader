@@ -2,6 +2,8 @@
 *.swp
 *.log
 *.ignore
+scratchpad*
+deleteme*
 
 # Below is all from the github .gitignore Python template chosen at repo creation
 # -------------------------------------------------------------------------------
