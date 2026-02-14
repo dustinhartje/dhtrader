@@ -918,3 +918,132 @@ def test_Symbol_get_market_boundary():
     assert dt_as_str(sym.get_previous_open(target_dt=t,
                      trading_hours="rth",
                      events=events)) == "2024-03-15 09:30:00"
+
+
+def test_Symbol_get_next_tick_up():
+    """Test get_next_tick_up() rounds up to nearest 0.25 (ES tick size)"""
+    sym = SYMBOL  # ES with tick_size=0.25
+
+    # Test exact tick boundary - should return same value
+    assert sym.get_next_tick_up(100.0) == 100.0
+    assert sym.get_next_tick_up(100.25) == 100.25
+    assert sym.get_next_tick_up(100.5) == 100.5
+    assert sym.get_next_tick_up(100.75) == 100.75
+
+    # Test rounding up to next tick
+    assert sym.get_next_tick_up(100.01) == 100.25
+    assert sym.get_next_tick_up(100.1) == 100.25
+    assert sym.get_next_tick_up(100.2) == 100.25
+    assert sym.get_next_tick_up(100.24) == 100.25
+
+    # Test rounding across multiples
+    assert sym.get_next_tick_up(100.26) == 100.5
+    assert sym.get_next_tick_up(100.51) == 100.75
+    assert sym.get_next_tick_up(100.76) == 101.0
+
+    # Test negative values
+    assert sym.get_next_tick_up(-100.0) == -100.0
+    assert sym.get_next_tick_up(-100.1) == -100.0
+    assert sym.get_next_tick_up(-100.24) == -100.0
+    assert sym.get_next_tick_up(-100.26) == -100.25
+
+    # Test values near zero
+    assert sym.get_next_tick_up(0.0) == 0.0
+    assert sym.get_next_tick_up(0.01) == 0.25
+    assert sym.get_next_tick_up(0.24) == 0.25
+    assert sym.get_next_tick_up(-0.01) == 0.0
+    assert sym.get_next_tick_up(-0.24) == 0.0
+
+    # Test decimal precision preservation (should round to 2 decimals)
+    assert sym.get_next_tick_up(4987.23) == 4987.25
+    assert sym.get_next_tick_up(1000.01) == 1000.25
+
+    # Test large values
+    assert sym.get_next_tick_up(9999.99) == 10000.0
+    assert sym.get_next_tick_up(5000.01) == 5000.25
+
+
+def test_Symbol_get_next_tick_down():
+    """Test get_next_tick_down() rounds down to nearest 0.25 (ES tick size)"""
+    sym = SYMBOL  # ES with tick_size=0.25
+
+    # Test exact tick boundary - should return same value
+    assert sym.get_next_tick_down(100.0) == 100.0
+    assert sym.get_next_tick_down(100.25) == 100.25
+    assert sym.get_next_tick_down(100.5) == 100.5
+    assert sym.get_next_tick_down(100.75) == 100.75
+
+    # Test rounding down to previous tick
+    assert sym.get_next_tick_down(100.01) == 100.0
+    assert sym.get_next_tick_down(100.1) == 100.0
+    assert sym.get_next_tick_down(100.2) == 100.0
+    assert sym.get_next_tick_down(100.24) == 100.0
+
+    # Test rounding across multiples
+    assert sym.get_next_tick_down(100.26) == 100.25
+    assert sym.get_next_tick_down(100.51) == 100.5
+    assert sym.get_next_tick_down(100.76) == 100.75
+
+    # Test negative values
+    assert sym.get_next_tick_down(-100.0) == -100.0
+    assert sym.get_next_tick_down(-100.1) == -100.25
+    assert sym.get_next_tick_down(-100.24) == -100.25
+    assert sym.get_next_tick_down(-100.26) == -100.5
+
+    # Test values near zero
+    assert sym.get_next_tick_down(0.0) == 0.0
+    assert sym.get_next_tick_down(0.01) == 0.0
+    assert sym.get_next_tick_down(0.24) == 0.0
+    assert sym.get_next_tick_down(-0.01) == -0.25
+    assert sym.get_next_tick_down(-0.24) == -0.25
+
+    # Test decimal precision preservation (should round to 2 decimals)
+    assert sym.get_next_tick_down(4987.23) == 4987.0
+    assert sym.get_next_tick_down(1000.01) == 1000.0
+
+    # Test large values
+    assert sym.get_next_tick_down(9999.99) == 9999.75
+    assert sym.get_next_tick_down(5000.01) == 5000.0
+
+
+def test_Symbol_tick_methods_roundtrip():
+    """Test that tick boundaries are idempotent and values roundtrip
+    correctly"""
+    sym = SYMBOL
+
+    # Test that values already on boundaries stay the same
+    for tick in [0.0, 0.25, 0.5, 0.75, 1.0, 100.25, 5000.75]:
+        assert sym.get_next_tick_up(tick) == tick
+        assert sym.get_next_tick_down(tick) == tick
+
+    # Test that rounding up then down from a boundary returns boundary
+    value = 100.1
+    rounded_up = sym.get_next_tick_up(value)
+    assert rounded_up == 100.25
+    # Rounding down an exact boundary stays at that boundary
+    rounded_down = sym.get_next_tick_down(rounded_up)
+    assert rounded_down == 100.25
+
+    # Test that rounding involves correct nearest boundaries
+    # 100.1 should round up to 100.25, and down to 100.0
+    rounded_down_direct = sym.get_next_tick_down(100.1)
+    assert rounded_down_direct == 100.0
+
+    # 100.6 should round down to 100.5, round up stays at 100.75
+    value = 100.6
+    rounded_down = sym.get_next_tick_down(value)
+    assert rounded_down == 100.5
+    rounded_up = sym.get_next_tick_up(value)
+    assert rounded_up == 100.75
+
+    # Test idempotent property: rounding twice returns same value
+    test_values = [100.1, 100.5, 100.99, 50.23, -100.15]
+    for val in test_values:
+        # Rounding up twice should equal rounding up once
+        up_once = sym.get_next_tick_up(val)
+        up_twice = sym.get_next_tick_up(up_once)
+        assert up_once == up_twice
+        # Same for rounding down
+        down_once = sym.get_next_tick_down(val)
+        down_twice = sym.get_next_tick_down(down_once)
+        assert down_once == down_twice

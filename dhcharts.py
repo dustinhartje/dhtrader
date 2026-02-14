@@ -8,6 +8,7 @@ import dhstore as dhs
 from statistics import fmean
 from copy import deepcopy
 import logging
+from math import ceil, floor
 
 CANDLE_TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w']
 BEGINNING_OF_TIME = "2022-01-01 00:00:00"
@@ -115,57 +116,11 @@ class Symbol():
 
     def get_next_tick_up(self, f: float):
         """Returns the next tick available at or above the provided value"""
-        # Ensure there's no more than 2 decimal places
-        if str(f)[::-1].find('.') > 2:
-            raise ValueError("More than 2 decimal places is not supported as "
-                             f"input for this method, got f={str(f)}"
-                             )
-        r = f
-        counter = 0
-        # Increment by 0.01 until we reach a tick_size multiple
-        while r % self.tick_size != 0:
-            counter += 1
-            if counter > (self.tick_size * 100):
-                raise Exception("Error attempting to round up, too many loops "
-                                "occurred which probably means a float math "
-                                f"issue occurred.  Stopping after {counter} "
-                                f"increments of {f} by 0.01 while trying to "
-                                f"find a multiple of {self.tick_size}.  Value "
-                                "at exit was {r}."
-                                )
-            r += 0.01
-            # Rounding is needed because float math is imperfect and sometimes
-            # adds numerous decimal places in simple arithmetic
-            r = round(r, 2)
-
-        return r
+        return round(ceil(f / self.tick_size) * self.tick_size, 2)
 
     def get_next_tick_down(self, f: float):
         """Returns the next tick available at or below the provided value"""
-        # Ensure there's no more than 2 decimal places
-        if str(f)[::-1].find('.') > 2:
-            raise ValueError("More than 2 decimal places is not supported as "
-                             f"input for this method, got f={str(f)}"
-                             )
-        r = f
-        counter = 0
-        # Increment by 0.01 until we reach a tick_size multiple
-        while r % self.tick_size != 0:
-            counter += 1
-            if counter > (self.tick_size * 100):
-                raise Exception("Error attempting to round up, too many loops "
-                                "occurred which probably means a float math "
-                                f"issue occurred.  Stopping after {counter} "
-                                f"increments of {f} by 0.01 while trying to "
-                                f"find a multiple of {self.tick_size}.  Value "
-                                "at exit was {r}."
-                                )
-            r -= 0.01
-            # Rounding is needed because float math is imperfect and sometimes
-            # adds numerous decimal places in simple arithmetic
-            r = round(r, 2)
-
-        return r
+        return round(floor(f / self.tick_size) * self.tick_size, 2)
 
     def market_is_open(self,
                        trading_hours: str,
