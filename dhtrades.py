@@ -1,5 +1,5 @@
 import json
-from datetime import timedelta, datetime as dt
+from datetime import timedelta, datetime as dt, date
 from copy import deepcopy
 import logging
 import numpy as np
@@ -1467,10 +1467,11 @@ class Backtest():
         same (or at all) in all subclasses.
 
         Args:
-            candle_date (str): Date string in format "YYYY-MM-DD"
+            candle_date: Date to check, can be datetime.date,
+                         datetime.datetime, or str in "YYYY-MM-DD" format
             closed_events (list): List of Event objects with Closed category
-            default_autoclose (datetime.time): Default autoclose time to return
-                                               if no early close event found
+            default_autoclose: Default autoclose time, can be datetime.time or
+                               str in "HH:MM:SS" format
 
         Returns:
             datetime.time: Adjusted autoclose time (5 minutes before actual
@@ -1483,14 +1484,30 @@ class Backtest():
             default_autoclose = dhu.dt_as_dt(
                 f"2000-01-01 {default_autoclose}").time()
 
-        # Get datetime.date object for candle_date
-        check_date = dt.strptime(candle_date, "%Y-%m-%d").date()
+        # Convert candle_date to datetime.date object, handling multiple types
+        if isinstance(candle_date, str):
+            # Handle string format "YYYY-MM-DD"
+            candle_date = dt.strptime(candle_date, "%Y-%m-%d").date()
+        elif isinstance(candle_date, dt):
+            # Handle datetime.datetime objects
+            candle_date = candle_date.date()
+        elif not isinstance(candle_date, date):
+            # Fallback attempt: convert to string and parse if not already date
+            try:
+                candle_date = dt.strptime(
+                    str(candle_date), "%Y-%m-%d").date()
+            except Exception as e:
+                log.error(f"Unable to convert candle_date {candle_date} "
+                          f"to date object: {e}")
+                raise TypeError(f"candle_date must be datetime.date, "
+                                f"datetime.datetime, or string, got "
+                                f"{type(candle_date)}")
 
         # Find events that start on this date with Closed category
         for event in closed_events:
             event_start_date = dhu.dt_as_dt(event.start_dt).date()
             # Check if event starts on this date and is a Closed event
-            if (event_start_date == check_date and
+            if (event_start_date == candle_date and
                     event.category == "Closed"):
                 close_time = dhu.dt_as_dt(event.start_dt).time()
                 # Only apply early close if it's actually before default
