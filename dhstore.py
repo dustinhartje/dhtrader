@@ -11,6 +11,7 @@ from datetime import datetime as dt
 from datetime import timedelta
 from copy import deepcopy
 import logging
+from pathlib import Path
 import dhcharts as dhc
 import dhtrades as dht
 import dhutil as dhu
@@ -266,7 +267,7 @@ def review_trades(symbol: str = "ES",
     result = {"integrity": integrity, "review": review}
     if out_path is not None:
         # Write result and any issues found to disk
-        filename = "/".join([out_path, out_file])
+        filename = Path(out_path) / out_file
         blob = deepcopy(result)
         # Add issue details for disk output if not already included
         if not list_issues:
