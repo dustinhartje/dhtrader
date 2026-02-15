@@ -183,8 +183,17 @@ def review_trades(symbol: str = "ES",
                              f"both!  We got ts_id={ts_id} bt_id={bt_id}")
         duplicates = []
         multidays = []
+        autoclosed_issues = {}
         total_trades = 0
         unique_trades = 0
+
+        # Cache all events for autoclosed trade integrity checking
+        dhu.log_say("Caching all events for autoclosed integrity checks")
+        all_events = get_events(symbol="ES")
+        # Create a set of event start_dt strings for fast lookup
+        event_start_times = {event.start_dt for event in all_events}
+        dhu.log_say(f"Cached {len(event_start_times)} unique event "
+                    f"start times")
 
         # Start a progress bar
         bar_total = len(all_ts)
@@ -236,6 +245,25 @@ def review_trades(symbol: str = "ES",
                         log.warning("Unapproved multiday trade found in "
                                     f"storage: {this}")
                         multidays.append(this)
+                # Check autoclosed trades for integrity
+                if "autoclosed" in t.tags and t.close_time != "15:55:00":
+                    # Calculate expected event start time (5 min after close)
+                    close_dt_obj = dhu.dt_as_dt(t.close_dt)
+                    expected_event_start = close_dt_obj + timedelta(
+                        minutes=5)
+                    expected_start_str = dhu.dt_as_str(
+                        expected_event_start)
+                    # Check if expected event start time exists in cached
+                    # events
+                    if expected_start_str not in event_start_times:
+                        # No matching event found, record integrity issue
+                        if t.close_dt not in autoclosed_issues:
+                            autoclosed_issues[t.close_dt] = 0
+                        autoclosed_issues[t.close_dt] += 1
+                        log.warning(
+                            f"Autoclosed trade integrity issue: "
+                            f"close_dt={t.close_dt}, expected event at "
+                            f"{expected_start_str} not found")
         bar.finish()
 
         # Output findings
@@ -247,6 +275,13 @@ def review_trades(symbol: str = "ES",
         if len(multidays) > 0:
             status = "ERRORS"
             issues.append(f"{len(multidays)} invalid multiday trades found")
+        if len(autoclosed_issues) > 0:
+            status = "ERRORS"
+            total_autoclosed_bad = sum(autoclosed_issues.values())
+            issues.append(
+                f"{total_autoclosed_bad} autoclosed trade integrity "
+                f"issues found across {len(autoclosed_issues)} unique "
+                f"close_dt values")
         if len(issues) == 0:
             issues = None
         integrity = {"status": status,
@@ -254,11 +289,16 @@ def review_trades(symbol: str = "ES",
                      "total_trades": total_trades,
                      "unique_trades": unique_trades,
                      "duplicate_trades": len(duplicates),
-                     "invalid_multiday_trades": len(multidays)
+                     "invalid_multiday_trades": len(multidays),
+                     "autoclosed_integrity_issues": len(autoclosed_issues),
+                     "total_autoclosed_bad_trades": sum(
+                         autoclosed_issues.values()) if autoclosed_issues
+                     else 0
                      }
         if list_issues:
             integrity["duplicates"] = duplicates
             integrity["multidays"] = multidays
+            integrity["autoclosed_issues"] = autoclosed_issues
         time_full.stop()
         print(time_full.summary())
     else:
@@ -271,8 +311,9 @@ def review_trades(symbol: str = "ES",
         blob = deepcopy(result)
         # Add issue details for disk output if not already included
         if not list_issues:
-            blob["duplicates"] = duplicates
-            blob["multidays"] = multidays
+            blob["integrity"]["duplicates"] = duplicates
+            blob["integrity"]["multidays"] = multidays
+            blob["integrity"]["autoclosed_issues"] = autoclosed_issues
         with open(filename, "w") as f:
             f.write(json.dumps(blob))
         dhu.log_say(f"Wrote integrity results and issues to {filename}")
