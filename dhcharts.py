@@ -13,6 +13,93 @@ from math import ceil, floor
 CANDLE_TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w']
 BEGINNING_OF_TIME = "2008-01-01 00:00:00"
 
+# Market Era Definitions
+# Define different historical market structures with start dates and schedules.
+# To add new eras: append a new dict to this list with start_date and schedule.
+# Eras are ordered chronologically; the system finds the era by checking which
+# start_date the target_dt is >= to (uses the latest matching start_date).
+MARKET_ERAS = [
+    {
+        "name": "2008_thru_2012",
+        "start_date": dt.date(2008, 1, 1),
+        "times": {
+            "eth_open": dt.time(18, 0, 0),
+            "eth_close": dt.time(17, 29, 0),
+            "rth_open": dt.time(9, 30, 0),
+            "rth_close": dt.time(16, 15, 0),
+        },
+        "closed_hours": {
+            "eth": {
+                # Two close periods per day: 16:15-16:30 and 17:30-18:00
+                0: [{"close": "16:15:00", "open": "16:30:00"},
+                    {"close": "17:30:00", "open": "18:00:00"}],
+                1: [{"close": "16:15:00", "open": "16:30:00"},
+                    {"close": "17:30:00", "open": "18:00:00"}],
+                2: [{"close": "16:15:00", "open": "16:30:00"},
+                    {"close": "17:30:00", "open": "18:00:00"}],
+                3: [{"close": "16:15:00", "open": "16:30:00"},
+                    {"close": "17:30:00", "open": "18:00:00"}],
+                4: [{"close": "16:15:00", "open": "16:30:00"},
+                    {"close": "17:30:00", "open": "23:59:59"}],
+                5: [{"close": "00:00:00", "open": "23:59:59"}],
+                6: [{"close": "00:00:00", "open": "18:00:00"}]
+            },
+            "rth": {
+                # RTH closed at 16:15
+                0: [{"close": "00:00:00", "open": "09:30:00"},
+                    {"close": "16:15:00", "open": "23:59:59"}],
+                1: [{"close": "00:00:00", "open": "09:30:00"},
+                    {"close": "16:15:00", "open": "23:59:59"}],
+                2: [{"close": "00:00:00", "open": "09:30:00"},
+                    {"close": "16:15:00", "open": "23:59:59"}],
+                3: [{"close": "00:00:00", "open": "09:30:00"},
+                    {"close": "16:15:00", "open": "23:59:59"}],
+                4: [{"close": "00:00:00", "open": "09:30:00"},
+                    {"close": "16:15:00", "open": "23:59:59"}],
+                5: [{"close": "00:00:00", "open": "23:59:59"}],
+                6: [{"close": "00:00:00", "open": "23:59:59"}]
+            }
+        }
+    },
+    {
+        "name": "2009_thru_present",
+        "start_date": dt.date(2012, 11, 17),
+        "times": {
+            "eth_open": dt.time(18, 0, 0),
+            "eth_close": dt.time(16, 59, 0),
+            "rth_open": dt.time(9, 30, 0),
+            "rth_close": dt.time(16, 14, 0),
+        },
+        "closed_hours": {
+            "eth": {
+                # Single close period: 17:00-18:00
+                0: [{"close": "17:00:00", "open": "18:00:00"}],
+                1: [{"close": "17:00:00", "open": "18:00:00"}],
+                2: [{"close": "17:00:00", "open": "18:00:00"}],
+                3: [{"close": "17:00:00", "open": "18:00:00"}],
+                4: [{"close": "17:00:00", "open": "23:59:59"}],
+                5: [{"close": "00:00:00", "open": "23:59:59"}],
+                6: [{"close": "00:00:00", "open": "18:00:00"}]
+            },
+            "rth": {
+                # RTH closes at 16:00
+                0: [{"close": "00:00:00", "open": "09:30:00"},
+                    {"close": "16:00:00", "open": "23:59:59"}],
+                1: [{"close": "00:00:00", "open": "09:30:00"},
+                    {"close": "16:00:00", "open": "23:59:59"}],
+                2: [{"close": "00:00:00", "open": "09:30:00"},
+                    {"close": "16:00:00", "open": "23:59:59"}],
+                3: [{"close": "00:00:00", "open": "09:30:00"},
+                    {"close": "16:00:00", "open": "23:59:59"}],
+                4: [{"close": "00:00:00", "open": "09:30:00"},
+                    {"close": "16:00:00", "open": "23:59:59"}],
+                5: [{"close": "00:00:00", "open": "23:59:59"}],
+                6: [{"close": "00:00:00", "open": "23:59:59"}]
+            }
+        }
+    }
+]
+
 log = logging.getLogger("dhcharts")
 log.addHandler(logging.NullHandler())
 
@@ -88,18 +175,20 @@ class Symbol():
                           )
 
     def set_times(self):
-        """Sets times for known Symbol objects."""
-        # DELETEME mimics ES and is used for testing storage to avoid polluting
-        # actual ES related data
+        """Sets times for known Symbol objects. These are the CURRENT era
+        times (latest era in MARKET_ERAS). Use get_times_for_era() with
+        dynamic era detection for historical times.
+        """
+        # DELETEME mimics ES and is used for testing storage to avoid
+        # polluting actual ES related data
         if self.ticker in ["ES", "DELETEME"]:
-            self.eth_open_time = dt.datetime.strptime("18:00:00",
-                                                      "%H:%M:%S").time()
-            self.eth_close_time = dt.datetime.strptime("16:59:00",
-                                                       "%H:%M:%S").time()
-            self.rth_open_time = dt.datetime.strptime("09:30:00",
-                                                      "%H:%M:%S").time()
-            self.rth_close_time = dt.datetime.strptime("16:14:00",
-                                                       "%H:%M:%S").time()
+            # Set to latest era times
+            latest_era = MARKET_ERAS[-1]
+            times = latest_era["times"]
+            self.eth_open_time = times["eth_open"]
+            self.eth_close_time = times["eth_close"]
+            self.rth_open_time = times["rth_open"]
+            self.rth_close_time = times["rth_close"]
             self.eth_week_open = {"day_of_week": 6,
                                   "time": self.eth_open_time}
             self.eth_week_close = {"day_of_week": 4,
@@ -122,6 +211,90 @@ class Symbol():
         """Returns the next tick available at or below the provided value"""
         return round(floor(f / self.tick_size) * self.tick_size, 2)
 
+    def get_era(self, target_dt):
+        """Determine which market era the target_dt falls into.
+
+        Finds the appropriate era by checking which start_date the target
+        falls on or after. Uses the latest matching era definition.
+
+        Args:
+            target_dt: datetime, date, or string representing the target date
+
+        Returns:
+            dict: The era definition dict containing name, start_date, times,
+                  and closed_hours
+        """
+        d = dhu.dt_as_dt(target_dt).date()
+
+        # Find the latest era whose start_date is <= target date
+        # MARKET_ERAS must be sorted chronologically
+        matching_era = None
+        for era in MARKET_ERAS:
+            if d >= era["start_date"]:
+                matching_era = era
+            else:
+                break
+
+        if matching_era is None:
+            raise ValueError(
+                f"No market era defined for date {d}. "
+                f"Earliest era starts at {MARKET_ERAS[0]['start_date']}"
+            )
+
+        return matching_era
+
+    def get_times_for_era(self, era):
+        """Get the market times (open/close) for a specific era.
+
+        Args:
+            era: Either an era dict (from get_era()) or an era name string
+
+        Returns:
+            dict: {eth_open, eth_close, rth_open, rth_close} as time objects
+        """
+        # Support both era dict and era name string
+        if isinstance(era, dict):
+            return era["times"]
+        else:
+            # era is a name string, find it in MARKET_ERAS
+            for era_def in MARKET_ERAS:
+                if era_def["name"] == era:
+                    return era_def["times"]
+            raise ValueError(f"Unknown era name: {era}")
+
+    def get_closed_hours_for_era(self, target_dt, trading_hours: str):
+        """Build the closed hours dictionary for a specific era and
+        trading_hours type.
+
+        Args:
+            target_dt: datetime to determine which era
+            trading_hours: "eth" or "rth"
+
+        Returns:
+            dict: {day_of_week -> list of {close, open} time ranges}
+        """
+        era = self.get_era(target_dt)
+
+        if trading_hours not in era["closed_hours"]:
+            raise ValueError(
+                f"trading_hours '{trading_hours}' not defined for "
+                f"era '{era['name']}'"
+            )
+
+        # Convert string times to time objects
+        closed_schedule = era["closed_hours"][trading_hours]
+        closed = {}
+        for day, periods in closed_schedule.items():
+            closed[day] = [
+                {
+                    "close": dhu.dt_as_time(period["close"]),
+                    "open": dhu.dt_as_time(period["open"])
+                }
+                for period in periods
+            ]
+
+        return closed
+
     def market_is_open(self,
                        trading_hours: str,
                        target_dt,
@@ -129,58 +302,16 @@ class Symbol():
                        events: list = None,
                        ):
         """Returns True if target_dt is within market hours and no Events with
-        category 'Closed' overlap as pulled from central storage
+        category 'Closed' overlap as pulled from central storage. Uses dynamic
+        era detection to apply correct historical market hours.
         """
         # Set vars needed to evaluate
         d = dhu.dt_as_dt(target_dt)
         dow = d.weekday()
         time = d.time()
-        # Hours vary per day and overnight/weekends get tricky so
-        # build a cheatsheet (0 = Monday)
-        if trading_hours == "eth":
-            closed = {0: [{"close": dhu.dt_as_time("17:00:00"),
-                           "open": dhu.dt_as_time("18:00:00")}],
-                      1: [{"close": dhu.dt_as_time("17:00:00"),
-                           "open": dhu.dt_as_time("18:00:00")}],
-                      2: [{"close": dhu.dt_as_time("17:00:00"),
-                           "open": dhu.dt_as_time("18:00:00")}],
-                      3: [{"close": dhu.dt_as_time("17:00:00"),
-                           "open": dhu.dt_as_time("18:00:00")}],
-                      4: [{"close": dhu.dt_as_time("17:00:00"),
-                           "open": dhu.dt_as_time("23:59:59")}],
-                      5: [{"close": dhu.dt_as_time("00:00:00"),
-                           "open": dhu.dt_as_time("23:59:59")}],
-                      6: [{"close": dhu.dt_as_time("00:00:00"),
-                           "open": dhu.dt_as_time("18:00:00")}]
-                      }
-        elif trading_hours == "rth":
-            closed = {0: [{"close": dhu.dt_as_time("00:00:00"),
-                           "open": dhu.dt_as_time("09:30:00")},
-                          {"close": dhu.dt_as_time("16:00:00"),
-                           "open": dhu.dt_as_time("23:59:59")}],
-                      1: [{"close": dhu.dt_as_time("00:00:00"),
-                           "open": dhu.dt_as_time("09:30:00")},
-                          {"close": dhu.dt_as_time("16:00:00"),
-                           "open": dhu.dt_as_time("23:59:59")}],
-                      2: [{"close": dhu.dt_as_time("00:00:00"),
-                           "open": dhu.dt_as_time("09:30:00")},
-                          {"close": dhu.dt_as_time("16:00:00"),
-                           "open": dhu.dt_as_time("23:59:59")}],
-                      3: [{"close": dhu.dt_as_time("00:00:00"),
-                           "open": dhu.dt_as_time("09:30:00")},
-                          {"close": dhu.dt_as_time("16:00:00"),
-                           "open": dhu.dt_as_time("23:59:59")}],
-                      4: [{"close": dhu.dt_as_time("00:00:00"),
-                           "open": dhu.dt_as_time("09:30:00")},
-                          {"close": dhu.dt_as_time("16:00:00"),
-                           "open": dhu.dt_as_time("23:59:59")}],
-                      5: [{"close": dhu.dt_as_time("00:00:00"),
-                           "open": dhu.dt_as_time("23:59:59")}],
-                      6: [{"close": dhu.dt_as_time("00:00:00"),
-                           "open": dhu.dt_as_time("23:59:59")}]
-                      }
-        else:
-            raise ValueError(f"trading_hours: {trading_hours} not supported")
+
+        # Get closed hours for the era this datetime falls into
+        closed = self.get_closed_hours_for_era(target_dt, trading_hours)
 
         # Test open_times ranges based on weekday, returning False if time
         # falls inside any of them
@@ -249,15 +380,17 @@ class Symbol():
         if self.ticker == "ES":
             this_date = dhu.dt_as_dt(target_dt).date()
             this_time = dhu.dt_as_dt(target_dt).time()
-            # Set Target Time based on standard hours
+            # Set Target Time based on standard hours for the era
+            # containing target_dt
+            era_times = self.get_times_for_era(self.get_era(target_dt))
             if trading_hours == "eth" and boundary == "open":
-                tt = self.eth_open_time
+                tt = era_times["eth_open"]
             if trading_hours == "eth" and boundary == "close":
-                tt = self.eth_close_time
+                tt = era_times["eth_close"]
             if trading_hours == "rth" and boundary == "open":
-                tt = self.rth_open_time
+                tt = era_times["rth_open"]
             if trading_hours == "rth" and boundary == "close":
-                tt = self.rth_close_time
+                tt = era_times["rth_close"]
             # Set Target Date based on time of input target_dt vs standard hrs
             if order == "next":
                 # Target date is today if time before target, else tomorrow
@@ -799,8 +932,10 @@ class Day():
                                               '%Y-%m-%d %H:%M:%S').time()
         eth_end_time = dt.datetime.strptime('2000-01-01 23:59:00',
                                             '%Y-%m-%d %H:%M:%S').time()
-        rth_end_time = dt.datetime.strptime('2000-01-01 16:14:00',
-                                            '%Y-%m-%d %H:%M:%S').time()
+        # Get rth_close_time dynamically from symbol for the era of d_date
+        target_dt = dt.datetime.combine(d_date, dt.time(16, 0, 0))
+        era_times = d_symbol.get_times_for_era(d_symbol.get_era(target_dt))
+        rth_end_time = era_times["rth_close"]
 
         # Setup class attributes
         self.d_symbol = d_symbol
