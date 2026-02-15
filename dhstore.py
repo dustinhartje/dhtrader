@@ -23,6 +23,9 @@ COLL_BACKTESTS = "backtests"
 COLL_IND_META = "indicators_meta"
 COLL_IND_DPS = "indicators_datapoints"
 
+# Cache for Symbol instances to avoid repeated creation
+SYMBOL_CACHE = {}
+
 log = logging.getLogger("dhstore")
 log.addHandler(logging.NullHandler())
 
@@ -957,13 +960,19 @@ def get_symbol_by_ticker(ticker: str):
     """Temp function to help other objects get symbols by name.  This should
     be replaced by proper storage and retrieval functions eventually but since
     I don't forsee working with any symbol other than ES for the forseeable
-    future I'm deprioritizing that work."""
+    future I'm deprioritizing that work.
+
+    Caches Symbol instances for performance - reusing the same Symbol instance
+    allows its internal caches (e.g., closed_hours_cache) to be shared across
+    all Charts and Indicators."""
     if ticker in ["ES", "DELETEME"]:
-        return dhc.Symbol(ticker=ticker,
-                          name=ticker,
-                          leverage_ratio=50,
-                          tick_size=0.25,
-                          )
+        if ticker not in SYMBOL_CACHE:
+            SYMBOL_CACHE[ticker] = dhc.Symbol(ticker=ticker,
+                                              name=ticker,
+                                              leverage_ratio=50,
+                                              tick_size=0.25,
+                                              )
+        return SYMBOL_CACHE[ticker]
     else:
         raise ValueError("Only ['ES', 'DELETEME'] is currently supported as "
                          f"Symbol ticker, we got {ticker}")

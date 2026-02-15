@@ -128,6 +128,7 @@ class Symbol():
         self.name = name
         self.leverage_ratio = float(leverage_ratio)
         self.tick_size = float(tick_size)
+        self._closed_hours_cache = {}
         self.set_times()
 
     def __eq__(self, other):
@@ -281,6 +282,11 @@ class Symbol():
                 f"era '{era['name']}'"
             )
 
+        # Check cache first
+        cache_key = (era["name"], trading_hours)
+        if cache_key in self._closed_hours_cache:
+            return self._closed_hours_cache[cache_key]
+
         # Convert string times to time objects
         closed_schedule = era["closed_hours"][trading_hours]
         closed = {}
@@ -292,6 +298,9 @@ class Symbol():
                 }
                 for period in periods
             ]
+
+        # Cache the result
+        self._closed_hours_cache[cache_key] = closed
 
         return closed
 
