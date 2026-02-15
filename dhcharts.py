@@ -11,7 +11,7 @@ import logging
 from math import ceil, floor
 
 CANDLE_TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w']
-BEGINNING_OF_TIME = "2022-01-01 00:00:00"
+BEGINNING_OF_TIME = "2008-01-01 00:00:00"
 
 log = logging.getLogger("dhcharts")
 log.addHandler(logging.NullHandler())
