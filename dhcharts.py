@@ -62,7 +62,7 @@ MARKET_ERAS = [
         }
     },
     {
-        "name": "2009_thru_present",
+        "name": "2013_thru_present",
         "start_date": dt.date(2012, 11, 17),
         "times": {
             "eth_open": dt.time(18, 0, 0),

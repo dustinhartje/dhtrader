@@ -1047,3 +1047,431 @@ def test_Symbol_tick_methods_roundtrip():
         down_once = sym.get_next_tick_down(val)
         down_twice = sym.get_next_tick_down(down_once)
         assert down_once == down_twice
+
+
+def test_Symbol_get_era():
+    """Test get_era() correctly identifies market eras based on date"""
+    sym = SYMBOL
+
+    # Test dates in the 2008-2012 era (before 2012-11-17)
+    era = sym.get_era("2008-01-01 12:00:00")
+    assert era["name"] == "2008_thru_2012"
+    assert "2008_thru_2012" == sym.get_era("2010-06-15 12:00:00")["name"]
+    assert "2008_thru_2012" == sym.get_era("2012-11-16 12:00:00")["name"]
+
+    # Test date exactly on the transition (2012-11-17)
+    era = sym.get_era("2012-11-17 12:00:00")
+    assert era["name"] == "2013_thru_present"
+
+    # Test dates in the 2013_thru_present era (after 2012-11-17)
+    assert "2013_thru_present" == sym.get_era("2012-11-18 12:00:00")["name"]
+    assert "2013_thru_present" == sym.get_era("2020-01-01 12:00:00")["name"]
+    assert "2013_thru_present" == sym.get_era("2024-06-15 12:00:00")["name"]
+    assert "2013_thru_present" == sym.get_era("2025-12-31 12:00:00")["name"]
+
+    # Test with datetime objects (not just strings)
+    import datetime as dt
+    era = sym.get_era(dt.datetime(2010, 5, 1))
+    assert era["name"] == "2008_thru_2012"
+    era = sym.get_era(dt.datetime(2024, 5, 1))
+    assert era["name"] == "2013_thru_present"
+
+    # Test error for date before any era
+    with pytest.raises(ValueError, match="No market era defined"):
+        sym.get_era("2007-12-31 12:00:00")
+
+
+def test_Symbol_get_times_for_era():
+    """Test get_times_for_era() returns correct market times for eras"""
+    sym = SYMBOL
+    import datetime as dt
+
+    # Test 2008_thru_2012 era by era dict
+    era_2008 = sym.get_era("2010-01-01 12:00:00")
+    times = sym.get_times_for_era(era_2008)
+    assert times["eth_open"] == dt.time(18, 0, 0)
+    assert times["eth_close"] == dt.time(17, 29, 0)
+    assert times["rth_open"] == dt.time(9, 30, 0)
+    assert times["rth_close"] == dt.time(16, 15, 0)
+
+    # Test 2008_thru_2012 era by name string
+    times = sym.get_times_for_era("2008_thru_2012")
+    assert times["eth_open"] == dt.time(18, 0, 0)
+    assert times["eth_close"] == dt.time(17, 29, 0)
+    assert times["rth_open"] == dt.time(9, 30, 0)
+    assert times["rth_close"] == dt.time(16, 15, 0)
+
+    # Test 2013_thru_present era by era dict
+    era_2009 = sym.get_era("2024-01-01 12:00:00")
+    times = sym.get_times_for_era(era_2009)
+    assert times["eth_open"] == dt.time(18, 0, 0)
+    assert times["eth_close"] == dt.time(16, 59, 0)
+    assert times["rth_open"] == dt.time(9, 30, 0)
+    assert times["rth_close"] == dt.time(16, 14, 0)
+
+    # Test 2013_thru_present era by name string
+    times = sym.get_times_for_era("2013_thru_present")
+    assert times["eth_open"] == dt.time(18, 0, 0)
+    assert times["eth_close"] == dt.time(16, 59, 0)
+    assert times["rth_open"] == dt.time(9, 30, 0)
+    assert times["rth_close"] == dt.time(16, 14, 0)
+
+    # Test error for unknown era name
+    with pytest.raises(ValueError, match="Unknown era name"):
+        sym.get_times_for_era("nonexistent_era")
+
+
+def test_Symbol_get_closed_hours_for_era():
+    """Test get_closed_hours_for_era() returns correct closed hours"""
+    sym = SYMBOL
+    import datetime as dt
+
+    # Test 2008_thru_2012 era ETH closed hours
+    closed = sym.get_closed_hours_for_era("2010-06-15 12:00:00", "eth")
+
+    # Monday (0) should have two closed periods
+    assert len(closed[0]) == 2
+    assert closed[0][0]["close"] == dt.time(16, 15, 0)
+    assert closed[0][0]["open"] == dt.time(16, 30, 0)
+    assert closed[0][1]["close"] == dt.time(17, 30, 0)
+    assert closed[0][1]["open"] == dt.time(18, 0, 0)
+
+    # Friday (4) closed until end of day after 16:15
+    assert len(closed[4]) == 2
+    assert closed[4][0]["close"] == dt.time(16, 15, 0)
+    assert closed[4][0]["open"] == dt.time(16, 30, 0)
+    assert closed[4][1]["close"] == dt.time(17, 30, 0)
+
+    # Saturday (5) closed all day
+    assert len(closed[5]) == 1
+    assert closed[5][0]["close"] == dt.time(0, 0, 0)
+
+    # Test 2008_thru_2012 era RTH closed hours
+    closed = sym.get_closed_hours_for_era("2010-06-15 12:00:00", "rth")
+
+    # Monday (0) closed before 9:30 and after 16:15
+    assert len(closed[0]) == 2
+    assert closed[0][0]["close"] == dt.time(0, 0, 0)
+    assert closed[0][0]["open"] == dt.time(9, 30, 0)
+    assert closed[0][1]["close"] == dt.time(16, 15, 0)
+
+    # Test 2013_thru_present era ETH closed hours
+    closed = sym.get_closed_hours_for_era("2024-06-15 12:00:00", "eth")
+
+    # Monday (0) should have one closed period (17:00-18:00)
+    assert len(closed[0]) == 1
+    assert closed[0][0]["close"] == dt.time(17, 0, 0)
+    assert closed[0][0]["open"] == dt.time(18, 0, 0)
+
+    # Friday (4) closed after 17:00 until end
+    assert len(closed[4]) == 1
+    assert closed[4][0]["close"] == dt.time(17, 0, 0)
+
+    # Test 2013_thru_present era RTH closed hours
+    closed = sym.get_closed_hours_for_era("2024-06-15 12:00:00", "rth")
+
+    # Monday (0) closed before 9:30 and at/after 16:00
+    assert len(closed[0]) == 2
+    assert closed[0][0]["close"] == dt.time(0, 0, 0)
+    assert closed[0][0]["open"] == dt.time(9, 30, 0)
+    assert closed[0][1]["close"] == dt.time(16, 0, 0)
+
+    # Test caching - call twice and verify same object returned
+    closed1 = sym.get_closed_hours_for_era("2024-06-15 12:00:00", "eth")
+    closed2 = sym.get_closed_hours_for_era("2024-06-20 12:00:00", "eth")
+    assert closed1 is closed2  # Should be same cached object
+
+    # Different era should return different object
+    closed3 = sym.get_closed_hours_for_era("2010-06-15 12:00:00", "eth")
+    assert closed1 is not closed3
+
+    # Test error for invalid trading_hours
+    with pytest.raises(ValueError, match="trading_hours.*not defined"):
+        sym.get_closed_hours_for_era("2024-06-15 12:00:00", "invalid")
+
+
+def test_Symbol_market_is_open_historical_eras():
+    """Test market_is_open() with historical era dates (2008-2012)"""
+    sym = SYMBOL
+
+    # Test 2008-2012 era: RTH closes at 16:15 (not 16:00)
+    # Wednesday during 2008-2012 era
+    date = "2010-03-10"
+
+    # RTH should be open at 4:14pm
+    assert sym.market_is_open(trading_hours="rth",
+                              target_dt=f"{date} 16:14:00",
+                              check_closed_events=False)
+
+    # RTH should be closed at 4:15pm (different from current era!)
+    assert not sym.market_is_open(trading_hours="rth",
+                                  target_dt=f"{date} 16:15:00",
+                                  check_closed_events=False)
+
+    # ETH should be closed from 5:30pm-6:00pm (different from current era!)
+    assert not sym.market_is_open(trading_hours="eth",
+                                  target_dt=f"{date} 17:30:00",
+                                  check_closed_events=False)
+    assert not sym.market_is_open(trading_hours="eth",
+                                  target_dt=f"{date} 17:45:00",
+                                  check_closed_events=False)
+
+    # ETH should also be closed from 4:15pm-4:30pm in 2008-2012 era
+    assert not sym.market_is_open(trading_hours="eth",
+                                  target_dt=f"{date} 16:15:00",
+                                  check_closed_events=False)
+    assert not sym.market_is_open(trading_hours="eth",
+                                  target_dt=f"{date} 16:20:00",
+                                  check_closed_events=False)
+    assert not sym.market_is_open(trading_hours="eth",
+                                  target_dt=f"{date} 16:29:00",
+                                  check_closed_events=False)
+
+    # ETH should be open at 4:30pm in 2008-2012 era
+    assert sym.market_is_open(trading_hours="eth",
+                              target_dt=f"{date} 16:30:00",
+                              check_closed_events=False)
+
+    # Test same times in 2013_thru_present era for comparison
+    # Use Wednesday March 13, 2024 to match Wednesday March 10, 2010
+    date = "2024-03-13"
+
+    # RTH should be closed at 4:00pm in current era (not 4:15pm)
+    assert not sym.market_is_open(trading_hours="rth",
+                                  target_dt=f"{date} 16:00:00",
+                                  check_closed_events=False)
+
+    # RTH should be closed at 4:14pm in current era
+    assert not sym.market_is_open(trading_hours="rth",
+                                  target_dt=f"{date} 16:14:00",
+                                  check_closed_events=False)
+
+    # ETH should be closed at 5:00pm in current era (17:00-18:00 closure)
+    assert not sym.market_is_open(trading_hours="eth",
+                                  target_dt=f"{date} 17:00:00",
+                                  check_closed_events=False)
+
+    # ETH should be open at 4:45pm in current era (no 16:15-16:30 closure)
+    assert sym.market_is_open(trading_hours="eth",
+                              target_dt=f"{date} 16:45:00",
+                              check_closed_events=False)
+
+
+def test_Symbol_get_market_boundary_historical_eras():
+    """Test get_market_boundary() with historical era dates"""
+    sym = SYMBOL
+
+    # Test 2008-2012 era: RTH closes at 16:15
+    # Checking from noon on Wednesday 2010-03-10 12:00:00
+    t = dt_as_dt("2010-03-10 12:00:00")
+
+    # Next RTH Close should be at 16:15 (not 16:14 like current era)
+    result = sym.get_next_close(target_dt=t,
+                                trading_hours="rth",
+                                adjust_for_events=False)
+    assert dt_as_str(result) == "2010-03-10 16:15:00"
+
+    # Previous RTH Close should be at 16:15 previous day
+    result = sym.get_previous_close(target_dt=t,
+                                    trading_hours="rth",
+                                    adjust_for_events=False)
+    assert dt_as_str(result) == "2010-03-09 16:15:00"
+
+    # Test 2008-2012 era: ETH closes at 17:29
+    # Next ETH Close should be at 17:29 (not 16:59 like current era)
+    result = sym.get_next_close(target_dt=t,
+                                trading_hours="eth",
+                                adjust_for_events=False)
+    assert dt_as_str(result) == "2010-03-10 17:29:00"
+
+    # Previous ETH Close should be at 17:29 previous day
+    result = sym.get_previous_close(target_dt=t,
+                                    trading_hours="eth",
+                                    adjust_for_events=False)
+    assert dt_as_str(result) == "2010-03-09 17:29:00"
+
+    # Test era transition: date right before change (2012-11-16 is Friday)
+    t = dt_as_dt("2012-11-16 12:00:00")
+    result = sym.get_next_close(target_dt=t,
+                                trading_hours="rth",
+                                adjust_for_events=False)
+    # Should use old era times (16:15)
+    assert dt_as_str(result) == "2012-11-16 16:15:00"
+
+    # Test era transition: Monday after change (2012-11-19 is Monday,
+    # 11/17 is Saturday, 11/18 is Sunday)
+    # Use Monday to avoid weekend complications
+    t = dt_as_dt("2012-11-19 12:00:00")
+    result = sym.get_next_close(target_dt=t,
+                                trading_hours="rth",
+                                adjust_for_events=False)
+    # Should use new era times (16:14)
+    assert dt_as_str(result) == "2012-11-19 16:14:00"
+
+    # Test era transition: RTH open stays the same across eras
+    t1 = dt_as_dt("2012-11-16 08:00:00")
+    result1 = sym.get_next_open(target_dt=t1,
+                                trading_hours="rth",
+                                adjust_for_events=False)
+    assert dt_as_str(result1) == "2012-11-16 09:30:00"
+
+    t2 = dt_as_dt("2012-11-19 08:00:00")  # Monday after era change
+    result2 = sym.get_next_open(target_dt=t2,
+                                trading_hours="rth",
+                                adjust_for_events=False)
+    # RTH open unchanged across eras (both 9:30)
+    assert dt_as_str(result2) == "2012-11-19 09:30:00"
+
+
+def test_Symbol_init():
+    """Test Symbol __init__ creates object with correct attributes"""
+    sym = dhc.Symbol(ticker="ES",
+                     name="E-mini S&P 500",
+                     leverage_ratio=50.0,
+                     tick_size=0.25)
+
+    assert sym.ticker == "ES"
+    assert sym.name == "E-mini S&P 500"
+    assert sym.leverage_ratio == 50.0
+    assert sym.tick_size == 0.25
+
+    # Verify set_times() was called during init
+    assert hasattr(sym, "eth_open_time")
+    assert hasattr(sym, "eth_close_time")
+    assert hasattr(sym, "rth_open_time")
+    assert hasattr(sym, "rth_close_time")
+    assert hasattr(sym, "eth_week_open")
+    assert hasattr(sym, "eth_week_close")
+    assert hasattr(sym, "rth_week_open")
+    assert hasattr(sym, "rth_week_close")
+    assert hasattr(sym, "_closed_hours_cache")
+
+    # Test that leverage_ratio and tick_size are converted to float
+    sym2 = dhc.Symbol(ticker="DELETEME", name="Test",
+                      leverage_ratio="100", tick_size="1.5")
+    assert isinstance(sym2.leverage_ratio, float)
+    assert sym2.leverage_ratio == 100.0
+    assert isinstance(sym2.tick_size, float)
+    assert sym2.tick_size == 1.5
+
+
+def test_Symbol_equality():
+    """Test Symbol __eq__ and __ne__ methods"""
+    sym1 = dhc.Symbol(ticker="ES", name="ES",
+                      leverage_ratio=50, tick_size=0.25)
+    sym2 = dhc.Symbol(ticker="ES", name="ES",
+                      leverage_ratio=50, tick_size=0.25)
+    sym3 = dhc.Symbol(ticker="ES", name="ES",
+                      leverage_ratio=50, tick_size=0.5)  # Different tick
+    sym4 = dhc.Symbol(ticker="DELETEME", name="DELETEME",
+                      leverage_ratio=20, tick_size=0.25)  # Different ticker
+
+    # Test __eq__
+    assert sym1 == sym2
+    assert not (sym1 == sym3)
+    assert not (sym1 == sym4)
+
+    # Test __ne__
+    assert not (sym1 != sym2)
+    assert sym1 != sym3
+    assert sym1 != sym4
+
+    # Test different attributes affect equality
+    sym5 = dhc.Symbol(ticker="ES", name="Different Name",
+                      leverage_ratio=50, tick_size=0.25)
+    assert sym1 != sym5
+
+
+def test_Symbol_string_representations():
+    """Test Symbol __str__, __repr__, and pretty methods"""
+    sym = dhc.Symbol(ticker="ES", name="ES",
+                     leverage_ratio=50, tick_size=0.25)
+
+    # Test __str__ returns a string
+    str_result = str(sym)
+    assert isinstance(str_result, str)
+    assert "ticker" in str_result
+    assert "ES" in str_result
+
+    # Test __repr__ returns a string
+    repr_result = repr(sym)
+    assert isinstance(repr_result, str)
+    assert "ticker" in repr_result
+
+    # Test __str__ and __repr__ are the same
+    assert str_result == repr_result
+
+    # Test pretty() returns formatted JSON string
+    pretty_result = sym.pretty()
+    assert isinstance(pretty_result, str)
+    # Should have indentation (newlines and spaces)
+    assert "\n" in pretty_result
+    assert "    " in pretty_result
+    # Should contain key attributes
+    assert '"ticker"' in pretty_result
+    assert '"ES"' in pretty_result
+    assert '"leverage_ratio"' in pretty_result
+    assert '"tick_size"' in pretty_result
+
+
+def test_Symbol_serialization():
+    """Test Symbol to_json and to_clean_dict methods"""
+    import json
+    sym = dhc.Symbol(ticker="ES", name="ES",
+                     leverage_ratio=50, tick_size=0.25)
+
+    # Test to_json returns valid JSON string
+    json_str = sym.to_json()
+    assert isinstance(json_str, str)
+
+    # Should be valid JSON
+    parsed = json.loads(json_str)
+    assert isinstance(parsed, dict)
+    assert parsed["ticker"] == "ES"
+    assert parsed["name"] == "ES"
+    assert parsed["leverage_ratio"] == 50.0
+    assert parsed["tick_size"] == 0.25
+
+    # Time attributes should be strings
+    assert isinstance(parsed["eth_open_time"], str)
+    assert isinstance(parsed["eth_close_time"], str)
+    assert isinstance(parsed["rth_open_time"], str)
+    assert isinstance(parsed["rth_close_time"], str)
+
+    # Test to_clean_dict returns dict
+    clean_dict = sym.to_clean_dict()
+    assert isinstance(clean_dict, dict)
+    assert clean_dict["ticker"] == "ES"
+    assert clean_dict["leverage_ratio"] == 50.0
+
+    # Should match parsed JSON
+    assert clean_dict == parsed
+
+
+def test_Symbol_set_times():
+    """Test Symbol set_times() sets correct values for current era"""
+    import datetime as dt
+    sym = dhc.Symbol(ticker="ES", name="ES",
+                     leverage_ratio=50, tick_size=0.25)
+
+    # Should use latest era times (2013_thru_present)
+    assert sym.eth_open_time == dt.time(18, 0, 0)
+    assert sym.eth_close_time == dt.time(16, 59, 0)
+    assert sym.rth_open_time == dt.time(9, 30, 0)
+    assert sym.rth_close_time == dt.time(16, 14, 0)
+
+    # Check week schedules
+    assert sym.eth_week_open["day_of_week"] == 6  # Sunday
+    assert sym.eth_week_open["time"] == dt.time(18, 0, 0)
+    assert sym.eth_week_close["day_of_week"] == 4  # Friday
+    assert sym.eth_week_close["time"] == dt.time(16, 59, 0)
+
+    assert sym.rth_week_open["day_of_week"] == 0  # Monday
+    assert sym.rth_week_open["time"] == dt.time(9, 30, 0)
+    assert sym.rth_week_close["day_of_week"] == 4  # Friday
+    assert sym.rth_week_close["time"] == dt.time(16, 14, 0)
+
+    # Test unknown ticker raises error
+    with pytest.raises(ValueError, match="times have not yet been defined"):
+        dhc.Symbol(ticker="UNKNOWN", name="Unknown",
+                   leverage_ratio=1, tick_size=0.01)
