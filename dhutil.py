@@ -290,7 +290,7 @@ def dt_to_epoch(d):
     """return an epoch integer from a datetime or string"""
     if d is None:
         return None
-    return int(dt_as_dt(d).strftime('%s'))
+    return int(dt_as_dt(d).timestamp())
 
 
 def dt_from_epoch(d):

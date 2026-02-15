@@ -11,6 +11,7 @@ from datetime import datetime as dt
 from datetime import timedelta
 from copy import deepcopy
 import logging
+from pathlib import Path
 import dhcharts as dhc
 import dhtrades as dht
 import dhutil as dhu
@@ -266,7 +267,7 @@ def review_trades(symbol: str = "ES",
     result = {"integrity": integrity, "review": review}
     if out_path is not None:
         # Write result and any issues found to disk
-        filename = "/".join([out_path, out_file])
+        filename = Path(out_path) / out_file
         blob = deepcopy(result)
         # Add issue details for disk output if not already included
         if not list_issues:
@@ -1191,7 +1192,7 @@ def get_events(symbol="ES",
     if isinstance(symbol, str):
         symbol = get_symbol_by_ticker(ticker=symbol)
     if start_epoch is None:
-        start_epoch = dhu.dt_to_epoch("1900-01-01 00:00:00")
+        start_epoch = 0
     if end_epoch is None:
         end_epoch = dhu.dt_to_epoch(dt.now())
     result = dhm.get_events(start_epoch=start_epoch,
