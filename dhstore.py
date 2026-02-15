@@ -1192,7 +1192,7 @@ def get_events(symbol="ES",
     if isinstance(symbol, str):
         symbol = get_symbol_by_ticker(ticker=symbol)
     if start_epoch is None:
-        start_epoch = dhu.dt_to_epoch("1900-01-01 00:00:00")
+        start_epoch = 0
     if end_epoch is None:
         end_epoch = dhu.dt_to_epoch(dt.now())
     result = dhm.get_events(start_epoch=start_epoch,
