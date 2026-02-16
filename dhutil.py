@@ -667,14 +667,14 @@ def remediate_candle_gaps(timeframe: str = "1m",
             for v in post_cans_vols:
                 adj_vols.append(int(v))
             # Mark obvious if candle falls outside of regular trading hours,
-            # all 10 adjacent candles exist, and the avg vol of adjacent
-            # candles is low
+            # some adjacent candles exist on both sides, and the avg vol of
+            # adjacent candles is low
             if len(adj_vols) > 0:
                 avg_vol = sum(adj_vols) / len(adj_vols)
             else:
                 avg_vol = 0
-            if ((c_dt.hour < 9 or c_dt.hour > 15) and len(pre_cans) > 2
-                    and len(post_cans) > 2 and 0 < avg_vol < 200):
+            if ((c_dt.hour < 9 or c_dt.hour > 15) and len(pre_cans) > 0
+                    and len(post_cans) > 0 and 0 < avg_vol < 500):
                 print(f"OBVIOUS: {c_dt.hour} len(pre_cans)={len(pre_cans)} "
                       f"len(post_cans)={len(post_cans)} avg_vol={avg_vol}")
                 obvious_fix.append({"c_dt": c_dt,
