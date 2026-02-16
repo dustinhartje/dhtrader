@@ -518,20 +518,8 @@ def expected_candle_datetimes(start_dt,
         symbol = dhs.get_symbol_by_ticker(ticker=symbol)
     if symbol.ticker == "ES":
         if timeframe == "r1h":
-            weekday_open = {"hour": 9, "minute": 30, "second": 0}
-            weekday_close = {"hour": 16, "minute": 14, "second": 0}
-            # Market opens for the week Sunday evening
-            week_open = {"day": 0, "hour": 9, "minute": 30, "second": 0}
-            # Market closes for the week Friday evening
-            week_close = {"day": 4, "hour": 16, "minute": 14, "second": 0}
             trading_hours = "rth"
         else:
-            weekday_open = {"hour": 18, "minute": 0, "second": 0}
-            weekday_close = {"hour": 16, "minute": 59, "second": 0}
-            # Market opens for the week Sunday evening
-            week_open = {"day": 6, "hour": 18, "minute": 0, "second": 0}
-            # Market closes for the week Friday evening
-            week_close = {"day": 4, "hour": 16, "minute": 59, "second": 0}
             trading_hours = "eth"
     else:
         raise ValueError("Only ES is currently supported as symbol for now")
@@ -550,45 +538,10 @@ def expected_candle_datetimes(start_dt,
                                  )
     ender = dt_as_dt(end_dt)
     while this <= ender:
-        include = True
-        # TODO Issue 21
-        # Check if this candle falls in the weekday closure window
-        this_weekday_close = this.replace(hour=weekday_close["hour"],
-                                          minute=weekday_close["minute"],
-                                          second=weekday_close["second"],
-                                          )
-        this_weekday_open = this.replace(hour=weekday_open["hour"],
-                                         minute=weekday_open["minute"],
-                                         second=weekday_open["second"],
-                                         )
-        # Same vs next day open dictates test logic
-        # if opening time is later we reopen same day, exclude between
-        if this_weekday_open > this_weekday_close:
-            if (this > this_weekday_close) and (this < this_weekday_open):
-                include = False
-        # Otherwise we reopen next day, exclude outside
-        else:
-            if (this > this_weekday_close) or (this < this_weekday_open):
-                include = False
-        # Check if this candle falls in the weekend closure window
-        this_week_close = this.replace(hour=week_close["hour"],
-                                       minute=week_close["minute"],
-                                       second=week_close["second"],
-                                       )
-        days_delta = week_close["day"] - this_week_close.weekday()
-        this_week_close = this_week_close + timedelta(days=days_delta)
-        this_week_open = this.replace(hour=week_open["hour"],
-                                      minute=week_open["minute"],
-                                      second=week_open["second"],
-                                      )
-        days_delta = week_open["day"] - this_week_open.weekday()
-        this_week_open = this_week_open + timedelta(days=days_delta)
-        if this_week_open < this_week_close:
-            this_week_open = this_week_open + timedelta(days=7)
-        # Range has been determined, test it
-        if (this > this_week_close) and (this < this_week_open):
-            include = False
-        if include:
+        if symbol.market_is_open(trading_hours=trading_hours,
+                                 target_dt=this,
+                                 check_closed_events=False,
+                                 ):
             result_std.append(this)
         this = this + adder
 
