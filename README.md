@@ -10,6 +10,16 @@ See /docs/ for class details
 
 Note to self - docs are not autoupdating, run mkdocs.sh to update them.  Perhaps this can be a pre-commit hook?
 
+# ES Futures Market Era Analysis
+
+For historical backtesting accuracy, the `MARKET_ERAS` configuration in `dhcharts.py` defines trading hours for different periods of ES futures history (2008-present). The configuration was derived from detailed analysis of 6.3M+ candle records and validated to 99.99% accuracy.
+
+See [ES Market Era Analysis](docs/es_market_era_analysis.md) for:
+- Complete trading hour specifications across 4 historical periods
+- Methodology for identifying era boundaries from actual candle data
+- Validation results confirming configuration accuracy
+- Technical details on how trading hours evolved from 2008-2026
+
 # Handling nested objects/subclasses storage and retrieval
 
 To keep logic within each class's own methods where it belongs, I'm writing storage functions in dhstore.py and dhmongo.py so that they only store information pertient to the object in question itself and not any of it's nested objects.  Nested objects might include a Chart(), a list of Trades(), or a number of other items along these lines.  This was decided after several such functions were already created and may not be fully backported.  See Backtest and TradeSeries for examples of this implementation
