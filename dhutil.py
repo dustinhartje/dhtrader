@@ -8,6 +8,8 @@ import logging
 import json
 import progressbar
 from tabulate import tabulate
+import dhcharts as dhc
+import dhstore as dhs
 
 TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', 'r1d', 'e1d', 'r1w', 'e1w',
               'r1mo', 'e1mo']
@@ -31,11 +33,6 @@ def log_say(msg, level="info"):
         log.error(msg)
     if level == "critical":
         log.critical(msg)
-
-
-# Import after log_say is defined to avoid circular import issues
-import dhcharts as dhc
-import dhstore as dhs
 
 
 class OperationTimer():
@@ -705,8 +702,21 @@ def remediate_candle_gaps(timeframe: str = "1m",
             has_post = len(post_cans) > 0 or is_last_open_min
             # Combine all of the logic to check if this is an "obvious" fix
             # candidate to replace with a zero volume candle.
+            is_obvious = False
             if (not is_open_rth and has_pre and has_post
                     and 0 < avg_vol < 500):
+                is_obvious = True
+            # Also check for historically known exceptions
+            # 2008-2012 had many 16:15 candles with zero volume for unclear
+            # reasons despite having many that had trades, so treat as obvious.
+            if (symbol.get_era(target_dt=c_dt)["name"] == "2008_thru_2012"
+                    and c_dt.hour == 16 and c_dt.minute == 15):
+                is_obvious = True
+            # 2013-2015 had similar anomalies with later closes at 17:15
+            if (symbol.get_era(target_dt=c_dt)["name"] == "2013_thru_2015"
+                    and c_dt.hour == 17 and c_dt.minute == 15):
+                is_obvious = True
+            if is_obvious:
                 print(f"OBVIOUS: {c_dt.hour} len(pre_cans)={len(pre_cans)} "
                       f"len(post_cans)={len(post_cans)} avg_vol={avg_vol}")
                 obvious_fix.append({"c_dt": c_dt,
