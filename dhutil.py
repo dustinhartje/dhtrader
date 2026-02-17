@@ -916,6 +916,9 @@ def compare_candles_vs_csv(filepath,
                                     check_integrity=False,
                                     return_detail=False,
                                     )
+        if review is None:
+            print(f"No {timeframe} candles found in storage, skipping...")
+            return None
         if start_dt is None:
             start_dt = review["overview"]["earliest_dt"]
         if end_dt is None:
