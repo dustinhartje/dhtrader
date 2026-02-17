@@ -149,7 +149,7 @@ MARKET_ERAS = [
         }
     },
     {
-        "name": "2021_thru_present",
+        "name": "2021-01_thru_2021-06",
         "start_date": dt.date(2021, 1, 1),
         "times": {
             "eth_open": dt.time(18, 0, 0),
@@ -160,7 +160,50 @@ MARKET_ERAS = [
         "closed_hours": {
             "eth": {
                 # Nearly 24/5 trading with extended RTH
-                # Daily close: 17:00-17:59:59
+                # Daily close: 16:15-16:29 on weekdays, then 17:00-17:59:59
+                0: [{"close": "16:15:00", "open": "16:30:00"},
+                    {"close": "17:00:00", "open": "17:59:59"}],
+                1: [{"close": "16:15:00", "open": "16:30:00"},
+                    {"close": "17:00:00", "open": "17:59:59"}],
+                2: [{"close": "16:15:00", "open": "16:30:00"},
+                    {"close": "17:00:00", "open": "17:59:59"}],
+                3: [{"close": "16:15:00", "open": "16:30:00"},
+                    {"close": "17:00:00", "open": "17:59:59"}],
+                4: [{"close": "16:15:00", "open": "16:30:00"},
+                    {"close": "17:00:00", "open": "23:59:59"}],
+                5: [{"close": "00:00:00", "open": "23:59:59"}],
+                6: [{"close": "00:00:00", "open": "17:59:59"}]
+            },
+            "rth": {
+                # RTH closes at 16:00
+                0: [{"close": "00:00:00", "open": "09:30:00"},
+                    {"close": "16:00:00", "open": "23:59:59"}],
+                1: [{"close": "00:00:00", "open": "09:30:00"},
+                    {"close": "16:00:00", "open": "23:59:59"}],
+                2: [{"close": "00:00:00", "open": "09:30:00"},
+                    {"close": "16:00:00", "open": "23:59:59"}],
+                3: [{"close": "00:00:00", "open": "09:30:00"},
+                    {"close": "16:00:00", "open": "23:59:59"}],
+                4: [{"close": "00:00:00", "open": "09:30:00"},
+                    {"close": "16:00:00", "open": "23:59:59"}],
+                5: [{"close": "00:00:00", "open": "23:59:59"}],
+                6: [{"close": "00:00:00", "open": "23:59:59"}]
+            }
+        }
+    },
+    {
+        "name": "2021-06_thru_present",
+        "start_date": dt.date(2021, 6, 26),
+        "times": {
+            "eth_open": dt.time(18, 0, 0),
+            "eth_close": dt.time(16, 59, 0),
+            "rth_open": dt.time(9, 30, 0),
+            "rth_close": dt.time(16, 0, 0),
+        },
+        "closed_hours": {
+            "eth": {
+                # Nearly 24/5 trading with extended RTH
+                # Daily close: 17:00-17:59:59 (16:15-16:29 close removed)
                 0: [{"close": "17:00:00", "open": "17:59:59"}],
                 1: [{"close": "17:00:00", "open": "17:59:59"}],
                 2: [{"close": "17:00:00", "open": "17:59:59"}],
