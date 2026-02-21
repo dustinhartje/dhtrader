@@ -6,7 +6,7 @@ import dhutil as dhu
 from dhutil import log_say
 import dhstore as dhs
 from statistics import fmean
-from copy import deepcopy
+from copy import copy, deepcopy
 import logging
 from math import ceil, floor
 
@@ -284,6 +284,7 @@ class Symbol():
         w["eth_week_close"]["time"] = str(w["eth_week_close"]["time"])
         w["rth_week_open"]["time"] = str(w["rth_week_open"]["time"])
         w["rth_week_close"]["time"] = str(w["rth_week_close"]["time"])
+        w.pop("_closed_hours_cache", None)
         return json.dumps(w)
 
     def to_clean_dict(self):
@@ -293,10 +294,12 @@ class Symbol():
         return json.loads(self.to_json())
 
     def __str__(self):
-        return str(self.__dict__)
+        working = copy(self.__dict__)
+        working.pop("_closed_hours_cache", None)
+        return str(working)
 
     def __repr__(self):
-        return str(self.__dict__)
+        return str(self)
 
     def pretty(self):
         """Attempts to return an indented multiline version of this object,
