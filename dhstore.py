@@ -1189,6 +1189,9 @@ def review_candles(timeframe: str,
                   "integrity_data": integrity_data,
                   "gap_analysis": gap_analysis,
                   }
+        if result["gap_analysis"] is not None:
+            result["gap_analysis"].pop("missing_candles")
+            result["gap_analysis"].pop("unexpected_candles")
 
     return result
 
