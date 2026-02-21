@@ -31,8 +31,7 @@ MARKET_ERAS = [
         },
         "closed_hours": {
             "eth": {
-                # ETH close period: 17:30-17:59:59
-                # (data shows 17:15-17:29 was trading, then closed 17:30+)
+                # ETH close period: 17:30-17:59:59 with 15min break at 16:15
                 0: [{"close": "16:16:00", "open": "16:30:00"},
                     {"close": "17:30:00", "open": "17:59:59"}],
                 1: [{"close": "16:16:00", "open": "16:30:00"},
@@ -63,8 +62,8 @@ MARKET_ERAS = [
         }
     },
     {
-        "name": "2013_thru_2015",
-        "start_date": dt.date(2013, 1, 1),
+        "name": "2012_holidays_thru_2015",
+        "start_date": dt.date(2012, 11, 17),
         "times": {
             "eth_open": dt.time(18, 0, 0),
             "eth_close": dt.time(17, 14, 0),
@@ -73,8 +72,7 @@ MARKET_ERAS = [
         },
         "closed_hours": {
             "eth": {
-                # ETH close period shortened: 17:15-17:59:59
-                # (data shows all days traded through 17:14, closed at 17:15)
+                # ETH close period: 17:15-17:59:59 with 15min break at 16:15
                 0: [{"close": "16:15:00", "open": "16:30:00"},
                     {"close": "17:16:00", "open": "17:59:59"}],
                 1: [{"close": "16:15:00", "open": "16:30:00"},
