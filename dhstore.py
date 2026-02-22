@@ -101,14 +101,22 @@ def get_trades_by_field(field: str,
                         ):
     """Returns Trade() objects matching the field=value provided.
     Default limit=0 returns all objects, or set to return only top X. """
+    # Retrieve trades from storage
+    log.info(f"get_trades_by_field() retrieving trades by {field}={value}, "
+             f"limit={limit}")
     result = []
     r = dhm.get_trades_by_field(field=field,
                                 value=value,
                                 collection=collection,
                                 limit=limit,
                                 )
+    log.info(f"get_trades_by_field() retrieved {len(r)} trade records")
+
+    # Reconstruct Trade objects
+    log.info(f"get_trades_by_field() building Trade objects")
     for t in r:
         result.append(reconstruct_trade(t))
+    log.info(f"get_trades_by_field() returning {len(result)} Trade objects")
 
     return result
 
@@ -118,12 +126,18 @@ def store_trades(trades: list,
                  ):
     """Store one or more dhtrades.Trade() objects in central storage"""
 
-    # make a working copy to pass dicts
+    # Convert Trade objects to dictionaries for storage
+    log.info(f"store_trades() preparing {len(trades)} trades for storage by"
+             f" converting to dicts")
     working_trades = []
     for t in trades:
         working_trades.append(t.to_clean_dict())
+
+    # Store in database
+    log.info(f"store_trades() writing to collection={collection}")
     result = dhm.store_trades(trades=working_trades,
                               collection=collection)
+    log.info(f"store_trades() storage complete, returning result")
 
     return result
 
@@ -402,21 +416,34 @@ def get_tradeseries_by_field(field: str,
                              include_trades: bool = True,
                              ):
     """Returns a list of all TradeSeries matching the bt_id provided."""
+    # Retrieve TradeSeries from storage
+    log.info(f"get_tradeseries_by_field() retrieving TradeSeries by "
+             f"{field}={value}, include_trades={include_trades}")
     result = []
     r = dhm.get_tradeseries_by_field(field=field,
                                      value=value,
                                      collection=collection,
                                      limit=limit,
                                      )
+    log.info(f"get_tradeseries_by_field() retrieved {len(r)} TradeSeries "
+             f"records")
+
+    # Reconstruct TradeSeries objects and optionally load trades
+    log.info(f"get_tradeseries_by_field() building TradeSeries objects and "
+             f"optionally loading trades")
     for t in r:
         ts = reconstruct_tradeseries(t)
         if include_trades:
+            log.info("get_tradeseries_by_field() Loading trades for "
+                     f"ts_id={ts.ts_id}")
             ts.trades = get_trades_by_field(field="ts_id",
                                             value=ts.ts_id,
                                             collection=collection_trades,
                                             )
             ts.sort_trades()
         result.append(ts)
+    log.info(f"get_tradeseries_by_field() Finished reconstruction, returning "
+             f"{len(result)} TradeSeries")
 
     return result
 
@@ -425,11 +452,16 @@ def store_tradeseries(series: list,
                       collection: str = COLL_TRADESERIES,
                       ):
     """Store a list of TradeSeries() objects in central storage"""
+    # Store TradeSeries in database
+    log.info(f"store_tradeseries() storing {len(series)} TradeSeries to "
+             f"collection={collection}")
     result = []
     for ts in series:
         result.append(dhm.store_tradeseries(ts.to_clean_dict(),
                                             collection=collection,
                                             ))
+    log.info(f"store_tradeseries() storage complete, {len(result)} records "
+             f"written")
 
     return result
 
@@ -748,11 +780,22 @@ def get_indicator_datapoints(ind_id: str,
                              ):
     """Returns a list of IndicatorDatapoint() objects for the given timeframe
     and ind_id"""
+    # Retrieve datapoints from storage
+    log.info(f"get_indicator_datapoints() retrieving datapoints for "
+             f"ind_id={ind_id}")
+    if earliest_dt or latest_dt:
+        log.info(f"  Date range: {earliest_dt} to {latest_dt}")
     working = dhm.get_indicator_datapoints(ind_id=ind_id,
                                            dp_collection=dp_collection,
                                            earliest_dt=earliest_dt,
                                            latest_dt=latest_dt,
                                            )
+    log.info(f"get_indicator_datapoints() retrieved {len(working)} raw "
+             f"datapoint records")
+
+    # Build IndicatorDataPoint objects
+    log.info(f"get_indicator_datapoints() building IndicatorDataPoint "
+             f"objects")
     result = []
     for d in working:
         result.append(dhc.IndicatorDataPoint(dt=d["dt"],
@@ -760,6 +803,8 @@ def get_indicator_datapoints(ind_id: str,
                                              ind_id=d["ind_id"],
                                              epoch=d["epoch"]
                                              ))
+    log.info(f"get_indicator_datapoints() returning {len(result)} "
+             f"datapoints")
 
     return result
 
@@ -769,10 +814,13 @@ def store_indicator_datapoints(datapoints: list,
                                skip_dupes: bool = True,
                                ):
     """Store one or more IndicatorDatapoint() objects in central storage"""
+    log.info(f"store_indicator_datapoints() processing {len(datapoints)} "
+             f"datapoints, skip_dupes={skip_dupes}")
     store_dps = []
     r_skipped = []
     for d in datapoints:
         if skip_dupes:
+            log.info(f"store_indicator_datapoints() checking for duplicates")
             stored = get_indicator_datapoints(ind_id=d.ind_id,
                                               earliest_dt=d.dt,
                                               latest_dt=d.dt,
@@ -797,10 +845,14 @@ def store_indicator_datapoints(datapoints: list,
             store_dps.append(d.to_clean_dict())
 
     op_timer = dhu.OperationTimer(name="Indicator Datapoints Storage Job")
+    log.info(f"store_indicator_datapoints() storing {len(store_dps)} "
+             f"datapoints to collection={collection}")
     r_stored = dhm.store_indicator_datapoints(datapoints=store_dps,
                                               collection=collection,
                                               )
     op_timer.stop()
+    log.info(f"store_indicator_datapoints() complete: {len(store_dps)} "
+             f"stored, {len(r_skipped)} skipped")
     result = {"skipped": r_skipped,
               "stored": r_stored,
               "elapsed": op_timer,
@@ -983,6 +1035,8 @@ def get_symbol_by_ticker(ticker: str):
 
 def store_candle(candle):
     """Write a single dhcharts.Candle() to central storage"""
+    log.debug(f"store_candle() storing {candle.c_symbol.ticker} "
+              f"{candle.c_timeframe} candle at {candle.c_datetime}")
     dhu.valid_timeframe(candle.c_timeframe)
     dhm.store_candle(c_datetime=candle.c_datetime,
                      c_timeframe=candle.c_timeframe,
@@ -1005,12 +1059,20 @@ def get_candles(start_epoch: int,
                 ):
     """Returns a list of candle docs within the start and end epochs given
     inclusive of both epochs"""
+    # Retrieve candle dictionaries from storage
+    log.info(f"get_candles() retrieving candles from storage for {symbol} "
+             f"{timeframe} between "
+             f"{dhu.dt_as_str(dhu.dt_from_epoch(start_epoch))} and "
+             f"{dhu.dt_as_str(dhu.dt_from_epoch(end_epoch))}")
     result = dhm.get_candles(start_epoch=start_epoch,
                              end_epoch=end_epoch,
                              timeframe=timeframe,
                              symbol=symbol,
                              )
+    log.info("get_candles() finished retrieval from storage")
 
+    # Build Candle() objects from retrieved dictionaries
+    log.info(f"get_candles() building Candle() objects from retrieved data")
     candles = []
     for r in result:
         candles.append(dhc.Candle(c_datetime=r["c_datetime"],
@@ -1023,6 +1085,8 @@ def get_candles(start_epoch: int,
                                   c_symbol=r["c_symbol"],
                                   c_epoch=r["c_epoch"],
                                   ))
+    log.info("get_candles() finished building Candle() objects, returning "
+             f"{len(candles)} candles")
 
     return candles
 
@@ -1220,6 +1284,7 @@ def store_event(event):
     if not isinstance(event, dhc.Event):
         raise TypeError(f"event {type(event)} must be a "
                         "<class dhcharts.Event> object")
+    log.debug(f"store_event() storing Event {str(event)}")
     result = dhm.store_event(start_dt=event.start_dt,
                              end_dt=event.end_dt,
                              symbol=event.symbol.ticker,
@@ -1248,13 +1313,27 @@ def get_events(symbol="ES",
         start_epoch = 0
     if end_epoch is None:
         end_epoch = dhu.dt_to_epoch(dt.now())
+
+    # Retrieve events from storage
+    msg = (f"get_events() retrieving events for {symbol.ticker} between "
+             f"{dhu.dt_as_str(dhu.dt_from_epoch(start_epoch))} and "
+             f"{dhu.dt_as_str(dhu.dt_from_epoch(end_epoch))}")
+    if categories:
+        " ".join([msg, f"Filtering by categories: {categories}"])
+    if tags:
+        " ".join([msg, f"Filtering by tags: {tags}"])
+    log.info(msg)
     result = dhm.get_events(start_epoch=start_epoch,
                             end_epoch=end_epoch,
                             symbol=symbol.ticker,
                             categories=categories,
                             tags=tags,
                             )
+    log.info(f"get_events() retrieved {len(result)} event records from "
+             f"storage")
 
+    # Build Event objects
+    log.info(f"get_events() building Event objects")
     events = []
     for r in result:
         events.append(dhc.Event(start_dt=r["start_dt"],
@@ -1264,6 +1343,7 @@ def get_events(symbol="ES",
                                 tags=r["tags"],
                                 notes=r["notes"],
                                 ))
+    log.info(f"get_events() returning {len(events)} events")
 
     return events
 
