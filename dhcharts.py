@@ -62,11 +62,11 @@ MARKET_ERAS = [
         }
     },
     {
-        "name": "2012_holidays_thru_2015",
+        "name": "2012holidays_thru_2015holidays",
         "start_date": dt.date(2012, 11, 17),
         "times": {
             "eth_open": dt.time(18, 0, 0),
-            "eth_close": dt.time(17, 14, 0),
+            "eth_close": dt.time(17, 15, 0),
             "rth_open": dt.time(9, 30, 0),
             "rth_close": dt.time(16, 0, 0),
         },
@@ -104,8 +104,8 @@ MARKET_ERAS = [
         }
     },
     {
-        "name": "2016_thru_2020",
-        "start_date": dt.date(2016, 1, 1),
+        "name": "2015holidays_thru_2020",
+        "start_date": dt.date(2015, 9, 19),
         "times": {
             "eth_open": dt.time(18, 0, 0),
             "eth_close": dt.time(16, 59, 0),

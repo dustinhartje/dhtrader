@@ -596,7 +596,7 @@ def remediate_candle_gaps(timeframe: str = "1m",
         raise ValueError("timeframe: {timeframe} is not currently supported")
     if isinstance(symbol, str):
         symbol = dhs.get_symbol_by_ticker(ticker=symbol)
-    print("Remediating Candle Gaps")
+    print(f"Remediating {timeframe} Candle Gaps for {symbol.ticker}")
     print(f"Auto fixing obvious zero volume gaps: {fix_obvious}")
     print(f"Prompting before fixing unclear candles: {prompt}")
     print(f"Dry Run Mode (only simulate changes): {dry_run}")
@@ -709,11 +709,12 @@ def remediate_candle_gaps(timeframe: str = "1m",
             # Also check for historically known exceptions
             # 2008-2012 had many 16:15 candles with zero volume for unclear
             # reasons despite having many that had trades, so treat as obvious.
-            if (symbol.get_era(target_dt=c_dt)["name"] == "2008_thru_2012"
+            era = symbol.get_era(target_dt=c_dt)["name"]
+            if (era == "2008_thru_2012"
                     and c_dt.hour == 16 and c_dt.minute == 15):
                 is_obvious = True
             # 2013-2015 had similar anomalies with later closes at 17:15
-            if (symbol.get_era(target_dt=c_dt)["name"] == "2013_thru_2015"
+            if (era == "2012holidays_thru_2015holidays"
                     and c_dt.hour == 17 and c_dt.minute == 15):
                 is_obvious = True
             if is_obvious:
