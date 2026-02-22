@@ -600,11 +600,13 @@ def remediate_candle_gaps(timeframe: str = "1m",
     print(f"Auto fixing obvious zero volume gaps: {fix_obvious}")
     print(f"Prompting before fixing unclear candles: {prompt}")
     print(f"Dry Run Mode (only simulate changes): {dry_run}")
+    print("Reviewing candles with integrity checks to identify issues...")
     review = dhs.review_candles(timeframe='1m',
                                 symbol=symbol,
                                 check_integrity=True,
                                 return_detail=True,
                                 )
+    print("Review complete, beginning remediation operations")
     missing_candles = review["missing_candles_by_date"]
     count_date = review["missing_count_by_date"]
     dates = []

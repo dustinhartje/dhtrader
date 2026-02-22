@@ -113,7 +113,7 @@ def get_trades_by_field(field: str,
     log.info(f"get_trades_by_field() retrieved {len(r)} trade records")
 
     # Reconstruct Trade objects
-    log.info(f"get_trades_by_field() building Trade objects")
+    log.info("get_trades_by_field() building Trade objects")
     for t in r:
         result.append(reconstruct_trade(t))
     log.info(f"get_trades_by_field() returning {len(result)} Trade objects")
@@ -137,7 +137,7 @@ def store_trades(trades: list,
     log.info(f"store_trades() writing to collection={collection}")
     result = dhm.store_trades(trades=working_trades,
                               collection=collection)
-    log.info(f"store_trades() storage complete, returning result")
+    log.info("store_trades() storage complete, returning result")
 
     return result
 
@@ -429,8 +429,8 @@ def get_tradeseries_by_field(field: str,
              f"records")
 
     # Reconstruct TradeSeries objects and optionally load trades
-    log.info(f"get_tradeseries_by_field() building TradeSeries objects and "
-             f"optionally loading trades")
+    log.info("get_tradeseries_by_field() building TradeSeries objects and "
+             "optionally loading trades")
     for t in r:
         ts = reconstruct_tradeseries(t)
         if include_trades:
@@ -794,8 +794,8 @@ def get_indicator_datapoints(ind_id: str,
              f"datapoint records")
 
     # Build IndicatorDataPoint objects
-    log.info(f"get_indicator_datapoints() building IndicatorDataPoint "
-             f"objects")
+    log.info("get_indicator_datapoints() building IndicatorDataPoint "
+             "objects")
     result = []
     for d in working:
         result.append(dhc.IndicatorDataPoint(dt=d["dt"],
@@ -820,7 +820,7 @@ def store_indicator_datapoints(datapoints: list,
     r_skipped = []
     for d in datapoints:
         if skip_dupes:
-            log.info(f"store_indicator_datapoints() checking for duplicates")
+            log.info("store_indicator_datapoints() checking for duplicates")
             stored = get_indicator_datapoints(ind_id=d.ind_id,
                                               earliest_dt=d.dt,
                                               latest_dt=d.dt,
@@ -1072,7 +1072,7 @@ def get_candles(start_epoch: int,
     log.info("get_candles() finished retrieval from storage")
 
     # Build Candle() objects from retrieved dictionaries
-    log.info(f"get_candles() building Candle() objects from retrieved data")
+    log.info("get_candles() building Candle() objects from retrieved data")
     candles = []
     for r in result:
         candles.append(dhc.Candle(c_datetime=r["c_datetime"],
@@ -1101,16 +1101,26 @@ def review_candles(timeframe: str,
     provide remediation"""
     if isinstance(symbol, str):
         symbol = get_symbol_by_ticker(ticker=symbol)
-    print("Retrieving candles from storage, this may take a few minutes...")
+    print("Retrieving candles overview from storage")
+    log.info(f"review_candles() retrieving candles from storage for {symbol} "
+             f"{timeframe}")
     overview = dhm.review_candles(timeframe=timeframe,
                                   symbol=symbol.ticker,
                                   )
+    log.info(f"review_candles() finished retrieval from storage for {symbol} "
+             f"{timeframe}")
     if overview is None:
         print(f"No candles found for the specified timeframe {timeframe}")
         return None
     start_epoch = dhu.dt_to_epoch(overview["earliest_dt"])
     end_epoch = dhu.dt_to_epoch(overview["latest_dt"])
     if check_integrity:
+        log.info("review_candles() Starting integrity checks and gap analysis "
+                 "because check_integrity=True")
+        log.info("review_candles() retrieving candles from storage for "
+                 f"{symbol} {timeframe} between "
+                 f"{dhu.dt_as_str(dhu.dt_from_epoch(start_epoch))} and "
+                 f"{dhu.dt_as_str(dhu.dt_from_epoch(end_epoch))}")
         candles = get_candles(timeframe=timeframe,
                               symbol=symbol.ticker,
                               start_epoch=start_epoch,
@@ -1118,6 +1128,8 @@ def review_candles(timeframe: str,
                               )
 
         # Perform a basic check on the times list vs expected for the timeframe
+        log.info("review_candles() summarizing retrieved candles using "
+                 "dhutil.summarize_candles()")
         breakdown = dhu.summarize_candles(timeframe=timeframe,
                                           symbol=symbol,
                                           candles=candles,
@@ -1138,16 +1150,24 @@ def review_candles(timeframe: str,
             err_msg = f"Expected data not defined for timeframe: {timeframe}"
 
         # Perform a detailed analysis of actual vs expected timestamps
+        log.info("review_candles() performing detailed analysis of actual vs "
+                 "expected candle datetimes")
         dt_actual = []
         for c in candles:
             dt_actual.append(dhu.dt_as_str(c.c_datetime))
         start_dt = dhu.dt_from_epoch(start_epoch)
         end_dt = dhu.dt_from_epoch(end_epoch)
+        log.info(f"review_candles() calculating expected candle datetimes for "
+                 f"{symbol} {timeframe} between "
+                 f"{dhu.dt_as_str(start_dt)} and {dhu.dt_as_str(end_dt)} "
+                 "using dhutil.expected_candle_datetimes()")
         dt_expected = dhu.expected_candle_datetimes(start_dt=start_dt,
                                                     end_dt=end_dt,
                                                     symbol=symbol,
                                                     timeframe=timeframe,
                                                     )
+        log.info("review_candles() finished calculating expected datetimes, "
+                 "starting comparison of actual (stored) vs expected candles")
 
         # Convert expected to strings for comparison and review
         dt_expected_str = []
@@ -1231,6 +1251,8 @@ def review_candles(timeframe: str,
             err_msg += f"{unexpected_candles_count} unexpected candles found"
         integrity_data = {"status": status, "err_msg": err_msg}
     else:
+        log.info("review_candles() Skipping integrity checks and gap analysis "
+                 "because check_integrity=False")
         integrity_data = None
         breakdown = None
         summary_data = None
@@ -1238,6 +1260,7 @@ def review_candles(timeframe: str,
         gap_analysis = None
 
     if return_detail:
+        log.info("review_candles() returning detailed review")
         result = {"overview": overview,
                   "integrity_data": integrity_data,
                   "summary_data": summary_data,
@@ -1249,6 +1272,7 @@ def review_candles(timeframe: str,
                   "missing_candles_by_hour": missing_candles_by_hour,
                   }
     else:
+        log.info("review_candles() returning summary review")
         result = {"overview": overview,
                   "integrity_data": integrity_data,
                   "gap_analysis": gap_analysis,
@@ -1316,8 +1340,8 @@ def get_events(symbol="ES",
 
     # Retrieve events from storage
     msg = (f"get_events() retrieving events for {symbol.ticker} between "
-             f"{dhu.dt_as_str(dhu.dt_from_epoch(start_epoch))} and "
-             f"{dhu.dt_as_str(dhu.dt_from_epoch(end_epoch))}")
+           f"{dhu.dt_as_str(dhu.dt_from_epoch(start_epoch))} and "
+           f"{dhu.dt_as_str(dhu.dt_from_epoch(end_epoch))}")
     if categories:
         " ".join([msg, f"Filtering by categories: {categories}"])
     if tags:
@@ -1333,7 +1357,7 @@ def get_events(symbol="ES",
              f"storage")
 
     # Build Event objects
-    log.info(f"get_events() building Event objects")
+    log.info("get_events() building Event objects")
     events = []
     for r in result:
         events.append(dhc.Event(start_dt=r["start_dt"],
