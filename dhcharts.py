@@ -908,6 +908,8 @@ class Chart():
 
     def load_candles(self):
         """Load candles from central storage based on current attributes"""
+        log.info(f"Loading candles for {self.c_symbol.ticker} "
+                 f"{self.c_timeframe} ")
         cans = dhs.get_candles(
                start_epoch=dhu.dt_to_epoch(self.c_start),
                end_epoch=dhu.dt_to_epoch(self.c_end),
@@ -915,17 +917,22 @@ class Chart():
                symbol=self.c_symbol.ticker,
                )
         self.c_candles = []
+        log.info("Getting events for market hours filtering...")
         events = dhs.get_events(symbol=self.c_symbol.ticker,
                                 categories=["Closed"],
                                 )
+        log.info("Filtering candles for market hours and events...")
         for c in cans:
             if self.c_symbol.market_is_open(target_dt=c.c_datetime,
                                             trading_hours=self.c_trading_hours,
                                             events=events,
                                             ):
                 self.c_candles.append(c)
+        log.info("Sorting candles")
         self.sort_candles()
+        log.info("Reviewing candles")
         self.review_candles()
+        log.info("Finished loading candles into Chart")
 
     def review_candles(self):
         if len(self.c_candles) > 0:
