@@ -902,7 +902,8 @@ def store_candles_from_csv(filepath: str,
 def compare_candles_vs_csv(filepath,
                            timeframe: str = "1m",
                            symbol: str = "ES",
-                           diff_threshold: float = 0.5,
+                           price_diff_threshold: float = 0.5,
+                           vol_diff_threshold_perc: int = 10,
                            start_dt=None,
                            end_dt=None,
                            expect_missing: list = None
@@ -985,36 +986,46 @@ def compare_candles_vs_csv(filepath,
                 # very close.  These are statistically trivial and likely
                 # couldn't be resolved in any case.
                 if sc.c_open != cc.c_open:
-                    if abs(sc.c_open - cc.c_open) <= diff_threshold:
+                    if abs(sc.c_open - cc.c_open) <= price_diff_threshold:
                         c_minor_diffs["c_open"] = {"stored": sc.c_open,
                                                    "csv": cc.c_open}
                     else:
                         c_diffs["c_open"] = {"stored": sc.c_open,
                                              "csv": cc.c_open}
                 if sc.c_high != cc.c_high:
-                    if abs(sc.c_high - cc.c_high) <= diff_threshold:
+                    if abs(sc.c_high - cc.c_high) <= price_diff_threshold:
                         c_minor_diffs["c_high"] = {"stored": sc.c_high,
                                                    "csv": cc.c_high}
                     else:
                         c_diffs["c_high"] = {"stored": sc.c_high,
                                              "csv": cc.c_high}
                 if sc.c_low != cc.c_low:
-                    if abs(sc.c_low - cc.c_low) <= diff_threshold:
+                    if abs(sc.c_low - cc.c_low) <= price_diff_threshold:
                         c_minor_diffs["c_low"] = {"stored": sc.c_low,
                                                   "csv": cc.c_low}
                     else:
                         c_diffs["c_low"] = {"stored": sc.c_low,
                                             "csv": cc.c_low}
                 if sc.c_close != cc.c_close:
-                    if abs(sc.c_close - cc.c_close) <= diff_threshold:
+                    if abs(sc.c_close - cc.c_close) <= price_diff_threshold:
                         c_minor_diffs["c_close"] = {"stored": sc.c_close,
                                                     "csv": cc.c_close}
                     else:
                         c_diffs["c_close"] = {"stored": sc.c_close,
                                               "csv": cc.c_close}
                 if sc.c_volume != cc.c_volume:
-                    c_diffs["c_volume"] = {"stored": sc.c_volume,
-                                           "csv": cc.c_volume}
+                    if sc.c_volume == 0 and cc.c_volume == 0:
+                        vol_diff_perc = 0
+                    else:
+                        vol_diff_perc = (abs(sc.c_volume - cc.c_volume)
+                                         / sum([sc.c_volume, cc.c_volume])
+                                         * 100)
+                    if vol_diff_perc <= vol_diff_threshold_perc:
+                        c_minor_diffs["c_volume"] = {"stored": sc.c_volume,
+                                                     "csv": cc.c_volume}
+                    else:
+                        c_diffs["c_volume"] = {"stored": sc.c_volume,
+                                               "csv": cc.c_volume}
                 # Store diffs by stringified datetime to simplify later review
                 this_diff = {"stored_candle": stored[k],
                              "csv_candle": csved[k],
