@@ -906,13 +906,12 @@ def compare_candles_vs_csv(filepath,
                            vol_diff_threshold_perc: int = 10,
                            start_dt=None,
                            end_dt=None,
-                           expect_missing: list = None
-                           ):
+                           expect_missing_from_storage: list = None):
     """Check stored candles against a CSV source file, primarily used to
     confirm calculated higher timeframes against data provider equivalents
     where available to sanity check calculation process"""
-    if expect_missing is None:
-        expect_missing = []
+    if expect_missing_from_storage is None:
+        expect_missing_from_storage = []
     # Determine start/end datetimes from stored candles if not provided
     if start_dt is None or end_dt is None:
         review = dhs.review_candles(timeframe=timeframe,
@@ -959,7 +958,7 @@ def compare_candles_vs_csv(filepath,
     # Note any candles in the csv that aren't found in storage
     for k, v in csved.items():
         if k not in stored.keys():
-            if v.c_datetime in expect_missing:
+            if v.c_datetime in expect_missing_from_storage:
                 missing_expected[k] = v
             else:
                 missing[k] = v
