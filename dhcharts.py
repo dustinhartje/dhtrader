@@ -31,7 +31,7 @@ MARKET_ERAS = [
         },
         "closed_hours": {
             "eth": {
-                # ETH close period: 17:30-17:59:59 with 15min break at 16:15
+                # ETH close period: 17:30-17:59:59 with 15min break at 16:16
                 0: [{"close": "16:16:00", "open": "16:30:00"},
                     {"close": "17:30:00", "open": "17:59:59"}],
                 1: [{"close": "16:16:00", "open": "16:30:00"},
@@ -114,8 +114,7 @@ MARKET_ERAS = [
         },
         "closed_hours": {
             "eth": {
-                # Nearly 24/5 trading: removed 17:00+ close periods
-                # Only daily close: ~17:00-17:59:59
+                # ETH close period: 17:00-17:59:59 with 15min break at 16:15
                 0: [{"close": "16:15:00", "open": "16:30:00"},
                     {"close": "17:00:00", "open": "17:59:59"}],
                 1: [{"close": "16:15:00", "open": "16:30:00"},
