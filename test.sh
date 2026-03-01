@@ -11,7 +11,7 @@ for a in "$@"; do
         echo "To run only specific marks: test.sh -m 'storage'"
         echo "To run only without specific marks: test.sh -m 'not storage'"
         echo ""
-        echo "Marks are listed in pytest.ini or grep for '@pytest.mark'"
+        echo "Marks are listed in setup.cfg [tool:pytest] section or grep for '@pytest.mark'"
         exit 0
     fi
 done

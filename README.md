@@ -8,7 +8,45 @@ Two main reasons exist for building this.  Mostly it's a personal project to hel
 
 See /docs/ for class details
 
-Note to self - docs are not autoupdating, run mkdocs.sh to update them.  Perhaps this can be a pre-commit hook?
+Note to self - docs are not autoupdating, run mkdocs.sh to update them.
+Perhaps this can be a pre-commit hook?
+
+## For AI Agents
+
+**Important:** AI agents working on this project MUST read
+[AGENTS.md](AGENTS.md) before making any changes. This file contains
+essential guidelines for:
+
+- Python file editing requirements
+- Pre-edit and post-edit verification checklists
+- Line length and whitespace validation procedures
+- Tools and resources for verification
+
+See [AGENTS.md](AGENTS.md) for complete agent guidelines.
+
+## Code Quality Standards and Automated Edits
+
+All code changes - whether by developers or automated agents - must adhere to:
+
+- **Maximum Line Length:** 79 characters in Python files (PEP 8)
+- **No Trailing Whitespace:** Python files must be clean
+- **Unix Line Endings:** LF only (not CRLF)
+
+**For Complete Details:**
+See [CODING_STANDARDS.md](CODING_STANDARDS.md) for canonical reference
+including validation commands, tool configuration, and examples.
+
+**Validation Tools:**
+
+Use validation commands from
+[CODING_STANDARDS.md](CODING_STANDARDS.md#validation-command-reference):
+
+```bash
+./validate-file-quality.sh <filename>  # Automated validation
+flake8 .                                # Lint all files
+```
+
+See [CODING_STANDARDS.md](CODING_STANDARDS.md) for complete documentation.
 
 # ES Futures Market Era Analysis
 

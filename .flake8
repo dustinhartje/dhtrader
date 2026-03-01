@@ -1,0 +1,42 @@
+[flake8]
+# Enforce 79 character line limit (PEP 8)
+max-line-length = 79
+
+# Ignore specific errors:
+# F401: imported module not used in code (handled separately)
+# E402: module level import not at top of file (handled separately)
+extend-ignore = F401,E402
+
+# Codes that will cause flake8 to report errors:
+# E501: line too long (ENFORCED with max-line-length)
+# W291: trailing whitespace (ENFORCED)
+# W293: blank line contains whitespace (ENFORCED)
+# W391: blank line at end of file
+# E251: unexpected spaces around keyword / parameter equals
+# E302: expected 2 blank lines
+# E305: expected 2 blank lines after class or function definition
+
+exclude =
+    .git,
+    __pycache__,
+    .pytest_cache,
+    v1,
+    .venv,
+    venv,
+    build,
+    dist,
+    *.egg-info
+
+# Per-file-ignores allow exceptions for specific files
+per-file-ignores =
+    # Ignore F401 (unused imports) in __init__.py files
+    __init__.py:F401
+
+# Report format
+format = default
+show-source = True
+show_pep8 = False
+
+# Statistics
+statistics = True
+count = True
