@@ -39,4 +39,4 @@ def test_Candle_create_and_verify_pretty():
                             c_symbol="ES",
                             )
     assert isinstance(out_candle, dhc.Candle)
-    assert len(out_candle.pretty().splitlines()) == 22
+    assert len(out_candle.pretty().splitlines()) == 23

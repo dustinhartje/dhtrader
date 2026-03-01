@@ -16,6 +16,26 @@ TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', 'r1d', 'e1d', 'r1w', 'e1w',
 TRADING_HOURS = ['rth', 'eth']
 EVENT_CATEGORIES = ['Closed', 'Data', 'Unplanned', 'LowVolume', 'Rollover']
 
+DT_STR_FORMAT = "%Y-%m-%d %H:%M:%S"
+DT_STR_CANONICAL_REGEX = re.compile(
+    r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$"
+)
+DT_STR_FLEX_REGEX = re.compile(
+    r"^\s*(\d{2,4})-(\d{1,2})-(\d{1,2})\s+"
+    r"(\d{1,2}):(\d{1,2}):(\d{1,2})\s*$"
+)
+TIMEFRAME_DELTAS = {
+    "1m": timedelta(minutes=1),
+    "5m": timedelta(minutes=5),
+    "15m": timedelta(minutes=15),
+    "r1h": timedelta(hours=1),
+    "e1h": timedelta(hours=1),
+    "r1d": timedelta(days=1),
+    "e1d": timedelta(days=1),
+    "r1w": timedelta(weeks=1),
+    "e1w": timedelta(weeks=1),
+}
+
 log = logging.getLogger("dhutil")
 log.addHandler(logging.NullHandler())
 
@@ -252,23 +272,60 @@ def valid_event_category(c, exit=True):
 
 
 def dt_as_dt(d):
-    """return a datetime object regardless of datetime or string input"""
+    """return a datetime object representing the given datetime, string, or
+    None input"""
     if d is None:
         return None
     if isinstance(d, dt):
         return d
-    else:
-        return dt.strptime(d, "%Y-%m-%d %H:%M:%S")
+
+    if not isinstance(d, str):
+        raise TypeError(f"d must be str, datetime, or None. Got {type(d)}")
+
+    # First attempt to match the standard canonical format
+    if DT_STR_CANONICAL_REGEX.fullmatch(d):
+        return dt.strptime(d, DT_STR_FORMAT)
+
+    # If that fails, attempt to match the more flexible format which may
+    # exclude leading zeroes in single digit values or reduce years to 2 digits
+    match = DT_STR_FLEX_REGEX.fullmatch(d)
+    if match is not None:
+        year = int(match.group(1))
+        if year < 100:
+            year += 2000
+        month = int(match.group(2))
+        day = int(match.group(3))
+        hour = int(match.group(4))
+        minute = int(match.group(5))
+        second = int(match.group(6))
+        return dt(year, month, day, hour, minute, second)
+
+    # Raise a ValueError Exception if we could not successfully parse a valid
+    # datetime from the given string
+    raise ValueError(
+        f"Unsupported datetime string format: {d}. Expected "
+        "YYYY-mm-dd HH:MM:SS or shorthand with '-' separators."
+    )
 
 
 def dt_as_str(d):
-    """return a string object regardless of datetime or string input"""
+    """return a string object representing the given datetime, string, or
+     None input"""
     if d is None:
         return None
+
+    # If a string is given, return an equivalent string in the standard format
     if isinstance(d, str):
-        return d
-    else:
-        return d.strftime("%Y-%m-%d %H:%M:%S")
+        if DT_STR_CANONICAL_REGEX.fullmatch(d):
+            return d
+        return dt_as_dt(d).strftime(DT_STR_FORMAT)
+
+    # If a datetime is given, convert to a string in the standard format
+    if isinstance(d, dt):
+        return d.strftime(DT_STR_FORMAT)
+
+    # Raise an error if the input was not a string, datetime, or None
+    raise TypeError(f"d must be str, datetime, or None. Got {type(d)}")
 
 
 def dt_as_time(time: str):
@@ -301,21 +358,11 @@ def dt_from_epoch(d):
 
 
 def timeframe_delta(timeframe: str):
-    """return a timedelta object based on the candle timeframe given"""
-    if timeframe == "1m":
-        return timedelta(minutes=1)
-    elif timeframe == "5m":
-        return timedelta(minutes=5)
-    elif timeframe == "15m":
-        return timedelta(minutes=15)
-    elif timeframe in ["r1h", "e1h"]:
-        return timedelta(hours=1)
-    elif timeframe in ["r1d", "e1d"]:
-        return timedelta(days=1)
-    elif timeframe in ["r1w", "e1w"]:
-        return timedelta(weeks=1)
-    else:
-        raise ValueError(f"timeframe: {timeframe} not supported")
+    """return a precalculated timedelta object for the timeframe given"""
+    if timeframe in TIMEFRAME_DELTAS:
+        return TIMEFRAME_DELTAS[timeframe]
+
+    raise ValueError(f"timeframe: {timeframe} not supported")
 
 
 def start_of_week_date(dt):

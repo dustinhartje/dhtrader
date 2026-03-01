@@ -55,7 +55,7 @@ def test_Chart_create_and_verify_pretty():
                             c_symbol="ES",
                             )
     assert isinstance(out_candle, dhc.Candle)
-    assert len(out_candle.pretty().splitlines()) == 22
+    assert len(out_candle.pretty().splitlines()) == 23
     out_chart = dhc.Chart(c_timeframe="1m",
                           c_trading_hours="rth",
                           c_symbol="ES",
@@ -66,7 +66,7 @@ def test_Chart_create_and_verify_pretty():
     assert isinstance(out_chart, dhc.Chart)
     out_chart.add_candle(out_candle)
     assert len(out_chart.pretty().splitlines()) == 14
-    assert len(out_chart.pretty(suppress_candles=False).splitlines()) == 35
+    assert len(out_chart.pretty(suppress_candles=False).splitlines()) == 36
 
 
 @pytest.mark.storage

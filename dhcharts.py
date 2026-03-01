@@ -678,8 +678,11 @@ class Candle():
                  c_time: str = None
                  ):
 
+        # Precalculate datetime for calculating other attributes efficiently
+        c_datetime_dt = dhu.dt_as_dt(c_datetime)
+
         # Passable attributes
-        self.c_datetime = dhu.dt_as_str(c_datetime)
+        self.c_datetime = dhu.dt_as_str(c_datetime_dt)
         self.c_timeframe = c_timeframe
         dhu.valid_timeframe(self.c_timeframe)
         self.c_open = float(c_open)
@@ -693,22 +696,20 @@ class Candle():
             self.c_symbol = dhs.get_symbol_by_ticker(ticker=c_symbol)
         if c_tags is None:
             c_tags = []
-        else:
-            self.c_tags = c_tags
+        self.c_tags = c_tags
         if c_epoch is None:
-            c_epoch = dhu.dt_to_epoch(self.c_datetime)
+            c_epoch = dhu.dt_to_epoch(c_datetime_dt)
         self.c_epoch = c_epoch
         if c_date is None:
-            c_date = dhu.dt_as_str(c_datetime).split()[0]
+            c_date = self.c_datetime[:10]
         self.c_date = c_date
         if c_time is None:
-            c_time = dhu.dt_as_str(c_datetime).split()[1]
+            c_time = self.c_datetime[11:19]
         self.c_time = c_time
 
         # Calculated attributes
         delta = dhu.timeframe_delta(self.c_timeframe)
-        self.c_end_datetime = dhu.dt_as_str(
-                dhu.dt_as_dt(self.c_datetime) + delta)
+        self.c_end_datetime = dhu.dt_as_str(c_datetime_dt + delta)
         self.c_size = abs(self.c_high - self.c_low)
         self.c_body_size = abs(self.c_open - self.c_close)
         self.c_upper_wick_size = self.c_high - max(self.c_open, self.c_close)
