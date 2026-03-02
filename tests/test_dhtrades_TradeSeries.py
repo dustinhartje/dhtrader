@@ -3,11 +3,19 @@ import pytest
 import json
 import site
 site.addsitedir('modulepaths')
-import dhcharts as dhc
-import dhtrades as dht
-import dhutil as dhu
-from dhutil import dt_as_dt, dt_as_str
-import dhstore as dhs
+from dhcharts import (
+    Candle, Chart, Day, Event, Indicator, IndicatorDataPoint,
+    IndicatorEMA, IndicatorSMA, Symbol)
+from dhtrades import Trade, TradeSeries, Backtest
+from dhutil import (
+    dt_as_dt, dt_as_str, dow_name, dt_to_epoch, parse_dt,
+    dt_from_epoch, OperationTimer, ProgBar, log_say, prompt_yn,
+    valid_timeframe, valid_trading_hours, check_tf_th_compatibility)
+from dhstore import (
+    get_trades_by_field, delete_trades, get_tradeseries_by_field,
+    delete_tradeseries, store_trades, store_tradeseries, get_candles,
+    store_candles, store_candle, review_candles, delete_candles,
+    get_symbol_by_ticker, get_events)
 from testdata.testdata import Rebuilder
 
 # TODO think through which tests can be done simply by creating and calcing,
@@ -45,7 +53,7 @@ def create_trade(open_dt="2025-01-02 12:00:00",
                  prof_target=5005,
                  name="DELETEME"
                  ):
-    return dht.Trade(open_dt=open_dt,
+    return Trade(open_dt=open_dt,
                      close_dt=close_dt,
                      direction=direction,
                      timeframe=timeframe,
@@ -63,7 +71,7 @@ def add_1m_candle(trade, dt, c_open, c_high, c_low, c_close):
     """Creates a dhcharts.Candle representing a 1 minute candle occurring
     during an open trade.  This is used to test against actual observed live
     trade results, simulating each significant candle in the trade."""
-    trade.candle_update(dhc.Candle(c_datetime=dt,
+    trade.candle_update(Candle(c_datetime=dt,
                                    c_timeframe="1m",
                                    c_open=c_open,
                                    c_high=c_high,
@@ -85,7 +93,7 @@ def create_tradeseries(start_dt="2025-01-01 00:00:00",
                        bt_id=None,
                        trades=None,
                        ):
-    r = dht.TradeSeries(start_dt=start_dt,
+    r = TradeSeries(start_dt=start_dt,
                         end_dt=end_dt,
                         timeframe=timeframe,
                         trading_hours=trading_hours,
@@ -118,7 +126,7 @@ def create_tradeseries(start_dt="2025-01-01 00:00:00",
         assert r.bt_id == bt_id
     # Calculated and adjusted attributes
     # symbol should get converted to a Symbol object
-    assert isinstance(r.symbol, dhc.Symbol)
+    assert isinstance(r.symbol, Symbol)
     # If symbol was passed as a string, it should now be the ticker
     if isinstance(symbol, str):
         assert r.symbol.ticker == symbol
@@ -137,7 +145,7 @@ def test_TradeSeries_create_and_verify_pretty():
     # Check line counts of pretty output, won't change unless class changes
     ts = create_tradeseries()
     test_trade = create_trade()
-    assert isinstance(ts, dht.TradeSeries)
+    assert isinstance(ts, TradeSeries)
     assert len(ts.pretty().splitlines()) == 15
     ts.add_trade(test_trade)
     # With trades shown
@@ -584,11 +592,11 @@ def test_TradeSeries_store_retrieve_and_delete():
     ts.add_trade(create_trade(open_dt="2025-01-06 09:35:00",
                               close_dt="2025-01-06 09:40:00"))
     # Clear and confirm storage has no objects with this name currently
-    dhs.delete_tradeseries(symbol="ES", field="name", value="DELETEME-TEST")
-    s_ts = dhs.get_tradeseries_by_field(field="name", value="DELETEME-TEST")
+    delete_tradeseries(symbol="ES", field="name", value="DELETEME-TEST")
+    s_ts = get_tradeseries_by_field(field="name", value="DELETEME-TEST")
     assert len(s_ts) == 0
-    dhs.delete_trades(symbol="ES", field="name", value="DELETEME-TEST")
-    s_tr = dhs.get_trades_by_field(field="name", value="DELETEME-TEST")
+    delete_trades(symbol="ES", field="name", value="DELETEME-TEST")
+    s_tr = get_trades_by_field(field="name", value="DELETEME-TEST")
     assert len(s_tr) == 0
     # Store and check the result looks successful by matching ts_id on each
     r = ts.store(store_trades=True)
@@ -600,27 +608,27 @@ def test_TradeSeries_store_retrieve_and_delete():
     assert r_tr[0][0]["ts_id"] == ts.ts_id
     assert r_tr[1][0]["ts_id"] == ts.ts_id
     # Confirm we can retrieve the TradeSeries and both Trades by ts_id
-    r_ts = dhs.get_tradeseries_by_field(field="ts_id", value=ts.ts_id)
+    r_ts = get_tradeseries_by_field(field="ts_id", value=ts.ts_id)
     assert len(r_ts) == 1
-    assert isinstance(r_ts[0], dht.TradeSeries)
+    assert isinstance(r_ts[0], TradeSeries)
     assert r_ts[0].ts_id == ts.ts_id
-    r_tr = dhs.get_trades_by_field(field="ts_id", value=ts.ts_id)
+    r_tr = get_trades_by_field(field="ts_id", value=ts.ts_id)
     assert len(r_tr) == 2
-    assert isinstance(r_tr[0], dht.Trade)
+    assert isinstance(r_tr[0], Trade)
     assert r_tr[0].ts_id == ts.ts_id
-    assert isinstance(r_tr[1], dht.Trade)
+    assert isinstance(r_tr[1], Trade)
     assert r_tr[1].ts_id == ts.ts_id
     # Delete objects by ts_id
-    dhs.delete_tradeseries(symbol="ES", field="ts_id", value=ts.ts_id)
-    dhs.delete_trades(symbol="ES", field="ts_id", value=ts.ts_id)
+    delete_tradeseries(symbol="ES", field="ts_id", value=ts.ts_id)
+    delete_trades(symbol="ES", field="ts_id", value=ts.ts_id)
     # Confirm storage has no objects with this name or ts_id at end of test
-    s_ts = dhs.get_tradeseries_by_field(field="name", value="DELETEME-TEST")
+    s_ts = get_tradeseries_by_field(field="name", value="DELETEME-TEST")
     assert len(s_ts) == 0
-    s_tr = dhs.get_trades_by_field(field="name", value="DELETEME-TEST")
+    s_tr = get_trades_by_field(field="name", value="DELETEME-TEST")
     assert len(s_tr) == 0
-    s_ts = dhs.get_tradeseries_by_field(field="ts_id", value=ts.ts_id)
+    s_ts = get_tradeseries_by_field(field="ts_id", value=ts.ts_id)
     assert len(s_ts) == 0
-    s_tr = dhs.get_trades_by_field(field="ts_id", value=ts.ts_id)
+    s_tr = get_trades_by_field(field="ts_id", value=ts.ts_id)
     assert len(s_tr) == 0
 
 

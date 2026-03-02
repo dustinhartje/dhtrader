@@ -4,11 +4,19 @@ import json
 import site
 import pytest
 site.addsitedir('modulepaths')
-import dhcharts as dhc
-import dhtrades as dht
-import dhutil as dhu
-from dhutil import dt_as_dt, dt_as_str
-import dhstore as dhs
+from dhcharts import (
+    Candle, Chart, Day, Event, Indicator, IndicatorDataPoint,
+    IndicatorEMA, IndicatorSMA, Symbol)
+from dhtrades import Trade, TradeSeries, Backtest
+from dhutil import (
+    dt_as_dt, dt_as_str, dow_name, dt_to_epoch, parse_dt,
+    dt_from_epoch, OperationTimer, ProgBar, log_say, prompt_yn,
+    valid_timeframe, valid_trading_hours, check_tf_th_compatibility)
+from dhstore import (
+    get_trades_by_field, delete_trades, get_tradeseries_by_field,
+    delete_tradeseries, store_trades, store_tradeseries, get_candles,
+    store_candles, store_candle, review_candles, delete_candles,
+    get_symbol_by_ticker, get_events)
 from datetime import timedelta as td
 from testdata.testdata import Rebuilder
 
@@ -44,7 +52,7 @@ def create_trade(open_dt="2025-01-02 12:00:00",
     # by Trade() or it will break assertions below meant to test defaults
     # and calculated attributes.  For further testing in test_* functions using
     # these objects, run create_trade() to create then update them after.
-    r = dht.Trade(open_dt=open_dt,
+    r = Trade(open_dt=open_dt,
                   close_dt=None,
                   direction=direction,
                   timeframe=timeframe,
@@ -57,7 +65,7 @@ def create_trade(open_dt="2025-01-02 12:00:00",
                   name=name,
                   )
     # Validate passed attributes
-    assert isinstance(r, dht.Trade)
+    assert isinstance(r, Trade)
     assert r.open_dt == open_dt
     assert r.direction == direction
     assert r.timeframe == timeframe
@@ -69,7 +77,7 @@ def create_trade(open_dt="2025-01-02 12:00:00",
     assert r.close_dt is None
     assert r.exit_price is None
     assert r.offset_ticks == 0
-    assert isinstance(r.symbol, dhc.Symbol)
+    assert isinstance(r.symbol, Symbol)
     assert r.symbol.ticker == "ES"
     assert r.is_open
     assert r.profitable is None
@@ -97,7 +105,7 @@ def add_1m_candle(trade, dt, c_open, c_high, c_low, c_close):
     """Creates a dhcharts.Candle representing a 1 minute candle occurring
     during an open trade.  This is used to test against actual observed live
     trade results, simulating each significant candle in the trade."""
-    trade.candle_update(dhc.Candle(c_datetime=dt,
+    trade.candle_update(Candle(c_datetime=dt,
                                    c_timeframe="1m",
                                    c_open=c_open,
                                    c_high=c_high,
@@ -575,7 +583,7 @@ def test_Trade_confirm_observed_results():
 def test_Trade_create_and_verify_pretty():
     # Check line counts of pretty output, won't change unless class changes
     trade = create_trade()
-    assert isinstance(trade, dht.Trade)
+    assert isinstance(trade, Trade)
     assert len(trade.pretty().splitlines()) == 32
 
 
@@ -814,7 +822,7 @@ def test_Trade_creation_short_close_at_loss():
 
 def test_Trade_candle_update_returns_correct_values():
     # Should not return closed until some target is met (500 ticks default)
-    c = dhc.Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
                    c_open=5000, c_high=5001, c_low=4999, c_close=5000,
                    c_volume=100, c_symbol="ES")
     t = create_trade(direction="long")
@@ -822,34 +830,34 @@ def test_Trade_candle_update_returns_correct_values():
     t = create_trade(direction="short")
     assert t.candle_update(c)["closed"] is False
     # Should close at stop target 4875 long / 5125 short exactly
-    c = dhc.Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
                    c_open=5000, c_high=5000, c_low=4875, c_close=5000,
                    c_volume=100, c_symbol="ES")
     t = create_trade(direction="long")
     assert t.candle_update(c)["closed"] is True
-    c = dhc.Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
                    c_open=5000, c_high=5125, c_low=5000, c_close=5000,
                    c_volume=100, c_symbol="ES")
     t = create_trade(direction="short")
     assert t.candle_update(c)["closed"] is True
     # Should not close at profit target 5125 long / 4875 short exactly
-    c = dhc.Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
                    c_open=5000, c_high=5125, c_low=5000, c_close=5000,
                    c_volume=100, c_symbol="ES")
     t = create_trade(direction="long")
     assert t.candle_update(c)["closed"] is False
-    c = dhc.Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
                    c_open=5000, c_high=5000, c_low=4875, c_close=5000,
                    c_volume=100, c_symbol="ES")
     t = create_trade(direction="short")
     assert t.candle_update(c)["closed"] is False
     # Should close one tick past profit targets
-    c = dhc.Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
                    c_open=5000, c_high=5125.25, c_low=5000, c_close=5000,
                    c_volume=100, c_symbol="ES")
     t = create_trade(direction="long")
     assert t.candle_update(c)["closed"] is True
-    c = dhc.Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
                    c_open=5000, c_high=5000, c_low=4874.75, c_close=5000,
                    c_volume=100, c_symbol="ES")
     t = create_trade(direction="short")
@@ -860,7 +868,7 @@ def test_Trade_candle_update_closes_trades_correctly():
     # Check close status and related attribs/methods for all target scenarios
     # Long trade should not close with no target hit
     t = create_trade(direction="long")
-    c = dhc.Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
                    c_open=5000, c_high=5000, c_low=5000, c_close=5000,
                    c_volume=100, c_symbol="ES")
     t.candle_update(c)
@@ -872,7 +880,7 @@ def test_Trade_candle_update_closes_trades_correctly():
     assert t.balance_impact(1000, 1, 50, 3.10) is None
     # Long trade closes at prof_target when surpassed
     t = create_trade(direction="long")
-    c = dhc.Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
                    c_open=5000, c_high=5200, c_low=5000, c_close=5000,
                    c_volume=100, c_symbol="ES")
     t.candle_update(c)
@@ -884,7 +892,7 @@ def test_Trade_candle_update_closes_trades_correctly():
     assert t.balance_impact(1000, 1, 50, 3.10) is not None
     # Long trade closes at stop_target when surpassed
     t = create_trade(direction="long")
-    c = dhc.Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
                    c_open=5000, c_high=5000, c_low=4800, c_close=5000,
                    c_volume=100, c_symbol="ES")
     t.candle_update(c)
@@ -896,7 +904,7 @@ def test_Trade_candle_update_closes_trades_correctly():
     assert t.balance_impact(1000, 1, 50, 3.10) is not None
     # Short trade should not close with no target hit
     t = create_trade(direction="short")
-    c = dhc.Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
                    c_open=5000, c_high=5000, c_low=5000, c_close=5000,
                    c_volume=100, c_symbol="ES")
     t.candle_update(c)
@@ -908,7 +916,7 @@ def test_Trade_candle_update_closes_trades_correctly():
     assert t.balance_impact(1000, 1, 50, 3.10) is None
     # Short trade closes at prof_target when surpassed
     t = create_trade(direction="short")
-    c = dhc.Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
                    c_open=5000, c_high=5000, c_low=4800, c_close=5000,
                    c_volume=100, c_symbol="ES")
     t.candle_update(c)
@@ -920,7 +928,7 @@ def test_Trade_candle_update_closes_trades_correctly():
     assert t.balance_impact(1000, 1, 50, 3.10) is not None
     # Short trade closes at stop_target when surpassed
     t = create_trade(direction="short")
-    c = dhc.Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
                    c_open=5000, c_high=5200, c_low=5000, c_close=5000,
                    c_volume=100, c_symbol="ES")
     t.candle_update(c)
@@ -933,12 +941,12 @@ def test_Trade_candle_update_closes_trades_correctly():
     # Long trade does not close during entry minute when 1m bar closes under
     # the profit target.  It should wait for the next bar to confirm profit.
     t = create_trade(direction="long", stop_ticks=20, prof_ticks=20)
-    c = dhc.Candle(c_datetime="2025-01-02 12:00:00", c_timeframe="1m",
+    c = Candle(c_datetime="2025-01-02 12:00:00", c_timeframe="1m",
                    c_open=5000, c_high=5050, c_low=4999, c_close=5000,
                    c_volume=100, c_symbol="ES")
     status = t.candle_update(c)
     assert not status["closed"]
-    c = dhc.Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
                    c_open=5000, c_high=5050, c_low=4999, c_close=5050,
                    c_volume=100, c_symbol="ES")
     status = t.candle_update(c)
@@ -946,7 +954,7 @@ def test_Trade_candle_update_closes_trades_correctly():
     # Long trade does close during entry minute when 1m bar closes over the
     # profit target
     t = create_trade(direction="long", stop_ticks=20, prof_ticks=20)
-    c = dhc.Candle(c_datetime="2025-01-02 12:00:00", c_timeframe="1m",
+    c = Candle(c_datetime="2025-01-02 12:00:00", c_timeframe="1m",
                    c_open=5000, c_high=5050, c_low=4999, c_close=5050,
                    c_volume=100, c_symbol="ES")
     status = t.candle_update(c)
@@ -954,12 +962,12 @@ def test_Trade_candle_update_closes_trades_correctly():
     # Short trade does not close during entry minute when 1m bar closes over
     # the profit target.  It should wait for the next bar to confirm profit.
     t = create_trade(direction="short", stop_ticks=20, prof_ticks=20)
-    c = dhc.Candle(c_datetime="2025-01-02 12:00:00", c_timeframe="1m",
+    c = Candle(c_datetime="2025-01-02 12:00:00", c_timeframe="1m",
                    c_open=5000, c_high=5001, c_low=4950, c_close=5000,
                    c_volume=100, c_symbol="ES")
     status = t.candle_update(c)
     assert not status["closed"]
-    c = dhc.Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
                    c_open=5000, c_high=5001, c_low=4950, c_close=5050,
                    c_volume=100, c_symbol="ES")
     status = t.candle_update(c)
@@ -967,7 +975,7 @@ def test_Trade_candle_update_closes_trades_correctly():
     # Short trade does close during entry minute when 1m bar closes under the
     # profit target
     t = create_trade(direction="short", stop_ticks=20, prof_ticks=20)
-    c = dhc.Candle(c_datetime="2025-01-02 12:00:00", c_timeframe="1m",
+    c = Candle(c_datetime="2025-01-02 12:00:00", c_timeframe="1m",
                    c_open=5000, c_high=5001, c_low=4950, c_close=4950,
                    c_volume=100, c_symbol="ES")
     status = t.candle_update(c)
@@ -979,7 +987,7 @@ def test_Trade_sets_high_low_exit_prices_correctly():
     t = create_trade(direction="long")
     assert t.high_price == 5000
     assert t.low_price == 5000
-    c = dhc.Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
                    c_open=5000, c_high=5100, c_low=4900, c_close=5000,
                    c_volume=100, c_symbol="ES")
     t.candle_update(c)
@@ -989,7 +997,7 @@ def test_Trade_sets_high_low_exit_prices_correctly():
     assert t.is_open
     # Long trade sets correctly at profit target when surpassed
     t = create_trade(direction="long")
-    c = dhc.Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
                    c_open=5000, c_high=5200, c_low=4900, c_close=5000,
                    c_volume=100, c_symbol="ES")
     t.candle_update(c)
@@ -999,7 +1007,7 @@ def test_Trade_sets_high_low_exit_prices_correctly():
     assert not t.is_open
     # Long trade sets correctly at stop target when surpassed
     t = create_trade(direction="long")
-    c = dhc.Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
                    c_open=5000, c_high=5100, c_low=4800, c_close=5000,
                    c_volume=100, c_symbol="ES")
     t.candle_update(c)
@@ -1009,7 +1017,7 @@ def test_Trade_sets_high_low_exit_prices_correctly():
     assert not t.is_open
     # Short trade sets candle high and low if exit targets are not hit
     t = create_trade(direction="short")
-    c = dhc.Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
                    c_open=5000, c_high=5100, c_low=4900, c_close=5000,
                    c_volume=100, c_symbol="ES")
     t.candle_update(c)
@@ -1019,7 +1027,7 @@ def test_Trade_sets_high_low_exit_prices_correctly():
     assert t.is_open
     # Short trade sets correctly at profit target when surpassed
     t = create_trade(direction="short")
-    c = dhc.Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
                    c_open=5000, c_high=5100, c_low=4800, c_close=5000,
                    c_volume=100, c_symbol="ES")
     t.candle_update(c)
@@ -1029,7 +1037,7 @@ def test_Trade_sets_high_low_exit_prices_correctly():
     assert not t.is_open
     # Short trade sets correctly at stop target when surpassed
     t = create_trade(direction="short")
-    c = dhc.Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
                    c_open=5000, c_high=5200, c_low=4900, c_close=5000,
                    c_volume=100, c_symbol="ES")
     t.candle_update(c)
@@ -1141,8 +1149,8 @@ def test_Trade_closed_intraday():
 @pytest.mark.storage
 def test_Trade_store_retrieve_delete():
     # First make sure there are no DELETEME trades in storage currently
-    dhs.delete_trades(symbol="ES", field="name", value="DELETEME-TEST")
-    stored = dhs.get_trades_by_field(field="name", value="DELETEME-TEST")
+    delete_trades(symbol="ES", field="name", value="DELETEME-TEST")
+    stored = get_trades_by_field(field="name", value="DELETEME-TEST")
     assert len(stored) == 0
     # Create and store a basic test, confirming it can be retreived after
     t = create_trade(name="DELETEME-TEST")
@@ -1150,12 +1158,12 @@ def test_Trade_store_retrieve_delete():
     # Confirm storage op returns something that looks vaguely like our trade
     assert stored[0]["name"] == "DELETEME-TEST"
     # Confirm we can retreive our trade from storage
-    stored = dhs.get_trades_by_field(field="name", value="DELETEME-TEST")
+    stored = get_trades_by_field(field="name", value="DELETEME-TEST")
     assert len(stored) == 1
-    assert isinstance(stored[0], dht.Trade)
+    assert isinstance(stored[0], Trade)
     # Delete it from storage and confirm it can no longer be retrieved
-    dhs.delete_trades(symbol="ES", field="name", value="DELETEME-TEST")
-    stored = dhs.get_trades_by_field(field="name", value="DELETEME-TEST")
+    delete_trades(symbol="ES", field="name", value="DELETEME-TEST")
+    stored = get_trades_by_field(field="name", value="DELETEME-TEST")
     assert len(stored) == 0
 
 

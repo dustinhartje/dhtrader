@@ -12,9 +12,16 @@ from datetime import timedelta
 from copy import deepcopy
 import logging
 from pathlib import Path
-import dhcharts as dhc
-import dhtrades as dht
-import dhutil as dhu
+from dhcharts import (
+    Candle, Chart, Day, Event, Indicator, IndicatorDatapoint, Symbol)
+from dhtrades import (
+    Trade, TradeSeries, Backtest)
+from dhutil import (
+    ProgBar, log_say, dt_as_str, dt_as_dt, dt_from_epoch, dt_to_epoch,
+    OperationTimer, check_tf_th_compatibility, timeframe_delta,
+    this_candle_start, next_candle_start, expected_candle_datetimes,
+    valid_timeframe, valid_trading_hours, sort_dict, prompt_yn,
+    rangify_candle_times, read_candles_from_csv, summarize_candles)
 import dhmongo as dhm
 
 COLL_TRADES = "trades"
@@ -33,15 +40,15 @@ log.addHandler(logging.NullHandler())
 ##############################################################################
 # Progress bar helper functions
 def start_progbar(show_progress: bool, total: int,
-                  desc: str) -> dhu.ProgBar:
+                  desc: str) -> ProgBar:
     """Start a progress bar if show_progress is True and total > 0.
     Returns ProgBar object or None."""
     if show_progress and total > 0:
-        return dhu.ProgBar(total=total, desc=desc)
+        return ProgBar(total=total, desc=desc)
     return None
 
 
-def update_progbar(pbar: dhu.ProgBar, index: int, total: int,
+def update_progbar(pbar: ProgBar, index: int, total: int,
                    update_every: int = 500):
     """Update progress bar at intervals and at final item."""
     if pbar is not None and (index % update_every == 0 or
@@ -49,7 +56,7 @@ def update_progbar(pbar: dhu.ProgBar, index: int, total: int,
         pbar.update(index)
 
 
-def finish_progbar(pbar: dhu.ProgBar):
+def finish_progbar(pbar: ProgBar):
     """Finish and cleanup progress bar if it exists."""
     if pbar is not None:
         pbar.finish()
@@ -58,13 +65,13 @@ def finish_progbar(pbar: dhu.ProgBar):
 ##############################################################################
 # Non-class specific functions
 def list_mongo_collections():
-    return dhm.list_collections()
+    return list_collections()
 
 
 def drop_mongo_collection(collection: str):
     """Used for brute force cleanup of storage, it will wipe all data from the
     named collection in mongo.  WIELD THIS POWER CAREFULLY!!!"""
-    return dhm.drop_collection(collection=collection)
+    return drop_collection(collection=collection)
 
 
 def get_all_records_by_collection(collection: str,
@@ -73,7 +80,7 @@ def get_all_records_by_collection(collection: str,
                                   ):
     """Return <limit> (default 0 == all) records from a given collection
     without attempting to reconstruct them into dhtrader classes."""
-    return dhm.get_all_records_by_collection(collection=collection,
+    return get_all_records_by_collection(collection=collection,
                                              limit=limit,
                                              show_progress=show_progress)
 
@@ -83,7 +90,7 @@ def get_all_records_by_collection(collection: str,
 def reconstruct_trade(t):
     """Takes a dictionary and builds a Trade() object from it.  Primarily used
     by other functions to convert results retrieved from storage."""
-    return dht.Trade(open_dt=t["open_dt"],
+    return Trade(open_dt=t["open_dt"],
                      direction=t["direction"],
                      timeframe=t["timeframe"],
                      trading_hours=t["trading_hours"],
@@ -116,7 +123,7 @@ def get_all_trades(collection: str = COLL_TRADES,
                    ):
     """Get <limit> (default 0 == all) stored trades and return as a list."""
     result = []
-    r = dhm.get_all_records_by_collection(collection=collection,
+    r = get_all_records_by_collection(collection=collection,
                                           limit=limit,
                                           show_progress=show_progress)
     total = len(r)
@@ -142,7 +149,7 @@ def get_trades_by_field(field: str,
     log.info(f"Retrieving trades by {field}={value}, "
              f"limit={limit}")
     result = []
-    r = dhm.get_trades_by_field(field=field,
+    r = get_trades_by_field(field=field,
                                 value=value,
                                 collection=collection,
                                 limit=limit,
@@ -178,7 +185,7 @@ def store_trades(trades: list,
     # Store in database
     log.info(f"Writing {len(working_trades)} trades to "
              f"collection={collection}")
-    result = dhm.store_trades(trades=working_trades,
+    result = store_trades(trades=working_trades,
                               collection=collection)
     log.info("Storage complete, returning result")
 
@@ -210,21 +217,21 @@ def review_trades(symbol: str = "ES",
     string format."""
     if multi_ok is None:
         multi_ok = []
-    review = dhm.review_trades(symbol=symbol,
+    review = review_trades(symbol=symbol,
                                collection=collection,
                                bt_id=bt_id,
                                ts_id=ts_id,
                                )
     for t in review:
-        t["earliest"] = dhu.dt_as_str(dhu.dt_from_epoch(t["earliest_epoch"]))
-        t["latest"] = dhu.dt_as_str(dhu.dt_from_epoch(t["latest_epoch"]))
+        t["earliest"] = dt_as_str(dt_from_epoch(t["earliest_epoch"]))
+        t["latest"] = dt_as_str(dt_from_epoch(t["latest_epoch"]))
         if not include_epochs:
             t.pop("earliest_epoch")
             t.pop("latest_epoch")
 
     if check_integrity:
-        dhu.log_say("Checking integrity of all Trades in storage")
-        time_full = dhu.OperationTimer(
+        log_say("Checking integrity of all Trades in storage")
+        time_full = OperationTimer(
                 name="Trade integrity check full run timer")
 
         # Get all TradeSeries in storage to loop through
@@ -248,11 +255,11 @@ def review_trades(symbol: str = "ES",
         unique_trades = 0
 
         # Cache all events for autoclosed trade integrity checking
-        dhu.log_say("Caching all events for autoclosed integrity checks")
+        log_say("Caching all events for autoclosed integrity checks")
         all_events = get_events(symbol="ES")
         # Create a set of event start_dt strings for fast lookup
         event_start_times = {event.start_dt for event in all_events}
-        dhu.log_say(f"Cached {len(event_start_times)} unique event "
+        log_say(f"Cached {len(event_start_times)} unique event "
                     f"start times")
 
         # Start a progress bar
@@ -308,10 +315,10 @@ def review_trades(symbol: str = "ES",
                 # Check autoclosed trades for integrity
                 if "autoclosed" in t.tags and t.close_time != "15:55:00":
                     # Calculate expected event start time (5 min after close)
-                    close_dt_obj = dhu.dt_as_dt(t.close_dt)
+                    close_dt_obj = dt_as_dt(t.close_dt)
                     expected_event_start = close_dt_obj + timedelta(
                         minutes=5)
-                    expected_start_str = dhu.dt_as_str(
+                    expected_start_str = dt_as_str(
                         expected_event_start)
                     # Check if expected event start time exists in cached
                     # events
@@ -376,7 +383,7 @@ def review_trades(symbol: str = "ES",
             blob["integrity"]["autoclosed_issues"] = autoclosed_issues
         with open(filename, "w") as f:
             f.write(json.dumps(blob))
-        dhu.log_say(f"Wrote integrity results and issues to {filename}")
+        log_say(f"Wrote integrity results and issues to {filename}")
 
     if pretty:
         return json.dumps(result,
@@ -398,7 +405,7 @@ def delete_one_trade(symbol: str,
              "ts_id": ts_id,
              }
 
-    return dhm.delete_one_document(query=query, collection=collection)
+    return delete_one_document(query=query, collection=collection)
 
 
 def delete_trades(symbol: str,
@@ -412,7 +419,7 @@ def delete_trades(symbol: str,
     Example to delete all trade records with name=="DELETEME":
         delete_trades(symbol="ES", field="name", value="DELETEME")
     """
-    result = dhm.delete_trades(symbol=symbol,
+    result = delete_trades(symbol=symbol,
                                collection=collection,
                                field=field,
                                value=value,
@@ -426,7 +433,7 @@ def delete_trades(symbol: str,
 def reconstruct_tradeseries(ts):
     """Takes a dictionary and builds a Trade() object from it.  Primarily used
     by other functions to convert results retrieved from storage."""
-    return dht.TradeSeries(start_dt=ts["start_dt"],
+    return TradeSeries(start_dt=ts["start_dt"],
                            end_dt=ts["end_dt"],
                            timeframe=ts["timeframe"],
                            trading_hours=ts["trading_hours"],
@@ -447,7 +454,7 @@ def get_all_tradeseries(collection: str = COLL_TRADESERIES,
     """Get <limit> (default 0 == all) stored tradeseries returned as a
     list."""
     result = []
-    r = dhm.get_all_records_by_collection(collection=collection,
+    r = get_all_records_by_collection(collection=collection,
                                           limit=limit,
                                           show_progress=show_progress)
     total = len(r)
@@ -474,7 +481,7 @@ def get_tradeseries_by_field(field: str,
     log.info(f"Retrieving TradeSeries by {field}={value} with limit={limit} "
              f"and include_trades={include_trades}")
     result = []
-    r = dhm.get_tradeseries_by_field(field=field,
+    r = get_tradeseries_by_field(field=field,
                                      value=value,
                                      collection=collection,
                                      limit=limit,
@@ -513,7 +520,7 @@ def store_tradeseries(series: list,
     log.info(f"Storing {len(series)} TradeSeries in collection={collection}")
     result = []
     for ts in series:
-        result.append(dhm.store_tradeseries(ts.to_clean_dict(),
+        result.append(store_tradeseries(ts.to_clean_dict(),
                                             collection=collection,
                                             ))
     log.info(f"Storage complete, {len(result)} records written")
@@ -567,9 +574,9 @@ def review_tradeseries(symbol: str = "ES",
             last_close_tf = None
             for t in ts.trades:
                 # Capture the parent timeframe bars that we open and close in
-                open_tf = dhu.this_candle_start(dt=t.open_dt,
+                open_tf = this_candle_start(dt=t.open_dt,
                                                 timeframe=ts.timeframe)
-                close_tf = dhu.this_candle_start(dt=t.close_dt,
+                close_tf = this_candle_start(dt=t.close_dt,
                                                  timeframe=ts.timeframe)
                 if last_trade is not None:
                     # Check if we opened in the same timeframe bar as the
@@ -603,7 +610,7 @@ def review_tradeseries(symbol: str = "ES",
     else:
         integrity = {"status": None, "issues": None}
     # Standard review shows key details of TradeSeries and optionally Trades
-    review = dhm.review_tradeseries(symbol=symbol,
+    review = review_tradeseries(symbol=symbol,
                                     collection=collection,
                                     bt_id=bt_id,
                                     )
@@ -631,7 +638,7 @@ def delete_tradeseries(symbol: str,
     'value'.  Typically used to delete by ts_id, or bt_id fields.
     """
     result = {}
-    result["tradeseries"] = dhm.delete_tradeseries(
+    result["tradeseries"] = delete_tradeseries(
             symbol=symbol,
             collection=collection,
             field=field,
@@ -657,7 +664,7 @@ def get_all_backtests(collection: str = COLL_BACKTESTS,
     dicts.  Because dhtrader.Backtest() is meant to be subclassed we don't
     return Backtest() objects here.  Subclass implementations can warp this
     function to convert dicts into their subclass object types as needed."""
-    return dhm.get_all_records_by_collection(collection=collection,
+    return get_all_records_by_collection(collection=collection,
                                              limit=limit,
                                              show_progress=show_progress)
 
@@ -673,12 +680,12 @@ def get_backtests_by_field(field: str,
     subclassed we don't return Backtest() objects here.  Subclass
     implementations can warp this function to convert dicts into their
     subclass specific object types as needed."""
-    result = dhm.get_backtests_by_field(field=field,
-                                        value=value,
-                                        collection=collection,
-                                        limit=limit,
-                                        show_progress=show_progress,
-                                        )
+    result = get_backtests_by_field(field=field,
+                                    value=value,
+                                    collection=collection,
+                                    limit=limit,
+                                    show_progress=show_progress,
+                                    )
 
     return result
 
@@ -689,9 +696,9 @@ def store_backtests(backtests: list,
     """Store one or more Backtest() objects in central storage"""
     result = []
     for bt in backtests:
-        result.append(dhm.store_backtest(bt.to_clean_dict(),
-                                         collection=collection,
-                                         ))
+        result.append(store_backtest(bt.to_clean_dict(),
+                                     collection=collection,
+                                     ))
 
     return result
 
@@ -703,9 +710,9 @@ def review_backtests(symbol: str = "ES",
                      pretty: bool = False,
                      ):
     """Provides aggregate summary data about backtests in central storage"""
-    review = dhm.review_backtests(symbol=symbol,
-                                  collection=collection,
-                                  )
+    review = review_backtests(symbol=symbol,
+                              collection=collection,
+                              )
     if include_tradeseries:
         for bt in review:
             bt["tradeseries"] = review_tradeseries(
@@ -800,7 +807,7 @@ def get_indicator(ind_id: str,
 
     # The stored class_name attribute tells us which object class to return
     if i["class_name"] == "IndicatorSMA":
-        result = dhc.IndicatorSMA(description=i["description"],
+        result = IndicatorSMA(description=i["description"],
                                   timeframe=i["timeframe"],
                                   trading_hours=i["trading_hours"],
                                   symbol=i["symbol"],
@@ -812,7 +819,7 @@ def get_indicator(ind_id: str,
                                   parameters=i["parameters"],
                                   )
     elif i["class_name"] == "IndicatorEMA":
-        result = dhc.IndicatorEMA(description=i["description"],
+        result = IndicatorEMA(description=i["description"],
                                   timeframe=i["timeframe"],
                                   trading_hours=i["trading_hours"],
                                   symbol=i["symbol"],
@@ -863,7 +870,7 @@ def get_indicator_datapoints(ind_id: str,
     pbar = start_progbar(show_progress, total,
                          "IndicatorDataPoint objects built")
     for i, d in enumerate(working, start=1):
-        result.append(dhc.IndicatorDataPoint(dt=d["dt"],
+        result.append(IndicatorDataPoint(dt=d["dt"],
                                              value=d["value"],
                                              ind_id=d["ind_id"],
                                              epoch=d["epoch"]
@@ -910,7 +917,7 @@ def store_indicator_datapoints(datapoints: list,
         else:
             store_dps.append(d.to_clean_dict())
 
-    op_timer = dhu.OperationTimer(name="Indicator Datapoints Storage Job")
+    op_timer = OperationTimer(name="Indicator Datapoints Storage Job")
     log.info(f"Storing {len(store_dps)} datapoints to collection={collection}")
     r_stored = dhm.store_indicator_datapoints(datapoints=store_dps,
                                               collection=collection,
@@ -934,7 +941,7 @@ def store_indicator(indicator,
                     ):
     """Store indicator meta and datapoints in central storage.  Does not
     overwrite existing datapoints unless overwrite_dp is True"""
-    op_timer = dhu.OperationTimer(name="Indicator Storage Job")
+    op_timer = OperationTimer(name="Indicator Storage Job")
     # First store/replace the indicator meta doc itself
     i = indicator.to_clean_dict()
     i["datapoints"] = len(indicator.datapoints)
@@ -964,13 +971,13 @@ def store_indicator(indicator,
         # Update - it really isn't significantly faster.  Sad face.
 
         # Determine earliest and latest datapoints in indicator
-        earliest = dhu.dt_to_epoch(dt.now())
+        earliest = dt_to_epoch(dt.now())
         latest = 0
         for d in indicator.datapoints:
             earliest = min(d.epoch, earliest)
             latest = max(d.epoch, latest)
-        earliest_to_store = dhu.dt_from_epoch(earliest)
-        latest_to_store = dhu.dt_from_epoch(latest)
+        earliest_to_store = dt_from_epoch(earliest)
+        latest_to_store = dt_from_epoch(latest)
 
         # Retrieve all stored datapoints for this timeframe
         dps_in_storage = get_indicator_datapoints(
@@ -981,7 +988,7 @@ def store_indicator(indicator,
 
         # Put them in a dict for easier comparison to each datapoint
         checkers = {}
-        earliest = dhu.dt_to_epoch(dt.now())
+        earliest = dt_to_epoch(dt.now())
         latest = 0
         for d in dps_in_storage:
             checkers[d.epoch] = d
@@ -1083,7 +1090,7 @@ def get_symbol_by_ticker(ticker: str):
     all Charts and Indicators."""
     if ticker in ["ES", "DELETEME"]:
         if ticker not in SYMBOL_CACHE:
-            SYMBOL_CACHE[ticker] = dhc.Symbol(ticker=ticker,
+            SYMBOL_CACHE[ticker] = Symbol(ticker=ticker,
                                               name=ticker,
                                               leverage_ratio=50,
                                               tick_size=0.25,
@@ -1101,7 +1108,7 @@ def store_candle(candle):
     """Write a single dhcharts.Candle() to central storage"""
     log.debug(f"Storing {candle.c_symbol.ticker} "
               f"{candle.c_timeframe} candle at {candle.c_datetime}")
-    dhu.valid_timeframe(candle.c_timeframe)
+    valid_timeframe(candle.c_timeframe)
     dhm.store_candle(c_datetime=candle.c_datetime,
                      c_timeframe=candle.c_timeframe,
                      c_open=candle.c_open,
@@ -1127,8 +1134,8 @@ def get_candles(start_epoch: int,
     # Retrieve candle dictionaries from storage
     log.info(f"Retrieving candles from storage for {symbol} "
              f"{timeframe} between "
-             f"{dhu.dt_as_str(dhu.dt_from_epoch(start_epoch))} and "
-             f"{dhu.dt_as_str(dhu.dt_from_epoch(end_epoch))}")
+             f"{dt_as_str(dt_from_epoch(start_epoch))} and "
+             f"{dt_as_str(dt_from_epoch(end_epoch))}")
     result = dhm.get_candles(start_epoch=start_epoch,
                              end_epoch=end_epoch,
                              timeframe=timeframe,
@@ -1144,7 +1151,7 @@ def get_candles(start_epoch: int,
     pbar = start_progbar(show_progress, total,
                          f"{symbol} {timeframe} Candle objects built")
     for i, r in enumerate(result, start=1):
-        candles.append(dhc.Candle(c_datetime=r["c_datetime"],
+        candles.append(Candle(c_datetime=r["c_datetime"],
                                   c_timeframe=r["c_timeframe"],
                                   c_open=r["c_open"],
                                   c_high=r["c_high"],
@@ -1181,15 +1188,15 @@ def review_candles(timeframe: str,
     if overview is None:
         print(f"No candles found for the specified timeframe {timeframe}")
         return None
-    start_epoch = dhu.dt_to_epoch(overview["earliest_dt"])
-    end_epoch = dhu.dt_to_epoch(overview["latest_dt"])
+    start_epoch = dt_to_epoch(overview["earliest_dt"])
+    end_epoch = dt_to_epoch(overview["latest_dt"])
     if check_integrity:
         log.info("Starting integrity checks and gap analysis because "
                  "check_integrity=True")
         log.info("Retrieving candles from storage for "
                  f"{symbol} {timeframe} between "
-                 f"{dhu.dt_as_str(dhu.dt_from_epoch(start_epoch))} and "
-                 f"{dhu.dt_as_str(dhu.dt_from_epoch(end_epoch))}")
+                 f"{dt_as_str(dt_from_epoch(start_epoch))} and "
+                 f"{dt_as_str(dt_from_epoch(end_epoch))}")
         candles = get_candles(timeframe=timeframe,
                               symbol=symbol.ticker,
                               start_epoch=start_epoch,
@@ -1198,10 +1205,9 @@ def review_candles(timeframe: str,
 
         # Perform a basic check on the times list vs expected for the timeframe
         log.info("Summarizing retrieved candles")
-        breakdown = dhu.summarize_candles(timeframe=timeframe,
-                                          symbol=symbol,
-                                          candles=candles,
-                                          )
+        breakdown = summarize_candles(timeframe=timeframe,
+                                      symbol=symbol,
+                                      candles=candles,)
         status = "OK"
         err_msg = ""
         summary_data = breakdown["summary_data"]
@@ -1222,24 +1228,24 @@ def review_candles(timeframe: str,
                  "candle datetimes")
         dt_actual = []
         for c in candles:
-            dt_actual.append(dhu.dt_as_str(c.c_datetime))
-        start_dt = dhu.dt_from_epoch(start_epoch)
-        end_dt = dhu.dt_from_epoch(end_epoch)
+            dt_actual.append(dt_as_str(c.c_datetime))
+        start_dt = dt_from_epoch(start_epoch)
+        end_dt = dt_from_epoch(end_epoch)
         log.info("Calculating expected candle datetimes for "
                  f"{symbol} {timeframe} between "
-                 f"{dhu.dt_as_str(start_dt)} and {dhu.dt_as_str(end_dt)}")
-        dt_expected = dhu.expected_candle_datetimes(start_dt=start_dt,
-                                                    end_dt=end_dt,
-                                                    symbol=symbol,
-                                                    timeframe=timeframe,
-                                                    )
+                 f"{dt_as_str(start_dt)} and {dt_as_str(end_dt)}")
+        dt_expected = expected_candle_datetimes(start_dt=start_dt,
+                                                end_dt=end_dt,
+                                                symbol=symbol,
+                                                timeframe=timeframe,
+                                                )
         log.info("Finished calculating expected datetimes, starting "
                  "comparison of actual (stored) vs expected candles")
 
         # Convert expected to strings for comparison and review
         dt_expected_str = []
         for d in dt_expected:
-            dt_expected_str.append(dhu.dt_as_str(d))
+            dt_expected_str.append(dt_as_str(d))
         # Ensure we don't have any timestamp duplications
         set_actual = set(dt_actual)
         set_expected = set(dt_expected_str)
@@ -1277,7 +1283,7 @@ def review_candles(timeframe: str,
             k = c.split(' ')[0]
             v = c.split(' ')[1]
             missing_candles_by_date[k].append(v)
-        missing_candles_by_date = dhu.sort_dict(dict(missing_candles_by_date))
+        missing_candles_by_date = sort_dict(dict(missing_candles_by_date))
         missing_count_by_date = {}
         for k, v in missing_candles_by_date.items():
             missing_count_by_date[k] = len(v)
@@ -1285,20 +1291,18 @@ def review_candles(timeframe: str,
         for c in missing_from_actual:
             k = c.split(' ')[1].split(':')[0]
             missing_candles_by_hour[k].append(c)
-        missing_candles_by_hour = dhu.sort_dict(dict(missing_candles_by_hour))
+        missing_candles_by_hour = sort_dict(dict(missing_candles_by_hour))
         missing_count_by_hour = {}
         for k, v in missing_candles_by_hour.items():
             missing_count_by_hour[k] = len(v)
         unexpected_in_actual = sorted(set_actual - set_expected)
         unexpected_candles_count = len(unexpected_in_actual)
         # Create human digestible ranges
-        missing_ranges = dhu.rangify_candle_times(times=missing_from_actual,
-                                                  timeframe=timeframe,
-                                                  )
-        unexpected_ranges = dhu.rangify_candle_times(
-                times=unexpected_in_actual,
-                timeframe=timeframe,
-                )
+        missing_ranges = rangify_candle_times(times=missing_from_actual,
+                                              timeframe=timeframe)
+        unexpected_ranges = rangify_candle_times(times=unexpected_in_actual,
+                                                 timeframe=timeframe,
+                                                 )
         gap_analysis = {"missing_candles_count": missing_candles_count,
                         "unexpected_candles_count": unexpected_candles_count,
                         "missing_candles": missing_from_actual,
@@ -1372,7 +1376,7 @@ def delete_candles(timeframe: str,
 # Events
 def store_event(event):
     """Write a single dhcharts.Event() to central storage"""
-    if not isinstance(event, dhc.Event):
+    if not isinstance(event, Event):
         raise TypeError(f"event {type(event)} must be a "
                         "<class dhcharts.Event> object")
     log.debug(f"Storing event: {str(event)}")
@@ -1404,12 +1408,12 @@ def get_events(symbol="ES",
     if start_epoch is None:
         start_epoch = 0
     if end_epoch is None:
-        end_epoch = dhu.dt_to_epoch(dt.now())
+        end_epoch = dt_to_epoch(dt.now())
 
     # Retrieve events from storage
     msg = (f"Retrieving events for {symbol.ticker} between "
-           f"{dhu.dt_as_str(dhu.dt_from_epoch(start_epoch))} and "
-           f"{dhu.dt_as_str(dhu.dt_from_epoch(end_epoch))}")
+           f"{dt_as_str(dt_from_epoch(start_epoch))} and "
+           f"{dt_as_str(dt_from_epoch(end_epoch))}")
     if categories:
         " ".join([msg, f"Filtering by categories: {categories}"])
     if tags:
@@ -1430,7 +1434,7 @@ def get_events(symbol="ES",
     pbar = start_progbar(show_progress, total,
                          "Event objects built")
     for i, r in enumerate(result, start=1):
-        events.append(dhc.Event(start_dt=r["start_dt"],
+        events.append(Event(start_dt=r["start_dt"],
                                 end_dt=r["end_dt"],
                                 symbol=symbol,
                                 category=r["category"],
@@ -1464,7 +1468,7 @@ def test_basics():
     print("=========================== CANDLES ==============================")
     # Test basic candle storing functionality
     print("\nStoring 2 test candles")
-    tc1 = dhc.Candle(c_datetime="2024-02-10 09:20:00",
+    tc1 = Candle(c_datetime="2024-02-10 09:20:00",
                      c_timeframe="1m",
                      c_open=5501.5,
                      c_high=5510,
@@ -1474,7 +1478,7 @@ def test_basics():
                      c_symbol="DELETEME",
                      )
     tc1.store()
-    tc2 = dhc.Candle(c_datetime="2024-02-10 09:21:00",
+    tc2 = Candle(c_datetime="2024-02-10 09:21:00",
                      c_timeframe="1m",
                      c_open=5503.5,
                      c_high=5512,
@@ -1493,21 +1497,21 @@ def test_basics():
     for r in result:
         print(r.__dict__)
     print("\nAnd drop the test collection to clean up")
-    dhm.drop_collection("candles_DELETEME_1m")
+    drop_collection("candles_DELETEME_1m")
 
     print("\nLets check the collections list to confirm it no longer exists")
-    collections = dhm.list_collections()
+    collections = list_collections()
     print(collections)
     if "candles_DELETEME_1m" in collections:
         raise Exception("Oops, why is 'candles_DELETEME_1m' still there?!")
 
     # Test storing raw candles read from a csv i.e. daily updates
     print("\nStoring 5/10 candles from testcandles.csv with date filtering")
-    candles = dhu.read_candles_from_csv(start_dt='2024-01-01 00:00:00',
-                                        end_dt='2024-01-02 00:00:00',
-                                        filepath='testcandles.csv',
-                                        symbol='DELETEME',
-                                        )
+    candles = read_candles_from_csv(start_dt='2024-01-01 00:00:00',
+                                    end_dt='2024-01-02 00:00:00',
+                                    filepath='testcandles.csv',
+                                    symbol='DELETEME',
+                                    )
     for c in candles:
         store_candle(c)
     print("\nCheck a summary of them")
@@ -1521,7 +1525,7 @@ def test_basics():
     for r in result:
         print(r.__dict__)
     print("\nAnd drop the test collection to clean up")
-    dhm.drop_collection("candles_DELETEME_1m")
+    drop_collection("candles_DELETEME_1m")
 
     # Test candle integrity check process
     print("\nChecking integrity of stored r1h candles")
@@ -1565,16 +1569,16 @@ def test_basics():
     print("\n----------------------------------------------------------------")
 
     # Prompt to run full reviews of stored items
-    prompt = dhu.prompt_yn("List all stored ES events?")
+    prompt = prompt_yn("List all stored ES events?")
     if prompt:
-        events = get_events(start_epoch=dhu.dt_to_epoch("2000-01-01 00:00:00"),
-                            end_epoch=dhu.dt_to_epoch(dt.now()),
+        events = get_events(start_epoch=dt_to_epoch("2000-01-01 00:00:00"),
+                            end_epoch=dt_to_epoch(dt.now()),
                             symbol="ES",
                             )
         for e in events:
             print(e)
     print("\n----------------------------------------------------------------")
-    prompt = dhu.prompt_yn("Run full integrity check of stored candles")
+    prompt = prompt_yn("Run full integrity check of stored candles")
     if prompt:
         for t in ['1m', '5m', '15m', 'r1h', 'e1h']:
             integrity = review_candles(timeframe=t,

@@ -15,8 +15,10 @@ import logging
 from dotenv import load_dotenv, find_dotenv
 from datetime import datetime as dt
 from datetime import timedelta
-import dhutil as dhu
-import dhcharts as dhc
+from dhutil import (
+    ProgBar, prompt_yn, valid_timeframe, dt_as_str, dt_from_epoch,
+    dt_to_epoch, log_say)
+from dhcharts import Candle
 
 log = logging.getLogger("dhmongo")
 log.addHandler(logging.NullHandler())
@@ -49,15 +51,15 @@ except Exception:
 ##############################################################################
 # Progress bar helper functions
 def start_progbar(show_progress: bool, total: int,
-                  desc: str) -> dhu.ProgBar:
+                  desc: str) -> ProgBar:
     """Start a progress bar if show_progress is True and total > 0.
     Returns ProgBar object or None."""
     if show_progress and total > 0:
-        return dhu.ProgBar(total=total, desc=desc)
+        return ProgBar(total=total, desc=desc)
     return None
 
 
-def update_progbar(pbar: dhu.ProgBar, index: int, total: int,
+def update_progbar(pbar: ProgBar, index: int, total: int,
                    update_every: int = 500):
     """Update progress bar at intervals and at final item."""
     if pbar is not None and (index % update_every == 0 or
@@ -65,7 +67,7 @@ def update_progbar(pbar: dhu.ProgBar, index: int, total: int,
         pbar.update(index)
 
 
-def finish_progbar(pbar: dhu.ProgBar):
+def finish_progbar(pbar: ProgBar):
     """Finish and cleanup progress bar if it exists."""
     if pbar is not None:
         pbar.finish()
@@ -97,9 +99,9 @@ def clear_collection(collection: str):
     """Deletes all records from a collection but keeps the collection itself
     and any indexes/settings intact."""
     c = db[collection]
-    if not dhu.prompt_yn(f"Clear all records from collection "
-                         f"'{collection}'? This cannot be undone.  You should "
-                         "probably do a backup first..."):
+    if not prompt_yn(f"Clear all records from collection "
+                     f"'{collection}'? This cannot be undone.  You should "
+                     "probably do a backup first..."):
         return None
 
     return c.delete_many({})
@@ -108,11 +110,11 @@ def clear_collection(collection: str):
 def drop_collection(collection: str):
     """Irretrievable drops a collection from the store.  Use carefully!"""
     c = db[collection]
-    if not dhu.prompt_yn(f"Drop collection '{collection}'? This cannot be"
-                         "undone and will delete all data, indexes, and other "
-                         "collection settings. You probably actually want to "
-                         "use clear_collection() instead, right?  Are you "
-                         "SURE you want to drop this?"):
+    if not prompt_yn(f"Drop collection '{collection}'? This cannot be"
+                     "undone and will delete all data, indexes, and other "
+                     "collection settings. You probably actually want to "
+                     "use clear_collection() instead, right?  Are you "
+                     "SURE you want to drop this?"):
         return None
 
     return c.drop()
@@ -510,9 +512,9 @@ def store_candle(c_datetime,
                  c_time: str,
                  ):
     """Stores a single candle object in mongo.  Overwrites if it exists."""
-    dhu.valid_timeframe(c_timeframe)
+    valid_timeframe(c_timeframe)
     collection = f"candles_{c_symbol}_{c_timeframe}"
-    c_dt = dhu.dt_as_str(c_datetime)
+    c_dt = dt_as_str(c_datetime)
     candle_doc = {"c_datetime": c_dt,
                   "c_timeframe": c_timeframe,
                   "c_open": c_open,
@@ -575,10 +577,10 @@ def review_candles(timeframe: str,
     except IndexError:
         return None
     else:
-        earliest_epoch = dhu.dt_from_epoch(epochs['earliest_epoch'])
-        earliest_dt = dhu.dt_as_str(earliest_epoch)
-        latest_epoch = dhu.dt_from_epoch(epochs['latest_epoch'])
-        latest_dt = dhu.dt_as_str(latest_epoch)
+        earliest_epoch = dt_from_epoch(epochs['earliest_epoch'])
+        earliest_dt = dt_as_str(earliest_epoch)
+        latest_epoch = dt_from_epoch(epochs['latest_epoch'])
+        latest_dt = dt_as_str(latest_epoch)
         count = c.count_documents({})
         result = {"earliest_dt": earliest_dt, "latest_dt": latest_dt,
                   "latest_dt": latest_dt, "latest_dt": latest_dt,
@@ -598,9 +600,9 @@ def delete_candles(timeframe: str,
     if earliest_dt is None:
         earliest_dt = "1970-01-01 00:00:00"
     if latest_dt is None:
-        latest_dt = dhu.dt_as_str(dt.now())
-    start_epoch = dhu.dt_to_epoch(earliest_dt)
-    end_epoch = dhu.dt_to_epoch(latest_dt)
+        latest_dt = dt_as_str(dt.now())
+    start_epoch = dt_to_epoch(earliest_dt)
+    end_epoch = dt_to_epoch(latest_dt)
     result = c.delete_many({"$and": [{"c_epoch": {"$gte": start_epoch}},
                                      {"c_epoch": {"$lte": end_epoch}},
                                      ]})
@@ -629,11 +631,11 @@ def get_indicator_datapoints(ind_id: str,
     if earliest_dt is None:
         earliest_epoch = 0
     else:
-        earliest_epoch = dhu.dt_to_epoch(earliest_dt)
+        earliest_epoch = dt_to_epoch(earliest_dt)
     if latest_dt is None:
-        latest_epoch = dhu.dt_to_epoch(dt.now())
+        latest_epoch = dt_to_epoch(dt.now())
     else:
-        latest_epoch = dhu.dt_to_epoch(latest_dt)
+        latest_epoch = dt_to_epoch(latest_dt)
     c = db[dp_collection]
     result = c.find({"$and": [{"ind_id": ind_id},
                               {"epoch": {"$gte": earliest_epoch}},
@@ -682,10 +684,10 @@ def review_indicators(meta_collection: str,
     else:
         for i in list(dps):
             ind_id = i['_id']
-            earliest_epoch = dhu.dt_from_epoch(i['earliest_epoch'])
-            earliest_dt = dhu.dt_as_str(earliest_epoch)
-            latest_epoch = dhu.dt_from_epoch(i['latest_epoch'])
-            latest_dt = dhu.dt_as_str(latest_epoch)
+            earliest_epoch = dt_from_epoch(i['earliest_epoch'])
+            earliest_dt = dt_as_str(earliest_epoch)
+            latest_epoch = dt_from_epoch(i['latest_epoch'])
+            latest_dt = dt_as_str(latest_epoch)
             count = i['count']
             this = {"ind_id": ind_id, "count": count,
                     "earliest_dt": earliest_dt, "latest_dt": latest_dt,
@@ -751,8 +753,8 @@ def store_event(start_dt,
                 end_epoch: int,
                 ):
     """Write a single dhcharts.Event() to mongo"""
-    event_doc = {"start_dt": dhu.dt_as_str(start_dt),
-                 "end_dt": dhu.dt_as_str(end_dt),
+    event_doc = {"start_dt": dt_as_str(start_dt),
+                 "end_dt": dt_as_str(end_dt),
                  "category": category,
                  "tags": tags,
                  "notes": notes,
@@ -845,7 +847,7 @@ def test_basics():
                           c_close=5501.5,
                           c_volume=500,
                           c_symbol="DELETEME",
-                          c_epoch=dhu.dt_to_epoch("2024-01-01 12:30:00"),
+                          c_epoch=dt_to_epoch("2024-01-01 12:30:00"),
                           c_date="2024-01-01",
                           c_time="12:30:00",
                           )
@@ -858,7 +860,7 @@ def test_basics():
                           c_close=5510,
                           c_volume=400,
                           c_symbol="DELETEME",
-                          c_epoch=dhu.dt_to_epoch("2024-01-05 14:35:00"),
+                          c_epoch=dt_to_epoch("2024-01-05 14:35:00"),
                           c_date="2024-01-05",
                           c_time="14:35:00"
                           )
@@ -884,15 +886,15 @@ def test_basics():
     print(result)
 
     print("\nNow try to store a Candle using it's build in method")
-    test_candle = dhc.Candle(c_datetime="2024-02-10 09:20:00",
-                             c_timeframe="1m",
-                             c_open=5501.5,
-                             c_high=5510,
-                             c_low=5500.5,
-                             c_close=5510,
-                             c_volume=400,
-                             c_symbol="DELETEME",
-                             )
+    test_candle = Candle(c_datetime="2024-02-10 09:20:00",
+                         c_timeframe="1m",
+                         c_open=5501.5,
+                         c_high=5510,
+                         c_low=5500.5,
+                         c_close=5510,
+                         c_volume=400,
+                         c_symbol="DELETEME",
+                         )
     test_candle.store()
     print("\nsearch to see if it's there...")
     result = c.find()

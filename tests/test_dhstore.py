@@ -1,7 +1,12 @@
 import pytest
 import site
 site.addsitedir('modulepaths')
-import dhstore as dhs
+from dhstore import (
+    get_trades_by_field, delete_trades, get_tradeseries_by_field,
+    delete_tradeseries, store_trades, store_tradeseries, get_candles,
+    store_candles, store_candle, review_candles, delete_candles,
+    get_symbol_by_ticker, get_events, delete_backtests, get_backtests_by_field,
+    review_tradeseries, review_trades)
 from dhtrades import TradeSeries, Trade
 # TODO Go through dhstore.py every function/class and write out comments
 #      here for things that need testing
@@ -51,13 +56,13 @@ from dhtrades import TradeSeries, Trade
 
 
 def clear_storage_by_bt_id(bt_id):
-    dhs.delete_backtests(symbol="ES", field="bt_id", value=bt_id,
-                         include_tradeseries=True, include_trades=True)
-    r = dhs.get_backtests_by_field(field="bt_id", value=bt_id)
+    delete_backtests(symbol="ES", field="bt_id", value=bt_id,
+                    include_tradeseries=True, include_trades=True)
+    r = get_backtests_by_field(field="bt_id", value=bt_id)
     assert len(r) == 0
-    r = dhs.get_tradeseries_by_field(field="bt_id", value=bt_id)
+    r = get_tradeseries_by_field(field="bt_id", value=bt_id)
     assert len(r) == 0
-    r = dhs.get_trades_by_field(field="bt_id", value=bt_id)
+    r = get_trades_by_field(field="bt_id", value=bt_id)
     assert len(r) == 0
 
 
@@ -93,26 +98,26 @@ def test_TradeSeries_and_Trade_integrity_checks():
         prof_target=5001, stop_target=4000,
         ts_id=ts_good.ts_id, bt_id=ts_good.bt_id))
     ts_good.store(store_trades=True)
-    stored = dhs.get_tradeseries_by_field(field="bt_id", value=bt)
+    stored = get_tradeseries_by_field(field="bt_id", value=bt)
     assert len(stored) == 1
-    stored = dhs.get_trades_by_field(field="bt_id", value=bt)
+    stored = get_trades_by_field(field="bt_id", value=bt)
     assert len(stored) == 2
 
     # Confirm TradeSEries storage integrity check against test bt_id passes
-    r = dhs.review_tradeseries(bt_id=bt, check_integrity=True)
+    r = review_tradeseries(bt_id=bt, check_integrity=True)
     assert r["integrity"]["status"] == "OK"
     assert r["integrity"]["issues"] is None
 
     # Confirm Trade storage integrity check against bt_id passes
-    r = dhs.review_trades(bt_id=bt, check_integrity=True)
+    r = review_trades(bt_id=bt, check_integrity=True)
     assert r["integrity"]["status"] == "OK"
     assert r["integrity"]["issues"] is None
 
     # Clean from storage and verify gone
     ts_good.delete_from_storage(include_trades=True)
-    stored = dhs.get_tradeseries_by_field(field="bt_id", value=bt)
+    stored = get_tradeseries_by_field(field="bt_id", value=bt)
     assert len(stored) == 0
-    stored = dhs.get_trades_by_field(field="bt_id", value=bt)
+    stored = get_trades_by_field(field="bt_id", value=bt)
     assert len(stored) == 0
 
     # Store TradeSeries with multiple Trades opening in the same bar
@@ -138,13 +143,13 @@ def test_TradeSeries_and_Trade_integrity_checks():
         prof_target=5001, stop_target=4000,
         ts_id=ts_fail.ts_id, bt_id=ts_fail.bt_id))
     ts_fail.store(store_trades=True)
-    stored = dhs.get_tradeseries_by_field(field="bt_id", value=bt)
+    stored = get_tradeseries_by_field(field="bt_id", value=bt)
     assert len(stored) == 1
-    stored = dhs.get_trades_by_field(field="bt_id", value=bt)
+    stored = get_trades_by_field(field="bt_id", value=bt)
     assert len(stored) == 2
 
     # Confirm TradeSeries integrity check fails test bt_id fails
-    r = dhs.review_tradeseries(bt_id=bt, check_integrity=True)
+    r = review_tradeseries(bt_id=bt, check_integrity=True)
     assert r["integrity"]["status"] == "ERRORS"
     assert r["integrity"]["issues"] == {"trade_overlaps": [
         {"issue_type": "Trade timeframe bar overlap",
@@ -158,9 +163,9 @@ def test_TradeSeries_and_Trade_integrity_checks():
 
     # Clean from storage and verify gone
     ts_fail.delete_from_storage(include_trades=True)
-    stored = dhs.get_tradeseries_by_field(field="bt_id", value=bt)
+    stored = get_tradeseries_by_field(field="bt_id", value=bt)
     assert len(stored) == 0
-    stored = dhs.get_trades_by_field(field="bt_id", value=bt)
+    stored = get_trades_by_field(field="bt_id", value=bt)
     assert len(stored) == 0
 
     # Store TradeSeries with a Trade opening in the same bar that the prior
@@ -187,12 +192,12 @@ def test_TradeSeries_and_Trade_integrity_checks():
         prof_target=5001, stop_target=4000,
         ts_id=ts_fail.ts_id, bt_id=ts_fail.bt_id))
     ts_fail.store(store_trades=True)
-    stored = dhs.get_tradeseries_by_field(field="bt_id", value=bt)
+    stored = get_tradeseries_by_field(field="bt_id", value=bt)
     assert len(stored) == 1
-    stored = dhs.get_trades_by_field(field="bt_id", value=bt)
+    stored = get_trades_by_field(field="bt_id", value=bt)
     assert len(stored) == 2
     # Confirm storage integrity check against test bt_id fails
-    r = dhs.review_tradeseries(bt_id=bt, check_integrity=True)
+    r = review_tradeseries(bt_id=bt, check_integrity=True)
     assert r["integrity"]["status"] == "ERRORS"
     assert r["integrity"]["issues"] == {'trade_overlaps': [
         {'issue_type': 'Trade timeframe bar overlap',
@@ -205,9 +210,9 @@ def test_TradeSeries_and_Trade_integrity_checks():
          'prev_trade_close_tf': '2025-01-05 11:00:00'}]}
     # Clean from storage and verify gone
     ts_fail.delete_from_storage(include_trades=True)
-    stored = dhs.get_tradeseries_by_field(field="bt_id", value=bt)
+    stored = get_tradeseries_by_field(field="bt_id", value=bt)
     assert len(stored) == 0
-    stored = dhs.get_trades_by_field(field="bt_id", value=bt)
+    stored = get_trades_by_field(field="bt_id", value=bt)
     assert len(stored) == 0
 
     # Add a multiday Trade and confirm Trades integrity check fails
@@ -234,25 +239,25 @@ def test_TradeSeries_and_Trade_integrity_checks():
         prof_target=5001, stop_target=4000,
         ts_id=ts_fail.ts_id, bt_id=ts_fail.bt_id))
     ts_fail.store(store_trades=True)
-    stored = dhs.get_tradeseries_by_field(field="bt_id", value=bt)
+    stored = get_tradeseries_by_field(field="bt_id", value=bt)
     assert len(stored) == 1
-    stored = dhs.get_trades_by_field(field="bt_id", value=bt)
+    stored = get_trades_by_field(field="bt_id", value=bt)
     assert len(stored) == 2
     # Confirm Trade integrity check against test bt_id fails
-    r = dhs.review_trades(bt_id=bt, check_integrity=True)
+    r = review_trades(bt_id=bt, check_integrity=True)
     assert r["integrity"]["status"] == "ERRORS"
     assert r["integrity"]["issues"] == ["1 invalid multiday trades found"]
     # Confirm Trade multi_ok list passes otherwise invalid Trades
-    r = dhs.review_trades(bt_id=bt,
-                          check_integrity=True,
-                          multi_ok=["DELETEME"])
+    r = review_trades(bt_id=bt,
+                      check_integrity=True,
+                      multi_ok=["DELETEME"])
     assert r["integrity"]["status"] == "OK"
     assert r["integrity"]["issues"] is None
     # Clean from storage and verify gone
     ts_fail.delete_from_storage(include_trades=True)
-    stored = dhs.get_tradeseries_by_field(field="bt_id", value=bt)
+    stored = get_tradeseries_by_field(field="bt_id", value=bt)
     assert len(stored) == 0
-    stored = dhs.get_trades_by_field(field="bt_id", value=bt)
+    stored = get_trades_by_field(field="bt_id", value=bt)
     assert len(stored) == 0
 
     # Confirm duplicate trades fail during Trade integrity check
@@ -278,17 +283,17 @@ def test_TradeSeries_and_Trade_integrity_checks():
         prof_target=5001, stop_target=4000,
         ts_id=ts_fail.ts_id, bt_id=ts_fail.bt_id))
     ts_fail.store(store_trades=True)
-    stored = dhs.get_tradeseries_by_field(field="bt_id", value=bt)
+    stored = get_tradeseries_by_field(field="bt_id", value=bt)
     assert len(stored) == 1
     # While we stored 2 trades, the second should have overwritten the first
     # by design.  Therefor we only see the second Trade in storage
-    stored = dhs.get_trades_by_field(field="bt_id", value=bt)
+    stored = get_trades_by_field(field="bt_id", value=bt)
     assert len(stored) == 1
     assert stored[0].open_dt == "2025-01-06 10:03:24"
     assert stored[0].close_dt == "2025-01-06 12:32:15"
     # Run the first trade's .store() method to try to write it directly
     ts_fail.trades[0].store()
-    stored = dhs.get_trades_by_field(field="bt_id", value=bt)
+    stored = get_trades_by_field(field="bt_id", value=bt)
     # Now we should still have only 1 trade, but it's the first not the second
     # this time due to another overwrite
     assert len(stored) == 1
@@ -298,14 +303,14 @@ def test_TradeSeries_and_Trade_integrity_checks():
     ts_fail.trades[0].name = "{bt}_multiday_fail_duplicate"
     ts_fail.trades[0].store()
     # Confirm integrity check now fails due to duplicate trade
-    r = dhs.review_trades(bt_id=bt, check_integrity=True)
+    r = review_trades(bt_id=bt, check_integrity=True)
     assert r["integrity"]["status"] == "ERRORS"
     assert r["integrity"]["issues"] == ["1 duplicate trades found"]
     # Clean from storage and verify gone
     ts_fail.delete_from_storage(include_trades=True)
-    stored = dhs.get_tradeseries_by_field(field="bt_id", value=bt)
+    stored = get_tradeseries_by_field(field="bt_id", value=bt)
     assert len(stored) == 0
-    stored = dhs.get_trades_by_field(field="bt_id", value=bt)
+    stored = get_trades_by_field(field="bt_id", value=bt)
     assert len(stored) == 0
 
     # Cleanup storage by bt_id in case anything was left behind somehow

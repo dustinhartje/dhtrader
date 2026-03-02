@@ -8,8 +8,9 @@ import logging
 import json
 import progressbar
 from tabulate import tabulate
-import dhcharts as dhc
-import dhstore as dhs
+from dhcharts import Candle
+from dhstore import (
+    get_symbol_by_ticker, get_candles, get_events, review_candles)
 
 TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', 'r1d', 'e1d', 'r1w', 'e1w',
               'r1mo', 'e1mo']
@@ -414,7 +415,7 @@ def next_candle_start(dt,
     after the given datetime (dt).  Will not return given datetime even if
     it starts a candle."""
     if isinstance(symbol, str):
-        symbol = dhs.get_symbol_by_ticker(ticker=symbol)
+        symbol = get_symbol_by_ticker(ticker=symbol)
     valid_trading_hours(trading_hours)
     check_tf_th_compatibility(tf=timeframe, th=trading_hours)
     # Start with a rounded minute, no seconds or ms supported
@@ -527,23 +528,22 @@ def generate_zero_volume_candle(c_datetime,
     else:
         raise ValueError(f"timeframe: {timeframe} is not currently supported")
     prior_epoch = dt_to_epoch(dt_as_dt(c_datetime) - delta)
-    prior_candle = dhs.get_candles(start_epoch=prior_epoch,
-                                   end_epoch=prior_epoch,
-                                   timeframe=timeframe,
-                                   symbol=symbol,
-                                   )
+    prior_candle = get_candles(start_epoch=prior_epoch,
+                               end_epoch=prior_epoch,
+                               timeframe=timeframe,
+                               symbol=symbol)
     # Ensure we got back exactly one Candle and use it's closing value
-    if len(prior_candle) == 1 and isinstance(prior_candle[0], dhc.Candle):
+    if len(prior_candle) == 1 and isinstance(prior_candle[0], Candle):
         v = prior_candle[0].c_close
-        result = dhc.Candle(c_datetime=c_datetime,
-                            c_timeframe=timeframe,
-                            c_open=v,
-                            c_high=v,
-                            c_low=v,
-                            c_close=v,
-                            c_volume=0,
-                            c_symbol=symbol,
-                            )
+        result = Candle(c_datetime=c_datetime,
+                        c_timeframe=timeframe,
+                        c_open=v,
+                        c_high=v,
+                        c_low=v,
+                        c_close=v,
+                        c_volume=0,
+                        c_symbol=symbol,
+        )
     else:
         result = None
 
@@ -562,7 +562,7 @@ def expected_candle_datetimes(start_dt,
     Optionally also exclude anything within known Event times matching
     exclude_categories."""
     if isinstance(symbol, str):
-        symbol = dhs.get_symbol_by_ticker(ticker=symbol)
+        symbol = get_symbol_by_ticker(ticker=symbol)
     if symbol.ticker == "ES":
         if timeframe == "r1h":
             trading_hours = "rth"
@@ -595,10 +595,10 @@ def expected_candle_datetimes(start_dt,
     # Remove any candles falling inside of non-standard market closures
     start_epoch = dt_to_epoch(start_dt)
     end_epoch = dt_to_epoch(end_dt)
-    all_events = dhs.get_events(start_epoch=start_epoch,
-                                end_epoch=end_epoch,
-                                symbol=symbol,
-                                )
+    all_events = get_events(start_epoch=start_epoch,
+                            end_epoch=end_epoch,
+                            symbol=symbol,
+                            )
     closures = []
     result = []
     # Only evaluate market Closed events
@@ -642,17 +642,17 @@ def remediate_candle_gaps(timeframe: str = "1m",
     else:
         raise ValueError("timeframe: {timeframe} is not currently supported")
     if isinstance(symbol, str):
-        symbol = dhs.get_symbol_by_ticker(ticker=symbol)
+        symbol = get_symbol_by_ticker(ticker=symbol)
     print(f"Remediating {timeframe} Candle Gaps for {symbol.ticker}")
     print(f"Auto fixing obvious zero volume gaps: {fix_obvious}")
     print(f"Prompting before fixing unclear candles: {prompt}")
     print(f"Dry Run Mode (only simulate changes): {dry_run}")
     print("Reviewing candles with integrity checks to identify issues...")
-    review = dhs.review_candles(timeframe='1m',
-                                symbol=symbol,
-                                check_integrity=True,
-                                return_detail=True,
-                                )
+    review = review_candles(timeframe='1m',
+                            symbol=symbol,
+                            check_integrity=True,
+                            return_detail=True,
+                            )
     print("Review complete, beginning remediation operations")
     missing_candles = review["missing_candles_by_date"]
     count_date = review["missing_count_by_date"]
@@ -678,16 +678,16 @@ def remediate_candle_gaps(timeframe: str = "1m",
             pre_end = dt_to_epoch(c_dt - delta)
             post_start = dt_to_epoch(c_dt + delta)
             post_end = dt_to_epoch(c_dt + (delta * 5))
-            pre_cans = dhs.get_candles(timeframe=timeframe,
-                                       symbol=symbol.ticker,
-                                       start_epoch=pre_start,
-                                       end_epoch=pre_end,
-                                       )
-            post_cans = dhs.get_candles(timeframe=timeframe,
-                                        symbol=symbol.ticker,
-                                        start_epoch=post_start,
-                                        end_epoch=post_end,
-                                        )
+            pre_cans = get_candles(timeframe=timeframe,
+                                   symbol=symbol.ticker,
+                                   start_epoch=pre_start,
+                                   end_epoch=pre_end,
+                                   )
+            post_cans = get_candles(timeframe=timeframe,
+                                    symbol=symbol.ticker,
+                                    start_epoch=post_start,
+                                    end_epoch=post_end,
+                                    )
             # Print an overview of each candle and surrounding candles
             # for human review before fixing
             this_time = str(c)
@@ -902,15 +902,15 @@ def read_candles_from_csv(start_dt,
         for r in rows:
             this_dt = dt.strptime(r[0], '%Y-%m-%d %H:%M:%S')
             if start_dt <= this_dt <= end_dt:
-                c = dhc.Candle(c_datetime=this_dt,
-                               c_timeframe=timeframe,
-                               c_symbol=symbol,
-                               c_open=r[1],
-                               c_high=r[2],
-                               c_low=r[3],
-                               c_close=r[4],
-                               c_volume=r[5],
-                               )
+                c = Candle(c_datetime=this_dt,
+                           c_timeframe=timeframe,
+                           c_symbol=symbol,
+                           c_open=r[1],
+                           c_high=r[2],
+                           c_low=r[3],
+                           c_close=r[4],
+                           c_volume=r[5],
+                           )
                 candles.append(c)
 
     return candles
@@ -934,11 +934,11 @@ def store_candles_from_csv(filepath: str,
     for c in candles:
         c.store()
     print("Done storing, attempting to retrieve them for validation.")
-    new_candles = dhs.get_candles(start_epoch=dt_to_epoch(start_dt),
-                                  end_epoch=dt_to_epoch(end_dt),
-                                  timeframe=timeframe,
-                                  symbol=symbol,
-                                  )
+    new_candles = get_candles(start_epoch=dt_to_epoch(start_dt),
+                              end_epoch=dt_to_epoch(end_dt),
+                              timeframe=timeframe,
+                              symbol=symbol,
+                              )
     new_dts = []
     for c in new_candles:
         new_dts.append(dt_as_str(c.c_datetime))
@@ -961,11 +961,11 @@ def compare_candles_vs_csv(filepath,
         expect_missing_from_storage = []
     # Determine start/end datetimes from stored candles if not provided
     if start_dt is None or end_dt is None:
-        review = dhs.review_candles(timeframe=timeframe,
-                                    symbol=symbol,
-                                    check_integrity=False,
-                                    return_detail=False,
-                                    )
+        review = review_candles(timeframe=timeframe,
+                                symbol=symbol,
+                                check_integrity=False,
+                                return_detail=False,
+                                )
         if review is None:
             print(f"No {timeframe} candles found in storage, skipping...")
             return None
@@ -977,11 +977,11 @@ def compare_candles_vs_csv(filepath,
     # Get candles from storage
     start_epoch = dt_to_epoch(start_dt)
     end_epoch = dt_to_epoch(end_dt)
-    stored_cans = dhs.get_candles(start_epoch=start_epoch,
-                                  end_epoch=end_epoch,
-                                  timeframe=timeframe,
-                                  symbol=symbol,
-                                  )
+    stored_cans = get_candles(start_epoch=start_epoch,
+                              end_epoch=end_epoch,
+                              timeframe=timeframe,
+                              symbol=symbol,
+                              )
     # Get candles from CSV
     csv_cans = read_candles_from_csv(start_dt=start_dt,
                                      end_dt=end_dt,

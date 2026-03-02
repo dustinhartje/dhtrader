@@ -2,7 +2,9 @@ import site
 # This hacky crap is needed to help imports between files in dhtrader
 # find each other when run by a script in another folder (even tests).
 site.addsitedir('modulepaths')
-import dhcharts as dhc
+from dhcharts import (
+    Candle, Chart, Day, Event, Indicator, IndicatorDataPoint,
+    IndicatorEMA, IndicatorSMA, Symbol)
 from dhutil import dt_as_dt, dt_as_str, dow_name
 
 # TODO think through which tests can be done simply by creating and calcing,

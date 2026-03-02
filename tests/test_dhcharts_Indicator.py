@@ -4,8 +4,14 @@ import site
 # This hacky crap is needed to help imports between files in dhtrader
 # find each other when run by a script in another folder (even tests).
 site.addsitedir('modulepaths')
-import dhcharts as dhc
-import dhstore as dhs
+from dhcharts import (
+    Candle, Chart, Day, Event, Indicator, IndicatorDataPoint,
+    IndicatorEMA, IndicatorSMA, Symbol)
+from dhstore import (
+    get_trades_by_field, delete_trades, get_tradeseries_by_field,
+    delete_tradeseries, store_trades, store_tradeseries, get_candles,
+    store_candles, store_candle, review_candles, delete_candles,
+    get_symbol_by_ticker, get_events, get_indicator, delete_indicator)
 
 
 # TODO think through which tests can be done simply by creating and calcing,
@@ -75,7 +81,7 @@ import dhstore as dhs
 # Create a base class Indicator and calculate
 def hide_Indicator_demo_hod_creation_and_calculation():
     # Confirm RTH datapoints are calculated
-    ind = dhc.Indicator(name="DELETEME-hod-demo",
+    ind = Indicator(name="DELETEME-hod-demo",
                         description="Code testing use only",
                         timeframe="15m",
                         trading_hours="rth",
@@ -164,7 +170,7 @@ def Indicator_spotcheck_ES_eth_5m_EMA_close_l9_s2():
 
 
 # def test_Indicator_calculated_spotcheck():
-#     ind_calced = dhs.get_indicator(ind_id="",
+#     ind_calced = get_indicator(ind_id="",
 #                                    autoload_datapoints=False,
 #                                    )
 #     ind_calced.start_dt = ""
@@ -175,7 +181,7 @@ def Indicator_spotcheck_ES_eth_5m_EMA_close_l9_s2():
 #
 #
 # def test_Indicator_storage_spotcheck_():
-#     ind_stored = dhs.get_indicator(ind_id="",
+#     ind_stored = get_indicator(ind_id="",
 #                                    autoload_datapoints=False,
 #                                    )
 #     ind_stored.load_datapoints()
@@ -188,7 +194,7 @@ def Indicator_spotcheck_ES_eth_5m_EMA_close_l20_s2(i):
 
 
 def hide_Indicator_calculated_spotcheck_ES_eth_5m_EMA_close_l20_s2():
-    ind_calced = dhs.get_indicator(ind_id="ES_eth_5m_EMA_close_l20_s2",
+    ind_calced = get_indicator(ind_id="ES_eth_5m_EMA_close_l20_s2",
                                    autoload_datapoints=False,
                                    )
     ind_calced.start_dt = "2025-01-01 00:00:00"
@@ -199,7 +205,7 @@ def hide_Indicator_calculated_spotcheck_ES_eth_5m_EMA_close_l20_s2():
 
 
 def hide_Indicator_storage_spotcheck_ES_eth_5m_EMA_close_l20_s2():
-    ind_stored = dhs.get_indicator(ind_id="ES_eth_5m_EMA_close_l20_s2",
+    ind_stored = get_indicator(ind_id="ES_eth_5m_EMA_close_l20_s2",
                                    autoload_datapoints=False,
                                    )
     ind_stored.load_datapoints()
@@ -253,7 +259,7 @@ def Indicator_spotcheck_ES_eth_15m_EMA_close_l9_s2(i):
 
 @pytest.mark.storage
 def test_Indicator_calculated_spotcheck_ES_eth_15m_EMA_close_l9_s2():
-    ind_calced = dhs.get_indicator(ind_id="ES_eth_15m_EMA_close_l9_s2",
+    ind_calced = get_indicator(ind_id="ES_eth_15m_EMA_close_l9_s2",
                                    autoload_datapoints=False,
                                    )
     ind_calced.start_dt = "2025-01-28 00:00:00"
@@ -265,7 +271,7 @@ def test_Indicator_calculated_spotcheck_ES_eth_15m_EMA_close_l9_s2():
 
 @pytest.mark.storage
 def test_Indicator_storage_spotcheck_ES_eth_15m_EMA_close_l9_s2():
-    ind_stored = dhs.get_indicator(ind_id="ES_eth_15m_EMA_close_l9_s2",
+    ind_stored = get_indicator(ind_id="ES_eth_15m_EMA_close_l9_s2",
                                    autoload_datapoints=False,
                                    )
     ind_stored.load_datapoints()
@@ -318,7 +324,7 @@ def Indicator_spotcheck_ES_eth_15m_EMA_close_l20_s2(i):
 
 @pytest.mark.storage
 def test_Indicator_calculated_spotcheck_ES_eth_15m_EMA_close_l20_s2():
-    ind_calced = dhs.get_indicator(ind_id="ES_eth_15m_EMA_close_l20_s2",
+    ind_calced = get_indicator(ind_id="ES_eth_15m_EMA_close_l20_s2",
                                    autoload_datapoints=False,
                                    )
     ind_calced.start_dt = "2024-11-27 00:00:00"
@@ -330,7 +336,7 @@ def test_Indicator_calculated_spotcheck_ES_eth_15m_EMA_close_l20_s2():
 
 @pytest.mark.storage
 def test_Indicator_storage_spotcheck_ES_eth_15m_EMA_close_l20_s2():
-    ind_stored = dhs.get_indicator(ind_id="ES_eth_15m_EMA_close_l20_s2",
+    ind_stored = get_indicator(ind_id="ES_eth_15m_EMA_close_l20_s2",
                                    autoload_datapoints=False,
                                    )
     ind_stored.load_datapoints()
@@ -384,7 +390,7 @@ def Indicator_spotcheck_ES_eth_e1h_EMA_close_l9_s2(i):
 
 @pytest.mark.storage
 def test_Indicator_calculated_spotcheck_ES_eth_e1h_EMA_close_l9_s2():
-    ind_calced = dhs.get_indicator(ind_id="ES_eth_e1h_EMA_close_l9_s2",
+    ind_calced = get_indicator(ind_id="ES_eth_e1h_EMA_close_l9_s2",
                                    autoload_datapoints=False,
                                    )
     ind_calced.start_dt = "2024-10-28 00:00:00"
@@ -396,7 +402,7 @@ def test_Indicator_calculated_spotcheck_ES_eth_e1h_EMA_close_l9_s2():
 
 @pytest.mark.storage
 def test_Indicator_storage_spotcheck_ES_eth_e1h_EMA_close_l9_s2():
-    ind_stored = dhs.get_indicator(ind_id="ES_eth_e1h_EMA_close_l9_s2",
+    ind_stored = get_indicator(ind_id="ES_eth_e1h_EMA_close_l9_s2",
                                    autoload_datapoints=False,
                                    )
     ind_stored.load_datapoints()
@@ -456,7 +462,7 @@ def Indicator_spotcheck_ES_eth_e1h_EMA_close_l20_s2(i):
 
 @pytest.mark.storage
 def test_Indicator_calculated_spotcheck_ES_eth_e1h_EMA_close_l20_s2():
-    ind_calced = dhs.get_indicator(ind_id="ES_eth_e1h_EMA_close_l20_s2",
+    ind_calced = get_indicator(ind_id="ES_eth_e1h_EMA_close_l20_s2",
                                    autoload_datapoints=False,
                                    )
     ind_calced.start_dt = "2024-10-01 00:00:00"
@@ -468,7 +474,7 @@ def test_Indicator_calculated_spotcheck_ES_eth_e1h_EMA_close_l20_s2():
 
 @pytest.mark.storage
 def test_Indicator_storage_spotcheck_ES_eth_e1h_EMA_close_l20_s2():
-    ind_stored = dhs.get_indicator(ind_id="ES_eth_e1h_EMA_close_l20_s2",
+    ind_stored = get_indicator(ind_id="ES_eth_e1h_EMA_close_l20_s2",
                                    autoload_datapoints=False,
                                    )
     ind_stored.load_datapoints()
@@ -479,7 +485,7 @@ def test_Indicator_storage_spotcheck_ES_eth_e1h_EMA_close_l20_s2():
 
 
 def hide_Indicator_spotcheck_ES_rth_5m_EMA_close_l9_s2():
-    ind = dhs.get_indicator(ind_id="ES_rth_5m_EMA_close_l9_s2",
+    ind = get_indicator(ind_id="ES_rth_5m_EMA_close_l9_s2",
                             autoload_datapoints=True,
                             )
     print(ind)
@@ -494,7 +500,7 @@ def hide_Indicator_spotcheck_ES_rth_5m_EMA_close_l9_s2():
 
 # TODO 5m RTH 20
 def hide_Indicator_spotcheck_ES_rth_5m_EMA_close_l20_s2():
-    ind = dhs.get_indicator(ind_id="ES_rth_5m_EMA_close_l20_s2",
+    ind = get_indicator(ind_id="ES_rth_5m_EMA_close_l20_s2",
                             autoload_datapoints=True,
                             )
     print(ind)
@@ -571,7 +577,7 @@ def Indicator_spotcheck_ES_rth_15m_EMA_close_l9_s2(i):
 
 
 def hide_Indicator_calculated_spotcheck_ES_rth_15m_EMA_close_l9_s2():
-    ind_calced = dhs.get_indicator(ind_id="ES_rth_15m_EMA_close_l9_s2",
+    ind_calced = get_indicator(ind_id="ES_rth_15m_EMA_close_l9_s2",
                                    autoload_datapoints=False,
                                    )
     ind_calced.start_dt = "2024-07-08 00:00:00"
@@ -582,7 +588,7 @@ def hide_Indicator_calculated_spotcheck_ES_rth_15m_EMA_close_l9_s2():
 
 
 def hide_Indicator_storage_spotcheck_ES_rth_15m_EMA_close_l9_s2():
-    ind_stored = dhs.get_indicator(ind_id="ES_rth_15m_EMA_close_l9_s2",
+    ind_stored = get_indicator(ind_id="ES_rth_15m_EMA_close_l9_s2",
                                    autoload_datapoints=False,
                                    )
     ind_stored.load_datapoints()
@@ -608,7 +614,7 @@ def Indicator_spotcheck_ES_rth_r1h_EMA_close_l20_s2(i):
 def hide_Indicator_create_and_calculate():
     # TODO break this up into however many functions make sense once converted
     # Building 5m9sma for 2025-01-08 9:30am-11:30am
-    itest = dhc.IndicatorSMA(name="TestSMA-DELETEME",
+    itest = IndicatorSMA(name="TestSMA-DELETEME",
                              timeframe="5m",
                              trading_hours="eth",
                              symbol="ES",
@@ -628,7 +634,7 @@ def hide_Indicator_create_and_calculate():
 
     # Building e1h9ema for 2025-01-08 - 2025-01-12
     # A test that spans a weekend closure covers most edge cases
-    itest = dhc.IndicatorEMA(name="TestEMA-DELETEME",
+    itest = IndicatorEMA(name="TestEMA-DELETEME",
                              timeframe="e1h",
                              trading_hours="eth",
                              symbol="ES",
@@ -646,23 +652,23 @@ def hide_Indicator_create_and_calculate():
     # Validate candles as expected
     assert len(itest.candle_chart.c_candles) == 59
     expected_id = "ES_eth_e1h_TestEMA-DELETEME_close_l9_s2"
-    expected = [dhc.IndicatorDataPoint(dt='2025-01-10 15:00:00',
+    expected = [IndicatorDataPoint(dt='2025-01-10 15:00:00',
                                        value=5890.25,
                                        ind_id=expected_id,
                                        epoch=1736539200),
-                dhc.IndicatorDataPoint(dt='2025-01-10 16:00:00',
+                IndicatorDataPoint(dt='2025-01-10 16:00:00',
                                        value=5884.5,
                                        ind_id=expected_id,
                                        epoch=1736542800),
-                dhc.IndicatorDataPoint(dt='2025-01-12 18:00:00',
+                IndicatorDataPoint(dt='2025-01-12 18:00:00',
                                        value=5879.6,
                                        ind_id=expected_id,
                                        epoch=1736722800),
-                dhc.IndicatorDataPoint(dt='2025-01-12 19:00:00',
+                IndicatorDataPoint(dt='2025-01-12 19:00:00',
                                        value=5875.38,
                                        ind_id=expected_id,
                                        epoch=1736726400),
-                dhc.IndicatorDataPoint(dt='2025-01-12 20:00:00',
+                IndicatorDataPoint(dt='2025-01-12 20:00:00',
                                        value=5869.3,
                                        ind_id=expected_id,
                                        epoch=1736730000),
@@ -673,7 +679,7 @@ def hide_Indicator_create_and_calculate():
 
 
 def hide_Indicator_get_datapoints():
-    itest = dhc.IndicatorEMA(name="TestEMA-DELETEME",
+    itest = IndicatorEMA(name="TestEMA-DELETEME",
                              timeframe="e1h",
                              trading_hours="eth",
                              symbol="ES",
@@ -700,7 +706,7 @@ def hide_Indicator_get_datapoints():
 
 
 def hide_Indicator_storage_and_retrieval():
-    itest = dhc.IndicatorEMA(name="TestEMA-DELETEME",
+    itest = IndicatorEMA(name="TestEMA-DELETEME",
                              timeframe="e1h",
                              trading_hours="eth",
                              symbol="ES",
@@ -717,9 +723,9 @@ def hide_Indicator_storage_and_retrieval():
     itest.calculate()
     # Confirm indicator is not already stored by first deleting it in case a
     # prior test run failed early
-    dhs.delete_indicator(itest.ind_id)
+    delete_indicator(itest.ind_id)
     # Then attempting retrieval
-    retrieve = dhs.get_indicator(ind_id=itest.ind_id)
+    retrieve = get_indicator(ind_id=itest.ind_id)
     assert retrieve is None
 
     # Store it
@@ -731,17 +737,17 @@ def hide_Indicator_storage_and_retrieval():
 
     # Confirm we can retrieve it from storage now
     # Dates must be set as they don't get stored
-    retrieve = dhs.get_indicator(ind_id=itest.ind_id,
+    retrieve = get_indicator(ind_id=itest.ind_id,
                                  autoload_datapoints=True)
     retrieve.start_dt = "2025-01-08 00:00:00"
     retrieve.end_dt = "2025-01-12 20:00:00"
     retrieve.load_underlying_chart()
     assert retrieve == itest
-    assert isinstance(retrieve, dhc.IndicatorEMA)
+    assert isinstance(retrieve, IndicatorEMA)
     assert retrieve.ind_id == itest.ind_id
 
     # Test datapoint retrieval
-    datapoints = dhs.get_indicator_datapoints(
+    datapoints = get_indicator_datapoints(
             ind_id=itest.ind_id)
     assert len(datapoints) == 23
     assert datapoints[5].ind_id == itest.ind_id
@@ -758,9 +764,9 @@ def hide_Indicator_storage_and_retrieval():
     assert result["datapoints_skipped"] == 23
 
     # Removing test object from storage
-    dhs.delete_indicator(itest.ind_id)
+    delete_indicator(itest.ind_id)
     # And confirm it's gone
-    retrieve = dhs.get_indicator(ind_id=itest.ind_id)
+    retrieve = get_indicator(ind_id=itest.ind_id)
     assert retrieve is None
-    dps = dhs.get_indicator_datapoints(ind_id=itest.ind_id)
+    dps = get_indicator_datapoints(ind_id=itest.ind_id)
     assert len(dps) == 0

@@ -2,11 +2,19 @@ import datetime
 import site
 import pytest
 site.addsitedir('modulepaths')
-import dhcharts as dhc
-import dhtrades as dht
-import dhutil as dhu
-from dhutil import dt_as_dt, dt_as_str
-import dhstore as dhs
+from dhcharts import (
+    Candle, Chart, Day, Event, Indicator, IndicatorDataPoint, IndicatorEMA,
+    IndicatorSMA, Symbol)
+from dhtrades import Trade, TradeSeries, Backtest
+from dhutil import (
+    dt_as_dt, dt_as_str, dow_name, dt_to_epoch, parse_dt, dt_from_epoch,
+    OperationTimer, ProgBar, log_say, prompt_yn, valid_timeframe,
+    valid_trading_hours, check_tf_th_compatibility)
+from dhstore import (
+    get_trades_by_field, delete_trades, get_tradeseries_by_field,
+    delete_tradeseries, store_trades, store_tradeseries, get_candles,
+    store_candles, store_candle, review_candles, delete_candles,
+    get_symbol_by_ticker, get_events, delete_backtests, get_backtests_by_field)
 
 # NOTE No tests are needed on the base Backtest() class for .calculate() or
 #      .incorporate_parameters() methods as these are only implemented when
@@ -46,7 +54,7 @@ def create_trade(open_dt="2025-01-02 12:00:00",
                  prof_target=5005,
                  name="DELETEME"
                  ):
-    return dht.Trade(open_dt=open_dt,
+    return Trade(open_dt=open_dt,
                      direction=direction,
                      timeframe=timeframe,
                      trading_hours=trading_hours,
@@ -70,7 +78,7 @@ def create_tradeseries(start_dt="2025-01-01 00:00:00",
                        bt_id=None,
                        trades=None,
                        ):
-    return dht.TradeSeries(start_dt=start_dt,
+    return TradeSeries(start_dt=start_dt,
                            end_dt=end_dt,
                            timeframe=timeframe,
                            trading_hours=trading_hours,
@@ -97,7 +105,7 @@ def create_backtest(start_dt="2025-01-01 00:00:00",
                     autoload_charts=False,
                     tradeseries=None,
                     ):
-    r = dht.Backtest(start_dt=start_dt,
+    r = Backtest(start_dt=start_dt,
                      end_dt=end_dt,
                      timeframe=timeframe,
                      trading_hours=trading_hours,
@@ -134,15 +142,15 @@ def create_backtest(start_dt="2025-01-01 00:00:00",
     if chart_tf is None and autoload_charts is False:
         assert r.chart_tf is None
     else:
-        assert isinstance(r.chart_tf, dhc.Chart)
+        assert isinstance(r.chart_tf, Chart)
     if chart_1m is None and autoload_charts is False:
         assert r.chart_1m is None
     else:
-        assert isinstance(r.chart_1m, dhc.Chart)
+        assert isinstance(r.chart_1m, Chart)
 
     # Calculated and adjusted attributes
     # symbol should get converted to a Symbol object
-    assert isinstance(r.symbol, dhc.Symbol)
+    assert isinstance(r.symbol, Symbol)
     # If symbol was passed as a string, it should now be the ticker
     if isinstance(symbol, str):
         assert r.symbol.ticker == symbol
@@ -153,14 +161,14 @@ def create_backtest(start_dt="2025-01-01 00:00:00",
 def clear_storage_by_name(name: str):
     """Delete all Backtests, TradeSeries, and Trades with the given name from
     central storage"""
-    dhs.delete_backtests(symbol="ES", field="name", value=name)
-    s_bt = dhs.get_backtests_by_field(field="name", value=name)
+    delete_backtests(symbol="ES", field="name", value=name)
+    s_bt = get_backtests_by_field(field="name", value=name)
     assert len(s_bt) == 0
-    dhs.delete_tradeseries(symbol="ES", field="name", value=name)
-    s_ts = dhs.get_tradeseries_by_field(field="name", value=name)
+    delete_tradeseries(symbol="ES", field="name", value=name)
+    s_ts = get_tradeseries_by_field(field="name", value=name)
     assert len(s_ts) == 0
-    dhs.delete_trades(symbol="ES", field="name", value=name)
-    s_tr = dhs.get_trades_by_field(field="name", value=name)
+    delete_trades(symbol="ES", field="name", value=name)
+    s_tr = get_trades_by_field(field="name", value=name)
     assert len(s_tr) == 0
 
 
@@ -168,11 +176,11 @@ def clear_storage_by_name(name: str):
 def test_Backtest_create_and_verify_pretty():
     # Check line counts of pretty output, won't change unless class changes
     bt = create_backtest()
-    assert isinstance(bt, dht.Backtest)
+    assert isinstance(bt, Backtest)
     ts = create_tradeseries()
-    assert isinstance(ts, dht.TradeSeries)
+    assert isinstance(ts, TradeSeries)
     tr = create_trade()
-    assert isinstance(tr, dht.Trade)
+    assert isinstance(tr, Trade)
     assert len(bt.pretty().splitlines()) == 21
     ts.add_trade(tr)
     bt.update_tradeseries(ts)
@@ -422,13 +430,13 @@ def test_Backtest_restrict_dates():
                                ))
     bt.update_tradeseries(ts1)
     bt.store()
-    bt_load = dhs.get_backtests_by_field(field="bt_id",
-                                         value=bt.bt_id)[0]
+    bt_load = get_backtests_by_field(field="bt_id",
+                                     value=bt.bt_id)[0]
     assert bt_load["start_dt"] == "2025-01-01 18:00:00"
     assert bt_load["end_dt"] == "2025-01-31 16:59:00"
-    ts_load = dhs.get_tradeseries_by_field(field="bt_id",
-                                           value=bt.bt_id,
-                                           include_trades=True)
+    ts_load = get_tradeseries_by_field(field="bt_id",
+                                       value=bt.bt_id,
+                                       include_trades=True)
 
     assert len(ts_load) == 1
     ts = ts_load[0]
@@ -443,13 +451,13 @@ def test_Backtest_restrict_dates():
                       new_end_dt="2025-01-31 16:59:00",
                       update_storage=True,
                       )
-    bt_load = dhs.get_backtests_by_field(field="bt_id",
-                                         value=bt.bt_id)[0]
+    bt_load = get_backtests_by_field(field="bt_id",
+                                     value=bt.bt_id)[0]
     assert bt_load["start_dt"] == "2025-01-03 12:00:00"
     assert bt_load["end_dt"] == "2025-01-31 16:59:00"
-    ts_load = dhs.get_tradeseries_by_field(field="bt_id",
-                                           value=bt.bt_id,
-                                           include_trades=True)
+    ts_load = get_tradeseries_by_field(field="bt_id",
+                                       value=bt.bt_id,
+                                       include_trades=True)
     assert len(ts_load) == 1
     ts = ts_load[0]
     assert ts.start_dt == "2025-01-03 12:00:00"
@@ -462,13 +470,13 @@ def test_Backtest_restrict_dates():
                       new_end_dt="2025-01-18 14:59:00",
                       update_storage=True,
                       )
-    bt_load = dhs.get_backtests_by_field(field="bt_id",
-                                         value=bt.bt_id)[0]
+    bt_load = get_backtests_by_field(field="bt_id",
+                                     value=bt.bt_id)[0]
     assert bt_load["start_dt"] == "2025-01-03 12:00:00"
     assert bt_load["end_dt"] == "2025-01-18 14:59:00"
-    ts_load = dhs.get_tradeseries_by_field(field="bt_id",
-                                           value=bt.bt_id,
-                                           include_trades=True)
+    ts_load = get_tradeseries_by_field(field="bt_id",
+                                       value=bt.bt_id,
+                                       include_trades=True)
     assert len(ts_load) == 1
     ts = ts_load[0]
     assert ts.start_dt == "2025-01-03 12:00:00"
@@ -480,20 +488,20 @@ def test_Backtest_restrict_dates():
                       new_end_dt="2025-01-10 14:59:00",
                       update_storage=True,
                       )
-    bt_load = dhs.get_backtests_by_field(field="bt_id",
-                                         value=bt.bt_id)[0]
+    bt_load = get_backtests_by_field(field="bt_id",
+                                     value=bt.bt_id)[0]
     assert bt_load["start_dt"] == "2025-01-08 12:00:00"
     assert bt_load["end_dt"] == "2025-01-10 14:59:00"
-    ts_load = dhs.get_tradeseries_by_field(field="bt_id",
-                                           value=bt.bt_id,
-                                           include_trades=True)
+    ts_load = get_tradeseries_by_field(field="bt_id",
+                                       value=bt.bt_id,
+                                       include_trades=True)
     assert len(ts_load) == 1
     ts = ts_load[0]
     assert ts.start_dt == "2025-01-08 12:00:00"
     assert ts.end_dt == "2025-01-10 14:59:00"
     assert len(bt.tradeseries[0].trades) == 0
-    trades = dhs.get_trades_by_field(field="bt_id",
-                                     value=bt.bt_id)
+    trades = get_trades_by_field(field="bt_id",
+                                 value=bt.bt_id)
     assert len(trades) == 0
 
     # Clear and confirm storage has no objects with this name currently
@@ -508,20 +516,20 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
     ts2_name = "".join([test_name, "2"])
     ts2_ts_id = "".join([test_name, "2_a1_b2_c3_p0"])
     bt = create_backtest(name=test_name)
-    assert isinstance(bt, dht.Backtest)
+    assert isinstance(bt, Backtest)
     assert len(bt.tradeseries) == 0
     ts1 = create_tradeseries(name=ts1_name,
                              start_dt="2025-01-05 10:00:00",
                              end_dt="2025-01-05 14:00:00",
                              )
-    assert isinstance(ts1, dht.TradeSeries)
+    assert isinstance(ts1, TradeSeries)
     assert len(ts1.trades) == 0
     # TradeSeries should not have a bt_id yet
     assert ts1.bt_id is None
     # Create and add 2 Trades
     for dt in ["2025-01-05 12:00:00", "2025-01-05 13:00:00"]:
         tr = create_trade(open_dt=dt, name=test_name)
-        assert isinstance(tr, dht.Trade)
+        assert isinstance(tr, Trade)
         # Trade should not have a ts_id or bt_id yet
         assert tr.ts_id is None
         assert tr.bt_id is None
@@ -529,12 +537,12 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
         # After adding to TradeSeries, Trade should now have TradeSeries ts_id
         assert tr.ts_id == ts1.ts_id
     assert len(ts1.trades) == 2
-    assert isinstance(ts1.trades[0], dht.Trade)
-    assert isinstance(ts1.trades[1], dht.Trade)
+    assert isinstance(ts1.trades[0], Trade)
+    assert isinstance(ts1.trades[1], Trade)
     # Add the TradeSeries to the Backtest
     bt.update_tradeseries(ts1)
     assert len(bt.tradeseries) == 1
-    assert isinstance(bt.tradeseries[0], dht.TradeSeries)
+    assert isinstance(bt.tradeseries[0], TradeSeries)
     # TradeSeries and Trade should now have Backtest's bt_id
     assert ts1.bt_id == bt.bt_id
     for tr in ts1.trades:
@@ -548,7 +556,7 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
         tr = create_trade(open_dt=dt, name=test_name)
         ts2.add_trade(tr)
     bt.update_tradeseries(ts2)
-    assert isinstance(bt.tradeseries[1], dht.TradeSeries)
+    assert isinstance(bt.tradeseries[1], TradeSeries)
     # Confirm both TradeSeries and Trades attached as expected
     assert len(bt.tradeseries) == 2
     assert bt.tradeseries[0].ts_id == ts1_ts_id
@@ -565,17 +573,17 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
     assert bt.tradeseries[1].trades[1].open_dt == "2025-01-06 15:00:00"
     # Clear and confirm storage has no objects with these name currently
     # in case previous tests failed and left orphans
-    dhs.delete_backtests(symbol="ES", field="name", value=test_name)
-    s_bt = dhs.get_backtests_by_field(field="name", value=test_name)
+    delete_backtests(symbol="ES", field="name", value=test_name)
+    s_bt = get_backtests_by_field(field="name", value=test_name)
     assert len(s_bt) == 0
-    dhs.delete_tradeseries(symbol="ES", field="name", value=ts1_name)
-    s_ts = dhs.get_tradeseries_by_field(field="name", value=ts1_name)
+    delete_tradeseries(symbol="ES", field="name", value=ts1_name)
+    s_ts = get_tradeseries_by_field(field="name", value=ts1_name)
     assert len(s_ts) == 0
-    dhs.delete_tradeseries(symbol="ES", field="name", value=ts2_name)
-    s_ts = dhs.get_tradeseries_by_field(field="name", value=ts2_name)
+    delete_tradeseries(symbol="ES", field="name", value=ts2_name)
+    s_ts = get_tradeseries_by_field(field="name", value=ts2_name)
     assert len(s_ts) == 0
-    dhs.delete_trades(symbol="ES", field="name", value=test_name)
-    s_tr = dhs.get_trades_by_field(field="name", value=test_name)
+    delete_trades(symbol="ES", field="name", value=test_name)
+    s_tr = get_trades_by_field(field="name", value=test_name)
     assert len(s_tr) == 0
     # Store the backtest
     bt.store(store_tradeseries=True, store_trades=True)
@@ -589,7 +597,7 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
     # Confirm previous tradeseries no longer in storage since it was modified
     # but not yet stored again.  Only the second (unmodified) TradeSeries
     # should be retrievable at this stage.
-    s_ts = dhs.get_tradeseries_by_field(field="bt_id", value=bt.bt_id)
+    s_ts = get_tradeseries_by_field(field="bt_id", value=bt.bt_id)
     assert len(s_ts) == 1
     assert s_ts[0].name == ts2_name
     # Confirm backtest updated and no dupes
@@ -610,16 +618,16 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
     # and their Trades without duplication occurring
     bt.store(store_tradeseries=True, store_trades=True)
     # Get backtests with this name from storage
-    s_bt = dhs.get_backtests_by_field(field="name", value=test_name)
+    s_bt = get_backtests_by_field(field="name", value=test_name)
     # Confirm exactly 1 backtest found in storage with this name
     assert len(s_bt) == 1
     # Get TradeSeries by bt_id from storage
-    s_ts = dhs.get_tradeseries_by_field(field="bt_id", value=bt.bt_id)
+    s_ts = get_tradeseries_by_field(field="bt_id", value=bt.bt_id)
     # Confirm exactly 2 TradeSeries in storage
     assert len(s_ts) == 2
     # Get TradeSeries by name from storage
-    s_ts1 = dhs.get_tradeseries_by_field(field="name", value=ts1_name)
-    s_ts2 = dhs.get_tradeseries_by_field(field="name", value=ts2_name)
+    s_ts1 = get_tradeseries_by_field(field="name", value=ts1_name)
+    s_ts2 = get_tradeseries_by_field(field="name", value=ts2_name)
     # Confirm exactly 1 of each tradeseries by name
     assert len(s_ts1) == 1
     assert len(s_ts2) == 1
@@ -631,14 +639,14 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
     assert s_ts2[0].start_dt == "2025-01-06 13:00:00"
     assert s_ts2[0].end_dt == "2025-01-06 16:00:00"
     # Confirm exactly 4 trades in storage by name and bt_id
-    s_tr = dhs.get_trades_by_field(field="name", value=test_name)
+    s_tr = get_trades_by_field(field="name", value=test_name)
     assert len(s_tr) == 4
-    s_tr = dhs.get_trades_by_field(field="bt_id", value=test_name)
+    s_tr = get_trades_by_field(field="bt_id", value=test_name)
     assert len(s_tr) == 4
     # Confirm exactly 2 Trades in storage by each TradeSeries ts_id
-    s_tr1 = dhs.get_trades_by_field(field="ts_id", value=ts1_ts_id)
+    s_tr1 = get_trades_by_field(field="ts_id", value=ts1_ts_id)
     assert len(s_tr1) == 2
-    s_tr2 = dhs.get_trades_by_field(field="ts_id", value=ts2_ts_id)
+    s_tr2 = get_trades_by_field(field="ts_id", value=ts2_ts_id)
     assert len(s_tr2) == 2
     # Confirm Trade open_dt values as expected in storage, with ts1 updated
     # and ts2 retaining original unmodified values
@@ -675,12 +683,12 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
     # Confirm storage not updated, including Trades, and no dupes
     # All of the below should remain the same as before we modified TS #2
     # Get TradeSeries by bt_id from storage
-    s_ts = dhs.get_tradeseries_by_field(field="bt_id", value=bt.bt_id)
+    s_ts = get_tradeseries_by_field(field="bt_id", value=bt.bt_id)
     # Confirm exactly 2 TradeSeries in storage
     assert len(s_ts) == 2
     # Get TradeSeries by name from storage
-    s_ts1 = dhs.get_tradeseries_by_field(field="name", value=ts1_name)
-    s_ts2 = dhs.get_tradeseries_by_field(field="name", value=ts2_name)
+    s_ts1 = get_tradeseries_by_field(field="name", value=ts1_name)
+    s_ts2 = get_tradeseries_by_field(field="name", value=ts2_name)
     # Confirm exactly 1 of each tradeseries by name
     assert len(s_ts1) == 1
     assert len(s_ts2) == 1
@@ -692,14 +700,14 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
     assert s_ts2[0].start_dt == "2025-01-06 13:00:00"
     assert s_ts2[0].end_dt == "2025-01-06 16:00:00"
     # Confirm exactly 4 trades in storage by name and bt_id
-    s_tr = dhs.get_trades_by_field(field="name", value=test_name)
+    s_tr = get_trades_by_field(field="name", value=test_name)
     assert len(s_tr) == 4
-    s_tr = dhs.get_trades_by_field(field="bt_id", value=test_name)
+    s_tr = get_trades_by_field(field="bt_id", value=test_name)
     assert len(s_tr) == 4
     # Confirm exactly 2 Trades in storage by each TradeSeries ts_id
-    s_tr1 = dhs.get_trades_by_field(field="ts_id", value=ts1_ts_id)
+    s_tr1 = get_trades_by_field(field="ts_id", value=ts1_ts_id)
     assert len(s_tr1) == 2
-    s_tr2 = dhs.get_trades_by_field(field="ts_id", value=ts2_ts_id)
+    s_tr2 = get_trades_by_field(field="ts_id", value=ts2_ts_id)
     assert len(s_tr2) == 2
     # Confirm Trade open_dt values as expected in storage, with ts1 updated
     # and ts2 retaining original unmodified values
@@ -713,23 +721,23 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
     bt.remove_tradeseries(ts_id=ts2.ts_id)
     assert len(bt.tradeseries) == 1
     assert bt.tradeseries[0].ts_id == ts1.ts_id
-    s_ts2 = dhs.get_tradeseries_by_field(field="name", value=ts2_name)
+    s_ts2 = get_tradeseries_by_field(field="name", value=ts2_name)
     assert len(s_ts2) == 0
-    s_tr2 = dhs.get_trades_by_field(field="ts_id", value=ts2_ts_id)
+    s_tr2 = get_trades_by_field(field="ts_id", value=ts2_ts_id)
     assert len(s_tr2) == 0
 
     # Delete everything from storage to cleanup
-    dhs.delete_backtests(symbol="ES", field="name", value=test_name)
-    s_bt = dhs.get_backtests_by_field(field="name", value=test_name)
+    delete_backtests(symbol="ES", field="name", value=test_name)
+    s_bt = get_backtests_by_field(field="name", value=test_name)
     assert len(s_bt) == 0
-    dhs.delete_tradeseries(symbol="ES", field="name", value=ts1_name)
-    s_ts = dhs.get_tradeseries_by_field(field="name", value=ts1_name)
+    delete_tradeseries(symbol="ES", field="name", value=ts1_name)
+    s_ts = get_tradeseries_by_field(field="name", value=ts1_name)
     assert len(s_ts) == 0
-    dhs.delete_tradeseries(symbol="ES", field="name", value=ts2_name)
-    s_ts = dhs.get_tradeseries_by_field(field="name", value=ts2_name)
+    delete_tradeseries(symbol="ES", field="name", value=ts2_name)
+    s_ts = get_tradeseries_by_field(field="name", value=ts2_name)
     assert len(s_ts) == 0
-    dhs.delete_trades(symbol="ES", field="name", value=test_name)
-    s_tr = dhs.get_trades_by_field(field="name", value=test_name)
+    delete_trades(symbol="ES", field="name", value=test_name)
+    s_tr = get_trades_by_field(field="name", value=test_name)
     assert len(s_tr) == 0
 
 
@@ -764,15 +772,15 @@ def test_Backtest_store_retrieve_load_tradeseries_and_delete():
     assert r_tr["ts_id"] == ts.ts_id
 
     # Confirm all objects individually retrievable from storage via ts_id/bt_id
-    s_bt = dhs.get_backtests_by_field(field="bt_id", value=bt.bt_id)
+    s_bt = get_backtests_by_field(field="bt_id", value=bt.bt_id)
     assert len(s_bt) == 1
     assert isinstance(s_bt[0], dict)
-    s_ts = dhs.get_tradeseries_by_field(field="bt_id", value=bt.bt_id)
+    s_ts = get_tradeseries_by_field(field="bt_id", value=bt.bt_id)
     assert len(s_ts) == 1
-    assert isinstance(s_ts[0], dht.TradeSeries)
-    s_tr = dhs.get_trades_by_field(field="bt_id", value=bt.bt_id)
+    assert isinstance(s_ts[0], TradeSeries)
+    s_tr = get_trades_by_field(field="bt_id", value=bt.bt_id)
     assert len(s_tr) == 1
-    assert isinstance(s_tr[0], dht.Trade)
+    assert isinstance(s_tr[0], Trade)
 
     # Attempt to rebuild Backtest from storage using .load_tradeseries() to
     # add TradeSeries and Trades
@@ -795,16 +803,16 @@ def test_Backtest_store_retrieve_load_tradeseries_and_delete():
     r_bt.delete_from_storage(include_tradeseries=True, include_trades=True)
 
     # Confirm storage has no objects remaining by name, ts_id, or bt_id
-    s_bt = dhs.get_backtests_by_field(field="bt_id", value=bt.bt_id)
+    s_bt = get_backtests_by_field(field="bt_id", value=bt.bt_id)
     assert len(s_bt) == 0
-    s_ts = dhs.get_tradeseries_by_field(field="bt_id", value=bt.bt_id)
+    s_ts = get_tradeseries_by_field(field="bt_id", value=bt.bt_id)
     assert len(s_ts) == 0
-    s_tr = dhs.get_trades_by_field(field="bt_id", value=bt.bt_id)
+    s_tr = get_trades_by_field(field="bt_id", value=bt.bt_id)
     assert len(s_tr) == 0
 
-    s_bt = dhs.get_backtests_by_field(field="ts_id", value=ts.ts_id)
+    s_bt = get_backtests_by_field(field="ts_id", value=ts.ts_id)
     assert len(s_bt) == 0
-    s_ts = dhs.get_tradeseries_by_field(field="ts_id", value=ts.ts_id)
+    s_ts = get_tradeseries_by_field(field="ts_id", value=ts.ts_id)
     assert len(s_ts) == 0
-    s_tr = dhs.get_trades_by_field(field="ts_id", value=ts.ts_id)
+    s_tr = get_trades_by_field(field="ts_id", value=ts.ts_id)
     assert len(s_tr) == 0

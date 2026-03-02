@@ -3,7 +3,9 @@ import site
 # This hacky crap is needed to help imports between files in dhtrader
 # find each other when run by a script in another folder (even tests).
 site.addsitedir('modulepaths')
-import dhcharts as dhc
+from dhcharts import (
+    Candle, Chart, Day, Event, Indicator, IndicatorDataPoint,
+    IndicatorEMA, IndicatorSMA, Symbol)
 from dhutil import dt_as_dt, dt_as_str, dow_name
 
 # TODO think through which tests can be done simply by creating and calcing,
@@ -31,7 +33,7 @@ from dhutil import dt_as_dt, dt_as_str, dow_name
 
 # TODO I should probalby have this be a create_symbol() function like other
 #      test files?  and it will need to test all the __init__ stuff too
-SYMBOL = dhc.Symbol(ticker="ES", name="ES", leverage_ratio=50, tick_size=0.25)
+SYMBOL = Symbol(ticker="ES", name="ES", leverage_ratio=50, tick_size=0.25)
 
 
 @pytest.mark.storage
@@ -275,13 +277,13 @@ def test_Symbol_market_is_open():
                                          target_dt=f"{date} 23:59:00")
 
     # Holidays (will need to pass events for this borred from known)
-    events = [dhc.Event(start_dt="2024-02-19 13:00:00",
+    events = [Event(start_dt="2024-02-19 13:00:00",
                         end_dt="2024-02-19 17:59:00",
                         symbol="ES",
                         category="Closed",
                         tags=["holiday"],
                         notes="Presidents Day early close"),
-              dhc.Event(start_dt="2024-03-28 17:00:00",
+              Event(start_dt="2024-03-28 17:00:00",
                         end_dt="2024-03-31 17:59:00",
                         symbol="ES",
                         category="Closed",
@@ -605,7 +607,7 @@ def test_Symbol_market_is_open():
 
 
 def test_Symbol_get_market_boundary():
-    sym = dhc.Symbol(ticker="ES",
+    sym = Symbol(ticker="ES",
                      name="ES",
                      leverage_ratio=50.0,
                      tick_size=0.25,
@@ -708,19 +710,19 @@ def test_Symbol_get_market_boundary():
                      trading_hours="rth")) == "2024-03-15 16:00:00"
 
     # Setting up a few events to test that boundary mechanics respect
-    events = [dhc.Event(start_dt="2024-03-28 17:00:00",
+    events = [Event(start_dt="2024-03-28 17:00:00",
                         end_dt="2024-03-31 17:59:00",
                         symbol="ES",
                         category="Closed",
                         notes="Good Friday Closed",
                         ),
-              dhc.Event(start_dt="2024-03-18 00:00:00",
+              Event(start_dt="2024-03-18 00:00:00",
                         end_dt="2024-03-19 23:59:00",
                         symbol="ES",
                         category="Closed",
                         notes="Tues-Wed Full days closure",
                         ),
-              dhc.Event(start_dt="2024-03-18 13:00:00",
+              Event(start_dt="2024-03-18 13:00:00",
                         end_dt="2024-03-18 17:59:00",
                         symbol="ES",
                         category="Closed",
@@ -1397,7 +1399,7 @@ def test_Symbol_get_market_boundary_historical_eras():
 
 def test_Symbol_init():
     """Test Symbol __init__ creates object with correct attributes"""
-    sym = dhc.Symbol(ticker="ES",
+    sym = Symbol(ticker="ES",
                      name="E-mini S&P 500",
                      leverage_ratio=50.0,
                      tick_size=0.25)
@@ -1419,7 +1421,7 @@ def test_Symbol_init():
     assert hasattr(sym, "_closed_hours_cache")
 
     # Test that leverage_ratio and tick_size are converted to float
-    sym2 = dhc.Symbol(ticker="DELETEME", name="Test",
+    sym2 = Symbol(ticker="DELETEME", name="Test",
                       leverage_ratio="100", tick_size="1.5")
     assert isinstance(sym2.leverage_ratio, float)
     assert sym2.leverage_ratio == 100.0
@@ -1429,13 +1431,13 @@ def test_Symbol_init():
 
 def test_Symbol_equality():
     """Test Symbol __eq__ and __ne__ methods"""
-    sym1 = dhc.Symbol(ticker="ES", name="ES",
+    sym1 = Symbol(ticker="ES", name="ES",
                       leverage_ratio=50, tick_size=0.25)
-    sym2 = dhc.Symbol(ticker="ES", name="ES",
+    sym2 = Symbol(ticker="ES", name="ES",
                       leverage_ratio=50, tick_size=0.25)
-    sym3 = dhc.Symbol(ticker="ES", name="ES",
+    sym3 = Symbol(ticker="ES", name="ES",
                       leverage_ratio=50, tick_size=0.5)  # Different tick
-    sym4 = dhc.Symbol(ticker="DELETEME", name="DELETEME",
+    sym4 = Symbol(ticker="DELETEME", name="DELETEME",
                       leverage_ratio=20, tick_size=0.25)  # Different ticker
 
     # Test __eq__
@@ -1449,14 +1451,14 @@ def test_Symbol_equality():
     assert sym1 != sym4
 
     # Test different attributes affect equality
-    sym5 = dhc.Symbol(ticker="ES", name="Different Name",
+    sym5 = Symbol(ticker="ES", name="Different Name",
                       leverage_ratio=50, tick_size=0.25)
     assert sym1 != sym5
 
 
 def test_Symbol_string_representations():
     """Test Symbol __str__, __repr__, and pretty methods"""
-    sym = dhc.Symbol(ticker="ES", name="ES",
+    sym = Symbol(ticker="ES", name="ES",
                      leverage_ratio=50, tick_size=0.25)
 
     # Test __str__ returns a string
@@ -1489,7 +1491,7 @@ def test_Symbol_string_representations():
 def test_Symbol_serialization():
     """Test Symbol to_json and to_clean_dict methods"""
     import json
-    sym = dhc.Symbol(ticker="ES", name="ES",
+    sym = Symbol(ticker="ES", name="ES",
                      leverage_ratio=50, tick_size=0.25)
 
     # Test to_json returns valid JSON string
@@ -1523,7 +1525,7 @@ def test_Symbol_serialization():
 def test_Symbol_set_times():
     """Test Symbol set_times() sets correct values for current era"""
     import datetime as dt
-    sym = dhc.Symbol(ticker="ES", name="ES",
+    sym = Symbol(ticker="ES", name="ES",
                      leverage_ratio=50, tick_size=0.25)
 
     # Should use latest era times (2021-06_thru_present)
@@ -1545,5 +1547,5 @@ def test_Symbol_set_times():
 
     # Test unknown ticker raises error
     with pytest.raises(ValueError, match="times have not yet been defined"):
-        dhc.Symbol(ticker="UNKNOWN", name="Unknown",
+        Symbol(ticker="UNKNOWN", name="Unknown",
                    leverage_ratio=1, tick_size=0.01)

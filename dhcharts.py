@@ -2,9 +2,13 @@ import datetime as dt
 from datetime import timedelta
 import sys
 import json
-import dhutil as dhu
-from dhutil import log_say
-import dhstore as dhs
+from dhutil import (
+    dt_as_dt, dt_as_str, dt_as_time, dt_to_epoch, dt_from_epoch,
+    timeframe_delta, valid_timeframe, valid_trading_hours, log_say,
+    this_candle_start, expected_candle_datetimes)
+from dhstore import (
+    get_symbol_by_ticker, store_candle, get_events,
+    get_indicator_datapoints, store_indicator)
 from statistics import fmean
 from copy import copy, deepcopy
 import logging
@@ -356,7 +360,7 @@ class Symbol():
             dict: The era definition dict containing name, start_date, times,
                   and closed_hours
         """
-        d = dhu.dt_as_dt(target_dt).date()
+        d = dt_as_dt(target_dt).date()
 
         # Find the latest era whose start_date is <= target date
         # MARKET_ERAS must be sorted chronologically
@@ -424,8 +428,8 @@ class Symbol():
         for day, periods in closed_schedule.items():
             closed[day] = [
                 {
-                    "close": dhu.dt_as_time(period["close"]),
-                    "open": dhu.dt_as_time(period["open"])
+                    "close": dt_as_time(period["close"]),
+                    "open": dt_as_time(period["open"])
                 }
                 for period in periods
             ]
@@ -446,7 +450,7 @@ class Symbol():
         era detection to apply correct historical market hours.
         """
         # Set vars needed to evaluate
-        d = dhu.dt_as_dt(target_dt)
+        d = dt_as_dt(target_dt)
         dow = d.weekday()
         time = d.time()
 
@@ -463,7 +467,7 @@ class Symbol():
         if check_closed_events:
             # If list of events was not passed, retrieve them from storage
             if events is None:
-                events = dhs.get_events(symbol=self.ticker,
+                events = get_events(symbol=self.ticker,
                                         categories=["Closed"],
                                         )
             for e in events:
@@ -518,8 +522,8 @@ class Symbol():
 
         # Evaluate requested boundary
         if self.ticker == "ES":
-            this_date = dhu.dt_as_dt(target_dt).date()
-            this_time = dhu.dt_as_dt(target_dt).time()
+            this_date = dt_as_dt(target_dt).date()
+            this_time = dt_as_dt(target_dt).time()
             # Set Target Time based on standard hours for the era
             # containing target_dt
             era_times = self.get_times_for_era(self.get_era(target_dt))
@@ -679,12 +683,12 @@ class Candle():
                  ):
 
         # Precalculate datetime for calculating other attributes efficiently
-        c_datetime_dt = dhu.dt_as_dt(c_datetime)
+        c_datetime_dt = dt_as_dt(c_datetime)
 
         # Passable attributes
-        self.c_datetime = dhu.dt_as_str(c_datetime_dt)
+        self.c_datetime = dt_as_str(c_datetime_dt)
         self.c_timeframe = c_timeframe
-        dhu.valid_timeframe(self.c_timeframe)
+        valid_timeframe(self.c_timeframe)
         self.c_open = float(c_open)
         self.c_high = float(c_high)
         self.c_low = float(c_low)
@@ -693,12 +697,12 @@ class Candle():
         if isinstance(c_symbol, Symbol):
             self.c_symbol = c_symbol
         else:
-            self.c_symbol = dhs.get_symbol_by_ticker(ticker=c_symbol)
+            self.c_symbol = get_symbol_by_ticker(ticker=c_symbol)
         if c_tags is None:
             c_tags = []
         self.c_tags = c_tags
         if c_epoch is None:
-            c_epoch = dhu.dt_to_epoch(c_datetime_dt)
+            c_epoch = dt_to_epoch(c_datetime_dt)
         self.c_epoch = c_epoch
         if c_date is None:
             c_date = self.c_datetime[:10]
@@ -708,8 +712,8 @@ class Candle():
         self.c_time = c_time
 
         # Calculated attributes
-        delta = dhu.timeframe_delta(self.c_timeframe)
-        self.c_end_datetime = dhu.dt_as_str(c_datetime_dt + delta)
+        delta = timeframe_delta(self.c_timeframe)
+        self.c_end_datetime = dt_as_str(c_datetime_dt + delta)
         self.c_size = abs(self.c_high - self.c_low)
         self.c_body_size = abs(self.c_open - self.c_close)
         self.c_upper_wick_size = self.c_high - max(self.c_open, self.c_close)
@@ -783,12 +787,12 @@ class Candle():
         return not self.__eq__(other)
 
     def store(self):
-        return dhs.store_candle(self)
+        return store_candle(self)
 
     def contains_datetime(self, d):
         """Return True if the datetime provided occurs in this candle"""
-        return (dhu.dt_as_dt(self.c_datetime) < dhu.dt_as_dt(d) and
-                dhu.dt_as_dt(d) < dhu.dt_as_dt(self.c_end_datetime))
+        return (dt_as_dt(self.c_datetime) < dt_as_dt(d) and
+                dt_as_dt(d) < dt_as_dt(self.c_end_datetime))
 
     def contains_price(self, p):
         """Return True if the price provided falls at or between the high and
@@ -807,16 +811,16 @@ class Chart():
                  autoload: bool = False,
                  ):
 
-        if dhu.valid_timeframe(c_timeframe):
+        if valid_timeframe(c_timeframe):
             self.c_timeframe = c_timeframe
-        if dhu.valid_trading_hours(c_trading_hours):
+        if valid_trading_hours(c_trading_hours):
             self.c_trading_hours = c_trading_hours
         if isinstance(c_symbol, str):
-            self.c_symbol = dhs.get_symbol_by_ticker(ticker=c_symbol)
+            self.c_symbol = get_symbol_by_ticker(ticker=c_symbol)
         else:
             self.c_symbol = c_symbol
-        self.c_start = dhu.dt_as_str(c_start)
-        self.c_end = dhu.dt_as_str(c_end)
+        self.c_start = dt_as_str(c_start)
+        self.c_end = dt_as_str(c_end)
         if c_candles is None:
             self.c_candles = []
         else:
@@ -910,15 +914,15 @@ class Chart():
         """Load candles from central storage based on current attributes"""
         log.info(f"Loading candles for {self.c_symbol.ticker} "
                  f"{self.c_timeframe} ")
-        cans = dhs.get_candles(
-               start_epoch=dhu.dt_to_epoch(self.c_start),
-               end_epoch=dhu.dt_to_epoch(self.c_end),
+        cans = get_candles(
+               start_epoch=dt_to_epoch(self.c_start),
+               end_epoch=dt_to_epoch(self.c_end),
                timeframe=self.c_timeframe,
                symbol=self.c_symbol.ticker,
                )
         self.c_candles = []
         log.info("Getting events for market hours filtering...")
-        events = dhs.get_events(symbol=self.c_symbol.ticker,
+        events = get_events(symbol=self.c_symbol.ticker,
                                 categories=["Closed"],
                                 )
         log.info("Filtering candles for market hours and events...")
@@ -937,8 +941,8 @@ class Chart():
     def review_candles(self):
         if len(self.c_candles) > 0:
             self.candles_count = len(self.c_candles)
-            self.earliest_candle = dhu.dt_as_str(self.c_candles[0].c_datetime)
-            self.latest_candle = dhu.dt_as_str(self.c_candles[-1].c_datetime)
+            self.earliest_candle = dt_as_str(self.c_candles[0].c_datetime)
+            self.latest_candle = dt_as_str(self.c_candles[-1].c_datetime)
         else:
             self.candles_count = 0
             self.earliest_candle = None
@@ -952,12 +956,12 @@ class Chart():
     def restrict_dates(self, new_start_dt: str, new_end_dt: str):
         """Reduce the date range of the Chart and remove any Candles that are
         no longer in bounds"""
-        os = dhu.dt_as_dt(self.c_start)
-        oe = dhu.dt_as_dt(self.c_end)
-        ns = dhu.dt_as_dt(new_start_dt)
-        ne = dhu.dt_as_dt(new_end_dt)
-        ns_epoch = dhu.dt_to_epoch(new_start_dt)
-        ne_epoch = dhu.dt_to_epoch(new_end_dt)
+        os = dt_as_dt(self.c_start)
+        oe = dt_as_dt(self.c_end)
+        ns = dt_as_dt(new_start_dt)
+        ne = dt_as_dt(new_end_dt)
+        ns_epoch = dt_to_epoch(new_start_dt)
+        ne_epoch = dt_to_epoch(new_end_dt)
         # Ensure new dates don't expand the daterange, they should only reduce
         # or keep unchanged
         if ns < os:
@@ -994,19 +998,19 @@ class Event():
                  tags: list = None,
                  notes: str = "",
                  ):
-        self.start_dt = dhu.dt_as_str(start_dt)
-        self.end_dt = dhu.dt_as_str(end_dt)
+        self.start_dt = dt_as_str(start_dt)
+        self.end_dt = dt_as_str(end_dt)
         if isinstance(symbol, Symbol):
             self.symbol = symbol
         else:
-            self.symbol = dhs.get_symbol_by_ticker(ticker=symbol)
+            self.symbol = get_symbol_by_ticker(ticker=symbol)
         self.category = category
         self.tags = tags
         if tags is None:
             tags = []
         self.notes = notes
-        self.start_epoch = dhu.dt_to_epoch(self.start_dt)
-        self.end_epoch = dhu.dt_to_epoch(self.end_dt)
+        self.start_epoch = dt_to_epoch(self.start_dt)
+        self.end_epoch = dt_to_epoch(self.end_dt)
 
     def to_json(self):
         """returns a json version of this object while normalizing
@@ -1037,7 +1041,7 @@ class Event():
                           )
 
     def store(self):
-        return dhs.store_event(self)
+        return store_event(self)
 
     def contains_datetime(self,
                           dt,
@@ -1045,9 +1049,9 @@ class Event():
         """Determine if the given datetime (dt) falls within this Event's
         timeframe, returning True or False.
         """
-        start = dhu.dt_as_dt(self.start_dt)
-        end = dhu.dt_as_dt(self.end_dt)
-        this = dhu.dt_as_dt(dt)
+        start = dt_as_dt(self.start_dt)
+        end = dt_as_dt(self.end_dt)
+        this = dt_as_dt(dt)
         if start <= this <= end:
             return True
         else:
@@ -1249,11 +1253,11 @@ class IndicatorDataPoint():
                  ind_id: str,
                  epoch: int = None,
                  ):
-        self.dt = dhu.dt_as_str(dt)
+        self.dt = dt_as_str(dt)
         self.value = value
         self.ind_id = ind_id
         if epoch is None:
-            self.epoch = dhu.dt_to_epoch(dt)
+            self.epoch = dt_to_epoch(dt)
         else:
             self.epoch = epoch
     """Simple class to handle time series datapoints for indicators.  I might
@@ -1321,7 +1325,7 @@ class IndicatorDataPoint():
                     "elapsed": None,
                     }
         else:
-            return dhs.store_indicator_datapoints(datapoints=[self])
+            return store_indicator_datapoints(datapoints=[self])
 
 
 class Indicator():
@@ -1347,14 +1351,14 @@ class Indicator():
         child classes which will be indicator type specific"""
         self.name = name
         self.description = description
-        if not dhu.valid_timeframe(timeframe):
+        if not valid_timeframe(timeframe):
             raise ValueError(f"{timeframe} not valid for timeframe")
         self.timeframe = timeframe
-        if not dhu.valid_trading_hours(trading_hours):
+        if not valid_trading_hours(trading_hours):
             raise ValueError(f"{trading_hours} not valid for trading_hours")
         self.trading_hours = trading_hours
         if isinstance(symbol, str):
-            self.symbol = dhs.get_symbol_by_ticker(ticker=symbol)
+            self.symbol = get_symbol_by_ticker(ticker=symbol)
         else:
             self.symbol = symbol
         self.calc_version = calc_version
@@ -1362,7 +1366,7 @@ class Indicator():
         self.start_dt = start_dt
         self.end_dt = end_dt
         if self.end_dt is None:
-            self.end_dt = dhu.dt_as_str(dt.datetime.now())
+            self.end_dt = dt_as_str(dt.datetime.now())
         if datapoints is None:
             self.datapoints = []
         else:
@@ -1506,11 +1510,9 @@ class Indicator():
         """Load any datapoints available from central storage by ind_id,
         start_dt, and end_dt.
         """
-        self.datapoints = dhs.get_indicator_datapoints(
-                ind_id=self.ind_id,
-                earliest_dt=self.start_dt,
-                latest_dt=self.end_dt,
-                )
+        self.datapoints = get_indicator_datapoints(ind_id=self.ind_id,
+                                                   earliest_dt=self.start_dt,
+                                                   latest_dt=self.end_dt)
         self.sort_datapoints()
 
     def sort_datapoints(self):
@@ -1553,9 +1555,9 @@ class Indicator():
         # For demo purposes, let's calculate the high of the day
         self.datapoints = []
         hod = 0
-        prev_day = dhu.dt_as_dt("1900-01-01 00:00:00").date()
+        prev_day = dt_as_dt("1900-01-01 00:00:00").date()
         for c in self.candle_chart.c_candles:
-            today = dhu.dt_as_dt(c.c_datetime).date()
+            today = dt_as_dt(c.c_datetime).date()
             # Reset HOD for first candle of a new day
             if today > prev_day:
                 prev_day = today
@@ -1578,11 +1580,11 @@ class Indicator():
         """uses DHStore functionality to store metadata and time series
         datapoints into central storage
         """
-        return dhs.store_indicator(self,
-                                   store_datapoints=store_datapoints,
-                                   fast_dps_check=fast_dps_check,
-                                   show_progress=show_progress,
-                                   )
+        return store_indicator(self,
+                               store_datapoints=store_datapoints,
+                               fast_dps_check=fast_dps_check,
+                               show_progress=show_progress,
+                               )
 
     def get_datapoint(self,
                       dt,
@@ -1595,9 +1597,9 @@ class Indicator():
         value.  Wrapper methods assist with the most common previous and
         next requests.
         """
-        can_dt = dhu.this_candle_start(dt=dt, timeframe=self.timeframe)
+        can_dt = this_candle_start(dt=dt, timeframe=self.timeframe)
         index = next((i for i, dp in enumerate(self.datapoints)
-                      if dhu.dt_as_dt(dp.dt) == dhu.dt_as_dt(can_dt)), None)
+                      if dt_as_dt(dp.dt) == dt_as_dt(can_dt)), None)
         # If no datapoints was found, return None
         if index is None:
             return None
@@ -1707,7 +1709,7 @@ class IndicatorSMA(Indicator):
                 raise ValueError(f"Unsupported method: {self.method}")
             # Once enough candles are in the working list, calc the datapoint
             if counter >= (self.length - 1):
-                dp = IndicatorDataPoint(dt=dhu.dt_as_str(c.c_datetime),
+                dp = IndicatorDataPoint(dt=dt_as_str(c.c_datetime),
                                         value=round(fmean(values), 2),
                                         ind_id=self.ind_id,
                                         )
@@ -1827,7 +1829,7 @@ class IndicatorEMA(Indicator):
                 # Only keep/ store once we reach the minimum needed to ensure
                 # accurate values.  See docstring for details.
                 if counter >= min_cans:
-                    dp = IndicatorDataPoint(dt=dhu.dt_as_str(c.c_datetime),
+                    dp = IndicatorDataPoint(dt=dt_as_str(c.c_datetime),
                                             value=round(this_ema, 2),
                                             ind_id=self.ind_id,
                                             )

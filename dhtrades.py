@@ -3,9 +3,16 @@ from datetime import timedelta, datetime as dt, date
 from copy import deepcopy
 import logging
 import numpy as np
-import dhutil as dhu
-import dhstore as dhs
-import dhcharts as dhc
+from dhutil import (
+    dt_as_str, valid_timeframe, valid_trading_hours, dt_as_dt,
+    dt_to_epoch, check_tf_th_compatibility, this_candle_start,
+    start_of_week_date, OperationTimer, log_say, dict_of_weeks)
+from dhstore import (
+    get_symbol_by_ticker, get_candles, review_candles, get_trades_by_field,
+    delete_one_trade, delete_tradeseries, delete_trades,
+    store_tradeseries, delete_tradeseries, store_trades,
+    get_tradeseries_by_field, store_backtests, delete_backtests)
+from dhcharts import Candle, Chart
 
 log = logging.getLogger("dhtrades")
 log.addHandler(logging.NullHandler())
@@ -78,7 +85,7 @@ class Trade():
         self.open_dt = open_dt
         self.close_dt = close_dt
         if created_dt is None:
-            self.created_dt = dhu.dt_as_str(dt.now())
+            self.created_dt = dt_as_str(dt.now())
         else:
             self.created_dt = created_dt
         if direction in ['long', 'short']:
@@ -87,9 +94,9 @@ class Trade():
             raise ValueError(f"invalid value for direction of {direction} "
                              "received, must be in ['long', 'short'] only."
                              )
-        if dhu.valid_timeframe(timeframe):
+        if valid_timeframe(timeframe):
             self.timeframe = timeframe
-        if dhu.valid_trading_hours(trading_hours):
+        if valid_trading_hours(trading_hours):
             self.trading_hours = trading_hours
         self.entry_price = entry_price
         self.stop_target = stop_target
@@ -107,7 +114,7 @@ class Trade():
         self.prof_ticks = prof_ticks
         self.offset_ticks = offset_ticks
         if isinstance(symbol, str):
-            self.symbol = dhs.get_symbol_by_ticker(ticker=symbol)
+            self.symbol = get_symbol_by_ticker(ticker=symbol)
         else:
             self.symbol = symbol
         self.is_open = is_open
@@ -128,12 +135,12 @@ class Trade():
             self.flipper = -1
         else:
             self.flipper = 0  # If this happens there's a bug somewhere
-        self.open_epoch = dhu.dt_to_epoch(self.open_dt)
-        self.open_date = str(dhu.dt_as_dt(self.open_dt).date())
-        self.open_time = str(dhu.dt_as_dt(self.open_dt).time())
+        self.open_epoch = dt_to_epoch(self.open_dt)
+        self.open_date = str(dt_as_dt(self.open_dt).date())
+        self.open_time = str(dt_as_dt(self.open_dt).time())
         if self.close_dt is not None:
-            self.close_date = str(dhu.dt_as_dt(self.close_dt).date())
-            self.close_time = str(dhu.dt_as_dt(self.close_dt).time())
+            self.close_date = str(dt_as_dt(self.close_dt).date())
+            self.close_time = str(dt_as_dt(self.close_dt).time())
             self.close_time = self.close_time.split(".")[0]
         else:
             self.close_date = None
@@ -152,7 +159,7 @@ class Trade():
             start_mins = None
             self.first_min_open = False
         if start_mins is not None:
-            if dhu.dt_as_dt(self.open_dt).minute in start_mins:
+            if dt_as_dt(self.open_dt).minute in start_mins:
                 self.first_min_open = True
             else:
                 self.first_min_open = False
@@ -281,11 +288,11 @@ class Trade():
         # Make sure dates are strings not datetimes
         working = deepcopy(self.__dict__)
         if self.open_dt is not None:
-            working["open_dt"] = dhu.dt_as_str(self.open_dt)
+            working["open_dt"] = dt_as_str(self.open_dt)
         if self.close_dt is not None:
-            working["close_dt"] = dhu.dt_as_str(self.close_dt)
+            working["close_dt"] = dt_as_str(self.close_dt)
         if self.created_dt is not None:
-            working["created_dt"] = dhu.dt_as_str(self.created_dt)
+            working["created_dt"] = dt_as_str(self.created_dt)
         # Change symbol to string of ticker
         working["symbol"] = working["symbol"].ticker
 
@@ -307,33 +314,33 @@ class Trade():
     def brief(self):
         """Return a single line summary string of this Trade's vitals"""
         return (f"{self.open_dt} - {self.close_dt} | "
-                f"{dhu.dt_as_dt(self.open_dt).strftime('%A')} | "
+                f"{dt_as_dt(self.open_dt).strftime('%A')} | "
                 f"{self.direction} | "
                 f"entry={self.entry_price} | exit={self.exit_price} | "
                 f"profitable={self.profitable}")
 
     def store(self):
         """Store this Trade in central storage"""
-        return dhs.store_trades(trades=[self])
+        return store_trades(trades=[self])
 
     def delete_from_storage(self):
         """Delete this Trade from central storage if it exists"""
-        return dhs.delete_one_trade(symbol=self.symbol.ticker,
-                                    open_dt=self.open_dt,
-                                    ts_id=self.ts_id,
-                                    )
+        return delete_one_trade(symbol=self.symbol.ticker,
+                                open_dt=self.open_dt,
+                                ts_id=self.ts_id,
+                                )
 
     def parent_bar_dt(self):
         """Returns the timeframe specific 'parent bar' (the bar within which
         this Trade opened) opening datetime as a datetime object."""
-        return dhu.this_candle_start(self.open_dt,
-                                     timeframe=self.timeframe)
+        return this_candle_start(self.open_dt,
+                                 timeframe=self.timeframe)
 
     def parent_bar_secs(self):
         """Returns the number of seconds that elapsed between the opening of
         the 'parent bar' (the timeframe specific bar within which this Trade
         opened) and the opening of this Trade."""
-        start = dhu.dt_to_epoch(self.parent_bar_dt())
+        start = dt_to_epoch(self.parent_bar_dt())
         return self.open_epoch - start
 
     def closed_intraday(self):
@@ -346,7 +353,7 @@ class Trade():
             next_close = self.symbol.get_next_close(
                             target_dt=self.open_dt,
                             trading_hours=self.trading_hours)
-            if dhu.dt_as_dt(self.close_dt) <= next_close:
+            if dt_as_dt(self.close_dt) <= next_close:
                 return True
             else:
                 return False
@@ -359,7 +366,7 @@ class Trade():
         if not self.is_open:
             raise Exception("Cannot run update() on a closed Trade, this "
                             "would break reality.")
-        if not isinstance(candle, dhc.Candle):
+        if not isinstance(candle, Candle):
             raise TypeError(f"candle {candle} must be a dhcharts.Candle obj, "
                             f"we got a {type(candle)} instead")
         # Set short var names for calcs in this method
@@ -375,7 +382,7 @@ class Trade():
                 self.low_price = min(self.low_price, candle.c_low)
             # Now if we passed the profit target we can close at a gain
             # Exact tag doesn't guarantee fill so we must see a tick past
-            if dhu.dt_as_dt(self.open_dt) == dhu.dt_as_dt(candle.c_datetime):
+            if dt_as_dt(self.open_dt) == dt_as_dt(candle.c_datetime):
                 # if we're still in the entry minute, we need to compare the
                 # closing price to be sure it tagged profit after the entry
                 if candle.c_close >= (self.prof_target + tick):
@@ -405,7 +412,7 @@ class Trade():
                 self.high_price = max(self.high_price, candle.c_high)
             # Now if we passed the profit target we can close at a gain
             # Exact tag doesn't guarantee fill so we must see a tick past
-            if dhu.dt_as_dt(self.open_dt) == dhu.dt_as_dt(candle.c_datetime):
+            if dt_as_dt(self.open_dt) == dt_as_dt(candle.c_datetime):
                 # if we're still in the entry minute, we need to compare the
                 # closing price to be sure it tagged profit after the entry
                 if candle.c_close <= (self.prof_target - tick):
@@ -540,9 +547,9 @@ class Trade():
         """Closes the trade at the price given, finalizing related attributes.
         """
         self.is_open = False
-        self.close_dt = dhu.dt_as_str(dt)
-        self.close_date = str(dhu.dt_as_dt(self.close_dt).date())
-        self.close_time = str(dhu.dt_as_dt(self.close_dt).time()).split(".")[0]
+        self.close_dt = dt_as_str(dt)
+        self.close_date = str(dt_as_dt(self.close_dt).date())
+        self.close_time = str(dt_as_dt(self.close_dt).time()).split(".")[0]
         self.exit_price = price
         if (self.exit_price - self.entry_price) * self.flipper > 0:
             self.profitable = True
@@ -563,8 +570,8 @@ class Trade():
         if self.is_open:
             return None
         else:
-            return (dhu.dt_to_epoch(self.close_dt)
-                    - dhu.dt_to_epoch(self.open_dt))
+            return (dt_to_epoch(self.close_dt)
+                    - dt_to_epoch(self.open_dt))
 
 
 class TradeSeries():
@@ -605,14 +612,14 @@ class TradeSeries():
                  tags: list = None,
                  ):
 
-        self.start_dt = dhu.dt_as_str(start_dt)
-        self.end_dt = dhu.dt_as_str(end_dt)
-        if dhu.valid_timeframe(timeframe):
+        self.start_dt = dt_as_str(start_dt)
+        self.end_dt = dt_as_str(end_dt)
+        if valid_timeframe(timeframe):
             self.timeframe = timeframe
-        if dhu.valid_trading_hours(trading_hours):
+        if valid_trading_hours(trading_hours):
             self.trading_hours = trading_hours
         if isinstance(symbol, str):
-            self.symbol = dhs.get_symbol_by_ticker(ticker=symbol)
+            self.symbol = get_symbol_by_ticker(ticker=symbol)
         else:
             self.symbol = symbol
         self.name = name
@@ -719,14 +726,14 @@ class TradeSeries():
         """Clear all attached Trades then retrieve and attach all Trades
         matching this ts_id from storage"""
 
-        self.trades = dhs.get_trades_by_field(field="ts_id",
-                                              value=self.ts_id)
+        self.trades = get_trades_by_field(field="ts_id",
+                                          value=self.ts_id)
         self.sort_trades()
 
     def store(self,
               store_trades: bool = False
               ):
-        result = {"tradeseries": dhs.store_tradeseries(series=[self]),
+        result = {"tradeseries": store_tradeseries(series=[self]),
                   "trades": [],
                   }
         if store_trades and self.trades is not None:
@@ -743,15 +750,15 @@ class TradeSeries():
         matching this object's ts_id."""
         result = {"tradeseries": None, "trades": []}
 
-        result["tradeseries"] = dhs.delete_tradeseries(symbol=self.symbol,
-                                                       field="ts_id",
-                                                       value=self.ts_id,
-                                                       )
+        result["tradeseries"] = delete_tradeseries(symbol=self.symbol,
+                                                   field="ts_id",
+                                                   value=self.ts_id,
+                                                   )
         if include_trades:
-            result["trades"] = dhs.delete_trades(symbol=self.symbol,
-                                                 field="ts_id",
-                                                 value=self.ts_id,
-                                                 )
+            result["trades"] = delete_trades(symbol=self.symbol,
+                                             field="ts_id",
+                                             value=self.ts_id,
+                                             )
 
         return result
 
@@ -769,7 +776,7 @@ class TradeSeries():
         """Return the first trade found with open_dt matching the provided
         datetime, or None if nothing matches."""
         for t in self.trades:
-            if dhu.dt_as_dt(t.open_dt) == dhu.dt_as_dt(dt):
+            if dt_as_dt(t.open_dt) == dt_as_dt(dt):
                 return t
 
         return None
@@ -788,12 +795,12 @@ class TradeSeries():
                        ):
         """Reduce the date range of the TradeSeries and remove any Trades that
         are no longer in bounds"""
-        os = dhu.dt_as_dt(self.start_dt)
-        oe = dhu.dt_as_dt(self.end_dt)
-        ns = dhu.dt_as_dt(new_start_dt)
-        ne = dhu.dt_as_dt(new_end_dt)
-        ns_epoch = dhu.dt_to_epoch(new_start_dt)
-        ne_epoch = dhu.dt_to_epoch(new_end_dt)
+        os = dt_as_dt(self.start_dt)
+        oe = dt_as_dt(self.end_dt)
+        ns = dt_as_dt(new_start_dt)
+        ne = dt_as_dt(new_end_dt)
+        ns_epoch = dt_to_epoch(new_start_dt)
+        ne_epoch = dt_to_epoch(new_end_dt)
         # Ensure new dates don't expand the daterange, they should only reduce
         # or keep unchanged
         if ns < os:
@@ -930,7 +937,7 @@ class TradeSeries():
                 rr["total_risk"] += t.stop_ticks
                 rr["total_reward"] += t.prof_ticks
                 # Add date to days_traded set
-                days_traded.add(dhu.dt_as_dt(t.open_dt).date())
+                days_traded.add(dt_as_dt(t.open_dt).date())
                 # Update profitability
                 if t.profitable:
                     profits += 1
@@ -952,8 +959,8 @@ class TradeSeries():
             # include the end date as a full day.  This may overstate
             # total_days by up to 2 days in some cases which is typically not
             # statistically meaningful for analysis on long time frames.
-            total_days = (dhu.dt_as_dt(self.end_dt).date()
-                          - dhu.dt_as_dt(self.start_dt).date()).days + 1
+            total_days = (dt_as_dt(self.end_dt).date()
+                          - dt_as_dt(self.start_dt).date()).days + 1
             total_weeks = round(total_days/7, 2)
             trades_per_day = round(total_trades/total_days, 2)
             trades_per_trading_day = round(total_trades/trading_days, 2)
@@ -1041,14 +1048,14 @@ class TradeSeries():
         self.sort_trades()
         w_start = self.trades[0].open_dt
         w_end = self.trades[-1].open_dt
-        result = dhu.dict_of_weeks(start_dt=w_start,
-                                   end_dt=w_end,
-                                   template=template)
+        result = dict_of_weeks(start_dt=w_start,
+                               end_dt=w_end,
+                               template=template)
         # Loop through trades to aggregate stats
         for t in self.trades:
             if not t.first_min_open or include_first_min:
-                d = dhu.dt_as_dt(t.open_dt)
-                w = str(dhu.start_of_week_date(dt=d))
+                d = dt_as_dt(t.open_dt)
+                w = str(start_of_week_date(dt=d))
                 result[w]["total_trades"] += 1
                 if t.profitable:
                     result[w]["profitable_trades"] += 1
@@ -1126,15 +1133,15 @@ class Backtest():
                  prefer_stored: bool = True,
                  tradeseries: list = None,
                  ):
-        self.start_dt = dhu.dt_as_str(start_dt)
-        self.end_dt = dhu.dt_as_str(end_dt)
-        if dhu.valid_timeframe(timeframe):
+        self.start_dt = dt_as_str(start_dt)
+        self.end_dt = dt_as_str(end_dt)
+        if valid_timeframe(timeframe):
             self.timeframe = timeframe
-        if dhu.valid_trading_hours(trading_hours):
+        if valid_trading_hours(trading_hours):
             self.trading_hours = trading_hours
-        dhu.check_tf_th_compatibility(tf=timeframe, th=trading_hours)
+        check_tf_th_compatibility(tf=timeframe, th=trading_hours)
         if isinstance(symbol, str):
-            self.symbol = dhs.get_symbol_by_ticker(ticker=symbol)
+            self.symbol = get_symbol_by_ticker(ticker=symbol)
         else:
             self.symbol = symbol
         self.name = name
@@ -1279,20 +1286,19 @@ class Backtest():
         calculation gaps where valid candles were not yet available on earlier
         runs."""
         # Build candle charts, retrieving candles from storage
-        self.chart_tf = dhc.Chart(c_timeframe=self.timeframe,
-                                  c_trading_hours=self.trading_hours,
-                                  c_symbol=self.symbol,
-                                  c_start=self.start_dt,
-                                  c_end=self.end_dt,
-                                  autoload=True,
-                                  )
-        self.chart_1m = dhc.Chart(c_timeframe="1m",
-                                  c_trading_hours=self.trading_hours,
-                                  c_symbol=self.symbol,
-                                  c_start=self.start_dt,
-                                  c_end=self.end_dt,
-                                  autoload=True,
-                                  )
+        self.chart_tf = Chart(c_timeframe=self.timeframe,
+                              c_trading_hours=self.trading_hours,
+                              c_symbol=self.symbol,
+                              c_start=self.start_dt,
+                              c_end=self.end_dt,
+                              autoload=True,
+                              )
+        self.chart_1m = Chart(c_timeframe="1m",
+                              c_trading_hours=self.trading_hours,
+                              c_symbol=self.symbol,
+                              c_start=self.start_dt,
+                              c_end=self.end_dt,
+                              autoload=True)
         # Limit the timeframe of the Backtest based on existing candles
         self.start_dt = self.chart_1m.c_candles[0].c_datetime
         self.end_dt = self.chart_1m.c_candles[-1].c_datetime
@@ -1313,7 +1319,7 @@ class Backtest():
         self.delete_from_storage(include_tradeseries=store_tradeseries,
                                  include_trades=store_trades,
                                  )
-        result = {"backtest": dhs.store_backtests(backtests=[self]),
+        result = {"backtest": store_backtests(backtests=[self]),
                   "tradeseries": [],
                   }
         st = store_trades
@@ -1332,10 +1338,10 @@ class Backtest():
         matching this object's bt_id."""
         result = {"backtest": None, "tradeseries": []}
 
-        result["backtest"] = dhs.delete_backtests(symbol=self.symbol,
-                                                  field="bt_id",
-                                                  value=self.bt_id,
-                                                  )
+        result["backtest"] = delete_backtests(symbol=self.symbol,
+                                              field="bt_id",
+                                              value=self.bt_id,
+                                              )
         if include_tradeseries:
             for ts in self.tradeseries:
                 result["tradeseries"].append(ts.delete_from_storage(
@@ -1385,14 +1391,14 @@ class Backtest():
         (default = True)."""
         # Delete TradeSeries and associated Trades from storage
         if clear_storage:
-            dhs.delete_tradeseries(symbol="ES",
-                                   field="ts_id",
-                                   value=ts_id,
-                                   )
-            dhs.delete_trades(symbol="ES",
-                              field="ts_id",
-                              value=ts_id,
-                              )
+            delete_tradeseries(symbol="ES",
+                               field="ts_id",
+                               value=ts_id,
+                               )
+            delete_trades(symbol="ES",
+                          field="ts_id",
+                          value=ts_id,
+                          )
         # Rebuild Backtest's list of TradeSeries, excluding any matching ts_id
         self.tradeseries = [ts for ts in self.tradeseries if ts.ts_id != ts_id]
         return True
@@ -1404,10 +1410,10 @@ class Backtest():
         """Attaches any TradeSeries and their linked trades that are found in
         storage and which match this object's bt_id.  This will replace any
         currently attached tradeseries."""
-        self.tradeseries = dhs.get_tradeseries_by_field(field="bt_id",
-                                                        value=self.bt_id,
-                                                        include_trades=True,
-                                                        )
+        self.tradeseries = get_tradeseries_by_field(field="bt_id",
+                                                    value=self.bt_id,
+                                                    include_trades=True,
+                                                    )
         self.sort_tradeseries()
 
     def restrict_dates(self,
@@ -1423,10 +1429,10 @@ class Backtest():
         Typically used to clean up failed partial calculation runs or, when
         non-destructive, to set up for analyzing a targetted timeframe of
         special interest within the longer Backtest."""
-        os = dhu.dt_as_dt(self.start_dt)
-        oe = dhu.dt_as_dt(self.end_dt)
-        ns = dhu.dt_as_dt(new_start_dt)
-        ne = dhu.dt_as_dt(new_end_dt)
+        os = dt_as_dt(self.start_dt)
+        oe = dt_as_dt(self.end_dt)
+        ns = dt_as_dt(new_start_dt)
+        ne = dt_as_dt(new_end_dt)
         # Ensure new dates don't expand the daterange, they should only reduce
         # or keep unchanged
         if ns < os:
@@ -1436,8 +1442,8 @@ class Backtest():
             raise ValueError(f"new_end_dt {new_end_dt} cannot be later "
                              f"than the current self.end_dt {self.end_dt}")
         # Update Backtest start and end dates and optionally store
-        self.start_dt = dhu.dt_as_str(new_start_dt)
-        self.end_dt = dhu.dt_as_str(new_end_dt)
+        self.start_dt = dt_as_str(new_start_dt)
+        self.end_dt = dt_as_str(new_end_dt)
         if update_storage:
             self.store(store_tradeseries=False, store_trades=False)
         # Update the attached Charts for the new dates as well if loaded
@@ -1480,7 +1486,7 @@ class Backtest():
         """
         # Ensure default_autoclose is a datetime.time object
         if isinstance(default_autoclose, str):
-            default_autoclose = dhu.dt_as_dt(
+            default_autoclose = dt_as_dt(
                 f"2000-01-01 {default_autoclose}").time()
 
         # Ensure candle_date is a datetime.date object
@@ -1490,11 +1496,11 @@ class Backtest():
 
         # Find events that start on this date with Closed category
         for event in closed_events:
-            event_start_date = dhu.dt_as_dt(event.start_dt).date()
+            event_start_date = dt_as_dt(event.start_dt).date()
             # Check if event starts on this date and is a Closed event
             if (event_start_date == candle_date and
                     event.category == "Closed"):
-                close_time = dhu.dt_as_dt(event.start_dt).time()
+                close_time = dt_as_dt(event.start_dt).time()
                 # Only apply early close if it's actually before default
                 if close_time < default_autoclose:
                     # Calculate autoclose as 5 minutes before
@@ -1534,7 +1540,7 @@ class Backtest():
             bool: True if trade was closed by this method, False otherwise
         """
         if current_time > autoclose_time and not trade.is_closed:
-            cnow = f"candle={dhu.dt_as_str(prev_candle.c_datetime)}"
+            cnow = f"candle={dt_as_str(prev_candle.c_datetime)}"
             log.warn(f"{log_id} {cnow} action=failsafe_autoclose msg='"
                      f"Forcing close: current time {current_time} exceeds"
                      f" autoclose {autoclose_time}. Closing at previous"
