@@ -2,7 +2,6 @@
 # migration to a different storage solution in the future without
 # massive overhaul of backtest, chart, and trader code bases.
 
-import csv
 import json
 import progressbar
 from collections import Counter, defaultdict
@@ -12,18 +11,13 @@ from copy import deepcopy
 import logging
 from pathlib import Path
 from dhcharts import (
-    Candle, Chart, Day, Event, Indicator, IndicatorDataPoint, Symbol,
-    IndicatorSMA, IndicatorEMA)
-from dhtrades import (
-    Trade, TradeSeries, Backtest)
+    Candle, Event, IndicatorDataPoint, Symbol, IndicatorSMA, IndicatorEMA)
 from dhcommon import (
-    dt_as_str, dt_as_dt, dt_from_epoch, dt_to_epoch, timeframe_delta,
-    check_tf_th_compatibility, valid_timeframe, valid_trading_hours,
-    this_candle_start, summarize_candles)
-from dhutil import (
-    ProgBar, log_say, OperationTimer, next_candle_start,
-    expected_candle_datetimes, sort_dict, prompt_yn,
-    rangify_candle_times, read_candles_from_csv)
+    dt_as_str, dt_as_dt, dt_from_epoch, dt_to_epoch, valid_timeframe,
+    this_candle_start, summarize_candles, log_say, sort_dict,
+    rangify_candle_times, ProgBar, OperationTimer)
+from dhtrades import Trade, TradeSeries
+from dhutil import expected_candle_datetimes
 import dhmongo as dhm
 
 COLL_TRADES = "trades"

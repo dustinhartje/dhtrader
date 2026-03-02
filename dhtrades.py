@@ -3,17 +3,17 @@ from datetime import timedelta, datetime as dt, date
 from copy import deepcopy
 import logging
 import numpy as np
+from dhcharts import Candle, Chart
 from dhcommon import (
     dt_as_str, valid_timeframe, valid_trading_hours, dt_as_dt,
     dt_to_epoch, check_tf_th_compatibility, this_candle_start,
-    start_of_week_date, log_say, dict_of_weeks, OperationTimer)
+    start_of_week_date, dict_of_weeks, OperationTimer)
 from dhstore import (
     get_symbol_by_ticker, get_candles,
     get_trades_by_field, get_tradeseries_by_field,
     delete_one_trade, delete_tradeseries, delete_trades, delete_backtests,
     store_tradeseries, store_trades, store_backtests,
     review_candles)
-from dhcharts import Candle, Chart
 
 log = logging.getLogger("dhtrades")
 log.addHandler(logging.NullHandler())

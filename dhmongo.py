@@ -16,8 +16,7 @@ from dotenv import load_dotenv, find_dotenv
 from datetime import datetime as dt
 from dhcommon import (
     ProgBar, prompt_yn, valid_timeframe, dt_as_str, dt_from_epoch,
-    dt_to_epoch, log_say)
-from dhcharts import Candle
+    dt_to_epoch)
 
 log = logging.getLogger("dhmongo")
 log.addHandler(logging.NullHandler())

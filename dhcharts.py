@@ -2,18 +2,18 @@ import datetime as dt
 from datetime import timedelta
 import sys
 import json
-from dhcommon import (
-    dt_as_dt, dt_as_str, dt_as_time, dt_to_epoch, dt_from_epoch,
-    timeframe_delta, valid_timeframe, valid_trading_hours, log_say,
-    this_candle_start)
-from dhutil import expected_candle_datetimes
-from dhstore import (
-    get_symbol_by_ticker, get_candles, store_candle, get_events, store_event,
-    get_indicator_datapoints, store_indicator, store_indicator_datapoints)
 from statistics import fmean
 from copy import copy, deepcopy
 import logging
 from math import ceil, floor
+from dhcommon import (
+    dt_as_dt, dt_as_str, dt_as_time, dt_to_epoch, dt_from_epoch,
+    timeframe_delta, valid_timeframe, valid_trading_hours, log_say,
+    this_candle_start)
+from dhstore import (
+    get_symbol_by_ticker, get_candles, store_candle, get_events, store_event,
+    get_indicator_datapoints, store_indicator, store_indicator_datapoints)
+from dhutil import expected_candle_datetimes
 
 CANDLE_TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w']
 BEGINNING_OF_TIME = "2008-01-01 00:00:00"
