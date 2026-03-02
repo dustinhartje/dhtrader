@@ -12,6 +12,7 @@ The environment name is the last segment of the filename.
 import os
 import sys
 import argparse
+from dhtrader.dhcommon import prompt_yn
 
 
 def get_script_dir(depth=0):
@@ -186,7 +187,6 @@ def check_environment_and_prompt(script_dir=None):
 
     prompt_fn = None
     try:
-        from dhtrader.dhutil import prompt_yn
         prompt_fn = prompt_yn
     except Exception:
         prompt_fn = None

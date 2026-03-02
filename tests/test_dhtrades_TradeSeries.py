@@ -6,8 +6,7 @@ site.addsitedir('modulepaths')
 from dhcharts import (
     Candle, Symbol)
 from dhtrades import Trade, TradeSeries
-from dhutil import (
-    dt_as_dt)
+from dhcommon import dt_as_dt
 from dhstore import (
     get_trades_by_field, delete_trades, get_tradeseries_by_field,
     delete_tradeseries)

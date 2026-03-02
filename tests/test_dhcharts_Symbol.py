@@ -6,7 +6,7 @@ site.addsitedir('modulepaths')
 from dhcharts import (
     Candle, Chart, Day, Event, Indicator, IndicatorDataPoint,
     IndicatorEMA, IndicatorSMA, Symbol)
-from dhutil import dt_as_dt, dt_as_str
+from dhcommon import dt_as_dt, dt_as_str
 
 # TODO think through which tests can be done simply by creating and calcing,
 #      and which should pull data from storage to confirm live results

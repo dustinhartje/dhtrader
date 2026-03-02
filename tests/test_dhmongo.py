@@ -8,8 +8,6 @@
 #      original manual testing hacks
 # TODO write any remaining tests needed here or in class specific files
 # TODO tests needed
-# test_basics() review and make sure anything it was doing previously is
-#     covered, copying out any useful code before recreating
 # review_database() Ensure it can connect and spits out what I care about
 # list_collections() Ensure it lists a few that should always exist like
 #     candles, and probably check that it's length isn't over like 50?

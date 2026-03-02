@@ -1,5 +1,5 @@
 from testdata import Rebuilder
-from dhutil import dt_to_epoch
+from dhcommon import dt_to_epoch
 from dhcharts import Candle
 from dhtrades import Trade, TradeSeries, Backtest
 

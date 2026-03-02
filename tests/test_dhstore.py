@@ -17,8 +17,6 @@ from dhtrades import TradeSeries, Trade
 #      original manual testing hacks
 # TODO write any remaining tests needed here or in class specific files
 # TODO tests needed
-# test_basics() review and make sure anything it was doing previously is
-#     covered, copying out any useful code before recreating
 # list_collections() Ensure it lists a few that should always exist like
 #     candles, and probably check that it's length isn't over like 50?
 #     -- probably combine with drop_collection() using a dummy test collection

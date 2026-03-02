@@ -6,8 +6,8 @@ from dhcharts import (
     Candle, Chart, Day, Event, Indicator, IndicatorDataPoint, IndicatorEMA,
     IndicatorSMA, Symbol)
 from dhtrades import Trade, TradeSeries, Backtest
-from dhutil import (
-    dt_as_dt, dt_as_str, dow_name, dt_to_epoch, parse_dt, dt_from_epoch,
+from dhcommon import (
+    dt_as_dt, dt_as_str, dow_name, dt_to_epoch, dt_from_epoch,
     OperationTimer, ProgBar, log_say, prompt_yn, valid_timeframe,
     valid_trading_hours, check_tf_th_compatibility)
 from dhstore import (

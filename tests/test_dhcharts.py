@@ -3,10 +3,10 @@ site.addsitedir('modulepaths')
 from dhcharts import (
     Candle, Chart, Day, Event, Indicator, IndicatorDataPoint,
     IndicatorEMA, IndicatorSMA, Symbol)
-from dhutil import (
-    dt_as_dt, dt_as_str, dow_name, dt_to_epoch, parse_dt,
-    dt_from_epoch, OperationTimer, ProgBar, log_say, prompt_yn,
-    valid_timeframe, valid_trading_hours, check_tf_th_compatibility)
+from dhcommon import (
+    dt_as_dt, dt_as_str, dow_name, dt_to_epoch, dt_from_epoch,
+    OperationTimer, ProgBar, log_say, prompt_yn, valid_timeframe,
+    valid_trading_hours, check_tf_th_compatibility)
 
 # TODO think through which tests can be done simply by creating and calcing,
 #      and which should pull data from storage to confirm live results

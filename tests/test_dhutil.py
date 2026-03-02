@@ -11,8 +11,6 @@
 #      that's the only place I use it
 
 # TODO tests needed
-# test_basics() review and make sure anything it was doing previously is
-#     covered, copying out any useful code before recreating
 # OperationTimer __init__, __str__, __repr__ similar to other classes
 # OperationTimer I also created summary and may others for this one?
 # OperationTimer can probably wrap creation, start, stop, and results

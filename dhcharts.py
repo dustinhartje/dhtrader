@@ -2,10 +2,11 @@ import datetime as dt
 from datetime import timedelta
 import sys
 import json
-from dhutil import (
+from dhcommon import (
     dt_as_dt, dt_as_str, dt_as_time, dt_to_epoch, dt_from_epoch,
     timeframe_delta, valid_timeframe, valid_trading_hours, log_say,
-    this_candle_start, expected_candle_datetimes)
+    this_candle_start)
+from dhutil import expected_candle_datetimes
 from dhstore import (
     get_symbol_by_ticker, get_candles, store_candle, get_events, store_event,
     get_indicator_datapoints, store_indicator, store_indicator_datapoints)

@@ -3,10 +3,10 @@ from datetime import timedelta, datetime as dt, date
 from copy import deepcopy
 import logging
 import numpy as np
-from dhutil import (
+from dhcommon import (
     dt_as_str, valid_timeframe, valid_trading_hours, dt_as_dt,
     dt_to_epoch, check_tf_th_compatibility, this_candle_start,
-    start_of_week_date, OperationTimer, log_say, dict_of_weeks)
+    start_of_week_date, log_say, dict_of_weeks, OperationTimer)
 from dhstore import (
     get_symbol_by_ticker, get_candles,
     get_trades_by_field, get_tradeseries_by_field,
