@@ -13,7 +13,6 @@ import sys
 import pymongo
 import logging
 from dotenv import load_dotenv, find_dotenv
-from operator import itemgetter
 from datetime import datetime as dt
 from datetime import timedelta
 import dhutil as dhu
@@ -45,6 +44,31 @@ except Exception:
           "button.  It should show a dialogue that allows me to add it.")
     print("If this keeps happening maybe add a subnet range too?")
     sys.exit()
+
+
+##############################################################################
+# Progress bar helper functions
+def start_progbar(show_progress: bool, total: int,
+                  desc: str) -> dhu.ProgBar:
+    """Start a progress bar if show_progress is True and total > 0.
+    Returns ProgBar object or None."""
+    if show_progress and total > 0:
+        return dhu.ProgBar(total=total, desc=desc)
+    return None
+
+
+def update_progbar(pbar: dhu.ProgBar, index: int, total: int,
+                   update_every: int = 500):
+    """Update progress bar at intervals and at final item."""
+    if pbar is not None and (index % update_every == 0 or
+                             index == total):
+        pbar.update(index)
+
+
+def finish_progbar(pbar: dhu.ProgBar):
+    """Finish and cleanup progress bar if it exists."""
+    if pbar is not None:
+        pbar.finish()
 
 
 ##############################################################################
@@ -95,19 +119,41 @@ def drop_collection(collection: str):
 
 
 def get_all_records_by_collection(collection: str,
-                                  limit=0):
+                                  limit=0,
+                                  show_progress: bool = False,
+                                  ):
     """Return <limit> (default 0 == all) records from a collection, typically
     wrapped by more specific functions in dhstore such as get_all_trades()."""
     c = db[collection]
-    result = c.find().limit(limit)
+    total = c.count_documents({})
+    if limit > 0:
+        total = min(total, limit)
+    pbar = start_progbar(show_progress, total,
+                         f"records fetched from {collection}")
+    cursor = c.find().limit(limit)
+    result = []
+    for i, doc in enumerate(cursor, start=1):
+        result.append(doc)
+        update_progbar(pbar, i, total)
+    finish_progbar(pbar)
 
-    return list(result)
+    return result
 
 
-def run_query(query, collection: str):
+def run_query(query, collection: str, show_progress: bool = False):
     """Run a standard mongo query and return the result"""
     c = db[collection]
-    return list(c.find(query))
+    total = c.count_documents(query)
+    pbar = start_progbar(show_progress, total,
+                         f"records fetched from {collection}")
+    cursor = c.find(query)
+    result = []
+    for i, doc in enumerate(cursor, start=1):
+        result.append(doc)
+        update_progbar(pbar, i, total)
+    finish_progbar(pbar)
+
+    return result
 
 
 def count_records_by_field(collection: str,
@@ -204,12 +250,23 @@ def get_trades_by_field(field: str,
                         value,
                         collection: str,
                         limit=0,
+                        show_progress: bool = False,
                         ):
     """Returns <limit> (0 = all) Trade documents matching (field == value)."""
     c = db[collection]
-    result = c.find({field: value}).limit(limit)
+    total = c.count_documents({field: value})
+    if limit > 0:
+        total = min(total, limit)
+    pbar = start_progbar(show_progress, total,
+                         f"trade records fetched from {collection}")
+    cursor = c.find({field: value}).limit(limit)
+    result = []
+    for i, doc in enumerate(cursor, start=1):
+        result.append(doc)
+        update_progbar(pbar, i, total)
+    finish_progbar(pbar)
 
-    return list(result)
+    return result
 
 
 def store_trades(trades: list,
@@ -289,12 +346,24 @@ def get_tradeseries_by_field(field: str,
                              value,
                              collection: str,
                              limit=0,
+                             show_progress: bool = False,
                              ):
     """Returns a list of TradeSeries() matching the field=value provided."""
     c = db[collection]
-    result = c.find({field: value}).limit(limit)
+    total = c.count_documents({field: value})
+    if limit > 0:
+        total = min(total, limit)
+    pbar = start_progbar(show_progress, total,
+                         "tradeseries records fetched from "
+                         f"{collection}")
+    cursor = c.find({field: value}).limit(limit)
+    result = []
+    for i, doc in enumerate(cursor, start=1):
+        result.append(doc)
+        update_progbar(pbar, i, total)
+    finish_progbar(pbar)
 
-    return list(result)
+    return result
 
 
 def store_tradeseries(series: dict,
@@ -357,12 +426,24 @@ def get_backtests_by_field(field: str,
                            value,
                            collection: str,
                            limit=0,
+                           show_progress: bool = False,
                            ):
     """Returns a list of Backtest() matching the field=value provided."""
     c = db[collection]
-    result = c.find({field: value}).limit(limit)
+    total = c.count_documents({field: value})
+    if limit > 0:
+        total = min(total, limit)
+    pbar = start_progbar(show_progress, total,
+                         "backtest records fetched from "
+                         f"{collection}")
+    cursor = c.find({field: value}).limit(limit)
+    result = []
+    for i, doc in enumerate(cursor, start=1):
+        result.append(doc)
+        update_progbar(pbar, i, total)
+    finish_progbar(pbar)
 
-    return list(result)
+    return result
 
 
 def store_backtest(backtest: dict,
@@ -457,14 +538,28 @@ def get_candles(start_epoch: int,
                 end_epoch: int,
                 timeframe: str,
                 symbol: str,
+                show_progress: bool = False,
                 ):
     """Returns a list of candle docs within the start and end epochs given
     inclusive of both epochs"""
     c = db[f"candles_{symbol}_{timeframe}"]
-    result = c.find({"$and": [{"c_epoch": {"$gte": start_epoch}},
-                    {"c_epoch": {"$lte": end_epoch}}]})
+    candle_filter = {
+        "$and": [
+            {"c_epoch": {"$gte": start_epoch}},
+            {"c_epoch": {"$lte": end_epoch}},
+        ]
+    }
+    total = c.count_documents(candle_filter)
+    pbar = start_progbar(show_progress, total,
+                         f"{symbol} {timeframe} candles fetched")
+    cursor = c.find(candle_filter).sort("c_epoch", pymongo.ASCENDING)
+    result = []
+    for i, doc in enumerate(cursor, start=1):
+        result.append(doc)
+        update_progbar(pbar, i, total)
+    finish_progbar(pbar)
 
-    return sorted(list(result), key=itemgetter('c_epoch'))
+    return result
 
 
 def review_candles(timeframe: str,

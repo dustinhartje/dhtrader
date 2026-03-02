@@ -31,6 +31,31 @@ log.addHandler(logging.NullHandler())
 
 
 ##############################################################################
+# Progress bar helper functions
+def start_progbar(show_progress: bool, total: int,
+                  desc: str) -> dhu.ProgBar:
+    """Start a progress bar if show_progress is True and total > 0.
+    Returns ProgBar object or None."""
+    if show_progress and total > 0:
+        return dhu.ProgBar(total=total, desc=desc)
+    return None
+
+
+def update_progbar(pbar: dhu.ProgBar, index: int, total: int,
+                   update_every: int = 500):
+    """Update progress bar at intervals and at final item."""
+    if pbar is not None and (index % update_every == 0 or
+                             index == total):
+        pbar.update(index)
+
+
+def finish_progbar(pbar: dhu.ProgBar):
+    """Finish and cleanup progress bar if it exists."""
+    if pbar is not None:
+        pbar.finish()
+
+
+##############################################################################
 # Non-class specific functions
 def list_mongo_collections():
     return dhm.list_collections()
@@ -43,11 +68,14 @@ def drop_mongo_collection(collection: str):
 
 
 def get_all_records_by_collection(collection: str,
-                                  limit=0):
+                                  limit=0,
+                                  show_progress: bool = False,
+                                  ):
     """Return <limit> (default 0 == all) records from a given collection
     without attempting to reconstruct them into dhtrader classes."""
     return dhm.get_all_records_by_collection(collection=collection,
-                                             limit=limit)
+                                             limit=limit,
+                                             show_progress=show_progress)
 
 
 ##############################################################################
@@ -83,13 +111,21 @@ def reconstruct_trade(t):
 
 
 def get_all_trades(collection: str = COLL_TRADES,
-                   limit=0):
-    "Get <limit> (default 0 == all) stored trades and return as a list."""
+                   limit=0,
+                   show_progress: bool = False,
+                   ):
+    """Get <limit> (default 0 == all) stored trades and return as a list."""
     result = []
     r = dhm.get_all_records_by_collection(collection=collection,
-                                          limit=limit)
-    for t in r:
+                                          limit=limit,
+                                          show_progress=show_progress)
+    total = len(r)
+    pbar = start_progbar(show_progress, total,
+                         "Trade objects built")
+    for i, t in enumerate(r, start=1):
         result.append(reconstruct_trade(t))
+        update_progbar(pbar, i, total)
+    finish_progbar(pbar)
 
     return result
 
@@ -98,6 +134,7 @@ def get_trades_by_field(field: str,
                         value,
                         collection: str = COLL_TRADES,
                         limit=0,
+                        show_progress: bool = False,
                         ):
     """Returns Trade() objects matching the field=value provided.
     Default limit=0 returns all objects, or set to return only top X. """
@@ -109,13 +146,19 @@ def get_trades_by_field(field: str,
                                 value=value,
                                 collection=collection,
                                 limit=limit,
+                                show_progress=show_progress,
                                 )
     log.info(f"Retrieved {len(r)} trade records")
 
     # Reconstruct Trade objects
     log.info("Building Trade objects")
-    for t in r:
+    total = len(r)
+    pbar = start_progbar(show_progress, total,
+                         "Trade objects built")
+    for i, t in enumerate(r, start=1):
         result.append(reconstruct_trade(t))
+        update_progbar(pbar, i, total)
+    finish_progbar(pbar)
     log.info(f"Returning {len(result)} Trade objects")
 
     return result
@@ -398,12 +441,22 @@ def reconstruct_tradeseries(ts):
 
 
 def get_all_tradeseries(collection: str = COLL_TRADESERIES,
-                        limit=0):
-    "Get <limit> (default 0 == all) stored tradeseries returned as a list."""
+                        limit=0,
+                        show_progress: bool = False,
+                        ):
+    """Get <limit> (default 0 == all) stored tradeseries returned as a
+    list."""
     result = []
-    r = dhm.get_all_records_by_collection(collection=collection, limit=limit)
-    for t in r:
+    r = dhm.get_all_records_by_collection(collection=collection,
+                                          limit=limit,
+                                          show_progress=show_progress)
+    total = len(r)
+    pbar = start_progbar(show_progress, total,
+                         "TradeSeries objects built")
+    for i, t in enumerate(r, start=1):
         result.append(reconstruct_tradeseries(t))
+        update_progbar(pbar, i, total)
+    finish_progbar(pbar)
 
     return result
 
@@ -414,6 +467,7 @@ def get_tradeseries_by_field(field: str,
                              collection_trades: str = COLL_TRADES,
                              limit=0,
                              include_trades: bool = True,
+                             show_progress: bool = False,
                              ):
     """Returns a list of all TradeSeries matching the bt_id provided."""
     # Retrieve TradeSeries from storage
@@ -424,12 +478,16 @@ def get_tradeseries_by_field(field: str,
                                      value=value,
                                      collection=collection,
                                      limit=limit,
+                                     show_progress=show_progress,
                                      )
     log.info(f"Retrieved {len(r)} TradeSeries records")
 
     # Reconstruct TradeSeries objects and optionally load trades
     log.info("Building TradeSeries objects and optionally loading trades")
-    for t in r:
+    total = len(r)
+    pbar = start_progbar(show_progress, total,
+                         "TradeSeries objects built")
+    for i, t in enumerate(r, start=1):
         ts = reconstruct_tradeseries(t)
         if include_trades:
             log.info(f"Loading trades for ts_id={ts.ts_id}")
@@ -439,7 +497,10 @@ def get_tradeseries_by_field(field: str,
                                             )
             ts.sort_trades()
         result.append(ts)
-    log.info(f"Finished reconstruction, returning {len(result)} TradeSeries")
+        update_progbar(pbar, i, total)
+    finish_progbar(pbar)
+    log.info(f"Finished reconstruction, returning {len(result)} "
+             f"TradeSeries")
 
     return result
 
@@ -589,19 +650,23 @@ def delete_tradeseries(symbol: str,
 ##############################################################################
 # Backtests
 def get_all_backtests(collection: str = COLL_BACKTESTS,
-                      limit=0):
+                      limit=0,
+                      show_progress: bool = False,
+                      ):
     """Get <limit> (default 0 == all) stored backtests returned as a list of
     dicts.  Because dhtrader.Backtest() is meant to be subclassed we don't
     return Backtest() objects here.  Subclass implementations can warp this
     function to convert dicts into their subclass object types as needed."""
     return dhm.get_all_records_by_collection(collection=collection,
-                                             limit=limit)
+                                             limit=limit,
+                                             show_progress=show_progress)
 
 
 def get_backtests_by_field(field: str,
                            value,
                            collection: str = COLL_BACKTESTS,
                            limit=0,
+                           show_progress: bool = False,
                            ):
     """Returns a list of Backtest() objects (as dictionaries), matching the
     field=value provided.  Because dhtrader.Backtest() is meant to be
@@ -612,6 +677,7 @@ def get_backtests_by_field(field: str,
                                         value=value,
                                         collection=collection,
                                         limit=limit,
+                                        show_progress=show_progress,
                                         )
 
     return result
@@ -771,13 +837,15 @@ def get_indicator_datapoints(ind_id: str,
                              dp_collection: str = COLL_IND_DPS,
                              earliest_dt: str = None,
                              latest_dt: str = None,
+                             show_progress: bool = False,
                              ):
-    """Returns a list of IndicatorDatapoint() objects for the given timeframe
-    and ind_id"""
+    """Returns a list of IndicatorDatapoint() objects for the given
+    timeframe and ind_id"""
     # Retrieve datapoints from storage
     msg = f"Retrieving datapoints for ind_id={ind_id}"
     if earliest_dt or latest_dt:
-        msg = " ".join([msg, f"with date range: {earliest_dt} to {latest_dt}"])
+        msg = " ".join([msg, f"with date range: {earliest_dt} to "
+                        f"{latest_dt}"])
     else:
         msg = " ".join([msg, "including all dates available"])
     log.info(msg)
@@ -791,12 +859,17 @@ def get_indicator_datapoints(ind_id: str,
     # Build IndicatorDataPoint objects
     log.info("Building IndicatorDataPoint objects")
     result = []
-    for d in working:
+    total = len(working)
+    pbar = start_progbar(show_progress, total,
+                         "IndicatorDataPoint objects built")
+    for i, d in enumerate(working, start=1):
         result.append(dhc.IndicatorDataPoint(dt=d["dt"],
                                              value=d["value"],
                                              ind_id=d["ind_id"],
                                              epoch=d["epoch"]
                                              ))
+        update_progbar(pbar, i, total)
+    finish_progbar(pbar)
     log.info(f"Returning {len(result)} datapoints")
 
     return result
@@ -1047,6 +1120,7 @@ def get_candles(start_epoch: int,
                 end_epoch: int,
                 timeframe: str,
                 symbol: str = "ES",
+                show_progress: bool = False,
                 ):
     """Returns a list of candle docs within the start and end epochs given
     inclusive of both epochs"""
@@ -1059,13 +1133,17 @@ def get_candles(start_epoch: int,
                              end_epoch=end_epoch,
                              timeframe=timeframe,
                              symbol=symbol,
+                             show_progress=show_progress,
                              )
     log.info("Finished retrieval from storage")
 
     # Build Candle() objects from retrieved dictionaries
     log.info("Building Candle objects from retrieved data")
     candles = []
-    for r in result:
+    total = len(result)
+    pbar = start_progbar(show_progress, total,
+                         f"{symbol} {timeframe} Candle objects built")
+    for i, r in enumerate(result, start=1):
         candles.append(dhc.Candle(c_datetime=r["c_datetime"],
                                   c_timeframe=r["c_timeframe"],
                                   c_open=r["c_open"],
@@ -1076,6 +1154,8 @@ def get_candles(start_epoch: int,
                                   c_symbol=r["c_symbol"],
                                   c_epoch=r["c_epoch"],
                                   ))
+        update_progbar(pbar, i, total)
+    finish_progbar(pbar)
     log.info("Finished building Candle objects, returning "
              f"{len(candles)} candles")
 
@@ -1314,6 +1394,7 @@ def get_events(symbol="ES",
                end_epoch: int = None,
                categories: list = None,
                tags: list = None,
+               show_progress: bool = False,
                ):
     """Returns a list of events starting within the start and end epochs given
     inclusive of both epochs.  Note this will return events that end after
@@ -1345,7 +1426,10 @@ def get_events(symbol="ES",
     # Build Event objects
     log.info("Building Event objects")
     events = []
-    for r in result:
+    total = len(result)
+    pbar = start_progbar(show_progress, total,
+                         "Event objects built")
+    for i, r in enumerate(result, start=1):
         events.append(dhc.Event(start_dt=r["start_dt"],
                                 end_dt=r["end_dt"],
                                 symbol=symbol,
@@ -1353,6 +1437,8 @@ def get_events(symbol="ES",
                                 tags=r["tags"],
                                 notes=r["notes"],
                                 ))
+        update_progbar(pbar, i, total)
+    finish_progbar(pbar)
     log.info(f"Returning {len(events)} events")
 
     return events
