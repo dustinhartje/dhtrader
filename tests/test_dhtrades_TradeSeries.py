@@ -49,17 +49,17 @@ def create_trade(open_dt="2025-01-02 12:00:00",
                  name="DELETEME"
                  ):
     return Trade(open_dt=open_dt,
-                     close_dt=close_dt,
-                     direction=direction,
-                     timeframe=timeframe,
-                     trading_hours=trading_hours,
-                     entry_price=entry_price,
-                     stop_ticks=stop_ticks,
-                     stop_target=stop_target,
-                     prof_ticks=prof_ticks,
-                     prof_target=prof_target,
-                     name=name,
-                     )
+                 close_dt=close_dt,
+                 direction=direction,
+                 timeframe=timeframe,
+                 trading_hours=trading_hours,
+                 entry_price=entry_price,
+                 stop_ticks=stop_ticks,
+                 stop_target=stop_target,
+                 prof_ticks=prof_ticks,
+                 prof_target=prof_target,
+                 name=name,
+                 )
 
 
 def add_1m_candle(trade, dt, c_open, c_high, c_low, c_close):
@@ -67,14 +67,14 @@ def add_1m_candle(trade, dt, c_open, c_high, c_low, c_close):
     during an open trade.  This is used to test against actual observed live
     trade results, simulating each significant candle in the trade."""
     trade.candle_update(Candle(c_datetime=dt,
-                                   c_timeframe="1m",
-                                   c_open=c_open,
-                                   c_high=c_high,
-                                   c_low=c_low,
-                                   c_close=c_close,
-                                   c_volume=100,
-                                   c_symbol="ES",
-                                   ))
+                               c_timeframe="1m",
+                               c_open=c_open,
+                               c_high=c_high,
+                               c_low=c_low,
+                               c_close=c_close,
+                               c_volume=100,
+                               c_symbol="ES",
+                               ))
 
 
 def create_tradeseries(start_dt="2025-01-01 00:00:00",
@@ -89,16 +89,16 @@ def create_tradeseries(start_dt="2025-01-01 00:00:00",
                        trades=None,
                        ):
     r = TradeSeries(start_dt=start_dt,
-                        end_dt=end_dt,
-                        timeframe=timeframe,
-                        trading_hours=trading_hours,
-                        symbol=symbol,
-                        name=name,
-                        params_str=params_str,
-                        ts_id=ts_id,
-                        bt_id=bt_id,
-                        trades=trades,
-                        )
+                    end_dt=end_dt,
+                    timeframe=timeframe,
+                    trading_hours=trading_hours,
+                    symbol=symbol,
+                    name=name,
+                    params_str=params_str,
+                    ts_id=ts_id,
+                    bt_id=bt_id,
+                    trades=trades,
+                    )
     assert isinstance(r.start_dt, str)
     assert r.start_dt == start_dt
     assert isinstance(r.end_dt, str)

@@ -278,17 +278,17 @@ def test_Symbol_market_is_open():
 
     # Holidays (will need to pass events for this borred from known)
     events = [Event(start_dt="2024-02-19 13:00:00",
-                        end_dt="2024-02-19 17:59:00",
-                        symbol="ES",
-                        category="Closed",
-                        tags=["holiday"],
-                        notes="Presidents Day early close"),
+                    end_dt="2024-02-19 17:59:00",
+                    symbol="ES",
+                    category="Closed",
+                    tags=["holiday"],
+                    notes="Presidents Day early close"),
               Event(start_dt="2024-03-28 17:00:00",
-                        end_dt="2024-03-31 17:59:00",
-                        symbol="ES",
-                        category="Closed",
-                        tags=["holiday"],
-                        notes="Good Friday closed")
+                    end_dt="2024-03-31 17:59:00",
+                    symbol="ES",
+                    category="Closed",
+                    tags=["holiday"],
+                    notes="Good Friday closed")
               ]
 
     # Check a full closure holiday for several times
@@ -608,10 +608,10 @@ def test_Symbol_market_is_open():
 
 def test_Symbol_get_market_boundary():
     sym = Symbol(ticker="ES",
-                     name="ES",
-                     leverage_ratio=50.0,
-                     tick_size=0.25,
-                     )
+                 name="ES",
+                 leverage_ratio=50.0,
+                 tick_size=0.25,
+                 )
 
     # Testing All boundaries mid-week Wednesday noon datetime
     # 2024-03-20 12:00:00.  This confirms non-weekend mechanics are working
@@ -711,23 +711,23 @@ def test_Symbol_get_market_boundary():
 
     # Setting up a few events to test that boundary mechanics respect
     events = [Event(start_dt="2024-03-28 17:00:00",
-                        end_dt="2024-03-31 17:59:00",
-                        symbol="ES",
-                        category="Closed",
-                        notes="Good Friday Closed",
-                        ),
+                    end_dt="2024-03-31 17:59:00",
+                    symbol="ES",
+                    category="Closed",
+                    notes="Good Friday Closed",
+                    ),
               Event(start_dt="2024-03-18 00:00:00",
-                        end_dt="2024-03-19 23:59:00",
-                        symbol="ES",
-                        category="Closed",
-                        notes="Tues-Wed Full days closure",
-                        ),
+                    end_dt="2024-03-19 23:59:00",
+                    symbol="ES",
+                    category="Closed",
+                    notes="Tues-Wed Full days closure",
+                    ),
               Event(start_dt="2024-03-18 13:00:00",
-                        end_dt="2024-03-18 17:59:00",
-                        symbol="ES",
-                        category="Closed",
-                        notes="Tues early closure",
-                        ),
+                    end_dt="2024-03-18 17:59:00",
+                    symbol="ES",
+                    category="Closed",
+                    notes="Tues early closure",
+                    ),
               ]
 
     # Testing Next against Good Friday closure running Thursday
@@ -1400,9 +1400,9 @@ def test_Symbol_get_market_boundary_historical_eras():
 def test_Symbol_init():
     """Test Symbol __init__ creates object with correct attributes"""
     sym = Symbol(ticker="ES",
-                     name="E-mini S&P 500",
-                     leverage_ratio=50.0,
-                     tick_size=0.25)
+                 name="E-mini S&P 500",
+                 leverage_ratio=50.0,
+                 tick_size=0.25)
 
     assert sym.ticker == "ES"
     assert sym.name == "E-mini S&P 500"
@@ -1422,7 +1422,7 @@ def test_Symbol_init():
 
     # Test that leverage_ratio and tick_size are converted to float
     sym2 = Symbol(ticker="DELETEME", name="Test",
-                      leverage_ratio="100", tick_size="1.5")
+                  leverage_ratio="100", tick_size="1.5")
     assert isinstance(sym2.leverage_ratio, float)
     assert sym2.leverage_ratio == 100.0
     assert isinstance(sym2.tick_size, float)
@@ -1432,13 +1432,13 @@ def test_Symbol_init():
 def test_Symbol_equality():
     """Test Symbol __eq__ and __ne__ methods"""
     sym1 = Symbol(ticker="ES", name="ES",
-                      leverage_ratio=50, tick_size=0.25)
+                  leverage_ratio=50, tick_size=0.25)
     sym2 = Symbol(ticker="ES", name="ES",
-                      leverage_ratio=50, tick_size=0.25)
+                  leverage_ratio=50, tick_size=0.25)
     sym3 = Symbol(ticker="ES", name="ES",
-                      leverage_ratio=50, tick_size=0.5)  # Different tick
+                  leverage_ratio=50, tick_size=0.5)  # Different tick
     sym4 = Symbol(ticker="DELETEME", name="DELETEME",
-                      leverage_ratio=20, tick_size=0.25)  # Different ticker
+                  leverage_ratio=20, tick_size=0.25)  # Different ticker
 
     # Test __eq__
     assert sym1 == sym2
@@ -1452,14 +1452,14 @@ def test_Symbol_equality():
 
     # Test different attributes affect equality
     sym5 = Symbol(ticker="ES", name="Different Name",
-                      leverage_ratio=50, tick_size=0.25)
+                  leverage_ratio=50, tick_size=0.25)
     assert sym1 != sym5
 
 
 def test_Symbol_string_representations():
     """Test Symbol __str__, __repr__, and pretty methods"""
     sym = Symbol(ticker="ES", name="ES",
-                     leverage_ratio=50, tick_size=0.25)
+                 leverage_ratio=50, tick_size=0.25)
 
     # Test __str__ returns a string
     str_result = str(sym)
@@ -1492,7 +1492,7 @@ def test_Symbol_serialization():
     """Test Symbol to_json and to_clean_dict methods"""
     import json
     sym = Symbol(ticker="ES", name="ES",
-                     leverage_ratio=50, tick_size=0.25)
+                 leverage_ratio=50, tick_size=0.25)
 
     # Test to_json returns valid JSON string
     json_str = sym.to_json()
@@ -1526,7 +1526,7 @@ def test_Symbol_set_times():
     """Test Symbol set_times() sets correct values for current era"""
     import datetime as dt
     sym = Symbol(ticker="ES", name="ES",
-                     leverage_ratio=50, tick_size=0.25)
+                 leverage_ratio=50, tick_size=0.25)
 
     # Should use latest era times (2021-06_thru_present)
     assert sym.eth_open_time == dt.time(18, 0, 0)
@@ -1548,4 +1548,4 @@ def test_Symbol_set_times():
     # Test unknown ticker raises error
     with pytest.raises(ValueError, match="times have not yet been defined"):
         Symbol(ticker="UNKNOWN", name="Unknown",
-                   leverage_ratio=1, tick_size=0.01)
+               leverage_ratio=1, tick_size=0.01)

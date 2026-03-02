@@ -55,16 +55,16 @@ def create_trade(open_dt="2025-01-02 12:00:00",
                  name="DELETEME"
                  ):
     return Trade(open_dt=open_dt,
-                     direction=direction,
-                     timeframe=timeframe,
-                     trading_hours=trading_hours,
-                     entry_price=entry_price,
-                     stop_ticks=stop_ticks,
-                     stop_target=stop_target,
-                     prof_ticks=prof_ticks,
-                     prof_target=prof_target,
-                     name=name,
-                     )
+                 direction=direction,
+                 timeframe=timeframe,
+                 trading_hours=trading_hours,
+                 entry_price=entry_price,
+                 stop_ticks=stop_ticks,
+                 stop_target=stop_target,
+                 prof_ticks=prof_ticks,
+                 prof_target=prof_target,
+                 name=name,
+                 )
 
 
 def create_tradeseries(start_dt="2025-01-01 00:00:00",
@@ -79,16 +79,16 @@ def create_tradeseries(start_dt="2025-01-01 00:00:00",
                        trades=None,
                        ):
     return TradeSeries(start_dt=start_dt,
-                           end_dt=end_dt,
-                           timeframe=timeframe,
-                           trading_hours=trading_hours,
-                           symbol=symbol,
-                           name=name,
-                           params_str=params_str,
-                           ts_id=ts_id,
-                           bt_id=bt_id,
-                           trades=trades,
-                           )
+                       end_dt=end_dt,
+                       timeframe=timeframe,
+                       trading_hours=trading_hours,
+                       symbol=symbol,
+                       name=name,
+                       params_str=params_str,
+                       ts_id=ts_id,
+                       bt_id=bt_id,
+                       trades=trades,
+                       )
 
 
 def create_backtest(start_dt="2025-01-01 00:00:00",
@@ -106,19 +106,19 @@ def create_backtest(start_dt="2025-01-01 00:00:00",
                     tradeseries=None,
                     ):
     r = Backtest(start_dt=start_dt,
-                     end_dt=end_dt,
-                     timeframe=timeframe,
-                     trading_hours=trading_hours,
-                     symbol=symbol,
-                     name=name,
-                     parameters=parameters,
-                     bt_id=bt_id,
-                     class_name=class_name,
-                     chart_tf=chart_tf,
-                     chart_1m=chart_1m,
-                     autoload_charts=autoload_charts,
-                     tradeseries=tradeseries,
-                     )
+                 end_dt=end_dt,
+                 timeframe=timeframe,
+                 trading_hours=trading_hours,
+                 symbol=symbol,
+                 name=name,
+                 parameters=parameters,
+                 bt_id=bt_id,
+                 class_name=class_name,
+                 chart_tf=chart_tf,
+                 chart_1m=chart_1m,
+                 autoload_charts=autoload_charts,
+                 tradeseries=tradeseries,
+                 )
     assert isinstance(r.start_dt, str)
     assert r.start_dt == start_dt
     assert isinstance(r.end_dt, str)

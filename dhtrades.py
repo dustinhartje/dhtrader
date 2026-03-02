@@ -8,10 +8,11 @@ from dhutil import (
     dt_to_epoch, check_tf_th_compatibility, this_candle_start,
     start_of_week_date, OperationTimer, log_say, dict_of_weeks)
 from dhstore import (
-    get_symbol_by_ticker, get_candles, review_candles, get_trades_by_field,
-    delete_one_trade, delete_tradeseries, delete_trades,
-    store_tradeseries, delete_tradeseries, store_trades,
-    get_tradeseries_by_field, store_backtests, delete_backtests)
+    get_symbol_by_ticker, get_candles,
+    get_trades_by_field, get_tradeseries_by_field,
+    delete_one_trade, delete_tradeseries, delete_trades, delete_backtests,
+    store_tradeseries, store_trades, store_backtests,
+    review_candles)
 from dhcharts import Candle, Chart
 
 log = logging.getLogger("dhtrades")

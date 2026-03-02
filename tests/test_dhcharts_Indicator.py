@@ -10,7 +10,8 @@ from dhstore import (
     get_trades_by_field, delete_trades, get_tradeseries_by_field,
     delete_tradeseries, store_trades, store_tradeseries, get_candles,
     store_candles, store_candle, review_candles, delete_candles,
-    get_symbol_by_ticker, get_events, get_indicator, delete_indicator)
+    get_symbol_by_ticker, get_events, get_indicator, delete_indicator,
+    get_indicator_datapoints)
 
 
 # TODO think through which tests can be done simply by creating and calcing,
@@ -81,15 +82,15 @@ from dhstore import (
 def hide_Indicator_demo_hod_creation_and_calculation():
     # Confirm RTH datapoints are calculated
     ind = Indicator(name="DELETEME-hod-demo",
-                        description="Code testing use only",
-                        timeframe="15m",
-                        trading_hours="rth",
-                        symbol="ES",
-                        calc_version="1.0.0",
-                        calc_details="super basic",
-                        start_dt="2024-12-01 00:00:00",
-                        end_dt="2025-01-31 00:00:00",
-                        )
+                    description="Code testing use only",
+                    timeframe="15m",
+                    trading_hours="rth",
+                    symbol="ES",
+                    calc_version="1.0.0",
+                    calc_details="super basic",
+                    start_dt="2024-12-01 00:00:00",
+                    end_dt="2025-01-31 00:00:00",
+                    )
     ind.calculate()
     assert len(ind.datapoints) > 0
     # Datapoints should not exist on weekdays before or after rth hours
@@ -194,8 +195,8 @@ def Indicator_spotcheck_ES_eth_5m_EMA_close_l20_s2(i):
 
 def hide_Indicator_calculated_spotcheck_ES_eth_5m_EMA_close_l20_s2():
     ind_calced = get_indicator(ind_id="ES_eth_5m_EMA_close_l20_s2",
-                                   autoload_datapoints=False,
-                                   )
+                               autoload_datapoints=False,
+                               )
     ind_calced.start_dt = "2025-01-01 00:00:00"
     ind_calced.end_dt = "2025-01-02 00:00:00"
     ind_calced.load_underlying_chart()
@@ -205,8 +206,8 @@ def hide_Indicator_calculated_spotcheck_ES_eth_5m_EMA_close_l20_s2():
 
 def hide_Indicator_storage_spotcheck_ES_eth_5m_EMA_close_l20_s2():
     ind_stored = get_indicator(ind_id="ES_eth_5m_EMA_close_l20_s2",
-                                   autoload_datapoints=False,
-                                   )
+                               autoload_datapoints=False,
+                               )
     ind_stored.load_datapoints()
     Indicator_spotcheck_ES_eth_5m_EMA_close_l20_s2(ind_stored)
 
@@ -259,8 +260,8 @@ def Indicator_spotcheck_ES_eth_15m_EMA_close_l9_s2(i):
 @pytest.mark.storage
 def test_Indicator_calculated_spotcheck_ES_eth_15m_EMA_close_l9_s2():
     ind_calced = get_indicator(ind_id="ES_eth_15m_EMA_close_l9_s2",
-                                   autoload_datapoints=False,
-                                   )
+                               autoload_datapoints=False,
+                               )
     ind_calced.start_dt = "2025-01-28 00:00:00"
     ind_calced.end_dt = "2025-02-16 00:00:00"
     ind_calced.load_underlying_chart()
@@ -271,8 +272,8 @@ def test_Indicator_calculated_spotcheck_ES_eth_15m_EMA_close_l9_s2():
 @pytest.mark.storage
 def test_Indicator_storage_spotcheck_ES_eth_15m_EMA_close_l9_s2():
     ind_stored = get_indicator(ind_id="ES_eth_15m_EMA_close_l9_s2",
-                                   autoload_datapoints=False,
-                                   )
+                               autoload_datapoints=False,
+                               )
     ind_stored.load_datapoints()
     Indicator_spotcheck_ES_eth_15m_EMA_close_l9_s2(ind_stored)
 
@@ -324,8 +325,8 @@ def Indicator_spotcheck_ES_eth_15m_EMA_close_l20_s2(i):
 @pytest.mark.storage
 def test_Indicator_calculated_spotcheck_ES_eth_15m_EMA_close_l20_s2():
     ind_calced = get_indicator(ind_id="ES_eth_15m_EMA_close_l20_s2",
-                                   autoload_datapoints=False,
-                                   )
+                               autoload_datapoints=False,
+                               )
     ind_calced.start_dt = "2024-11-27 00:00:00"
     ind_calced.end_dt = "2024-12-15 00:00:00"
     ind_calced.load_underlying_chart()
@@ -336,8 +337,8 @@ def test_Indicator_calculated_spotcheck_ES_eth_15m_EMA_close_l20_s2():
 @pytest.mark.storage
 def test_Indicator_storage_spotcheck_ES_eth_15m_EMA_close_l20_s2():
     ind_stored = get_indicator(ind_id="ES_eth_15m_EMA_close_l20_s2",
-                                   autoload_datapoints=False,
-                                   )
+                               autoload_datapoints=False,
+                               )
     ind_stored.load_datapoints()
     Indicator_spotcheck_ES_eth_15m_EMA_close_l20_s2(ind_stored)
 
@@ -390,8 +391,8 @@ def Indicator_spotcheck_ES_eth_e1h_EMA_close_l9_s2(i):
 @pytest.mark.storage
 def test_Indicator_calculated_spotcheck_ES_eth_e1h_EMA_close_l9_s2():
     ind_calced = get_indicator(ind_id="ES_eth_e1h_EMA_close_l9_s2",
-                                   autoload_datapoints=False,
-                                   )
+                               autoload_datapoints=False,
+                               )
     ind_calced.start_dt = "2024-10-28 00:00:00"
     ind_calced.end_dt = "2024-11-17 00:00:00"
     ind_calced.load_underlying_chart()
@@ -402,8 +403,8 @@ def test_Indicator_calculated_spotcheck_ES_eth_e1h_EMA_close_l9_s2():
 @pytest.mark.storage
 def test_Indicator_storage_spotcheck_ES_eth_e1h_EMA_close_l9_s2():
     ind_stored = get_indicator(ind_id="ES_eth_e1h_EMA_close_l9_s2",
-                                   autoload_datapoints=False,
-                                   )
+                               autoload_datapoints=False,
+                               )
     ind_stored.load_datapoints()
     Indicator_spotcheck_ES_eth_e1h_EMA_close_l9_s2(ind_stored)
 
@@ -462,8 +463,8 @@ def Indicator_spotcheck_ES_eth_e1h_EMA_close_l20_s2(i):
 @pytest.mark.storage
 def test_Indicator_calculated_spotcheck_ES_eth_e1h_EMA_close_l20_s2():
     ind_calced = get_indicator(ind_id="ES_eth_e1h_EMA_close_l20_s2",
-                                   autoload_datapoints=False,
-                                   )
+                               autoload_datapoints=False,
+                               )
     ind_calced.start_dt = "2024-10-01 00:00:00"
     ind_calced.end_dt = "2024-10-20 00:00:00"
     ind_calced.load_underlying_chart()
@@ -474,8 +475,8 @@ def test_Indicator_calculated_spotcheck_ES_eth_e1h_EMA_close_l20_s2():
 @pytest.mark.storage
 def test_Indicator_storage_spotcheck_ES_eth_e1h_EMA_close_l20_s2():
     ind_stored = get_indicator(ind_id="ES_eth_e1h_EMA_close_l20_s2",
-                                   autoload_datapoints=False,
-                                   )
+                               autoload_datapoints=False,
+                               )
     ind_stored.load_datapoints()
     Indicator_spotcheck_ES_eth_e1h_EMA_close_l20_s2(ind_stored)
 
@@ -485,8 +486,8 @@ def test_Indicator_storage_spotcheck_ES_eth_e1h_EMA_close_l20_s2():
 
 def hide_Indicator_spotcheck_ES_rth_5m_EMA_close_l9_s2():
     ind = get_indicator(ind_id="ES_rth_5m_EMA_close_l9_s2",
-                            autoload_datapoints=True,
-                            )
+                        autoload_datapoints=True,
+                        )
     print(ind)
     # print("\n")
     # print(ind.pretty())
@@ -500,8 +501,8 @@ def hide_Indicator_spotcheck_ES_rth_5m_EMA_close_l9_s2():
 # TODO 5m RTH 20
 def hide_Indicator_spotcheck_ES_rth_5m_EMA_close_l20_s2():
     ind = get_indicator(ind_id="ES_rth_5m_EMA_close_l20_s2",
-                            autoload_datapoints=True,
-                            )
+                        autoload_datapoints=True,
+                        )
     print(ind)
     # print("\n")
     # print(ind.pretty())
@@ -577,8 +578,8 @@ def Indicator_spotcheck_ES_rth_15m_EMA_close_l9_s2(i):
 
 def hide_Indicator_calculated_spotcheck_ES_rth_15m_EMA_close_l9_s2():
     ind_calced = get_indicator(ind_id="ES_rth_15m_EMA_close_l9_s2",
-                                   autoload_datapoints=False,
-                                   )
+                               autoload_datapoints=False,
+                               )
     ind_calced.start_dt = "2024-07-08 00:00:00"
     ind_calced.end_dt = "2024-07-21 00:00:00"
     ind_calced.load_underlying_chart()
@@ -588,8 +589,8 @@ def hide_Indicator_calculated_spotcheck_ES_rth_15m_EMA_close_l9_s2():
 
 def hide_Indicator_storage_spotcheck_ES_rth_15m_EMA_close_l9_s2():
     ind_stored = get_indicator(ind_id="ES_rth_15m_EMA_close_l9_s2",
-                                   autoload_datapoints=False,
-                                   )
+                               autoload_datapoints=False,
+                               )
     ind_stored.load_datapoints()
     Indicator_spotcheck_ES_rth_15m_EMA_close_l9_s2(ind_stored)
 
@@ -614,18 +615,18 @@ def hide_Indicator_create_and_calculate():
     # TODO break this up into however many functions make sense once converted
     # Building 5m9sma for 2025-01-08 9:30am-11:30am
     itest = IndicatorSMA(name="TestSMA-DELETEME",
-                             timeframe="5m",
-                             trading_hours="eth",
-                             symbol="ES",
-                             description="yadda",
-                             calc_version="yoda",
-                             calc_details="yeeta",
-                             start_dt="2025-01-08 09:30:00",
-                             end_dt="2025-01-08 11:30:00",
-                             parameters={"length": 9,
-                                         "method": "close"
-                                         },
-                             )
+                         timeframe="5m",
+                         trading_hours="eth",
+                         symbol="ES",
+                         description="yadda",
+                         calc_version="yoda",
+                         calc_details="yeeta",
+                         start_dt="2025-01-08 09:30:00",
+                         end_dt="2025-01-08 11:30:00",
+                         parameters={"length": 9,
+                                     "method": "close"
+                                     },
+                         )
     itest.load_underlying_chart()
     itest.calculate()
     assert len(itest.candle_chart.c_candles) == 25
@@ -634,43 +635,43 @@ def hide_Indicator_create_and_calculate():
     # Building e1h9ema for 2025-01-08 - 2025-01-12
     # A test that spans a weekend closure covers most edge cases
     itest = IndicatorEMA(name="TestEMA-DELETEME",
-                             timeframe="e1h",
-                             trading_hours="eth",
-                             symbol="ES",
-                             description="yadda",
-                             calc_version="yoda",
-                             calc_details="yeeta",
-                             start_dt="2025-01-08 00:00:00",
-                             end_dt="2025-01-12 20:00:00",
-                             parameters={"length": 9,
-                                         "method": "close"
-                                         },
-                             )
+                         timeframe="e1h",
+                         trading_hours="eth",
+                         symbol="ES",
+                         description="yadda",
+                         calc_version="yoda",
+                         calc_details="yeeta",
+                         start_dt="2025-01-08 00:00:00",
+                         end_dt="2025-01-12 20:00:00",
+                         parameters={"length": 9,
+                                     "method": "close"
+                                     },
+                         )
     itest.load_underlying_chart()
     itest.calculate()
     # Validate candles as expected
     assert len(itest.candle_chart.c_candles) == 59
     expected_id = "ES_eth_e1h_TestEMA-DELETEME_close_l9_s2"
     expected = [IndicatorDataPoint(dt='2025-01-10 15:00:00',
-                                       value=5890.25,
-                                       ind_id=expected_id,
-                                       epoch=1736539200),
+                                   value=5890.25,
+                                   ind_id=expected_id,
+                                   epoch=1736539200),
                 IndicatorDataPoint(dt='2025-01-10 16:00:00',
-                                       value=5884.5,
-                                       ind_id=expected_id,
-                                       epoch=1736542800),
+                                   value=5884.5,
+                                   ind_id=expected_id,
+                                   epoch=1736542800),
                 IndicatorDataPoint(dt='2025-01-12 18:00:00',
-                                       value=5879.6,
-                                       ind_id=expected_id,
-                                       epoch=1736722800),
+                                   value=5879.6,
+                                   ind_id=expected_id,
+                                   epoch=1736722800),
                 IndicatorDataPoint(dt='2025-01-12 19:00:00',
-                                       value=5875.38,
-                                       ind_id=expected_id,
-                                       epoch=1736726400),
+                                   value=5875.38,
+                                   ind_id=expected_id,
+                                   epoch=1736726400),
                 IndicatorDataPoint(dt='2025-01-12 20:00:00',
-                                       value=5869.3,
-                                       ind_id=expected_id,
-                                       epoch=1736730000),
+                                   value=5869.3,
+                                   ind_id=expected_id,
+                                   epoch=1736730000),
                 ]
     calculated = itest.datapoints[-5:]
     for i in range(5):
@@ -679,18 +680,18 @@ def hide_Indicator_create_and_calculate():
 
 def hide_Indicator_get_datapoints():
     itest = IndicatorEMA(name="TestEMA-DELETEME",
-                             timeframe="e1h",
-                             trading_hours="eth",
-                             symbol="ES",
-                             description="yadda",
-                             calc_version="yoda",
-                             calc_details="yeeta",
-                             start_dt="2025-01-08 00:00:00",
-                             end_dt="2025-01-12 20:00:00",
-                             parameters={"length": 9,
-                                         "method": "close"
-                                         },
-                             )
+                         timeframe="e1h",
+                         trading_hours="eth",
+                         symbol="ES",
+                         description="yadda",
+                         calc_version="yoda",
+                         calc_details="yeeta",
+                         start_dt="2025-01-08 00:00:00",
+                         end_dt="2025-01-12 20:00:00",
+                         parameters={"length": 9,
+                                     "method": "close"
+                                     },
+                         )
     itest.load_underlying_chart()
     itest.calculate()
     # Testing getting datapoints by dt using 2025-01-12 18:00:00
@@ -706,18 +707,18 @@ def hide_Indicator_get_datapoints():
 
 def hide_Indicator_storage_and_retrieval():
     itest = IndicatorEMA(name="TestEMA-DELETEME",
-                             timeframe="e1h",
-                             trading_hours="eth",
-                             symbol="ES",
-                             description="yadda",
-                             calc_version="yoda",
-                             calc_details="yeeta",
-                             start_dt="2025-01-08 00:00:00",
-                             end_dt="2025-01-12 20:00:00",
-                             parameters={"length": 9,
-                                         "method": "close"
-                                         },
-                             )
+                         timeframe="e1h",
+                         trading_hours="eth",
+                         symbol="ES",
+                         description="yadda",
+                         calc_version="yoda",
+                         calc_details="yeeta",
+                         start_dt="2025-01-08 00:00:00",
+                         end_dt="2025-01-12 20:00:00",
+                         parameters={"length": 9,
+                                     "method": "close"
+                                     },
+                         )
     itest.load_underlying_chart()
     itest.calculate()
     # Confirm indicator is not already stored by first deleting it in case a
@@ -737,7 +738,7 @@ def hide_Indicator_storage_and_retrieval():
     # Confirm we can retrieve it from storage now
     # Dates must be set as they don't get stored
     retrieve = get_indicator(ind_id=itest.ind_id,
-                                 autoload_datapoints=True)
+                             autoload_datapoints=True)
     retrieve.start_dt = "2025-01-08 00:00:00"
     retrieve.end_dt = "2025-01-12 20:00:00"
     retrieve.load_underlying_chart()

@@ -543,7 +543,7 @@ def generate_zero_volume_candle(c_datetime,
                         c_close=v,
                         c_volume=0,
                         c_symbol=symbol,
-        )
+                        )
     else:
         result = None
 

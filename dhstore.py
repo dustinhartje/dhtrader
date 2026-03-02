@@ -12,7 +12,8 @@ from copy import deepcopy
 import logging
 from pathlib import Path
 from dhcharts import (
-    Candle, Chart, Day, Event, Indicator, IndicatorDatapoint, Symbol)
+    Candle, Chart, Day, Event, Indicator, IndicatorDataPoint, Symbol,
+    IndicatorSMA, IndicatorEMA)
 from dhtrades import (
     Trade, TradeSeries, Backtest)
 from dhutil import (
@@ -64,13 +65,13 @@ def finish_progbar(pbar: ProgBar):
 ##############################################################################
 # Non-class specific functions
 def list_mongo_collections():
-    return list_collections()
+    return dhm.list_collections()
 
 
 def drop_mongo_collection(collection: str):
     """Used for brute force cleanup of storage, it will wipe all data from the
     named collection in mongo.  WIELD THIS POWER CAREFULLY!!!"""
-    return drop_collection(collection=collection)
+    return dhm.drop_collection(collection=collection)
 
 
 def get_all_records_by_collection(collection: str,
@@ -79,7 +80,7 @@ def get_all_records_by_collection(collection: str,
                                   ):
     """Return <limit> (default 0 == all) records from a given collection
     without attempting to reconstruct them into dhtrader classes."""
-    return get_all_records_by_collection(collection=collection,
+    return dhm.get_all_records_by_collection(collection=collection,
                                              limit=limit,
                                              show_progress=show_progress)
 
@@ -90,30 +91,30 @@ def reconstruct_trade(t):
     """Takes a dictionary and builds a Trade() object from it.  Primarily used
     by other functions to convert results retrieved from storage."""
     return Trade(open_dt=t["open_dt"],
-                     direction=t["direction"],
-                     timeframe=t["timeframe"],
-                     trading_hours=t["trading_hours"],
-                     entry_price=t["entry_price"],
-                     close_dt=t["close_dt"],
-                     created_dt=t["created_dt"],
-                     open_epoch=t["open_epoch"],
-                     high_price=t["high_price"],
-                     low_price=t["low_price"],
-                     exit_price=t["exit_price"],
-                     stop_target=t["stop_target"],
-                     prof_target=t["prof_target"],
-                     stop_ticks=t["stop_ticks"],
-                     prof_ticks=t["prof_ticks"],
-                     offset_ticks=t["offset_ticks"],
-                     symbol=t["symbol"],
-                     is_open=t["is_open"],
-                     profitable=t["profitable"],
-                     name=t["name"],
-                     version=t["version"],
-                     ts_id=t["ts_id"],
-                     bt_id=t["bt_id"],
-                     tags=t["tags"],
-                     )
+                 direction=t["direction"],
+                 timeframe=t["timeframe"],
+                 trading_hours=t["trading_hours"],
+                 entry_price=t["entry_price"],
+                 close_dt=t["close_dt"],
+                 created_dt=t["created_dt"],
+                 open_epoch=t["open_epoch"],
+                 high_price=t["high_price"],
+                 low_price=t["low_price"],
+                 exit_price=t["exit_price"],
+                 stop_target=t["stop_target"],
+                 prof_target=t["prof_target"],
+                 stop_ticks=t["stop_ticks"],
+                 prof_ticks=t["prof_ticks"],
+                 offset_ticks=t["offset_ticks"],
+                 symbol=t["symbol"],
+                 is_open=t["is_open"],
+                 profitable=t["profitable"],
+                 name=t["name"],
+                 version=t["version"],
+                 ts_id=t["ts_id"],
+                 bt_id=t["bt_id"],
+                 tags=t["tags"],
+                 )
 
 
 def get_all_trades(collection: str = COLL_TRADES,
@@ -122,7 +123,7 @@ def get_all_trades(collection: str = COLL_TRADES,
                    ):
     """Get <limit> (default 0 == all) stored trades and return as a list."""
     result = []
-    r = get_all_records_by_collection(collection=collection,
+    r = dhm.get_all_records_by_collection(collection=collection,
                                           limit=limit,
                                           show_progress=show_progress)
     total = len(r)
@@ -148,7 +149,7 @@ def get_trades_by_field(field: str,
     log.info(f"Retrieving trades by {field}={value}, "
              f"limit={limit}")
     result = []
-    r = get_trades_by_field(field=field,
+    r = dhm.get_trades_by_field(field=field,
                                 value=value,
                                 collection=collection,
                                 limit=limit,
@@ -184,7 +185,7 @@ def store_trades(trades: list,
     # Store in database
     log.info(f"Writing {len(working_trades)} trades to "
              f"collection={collection}")
-    result = store_trades(trades=working_trades,
+    result = dhm.store_trades(trades=working_trades,
                               collection=collection)
     log.info("Storage complete, returning result")
 
@@ -216,7 +217,7 @@ def review_trades(symbol: str = "ES",
     string format."""
     if multi_ok is None:
         multi_ok = []
-    review = review_trades(symbol=symbol,
+    review = dhm.review_trades(symbol=symbol,
                                collection=collection,
                                bt_id=bt_id,
                                ts_id=ts_id,
@@ -259,7 +260,7 @@ def review_trades(symbol: str = "ES",
         # Create a set of event start_dt strings for fast lookup
         event_start_times = {event.start_dt for event in all_events}
         log_say(f"Cached {len(event_start_times)} unique event "
-                    f"start times")
+                f"start times")
 
         # Start a progress bar
         bar_total = len(all_ts)
@@ -404,7 +405,7 @@ def delete_one_trade(symbol: str,
              "ts_id": ts_id,
              }
 
-    return delete_one_document(query=query, collection=collection)
+    return dhm.delete_one_document(query=query, collection=collection)
 
 
 def delete_trades(symbol: str,
@@ -418,7 +419,7 @@ def delete_trades(symbol: str,
     Example to delete all trade records with name=="DELETEME":
         delete_trades(symbol="ES", field="name", value="DELETEME")
     """
-    result = delete_trades(symbol=symbol,
+    result = dhm.delete_trades(symbol=symbol,
                                collection=collection,
                                field=field,
                                value=value,
@@ -433,17 +434,17 @@ def reconstruct_tradeseries(ts):
     """Takes a dictionary and builds a Trade() object from it.  Primarily used
     by other functions to convert results retrieved from storage."""
     return TradeSeries(start_dt=ts["start_dt"],
-                           end_dt=ts["end_dt"],
-                           timeframe=ts["timeframe"],
-                           trading_hours=ts["trading_hours"],
-                           symbol=ts["symbol"],
-                           name=ts["name"],
-                           params_str=ts["params_str"],
-                           ts_id=ts["ts_id"],
-                           bt_id=ts["bt_id"],
-                           trades=[],
-                           tags=ts["tags"],
-                           )
+                       end_dt=ts["end_dt"],
+                       timeframe=ts["timeframe"],
+                       trading_hours=ts["trading_hours"],
+                       symbol=ts["symbol"],
+                       name=ts["name"],
+                       params_str=ts["params_str"],
+                       ts_id=ts["ts_id"],
+                       bt_id=ts["bt_id"],
+                       trades=[],
+                       tags=ts["tags"],
+                       )
 
 
 def get_all_tradeseries(collection: str = COLL_TRADESERIES,
@@ -453,7 +454,7 @@ def get_all_tradeseries(collection: str = COLL_TRADESERIES,
     """Get <limit> (default 0 == all) stored tradeseries returned as a
     list."""
     result = []
-    r = get_all_records_by_collection(collection=collection,
+    r = dhm.get_all_records_by_collection(collection=collection,
                                           limit=limit,
                                           show_progress=show_progress)
     total = len(r)
@@ -480,7 +481,7 @@ def get_tradeseries_by_field(field: str,
     log.info(f"Retrieving TradeSeries by {field}={value} with limit={limit} "
              f"and include_trades={include_trades}")
     result = []
-    r = get_tradeseries_by_field(field=field,
+    r = dhm.get_tradeseries_by_field(field=field,
                                      value=value,
                                      collection=collection,
                                      limit=limit,
@@ -519,7 +520,7 @@ def store_tradeseries(series: list,
     log.info(f"Storing {len(series)} TradeSeries in collection={collection}")
     result = []
     for ts in series:
-        result.append(store_tradeseries(ts.to_clean_dict(),
+        result.append(dhm.store_tradeseries(ts.to_clean_dict(),
                                             collection=collection,
                                             ))
     log.info(f"Storage complete, {len(result)} records written")
@@ -574,9 +575,9 @@ def review_tradeseries(symbol: str = "ES",
             for t in ts.trades:
                 # Capture the parent timeframe bars that we open and close in
                 open_tf = this_candle_start(dt=t.open_dt,
-                                                timeframe=ts.timeframe)
+                                            timeframe=ts.timeframe)
                 close_tf = this_candle_start(dt=t.close_dt,
-                                                 timeframe=ts.timeframe)
+                                             timeframe=ts.timeframe)
                 if last_trade is not None:
                     # Check if we opened in the same timeframe bar as the
                     # prior Trade closed in (not expected)
@@ -609,7 +610,7 @@ def review_tradeseries(symbol: str = "ES",
     else:
         integrity = {"status": None, "issues": None}
     # Standard review shows key details of TradeSeries and optionally Trades
-    review = review_tradeseries(symbol=symbol,
+    review = dhm.review_tradeseries(symbol=symbol,
                                     collection=collection,
                                     bt_id=bt_id,
                                     )
@@ -637,7 +638,7 @@ def delete_tradeseries(symbol: str,
     'value'.  Typically used to delete by ts_id, or bt_id fields.
     """
     result = {}
-    result["tradeseries"] = delete_tradeseries(
+    result["tradeseries"] = dhm.delete_tradeseries(
             symbol=symbol,
             collection=collection,
             field=field,
@@ -663,7 +664,7 @@ def get_all_backtests(collection: str = COLL_BACKTESTS,
     dicts.  Because dhtrader.Backtest() is meant to be subclassed we don't
     return Backtest() objects here.  Subclass implementations can warp this
     function to convert dicts into their subclass object types as needed."""
-    return get_all_records_by_collection(collection=collection,
+    return dhm.get_all_records_by_collection(collection=collection,
                                              limit=limit,
                                              show_progress=show_progress)
 
@@ -679,12 +680,12 @@ def get_backtests_by_field(field: str,
     subclassed we don't return Backtest() objects here.  Subclass
     implementations can warp this function to convert dicts into their
     subclass specific object types as needed."""
-    result = get_backtests_by_field(field=field,
-                                    value=value,
-                                    collection=collection,
-                                    limit=limit,
-                                    show_progress=show_progress,
-                                    )
+    result = dhm.get_backtests_by_field(field=field,
+                                        value=value,
+                                        collection=collection,
+                                        limit=limit,
+                                        show_progress=show_progress,
+                                        )
 
     return result
 
@@ -695,9 +696,9 @@ def store_backtests(backtests: list,
     """Store one or more Backtest() objects in central storage"""
     result = []
     for bt in backtests:
-        result.append(store_backtest(bt.to_clean_dict(),
-                                     collection=collection,
-                                     ))
+        result.append(dhm.store_backtest(bt.to_clean_dict(),
+                                         collection=collection,
+                                         ))
 
     return result
 
@@ -709,9 +710,9 @@ def review_backtests(symbol: str = "ES",
                      pretty: bool = False,
                      ):
     """Provides aggregate summary data about backtests in central storage"""
-    review = review_backtests(symbol=symbol,
-                              collection=collection,
-                              )
+    review = dhm.review_backtests(symbol=symbol,
+                                  collection=collection,
+                                  )
     if include_tradeseries:
         for bt in review:
             bt["tradeseries"] = review_tradeseries(
@@ -807,28 +808,28 @@ def get_indicator(ind_id: str,
     # The stored class_name attribute tells us which object class to return
     if i["class_name"] == "IndicatorSMA":
         result = IndicatorSMA(description=i["description"],
-                                  timeframe=i["timeframe"],
-                                  trading_hours=i["trading_hours"],
-                                  symbol=i["symbol"],
-                                  calc_version=i["calc_version"],
-                                  calc_details=i["calc_details"],
-                                  ind_id=i["ind_id"],
-                                  autoload_chart=autoload_chart,
-                                  name=i["name"],
-                                  parameters=i["parameters"],
-                                  )
+                              timeframe=i["timeframe"],
+                              trading_hours=i["trading_hours"],
+                              symbol=i["symbol"],
+                              calc_version=i["calc_version"],
+                              calc_details=i["calc_details"],
+                              ind_id=i["ind_id"],
+                              autoload_chart=autoload_chart,
+                              name=i["name"],
+                              parameters=i["parameters"],
+                              )
     elif i["class_name"] == "IndicatorEMA":
         result = IndicatorEMA(description=i["description"],
-                                  timeframe=i["timeframe"],
-                                  trading_hours=i["trading_hours"],
-                                  symbol=i["symbol"],
-                                  calc_version=i["calc_version"],
-                                  calc_details=i["calc_details"],
-                                  ind_id=i["ind_id"],
-                                  autoload_chart=autoload_chart,
-                                  name=i["name"],
-                                  parameters=i["parameters"],
-                                  )
+                              timeframe=i["timeframe"],
+                              trading_hours=i["trading_hours"],
+                              symbol=i["symbol"],
+                              calc_version=i["calc_version"],
+                              calc_details=i["calc_details"],
+                              ind_id=i["ind_id"],
+                              autoload_chart=autoload_chart,
+                              name=i["name"],
+                              parameters=i["parameters"],
+                              )
     else:
         raise ValueError(f"Unable to match class_name of {i['class_name']} "
                          "with a known Indicator() subclass."
@@ -870,10 +871,10 @@ def get_indicator_datapoints(ind_id: str,
                          "IndicatorDataPoint objects built")
     for i, d in enumerate(working, start=1):
         result.append(IndicatorDataPoint(dt=d["dt"],
-                                             value=d["value"],
-                                             ind_id=d["ind_id"],
-                                             epoch=d["epoch"]
-                                             ))
+                                         value=d["value"],
+                                         ind_id=d["ind_id"],
+                                         epoch=d["epoch"]
+                                         ))
         update_progbar(pbar, i, total)
     finish_progbar(pbar)
     log.info(f"Returning {len(result)} datapoints")
@@ -1090,10 +1091,10 @@ def get_symbol_by_ticker(ticker: str):
     if ticker in ["ES", "DELETEME"]:
         if ticker not in SYMBOL_CACHE:
             SYMBOL_CACHE[ticker] = Symbol(ticker=ticker,
-                                              name=ticker,
-                                              leverage_ratio=50,
-                                              tick_size=0.25,
-                                              )
+                                          name=ticker,
+                                          leverage_ratio=50,
+                                          tick_size=0.25,
+                                          )
         return SYMBOL_CACHE[ticker]
     else:
         raise ValueError("Only ['ES', 'DELETEME'] is currently supported as "
@@ -1151,15 +1152,15 @@ def get_candles(start_epoch: int,
                          f"{symbol} {timeframe} Candle objects built")
     for i, r in enumerate(result, start=1):
         candles.append(Candle(c_datetime=r["c_datetime"],
-                                  c_timeframe=r["c_timeframe"],
-                                  c_open=r["c_open"],
-                                  c_high=r["c_high"],
-                                  c_low=r["c_low"],
-                                  c_close=r["c_close"],
-                                  c_volume=r["c_volume"],
-                                  c_symbol=r["c_symbol"],
-                                  c_epoch=r["c_epoch"],
-                                  ))
+                              c_timeframe=r["c_timeframe"],
+                              c_open=r["c_open"],
+                              c_high=r["c_high"],
+                              c_low=r["c_low"],
+                              c_close=r["c_close"],
+                              c_volume=r["c_volume"],
+                              c_symbol=r["c_symbol"],
+                              c_epoch=r["c_epoch"],
+                              ))
         update_progbar(pbar, i, total)
     finish_progbar(pbar)
     log.info("Finished building Candle objects, returning "
@@ -1434,12 +1435,12 @@ def get_events(symbol="ES",
                          "Event objects built")
     for i, r in enumerate(result, start=1):
         events.append(Event(start_dt=r["start_dt"],
-                                end_dt=r["end_dt"],
-                                symbol=symbol,
-                                category=r["category"],
-                                tags=r["tags"],
-                                notes=r["notes"],
-                                ))
+                            end_dt=r["end_dt"],
+                            symbol=symbol,
+                            category=r["category"],
+                            tags=r["tags"],
+                            notes=r["notes"],
+                            ))
         update_progbar(pbar, i, total)
     finish_progbar(pbar)
     log.info(f"Returning {len(events)} events")
@@ -1456,154 +1457,3 @@ def clear_events(symbol: str,
         return dhm.clear_collection(f"events_{symbol}")
     else:
         return "Sorry, Dusty hasn't written code for select timeframes yet"
-
-
-##############################################################################
-# Tests
-def test_basics():
-    """runs a few basics tests, mostly used during initial development
-       to confirm functionality as desired"""
-
-    print("=========================== CANDLES ==============================")
-    # Test basic candle storing functionality
-    print("\nStoring 2 test candles")
-    tc1 = Candle(c_datetime="2024-02-10 09:20:00",
-                     c_timeframe="1m",
-                     c_open=5501.5,
-                     c_high=5510,
-                     c_low=5500.5,
-                     c_close=5510,
-                     c_volume=400,
-                     c_symbol="DELETEME",
-                     )
-    tc1.store()
-    tc2 = Candle(c_datetime="2024-02-10 09:21:00",
-                     c_timeframe="1m",
-                     c_open=5503.5,
-                     c_high=5512,
-                     c_low=5500.5,
-                     c_close=5500,
-                     c_volume=600,
-                     c_symbol="DELETEME",
-                     )
-    tc2.store()
-    print("\nNow let's retrieve them")
-    result = get_candles(start_epoch=1704130201,
-                         end_epoch=17044834300,
-                         timeframe="1m",
-                         symbol="DELETEME",
-                         )
-    for r in result:
-        print(r.__dict__)
-    print("\nAnd drop the test collection to clean up")
-    drop_collection("candles_DELETEME_1m")
-
-    print("\nLets check the collections list to confirm it no longer exists")
-    collections = list_collections()
-    print(collections)
-    if "candles_DELETEME_1m" in collections:
-        raise Exception("Oops, why is 'candles_DELETEME_1m' still there?!")
-
-    # Test storing raw candles read from a csv i.e. daily updates
-    print("\nStoring 5/10 candles from testcandles.csv with date filtering")
-    candles = read_candles_from_csv(start_dt='2024-01-01 00:00:00',
-                                    end_dt='2024-01-02 00:00:00',
-                                    filepath='testcandles.csv',
-                                    symbol='DELETEME',
-                                    )
-    for c in candles:
-        store_candle(c)
-    print("\nCheck a summary of them")
-    print(review_candles(timeframe='1m', symbol="DELETEME"))
-    print("\nNow let's retrieve them")
-    result = get_candles(start_epoch=1704130201,
-                         end_epoch=17044834300,
-                         timeframe="1m",
-                         symbol="DELETEME",
-                         )
-    for r in result:
-        print(r.__dict__)
-    print("\nAnd drop the test collection to clean up")
-    drop_collection("candles_DELETEME_1m")
-
-    # Test candle integrity check process
-    print("\nChecking integrity of stored r1h candles")
-    integrity = review_candles(timeframe='r1h',
-                               symbol='ES',
-                               check_integrity=True,
-                               )
-    print(integrity)
-    print(f"\n\nIntegrity result: {integrity['integrity_data']}")
-
-    # Test candle integrity check process - detailed
-    # runs slowly, only uncomment as needed
-    print("\nChecking for missing e1h candles")
-    integrity = review_candles(timeframe='e1h',
-                               symbol='ES',
-                               check_integrity=True,
-                               return_detail=True,
-                               )
-    print(integrity)
-    print("\nCount of missing candles by date")
-    for k, v in integrity["missing_count_by_date"].items():
-        print(k, v)
-    print("\nCount of missing candles by hour")
-    for k, v in integrity["missing_count_by_hour"].items():
-        print(k, v)
-
-    print("============================ EVENTS ==============================")
-    # Test event storage and retrieval
-    print("\n----------------------------------------------------------------")
-    print("\nTesting event retrieval, assumes some ES events in storage")
-    result = get_events(start_epoch=1704085200,
-                        end_epoch=1735707599,
-                        symbol="ES",
-                        )
-    print(f"Found {len(result)} events since 2024.  Showing the first 5:")
-    first_five = result[:5]
-    for r in first_five:
-        print(r.pretty())
-
-    print("Testing complete.")
-    print("\n----------------------------------------------------------------")
-
-    # Prompt to run full reviews of stored items
-    prompt = prompt_yn("List all stored ES events?")
-    if prompt:
-        events = get_events(start_epoch=dt_to_epoch("2000-01-01 00:00:00"),
-                            end_epoch=dt_to_epoch(dt.now()),
-                            symbol="ES",
-                            )
-        for e in events:
-            print(e)
-    print("\n----------------------------------------------------------------")
-    prompt = prompt_yn("Run full integrity check of stored candles")
-    if prompt:
-        for t in ['1m', '5m', '15m', 'r1h', 'e1h']:
-            integrity = review_candles(timeframe=t,
-                                       symbol='ES',
-                                       check_integrity=True,
-                                       return_detail=False,
-                                       )
-            print(integrity)
-
-    print("========================== INDICATORS ============================")
-    # Review indicators in storage
-    # NOTE - There are a number of comprehensive Indicators tests in dhcharts,
-    #        no need to duplicate them here
-    print("\n----------------------------------------------------------------")
-    print("Reviewing stored indicators:\n\n")
-    indicators = review_indicators()
-    print("==== Meta Docs ====")
-    for m in indicators["meta_docs"]:
-        print(m['ind_id'])
-        print(f"{m}\n")
-    print("==== Datapoints ====")
-    for d in indicators["datapoints"]:
-        print(f"{d['ind_id']} contains {d['count']} datapoints from "
-              f"{d['earliest_dt']} to {d['latest_dt']}"
-              )
-
-
-if __name__ == '__main__':
-    test_basics()

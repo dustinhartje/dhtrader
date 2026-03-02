@@ -50,17 +50,17 @@ def create_trade(open_dt="2025-01-02 12:00:00",
     # and calculated attributes.  For further testing in test_* functions using
     # these objects, run create_trade() to create then update them after.
     r = Trade(open_dt=open_dt,
-                  close_dt=None,
-                  direction=direction,
-                  timeframe=timeframe,
-                  trading_hours=trading_hours,
-                  entry_price=entry_price,
-                  stop_ticks=stop_ticks,
-                  stop_target=stop_target,
-                  prof_ticks=prof_ticks,
-                  prof_target=prof_target,
-                  name=name,
-                  )
+              close_dt=None,
+              direction=direction,
+              timeframe=timeframe,
+              trading_hours=trading_hours,
+              entry_price=entry_price,
+              stop_ticks=stop_ticks,
+              stop_target=stop_target,
+              prof_ticks=prof_ticks,
+              prof_target=prof_target,
+              name=name,
+              )
     # Validate passed attributes
     assert isinstance(r, Trade)
     assert r.open_dt == open_dt
@@ -103,14 +103,14 @@ def add_1m_candle(trade, dt, c_open, c_high, c_low, c_close):
     during an open trade.  This is used to test against actual observed live
     trade results, simulating each significant candle in the trade."""
     trade.candle_update(Candle(c_datetime=dt,
-                                   c_timeframe="1m",
-                                   c_open=c_open,
-                                   c_high=c_high,
-                                   c_low=c_low,
-                                   c_close=c_close,
-                                   c_volume=100,
-                                   c_symbol="ES",
-                                   ))
+                               c_timeframe="1m",
+                               c_open=c_open,
+                               c_high=c_high,
+                               c_low=c_low,
+                               c_close=c_close,
+                               c_volume=100,
+                               c_symbol="ES",
+                               ))
 
 
 def test_Trade_confirm_observed_results():
@@ -820,43 +820,43 @@ def test_Trade_creation_short_close_at_loss():
 def test_Trade_candle_update_returns_correct_values():
     # Should not return closed until some target is met (500 ticks default)
     c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
-                   c_open=5000, c_high=5001, c_low=4999, c_close=5000,
-                   c_volume=100, c_symbol="ES")
+               c_open=5000, c_high=5001, c_low=4999, c_close=5000,
+               c_volume=100, c_symbol="ES")
     t = create_trade(direction="long")
     assert t.candle_update(c)["closed"] is False
     t = create_trade(direction="short")
     assert t.candle_update(c)["closed"] is False
     # Should close at stop target 4875 long / 5125 short exactly
     c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
-                   c_open=5000, c_high=5000, c_low=4875, c_close=5000,
-                   c_volume=100, c_symbol="ES")
+               c_open=5000, c_high=5000, c_low=4875, c_close=5000,
+               c_volume=100, c_symbol="ES")
     t = create_trade(direction="long")
     assert t.candle_update(c)["closed"] is True
     c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
-                   c_open=5000, c_high=5125, c_low=5000, c_close=5000,
-                   c_volume=100, c_symbol="ES")
+               c_open=5000, c_high=5125, c_low=5000, c_close=5000,
+               c_volume=100, c_symbol="ES")
     t = create_trade(direction="short")
     assert t.candle_update(c)["closed"] is True
     # Should not close at profit target 5125 long / 4875 short exactly
     c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
-                   c_open=5000, c_high=5125, c_low=5000, c_close=5000,
-                   c_volume=100, c_symbol="ES")
+               c_open=5000, c_high=5125, c_low=5000, c_close=5000,
+               c_volume=100, c_symbol="ES")
     t = create_trade(direction="long")
     assert t.candle_update(c)["closed"] is False
     c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
-                   c_open=5000, c_high=5000, c_low=4875, c_close=5000,
-                   c_volume=100, c_symbol="ES")
+               c_open=5000, c_high=5000, c_low=4875, c_close=5000,
+               c_volume=100, c_symbol="ES")
     t = create_trade(direction="short")
     assert t.candle_update(c)["closed"] is False
     # Should close one tick past profit targets
     c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
-                   c_open=5000, c_high=5125.25, c_low=5000, c_close=5000,
-                   c_volume=100, c_symbol="ES")
+               c_open=5000, c_high=5125.25, c_low=5000, c_close=5000,
+               c_volume=100, c_symbol="ES")
     t = create_trade(direction="long")
     assert t.candle_update(c)["closed"] is True
     c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
-                   c_open=5000, c_high=5000, c_low=4874.75, c_close=5000,
-                   c_volume=100, c_symbol="ES")
+               c_open=5000, c_high=5000, c_low=4874.75, c_close=5000,
+               c_volume=100, c_symbol="ES")
     t = create_trade(direction="short")
     assert t.candle_update(c)["closed"] is True
 
@@ -866,8 +866,8 @@ def test_Trade_candle_update_closes_trades_correctly():
     # Long trade should not close with no target hit
     t = create_trade(direction="long")
     c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
-                   c_open=5000, c_high=5000, c_low=5000, c_close=5000,
-                   c_volume=100, c_symbol="ES")
+               c_open=5000, c_high=5000, c_low=5000, c_close=5000,
+               c_volume=100, c_symbol="ES")
     t.candle_update(c)
     assert t.is_open is True
     assert t.profitable is None
@@ -878,8 +878,8 @@ def test_Trade_candle_update_closes_trades_correctly():
     # Long trade closes at prof_target when surpassed
     t = create_trade(direction="long")
     c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
-                   c_open=5000, c_high=5200, c_low=5000, c_close=5000,
-                   c_volume=100, c_symbol="ES")
+               c_open=5000, c_high=5200, c_low=5000, c_close=5000,
+               c_volume=100, c_symbol="ES")
     t.candle_update(c)
     assert t.is_open is False
     assert t.profitable is True
@@ -890,8 +890,8 @@ def test_Trade_candle_update_closes_trades_correctly():
     # Long trade closes at stop_target when surpassed
     t = create_trade(direction="long")
     c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
-                   c_open=5000, c_high=5000, c_low=4800, c_close=5000,
-                   c_volume=100, c_symbol="ES")
+               c_open=5000, c_high=5000, c_low=4800, c_close=5000,
+               c_volume=100, c_symbol="ES")
     t.candle_update(c)
     assert t.is_open is False
     assert t.profitable is False
@@ -902,8 +902,8 @@ def test_Trade_candle_update_closes_trades_correctly():
     # Short trade should not close with no target hit
     t = create_trade(direction="short")
     c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
-                   c_open=5000, c_high=5000, c_low=5000, c_close=5000,
-                   c_volume=100, c_symbol="ES")
+               c_open=5000, c_high=5000, c_low=5000, c_close=5000,
+               c_volume=100, c_symbol="ES")
     t.candle_update(c)
     assert t.is_open is True
     assert t.profitable is None
@@ -914,8 +914,8 @@ def test_Trade_candle_update_closes_trades_correctly():
     # Short trade closes at prof_target when surpassed
     t = create_trade(direction="short")
     c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
-                   c_open=5000, c_high=5000, c_low=4800, c_close=5000,
-                   c_volume=100, c_symbol="ES")
+               c_open=5000, c_high=5000, c_low=4800, c_close=5000,
+               c_volume=100, c_symbol="ES")
     t.candle_update(c)
     assert t.is_open is False
     assert t.profitable is True
@@ -926,8 +926,8 @@ def test_Trade_candle_update_closes_trades_correctly():
     # Short trade closes at stop_target when surpassed
     t = create_trade(direction="short")
     c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
-                   c_open=5000, c_high=5200, c_low=5000, c_close=5000,
-                   c_volume=100, c_symbol="ES")
+               c_open=5000, c_high=5200, c_low=5000, c_close=5000,
+               c_volume=100, c_symbol="ES")
     t.candle_update(c)
     assert t.is_open is False
     assert t.profitable is False
@@ -939,42 +939,42 @@ def test_Trade_candle_update_closes_trades_correctly():
     # the profit target.  It should wait for the next bar to confirm profit.
     t = create_trade(direction="long", stop_ticks=20, prof_ticks=20)
     c = Candle(c_datetime="2025-01-02 12:00:00", c_timeframe="1m",
-                   c_open=5000, c_high=5050, c_low=4999, c_close=5000,
-                   c_volume=100, c_symbol="ES")
+               c_open=5000, c_high=5050, c_low=4999, c_close=5000,
+               c_volume=100, c_symbol="ES")
     status = t.candle_update(c)
     assert not status["closed"]
     c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
-                   c_open=5000, c_high=5050, c_low=4999, c_close=5050,
-                   c_volume=100, c_symbol="ES")
+               c_open=5000, c_high=5050, c_low=4999, c_close=5050,
+               c_volume=100, c_symbol="ES")
     status = t.candle_update(c)
     assert status["closed"]
     # Long trade does close during entry minute when 1m bar closes over the
     # profit target
     t = create_trade(direction="long", stop_ticks=20, prof_ticks=20)
     c = Candle(c_datetime="2025-01-02 12:00:00", c_timeframe="1m",
-                   c_open=5000, c_high=5050, c_low=4999, c_close=5050,
-                   c_volume=100, c_symbol="ES")
+               c_open=5000, c_high=5050, c_low=4999, c_close=5050,
+               c_volume=100, c_symbol="ES")
     status = t.candle_update(c)
     assert status["closed"]
     # Short trade does not close during entry minute when 1m bar closes over
     # the profit target.  It should wait for the next bar to confirm profit.
     t = create_trade(direction="short", stop_ticks=20, prof_ticks=20)
     c = Candle(c_datetime="2025-01-02 12:00:00", c_timeframe="1m",
-                   c_open=5000, c_high=5001, c_low=4950, c_close=5000,
-                   c_volume=100, c_symbol="ES")
+               c_open=5000, c_high=5001, c_low=4950, c_close=5000,
+               c_volume=100, c_symbol="ES")
     status = t.candle_update(c)
     assert not status["closed"]
     c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
-                   c_open=5000, c_high=5001, c_low=4950, c_close=5050,
-                   c_volume=100, c_symbol="ES")
+               c_open=5000, c_high=5001, c_low=4950, c_close=5050,
+               c_volume=100, c_symbol="ES")
     status = t.candle_update(c)
     assert status["closed"]
     # Short trade does close during entry minute when 1m bar closes under the
     # profit target
     t = create_trade(direction="short", stop_ticks=20, prof_ticks=20)
     c = Candle(c_datetime="2025-01-02 12:00:00", c_timeframe="1m",
-                   c_open=5000, c_high=5001, c_low=4950, c_close=4950,
-                   c_volume=100, c_symbol="ES")
+               c_open=5000, c_high=5001, c_low=4950, c_close=4950,
+               c_volume=100, c_symbol="ES")
     status = t.candle_update(c)
     assert status["closed"]
 
@@ -985,8 +985,8 @@ def test_Trade_sets_high_low_exit_prices_correctly():
     assert t.high_price == 5000
     assert t.low_price == 5000
     c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
-                   c_open=5000, c_high=5100, c_low=4900, c_close=5000,
-                   c_volume=100, c_symbol="ES")
+               c_open=5000, c_high=5100, c_low=4900, c_close=5000,
+               c_volume=100, c_symbol="ES")
     t.candle_update(c)
     assert t.high_price == 5100
     assert t.low_price == 4900
@@ -995,8 +995,8 @@ def test_Trade_sets_high_low_exit_prices_correctly():
     # Long trade sets correctly at profit target when surpassed
     t = create_trade(direction="long")
     c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
-                   c_open=5000, c_high=5200, c_low=4900, c_close=5000,
-                   c_volume=100, c_symbol="ES")
+               c_open=5000, c_high=5200, c_low=4900, c_close=5000,
+               c_volume=100, c_symbol="ES")
     t.candle_update(c)
     assert t.high_price == 5125
     assert t.low_price == 4900
@@ -1005,8 +1005,8 @@ def test_Trade_sets_high_low_exit_prices_correctly():
     # Long trade sets correctly at stop target when surpassed
     t = create_trade(direction="long")
     c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
-                   c_open=5000, c_high=5100, c_low=4800, c_close=5000,
-                   c_volume=100, c_symbol="ES")
+               c_open=5000, c_high=5100, c_low=4800, c_close=5000,
+               c_volume=100, c_symbol="ES")
     t.candle_update(c)
     assert t.high_price == 5100
     assert t.low_price == 4875
@@ -1015,8 +1015,8 @@ def test_Trade_sets_high_low_exit_prices_correctly():
     # Short trade sets candle high and low if exit targets are not hit
     t = create_trade(direction="short")
     c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
-                   c_open=5000, c_high=5100, c_low=4900, c_close=5000,
-                   c_volume=100, c_symbol="ES")
+               c_open=5000, c_high=5100, c_low=4900, c_close=5000,
+               c_volume=100, c_symbol="ES")
     t.candle_update(c)
     assert t.high_price == 5100
     assert t.low_price == 4900
@@ -1025,8 +1025,8 @@ def test_Trade_sets_high_low_exit_prices_correctly():
     # Short trade sets correctly at profit target when surpassed
     t = create_trade(direction="short")
     c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
-                   c_open=5000, c_high=5100, c_low=4800, c_close=5000,
-                   c_volume=100, c_symbol="ES")
+               c_open=5000, c_high=5100, c_low=4800, c_close=5000,
+               c_volume=100, c_symbol="ES")
     t.candle_update(c)
     assert t.high_price == 5100
     assert t.low_price == 4875
@@ -1035,8 +1035,8 @@ def test_Trade_sets_high_low_exit_prices_correctly():
     # Short trade sets correctly at stop target when surpassed
     t = create_trade(direction="short")
     c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
-                   c_open=5000, c_high=5200, c_low=4900, c_close=5000,
-                   c_volume=100, c_symbol="ES")
+               c_open=5000, c_high=5200, c_low=4900, c_close=5000,
+               c_volume=100, c_symbol="ES")
     t.candle_update(c)
     assert t.high_price == 5125
     assert t.low_price == 4900

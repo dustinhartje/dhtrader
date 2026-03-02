@@ -57,7 +57,7 @@ from dhtrades import TradeSeries, Trade
 
 def clear_storage_by_bt_id(bt_id):
     delete_backtests(symbol="ES", field="bt_id", value=bt_id,
-                    include_tradeseries=True, include_trades=True)
+                     include_tradeseries=True, include_trades=True)
     r = get_backtests_by_field(field="bt_id", value=bt_id)
     assert len(r) == 0
     r = get_tradeseries_by_field(field="bt_id", value=bt_id)

@@ -7,8 +7,8 @@ from dhutil import (
     timeframe_delta, valid_timeframe, valid_trading_hours, log_say,
     this_candle_start, expected_candle_datetimes)
 from dhstore import (
-    get_symbol_by_ticker, store_candle, get_events,
-    get_indicator_datapoints, store_indicator)
+    get_symbol_by_ticker, get_candles, store_candle, get_events, store_event,
+    get_indicator_datapoints, store_indicator, store_indicator_datapoints)
 from statistics import fmean
 from copy import copy, deepcopy
 import logging
@@ -468,8 +468,8 @@ class Symbol():
             # If list of events was not passed, retrieve them from storage
             if events is None:
                 events = get_events(symbol=self.ticker,
-                                        categories=["Closed"],
-                                        )
+                                    categories=["Closed"],
+                                    )
             for e in events:
                 if e.contains_datetime(d):
                     # Datetime falls inside a closure event
@@ -923,8 +923,8 @@ class Chart():
         self.c_candles = []
         log.info("Getting events for market hours filtering...")
         events = get_events(symbol=self.c_symbol.ticker,
-                                categories=["Closed"],
-                                )
+                            categories=["Closed"],
+                            )
         log.info("Filtering candles for market hours and events...")
         for c in cans:
             if self.c_symbol.market_is_open(target_dt=c.c_datetime,
