@@ -4,7 +4,6 @@
 
 import csv
 import json
-import sys
 import progressbar
 from collections import Counter, defaultdict
 from datetime import datetime as dt

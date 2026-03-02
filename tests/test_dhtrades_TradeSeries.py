@@ -4,18 +4,13 @@ import json
 import site
 site.addsitedir('modulepaths')
 from dhcharts import (
-    Candle, Chart, Day, Event, Indicator, IndicatorDataPoint,
-    IndicatorEMA, IndicatorSMA, Symbol)
-from dhtrades import Trade, TradeSeries, Backtest
+    Candle, Symbol)
+from dhtrades import Trade, TradeSeries
 from dhutil import (
-    dt_as_dt, dt_as_str, dow_name, dt_to_epoch, parse_dt,
-    dt_from_epoch, OperationTimer, ProgBar, log_say, prompt_yn,
-    valid_timeframe, valid_trading_hours, check_tf_th_compatibility)
+    dt_as_dt)
 from dhstore import (
     get_trades_by_field, delete_trades, get_tradeseries_by_field,
-    delete_tradeseries, store_trades, store_tradeseries, get_candles,
-    store_candles, store_candle, review_candles, delete_candles,
-    get_symbol_by_ticker, get_events)
+    delete_tradeseries)
 from testdata.testdata import Rebuilder
 
 # TODO think through which tests can be done simply by creating and calcing,

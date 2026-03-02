@@ -1,4 +1,3 @@
-import sys
 import pytest
 import site
 # This hacky crap is needed to help imports between files in dhtrader
