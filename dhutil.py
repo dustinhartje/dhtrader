@@ -4,58 +4,10 @@ import sys
 from tabulate import tabulate
 from dhtypes import Candle
 from dhstore import (
-    get_symbol_by_ticker, get_candles, get_events, review_candles)
+    get_symbol_by_ticker, get_candles, review_candles)
 from dhcommon import (
     dt_as_dt, dt_as_str, dt_to_epoch, timeframe_delta,
-    this_candle_start, valid_trading_hours, check_tf_th_compatibility)
-
-
-def next_candle_start(dt,
-                      trading_hours: str,
-                      symbol: str = "ES",
-                      timeframe: str = "1m",
-                      events: list = None,
-                      ):
-    """Returns the next datetime that represents a proper candle start
-    after the given datetime (dt).  Will not return given datetime even if
-    it starts a candle."""
-    if isinstance(symbol, str):
-        symbol = get_symbol_by_ticker(ticker=symbol)
-    valid_trading_hours(trading_hours)
-    check_tf_th_compatibility(tf=timeframe, th=trading_hours)
-    # Start with a rounded minute, no seconds or ms supported
-    next_dt = dt_as_dt(dt)
-    next_dt = next_dt.replace(microsecond=0, second=0)
-    min_delta = timedelta(minutes=1)
-
-    done = False
-    while not done:
-        # All timeframes add at least 1 minute each loop
-        next_dt = next_dt + min_delta
-        # Then each timeframe other than 1m keeps adding minutes until it
-        # reaches a minute representing it's appropriate candle start time.
-        if timeframe == "5m":
-            while next_dt.minute % 5 != 0:
-                next_dt = next_dt + min_delta
-        elif timeframe == "15m":
-            while next_dt.minute % 15 != 0:
-                next_dt = next_dt + min_delta
-        elif timeframe == "r1h":
-            while next_dt.minute != 30:
-                next_dt = next_dt + min_delta
-        elif timeframe == "e1h":
-            while next_dt.minute != 0:
-                next_dt = next_dt + min_delta
-        else:
-            raise ValueError(f"timeframe: {timeframe} not supported")
-        # Ensure the market is open at the dt found, otherwise keep looping
-        done = symbol.market_is_open(trading_hours=trading_hours,
-                                     target_dt=next_dt,
-                                     check_closed_events=True,
-                                     events=events,
-                                     )
-
-    return next_dt
+    this_candle_start)
 
 
 def generate_zero_volume_candle(c_datetime,
@@ -90,73 +42,6 @@ def generate_zero_volume_candle(c_datetime,
                         )
     else:
         result = None
-
-    return result
-
-
-def expected_candle_datetimes(start_dt,
-                              end_dt,
-                              timeframe: str,
-                              symbol="ES",
-                              exclude_categories: list = None,
-                              ):
-    """Return a sorted list of datetimes within the provided start_dt and
-    end_dt (inclusive of both) that should exist for the given symbol based on
-    standard market hours, after removing any known Closed events.
-    Optionally also exclude anything within known Event times matching
-    exclude_categories."""
-    if isinstance(symbol, str):
-        symbol = get_symbol_by_ticker(ticker=symbol)
-    if symbol.ticker == "ES":
-        if timeframe == "r1h":
-            trading_hours = "rth"
-        else:
-            trading_hours = "eth"
-    else:
-        raise ValueError("Only ES is currently supported as symbol for now")
-    # Build a list of possible candles within standard market hours
-    result_std = []
-    adder = timeframe_delta(timeframe)
-    # Start with the start_dt if it is a valid candle start
-    this = this_candle_start(dt=start_dt,
-                             timeframe=timeframe,
-                             )
-    # Otherwise start with the next valid candle
-    if not this == dt_as_dt(start_dt):
-        this = next_candle_start(dt=start_dt,
-                                 timeframe=timeframe,
-                                 trading_hours=trading_hours,
-                                 )
-    ender = dt_as_dt(end_dt)
-    while this <= ender:
-        if symbol.market_is_open(trading_hours=trading_hours,
-                                 target_dt=this,
-                                 check_closed_events=False,
-                                 ):
-            result_std.append(this)
-        this = this + adder
-
-    # Remove any candles falling inside of non-standard market closures
-    start_epoch = dt_to_epoch(start_dt)
-    end_epoch = dt_to_epoch(end_dt)
-    all_events = get_events(start_epoch=start_epoch,
-                            end_epoch=end_epoch,
-                            symbol=symbol,
-                            )
-    closures = []
-    result = []
-    # Only evaluate market Closed events
-    for e in all_events:
-        if e.category == "Closed":
-            closures.append(e)
-    # Check each candle against closures to build a new expected list
-    for c in result_std:
-        include = True
-        for e in closures:
-            if e.start_epoch <= dt_to_epoch(c) <= e.end_epoch:
-                include = False
-        if include:
-            result.append(c)
 
     return result
 

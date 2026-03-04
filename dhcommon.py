@@ -433,6 +433,107 @@ def this_candle_start(dt, timeframe: str):
     return this_dt
 
 
+def next_candle_start(dt,
+                      trading_hours: str,
+                      symbol,
+                      timeframe: str = "1m",
+                      events: list = None,
+                      ):
+    """Return the next datetime that represents a valid candle start.
+
+    symbol must be a Symbol-like object implementing market_is_open().
+    """
+    if isinstance(symbol, str):
+        raise TypeError("symbol must be a Symbol object, not str")
+    valid_trading_hours(trading_hours)
+    check_tf_th_compatibility(tf=timeframe, th=trading_hours)
+    next_dt = dt_as_dt(dt).replace(microsecond=0, second=0)
+    min_delta = timedelta(minutes=1)
+
+    done = False
+    while not done:
+        next_dt = next_dt + min_delta
+        if timeframe == "5m":
+            while next_dt.minute % 5 != 0:
+                next_dt = next_dt + min_delta
+        elif timeframe == "15m":
+            while next_dt.minute % 15 != 0:
+                next_dt = next_dt + min_delta
+        elif timeframe == "r1h":
+            while next_dt.minute != 30:
+                next_dt = next_dt + min_delta
+        elif timeframe == "e1h":
+            while next_dt.minute != 0:
+                next_dt = next_dt + min_delta
+        elif timeframe != "1m":
+            raise ValueError(f"timeframe: {timeframe} not supported")
+        done = symbol.market_is_open(trading_hours=trading_hours,
+                                     target_dt=next_dt,
+                                     check_closed_events=True,
+                                     events=events,
+                                     )
+
+    return next_dt
+
+
+def expected_candle_datetimes(start_dt,
+                              end_dt,
+                              timeframe: str,
+                              symbol,
+                              events: list = None,
+                              exclude_categories: list = None,
+                              ):
+    """Return expected candle datetimes for a symbol in a datetime range."""
+    if isinstance(symbol, str):
+        raise TypeError("symbol must be a Symbol object, not str")
+    if symbol.ticker == "ES":
+        trading_hours = "rth" if timeframe == "r1h" else "eth"
+    else:
+        raise ValueError("Only ES is currently supported as symbol for now")
+
+    result_std = []
+    adder = timeframe_delta(timeframe)
+    this = this_candle_start(dt=start_dt,
+                             timeframe=timeframe,
+                             )
+    if this != dt_as_dt(start_dt):
+        this = next_candle_start(dt=start_dt,
+                                 timeframe=timeframe,
+                                 trading_hours=trading_hours,
+                                 symbol=symbol,
+                                 events=events,
+                                 )
+    ender = dt_as_dt(end_dt)
+    while this <= ender:
+        if symbol.market_is_open(trading_hours=trading_hours,
+                                 target_dt=this,
+                                 check_closed_events=False,
+                                 ):
+            result_std.append(this)
+        this = this + adder
+
+    if events is None:
+        events = []
+    closures = []
+    for event in events:
+        if event.category == "Closed":
+            if exclude_categories and event.category in exclude_categories:
+                continue
+            closures.append(event)
+
+    result = []
+    for candle_dt in result_std:
+        include = True
+        candle_epoch = dt_to_epoch(candle_dt)
+        for event in closures:
+            if event.start_epoch <= candle_epoch <= event.end_epoch:
+                include = False
+        if include:
+            result.append(candle_dt)
+
+    return result
+
+
 def rangify_candle_times(times: list,
                          timeframe: str,
                          ):
