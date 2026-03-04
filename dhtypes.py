@@ -2655,7 +2655,7 @@ class TradeSeries():
         self.end_dt = new_end_dt
         if update_storage:
             # Store (update) the TradeSeries
-            self.store(store_trades=False)
+            _dhstore('store_tradeseries', series=[self])
             # Remove all trades from storage that are no longer in bounds
             remove_trades = [t for t in self.trades
                              if (t.open_epoch < ns_epoch
@@ -3265,7 +3265,9 @@ class Backtest():
         self.start_dt = dt_as_str(new_start_dt)
         self.end_dt = dt_as_str(new_end_dt)
         if update_storage:
-            self.store(store_tradeseries=False, store_trades=False)
+            self.delete_from_storage(
+                include_tradeseries=False, include_trades=False)
+            _dhstore('store_backtests', backtests=[self])
         # Update the attached Charts for the new dates as well if loaded
         if self.chart_tf is not None:
             self.chart_tf.restrict_dates(new_start_dt=new_start_dt,
@@ -3325,7 +3327,7 @@ class Backtest():
                 if close_time < default_autoclose:
                     # Calculate autoclose as 5 minutes before
                     close_dt = dt.datetime.combine(
-                        dt.datetime.today(), close_time
+                        candle_date, close_time
                     ) - timedelta(minutes=5)
                     autoclose_time = close_dt.time()
                     log.info(f"Early close event detected for {candle_date}:"
