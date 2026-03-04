@@ -827,4 +827,3 @@ MARKET_ERAS = [
 def bot():
     """Return universal beginning of time for this and other modules."""
     return BEGINNING_OF_TIME
-

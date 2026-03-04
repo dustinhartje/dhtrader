@@ -17,7 +17,6 @@ from dhcommon import (
     dt_as_str, dt_as_dt, dt_from_epoch, dt_to_epoch, valid_timeframe,
     this_candle_start, summarize_candles, log_say, sort_dict,
     rangify_candle_times, ProgBar, OperationTimer)
-from dhutil import expected_candle_datetimes
 import dhmongo as dhm
 
 COLL_TRADES = "trades"
@@ -1230,6 +1229,8 @@ def review_candles(timeframe: str,
         log.info("Calculating expected candle datetimes for "
                  f"{symbol} {timeframe} between "
                  f"{dt_as_str(start_dt)} and {dt_as_str(end_dt)}")
+        # Import here to avoid circular dependency with dhutil
+        from dhutil import expected_candle_datetimes
         dt_expected = expected_candle_datetimes(start_dt=start_dt,
                                                 end_dt=end_dt,
                                                 symbol=symbol,

@@ -1380,7 +1380,6 @@ class IndicatorDataPoint():
         return not self.__eq__(other)
 
 
-
 class Indicator():
     def __init__(self,
                  name: str,
@@ -1877,6 +1876,7 @@ class IndicatorEMA(Indicator):
                 # Update vars for next candle
                 prior_ema = this_ema
                 counter += 1
+
 
 class Trade():
     """Represents a single trade that could have been made.

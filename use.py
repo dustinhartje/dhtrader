@@ -12,7 +12,7 @@ The environment name is the last segment of the filename.
 import os
 import sys
 import argparse
-from dhtrader.dhcommon import prompt_yn
+from dhcommon import prompt_yn
 
 
 def get_script_dir(depth=0):
