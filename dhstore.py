@@ -1,6 +1,6 @@
 # Wrapper for current (dhmongo.py) data storage I'm using to allow
 # migration to a different storage solution in the future without
-# massive overhaul of backtest, chart, and trader code bases.
+# massive overhaul of dependant classes.
 
 import json
 import progressbar
@@ -16,7 +16,8 @@ from dhtypes import (
 from dhcommon import (
     dt_as_str, dt_as_dt, dt_from_epoch, dt_to_epoch, valid_timeframe,
     this_candle_start, summarize_candles, log_say, sort_dict,
-    rangify_candle_times, ProgBar, OperationTimer)
+    rangify_candle_times, expected_candle_datetimes,
+    ProgBar, OperationTimer)
 import dhmongo as dhm
 
 COLL_TRADES = "trades"
@@ -1118,6 +1119,12 @@ def store_candle(candle):
                      )
 
 
+def store_candles(candles):
+    """Write multiple dhtypes.Candle() objects to central storage"""
+    for candle in candles:
+        store_candle(candle)
+
+
 def get_candles(start_epoch: int,
                 end_epoch: int,
                 timeframe: str,
@@ -1229,12 +1236,15 @@ def review_candles(timeframe: str,
         log.info("Calculating expected candle datetimes for "
                  f"{symbol} {timeframe} between "
                  f"{dt_as_str(start_dt)} and {dt_as_str(end_dt)}")
-        # Import here to avoid circular dependency with dhutil
-        from dhutil import expected_candle_datetimes
+        all_events = get_events(start_epoch=start_epoch,
+                                end_epoch=end_epoch,
+                                symbol=symbol,
+                                )
         dt_expected = expected_candle_datetimes(start_dt=start_dt,
                                                 end_dt=end_dt,
                                                 symbol=symbol,
                                                 timeframe=timeframe,
+                                                events=all_events,
                                                 )
         log.info("Finished calculating expected datetimes, starting "
                  "comparison of actual (stored) vs expected candles")
