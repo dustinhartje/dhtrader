@@ -1,16 +1,14 @@
 import datetime
 import pytest
 import json
-import site
-site.addsitedir('modulepaths')
-from dhtypes import (
+from dhtrader.dhtypes import (
     Candle, Symbol)
-from dhtypes import Trade, TradeSeries
-from dhcommon import dt_as_dt
-from dhstore import (
+from dhtrader.dhtypes import Trade, TradeSeries
+from dhtrader.dhcommon import dt_as_dt
+from dhtrader.dhstore import (
     get_trades_by_field, delete_trades, get_tradeseries_by_field,
-    delete_tradeseries)
-from testdata.testdata import Rebuilder
+    delete_tradeseries, store_tradeseries, store_trades)
+from dhtrader.testdata.testdata import Rebuilder
 
 
 def create_trade(open_dt="2025-01-02 12:00:00",
@@ -571,14 +569,14 @@ def test_TradeSeries_store_retrieve_and_delete():
     s_tr = get_trades_by_field(field="name", value="DELETEME-TEST")
     assert len(s_tr) == 0
     # Store and check the result looks successful by matching ts_id on each
-    r = ts.store(store_trades=True)
-    assert len(r["tradeseries"]) == 1
-    r_ts = r["tradeseries"][0]
+    r_tradeseries = store_tradeseries([ts])
+    r_trades = store_trades(ts.trades)
+    assert len(r_tradeseries) == 1
+    r_ts = r_tradeseries[0]
     assert r_ts["ts_id"] == ts.ts_id
-    r_tr = r["trades"]
-    assert len(r_tr) == 2
-    assert r_tr[0][0]["ts_id"] == ts.ts_id
-    assert r_tr[1][0]["ts_id"] == ts.ts_id
+    assert len(r_trades) == 2
+    assert r_trades[0]["ts_id"] == ts.ts_id
+    assert r_trades[1]["ts_id"] == ts.ts_id
     # Confirm we can retrieve the TradeSeries and both Trades by ts_id
     r_ts = get_tradeseries_by_field(field="ts_id", value=ts.ts_id)
     assert len(r_ts) == 1

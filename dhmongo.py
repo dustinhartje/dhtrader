@@ -17,7 +17,7 @@ import pymongo
 import logging
 from dotenv import load_dotenv, find_dotenv
 from datetime import datetime as dt
-from dhcommon import (
+from .dhcommon import (
     ProgBar, prompt_yn, valid_timeframe, dt_as_str, dt_from_epoch,
     dt_to_epoch)
 

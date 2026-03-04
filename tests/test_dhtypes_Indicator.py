@@ -1,17 +1,13 @@
 import pytest
-import site
-# This hacky crap is needed to help imports between files in dhtrader
-# find each other when run by a script in another folder (even tests).
-site.addsitedir('modulepaths')
-from dhtypes import (
+from dhtrader.dhtypes import (
     Candle, Chart, Day, Event, Indicator, IndicatorDataPoint,
     IndicatorEMA, IndicatorSMA, Symbol)
-from dhstore import (
+from dhtrader.dhstore import (
     get_trades_by_field, delete_trades, get_tradeseries_by_field,
     delete_tradeseries, store_trades, store_tradeseries, get_candles,
     store_candles, store_candle, review_candles, delete_candles,
     get_symbol_by_ticker, get_events, get_indicator, delete_indicator,
-    get_indicator_datapoints)
+    get_indicator_datapoints, store_indicator)
 
 
 def hide_Indicator_demo_hod_creation_and_calculation():
@@ -664,7 +660,7 @@ def hide_Indicator_storage_and_retrieval():
     assert retrieve is None
 
     # Store it
-    result = itest.store()
+    result = store_indicator(itest, store_datapoints=True)
 
     # Confirm storage returned something that looks vaguely like an Indicator
     r_id = result["indicator"]["ind_id"]
@@ -694,7 +690,7 @@ def hide_Indicator_storage_and_retrieval():
     itest.end_dt = "2025-01-14 20:00:00"
     itest.load_underlying_chart()
     itest.calculate()
-    result = itest.store()
+    result = store_indicator(itest, store_datapoints=True)
     assert result["datapoints_stored"] == 46
     assert result["datapoints_skipped"] == 23
 

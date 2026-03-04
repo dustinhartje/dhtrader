@@ -1,20 +1,18 @@
 from copy import copy
 import datetime
 import json
-import site
 import pytest
-site.addsitedir('modulepaths')
-from dhtypes import (
+from dhtrader.dhtypes import (
     Candle, Symbol)
-from dhtypes import Trade
-from dhcommon import dt_as_dt
-from dhstore import (
+from dhtrader.dhtypes import Trade
+from dhtrader.dhcommon import dt_as_dt
+from dhtrader.dhstore import (
     get_trades_by_field, delete_trades, get_tradeseries_by_field,
     delete_tradeseries, store_trades, store_tradeseries, get_candles,
     store_candles, store_candle, review_candles, delete_candles,
     get_symbol_by_ticker, get_events)
 from datetime import timedelta as td
-from testdata.testdata import Rebuilder
+from dhtrader.testdata.testdata import Rebuilder
 
 
 def create_trade(open_dt="2025-01-02 12:00:00",
@@ -1134,7 +1132,7 @@ def test_Trade_store_retrieve_delete():
     assert len(stored) == 0
     # Create and store a basic test, confirming it can be retreived after
     t = create_trade(name="DELETEME-TEST")
-    stored = t.store()
+    stored = store_trades([t])
     # Confirm storage op returns something that looks vaguely like our trade
     assert stored[0]["name"] == "DELETEME-TEST"
     # Confirm we can retreive our trade from storage

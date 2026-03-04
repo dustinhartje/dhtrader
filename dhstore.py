@@ -18,15 +18,15 @@ from datetime import timedelta
 from copy import deepcopy
 import logging
 from pathlib import Path
-from dhtypes import (
+from .dhtypes import (
     Candle, Event, IndicatorDataPoint, Symbol, IndicatorSMA, IndicatorEMA,
     Trade, TradeSeries, Backtest, Chart, Day, Indicator)
-from dhcommon import (
+from .dhcommon import (
     dt_as_str, dt_as_dt, dt_from_epoch, dt_to_epoch, valid_timeframe,
     this_candle_start, summarize_candles, log_say, sort_dict,
     rangify_candle_times, expected_candle_datetimes,
     ProgBar, OperationTimer)
-import dhmongo as dhm
+from . import dhmongo as dhm
 
 COLL_TRADES = "trades"
 COLL_TRADESERIES = "tradeseries"

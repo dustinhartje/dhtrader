@@ -32,7 +32,7 @@ import logging
 from math import ceil, floor
 import numpy as np
 from typing import List, Optional, Dict, Tuple, Any
-from dhcommon import (
+from .dhcommon import (
     dt_as_dt, dt_as_str, dt_as_time, dt_to_epoch, dt_from_epoch,
     timeframe_delta, valid_timeframe, valid_trading_hours, log_say,
     this_candle_start, check_tf_th_compatibility,
@@ -270,7 +270,10 @@ def bot():
 
 def _dhstore(fn_name, *args, **kwargs):
     """Delegate to dhstore if loaded."""
-    m = sys.modules.get('dhstore')
+    # Try package-qualified name first, then bare name for compatibility
+    m = sys.modules.get('dhtrader.dhstore')
+    if m is None:
+        m = sys.modules.get('dhstore')
     if m is None:
         raise RuntimeError(
             f"dhstore not imported. Import dhstore before "
@@ -281,7 +284,10 @@ def _dhstore(fn_name, *args, **kwargs):
 
 def get_symbol_by_ticker(ticker: str):
     """Resolve ticker to Symbol. Falls back for known tickers."""
-    m = sys.modules.get('dhstore')
+    # Try package-qualified name first, then bare name for compatibility
+    m = sys.modules.get('dhtrader.dhstore')
+    if m is None:
+        m = sys.modules.get('dhstore')
     if m:
         return m.get_symbol_by_ticker(ticker=ticker)
     _known = {

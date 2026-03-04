@@ -1,13 +1,11 @@
 import pytest
-import site
-site.addsitedir('modulepaths')
-from dhstore import (
+from dhtrader.dhstore import (
     get_trades_by_field, delete_trades, get_tradeseries_by_field,
     delete_tradeseries, store_trades, store_tradeseries, get_candles,
     store_candles, store_candle, review_candles, delete_candles,
     get_symbol_by_ticker, get_events, delete_backtests, get_backtests_by_field,
     review_tradeseries, review_trades)
-from dhtypes import TradeSeries, Trade
+from dhtrader.dhtypes import TradeSeries, Trade
 
 
 def clear_storage_by_bt_id(bt_id):
@@ -52,7 +50,8 @@ def test_TradeSeries_and_Trade_integrity_checks():
         entry_price=5000, exit_price=5001, high_price=5005, low_price=4995,
         prof_target=5001, stop_target=4000,
         ts_id=ts_good.ts_id, bt_id=ts_good.bt_id))
-    ts_good.store(store_trades=True)
+    store_tradeseries([ts_good])
+    store_trades(ts_good.trades)
     stored = get_tradeseries_by_field(field="bt_id", value=bt)
     assert len(stored) == 1
     stored = get_trades_by_field(field="bt_id", value=bt)
@@ -97,7 +96,8 @@ def test_TradeSeries_and_Trade_integrity_checks():
         entry_price=5000, exit_price=5001, high_price=5005, low_price=4995,
         prof_target=5001, stop_target=4000,
         ts_id=ts_fail.ts_id, bt_id=ts_fail.bt_id))
-    ts_fail.store(store_trades=True)
+    store_tradeseries([ts_fail])
+    store_trades(ts_fail.trades)
     stored = get_tradeseries_by_field(field="bt_id", value=bt)
     assert len(stored) == 1
     stored = get_trades_by_field(field="bt_id", value=bt)
@@ -146,7 +146,8 @@ def test_TradeSeries_and_Trade_integrity_checks():
         entry_price=5000, exit_price=5001, high_price=5005, low_price=4995,
         prof_target=5001, stop_target=4000,
         ts_id=ts_fail.ts_id, bt_id=ts_fail.bt_id))
-    ts_fail.store(store_trades=True)
+    store_tradeseries([ts_fail])
+    store_trades(ts_fail.trades)
     stored = get_tradeseries_by_field(field="bt_id", value=bt)
     assert len(stored) == 1
     stored = get_trades_by_field(field="bt_id", value=bt)
@@ -193,7 +194,8 @@ def test_TradeSeries_and_Trade_integrity_checks():
         entry_price=5000, exit_price=5001, high_price=5005, low_price=4995,
         prof_target=5001, stop_target=4000,
         ts_id=ts_fail.ts_id, bt_id=ts_fail.bt_id))
-    ts_fail.store(store_trades=True)
+    store_tradeseries([ts_fail])
+    store_trades(ts_fail.trades)
     stored = get_tradeseries_by_field(field="bt_id", value=bt)
     assert len(stored) == 1
     stored = get_trades_by_field(field="bt_id", value=bt)
@@ -237,7 +239,8 @@ def test_TradeSeries_and_Trade_integrity_checks():
         entry_price=5000, exit_price=5001, high_price=5005, low_price=4995,
         prof_target=5001, stop_target=4000,
         ts_id=ts_fail.ts_id, bt_id=ts_fail.bt_id))
-    ts_fail.store(store_trades=True)
+    store_tradeseries([ts_fail])
+    store_trades(ts_fail.trades)
     stored = get_tradeseries_by_field(field="bt_id", value=bt)
     assert len(stored) == 1
     # While we stored 2 trades, the second should have overwritten the first
@@ -246,8 +249,8 @@ def test_TradeSeries_and_Trade_integrity_checks():
     assert len(stored) == 1
     assert stored[0].open_dt == "2025-01-06 10:03:24"
     assert stored[0].close_dt == "2025-01-06 12:32:15"
-    # Run the first trade's .store() method to try to write it directly
-    ts_fail.trades[0].store()
+    # Store the trades
+    store_trades([ts_fail.trades[0]])
     stored = get_trades_by_field(field="bt_id", value=bt)
     # Now we should still have only 1 trade, but it's the first not the second
     # this time due to another overwrite
@@ -256,7 +259,7 @@ def test_TradeSeries_and_Trade_integrity_checks():
     assert stored[0].close_dt == "2025-01-06 11:45:32"
     # Change the name attribute to allow it to store itself without replacing
     ts_fail.trades[0].name = "{bt}_multiday_fail_duplicate"
-    ts_fail.trades[0].store()
+    store_trades([ts_fail.trades[0]])
     # Confirm integrity check now fails due to duplicate trade
     r = review_trades(bt_id=bt, check_integrity=True)
     assert r["integrity"]["status"] == "ERRORS"

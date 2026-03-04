@@ -1,9 +1,9 @@
 import os
 import sys
-from testdata import Extractor
+from dhtrader.testdata.testdata import Extractor
 from datetime import timedelta
 import json
-from dhcommon import dt_as_dt, dt_as_str
+from dhtrader.dhcommon import dt_as_dt, dt_as_str
 """Extract test data from storage for testing and development purposes.  Run
 as a script to extract and write to json files.  Or import and call
 extract_all() from other test modules to extract data for testing

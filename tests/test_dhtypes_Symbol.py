@@ -1,12 +1,9 @@
 import pytest
-import site
-# This hacky crap is needed to help imports between files in dhtrader
-# find each other when run by a script in another folder (even tests).
-site.addsitedir('modulepaths')
-from dhtypes import (
+from dhtrader.dhstore import get_candles
+from dhtrader.dhtypes import (
     Candle, Chart, Day, Event, Indicator, IndicatorDataPoint,
     IndicatorEMA, IndicatorSMA, Symbol)
-from dhcommon import dt_as_dt, dt_as_str
+from dhtrader.dhcommon import dt_as_dt, dt_as_str
 
 # TODO I should probably have this be a create_symbol() function like other
 #      test files?  and it will need to test all the __init__ stuff too

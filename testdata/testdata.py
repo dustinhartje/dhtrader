@@ -1,13 +1,12 @@
 import json
 import csv
-import site
 from datetime import datetime
-site.addsitedir('modulepaths')
-from dhtypes import Candle
-from dhtypes import Backtest, TradeSeries, Trade
-from dhstore import get_backtests_by_field, get_trades_by_field, get_candles
-from dhstore import get_tradeseries_by_field, get_indicator_datapoints
-from dhcommon import dt_to_epoch, this_candle_start
+from dhtrader.dhtypes import Candle
+from dhtrader.dhtypes import Backtest, TradeSeries, Trade
+from dhtrader.dhstore import (
+    get_backtests_by_field, get_trades_by_field, get_candles)
+from dhtrader.dhstore import get_tradeseries_by_field, get_indicator_datapoints
+from dhtrader.dhcommon import dt_to_epoch, this_candle_start
 
 
 def prepare_for_csv(data_list):

@@ -3,7 +3,7 @@ dhtrader: Trading analysis module
 
 Public API exports domain classes and storage functions.
 """
-from dhtypes import (
+from .dhtypes import (
     Candle,
     Event,
     Symbol,
@@ -19,7 +19,7 @@ from dhtypes import (
 )
 
 try:
-    from dhstore import (
+    from .dhstore import (
         store_candle,
         store_candles,
         store_trade,

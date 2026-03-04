@@ -1,20 +1,19 @@
 import datetime
-import site
 import pytest
-site.addsitedir('modulepaths')
-from dhtypes import (
+from dhtrader.dhtypes import (
     Candle, Chart, Day, Event, Indicator, IndicatorDataPoint, IndicatorEMA,
     IndicatorSMA, Symbol)
-from dhtypes import Trade, TradeSeries, Backtest
-from dhcommon import (
+from dhtrader.dhtypes import Trade, TradeSeries, Backtest
+from dhtrader.dhcommon import (
     dt_as_dt, dt_as_str, dow_name, dt_to_epoch, dt_from_epoch,
     OperationTimer, ProgBar, log_say, prompt_yn, valid_timeframe,
     valid_trading_hours, check_tf_th_compatibility)
-from dhstore import (
+from dhtrader.dhstore import (
     get_trades_by_field, delete_trades, get_tradeseries_by_field,
     delete_tradeseries, store_trades, store_tradeseries, get_candles,
     store_candles, store_candle, review_candles, delete_candles,
-    get_symbol_by_ticker, get_events, delete_backtests, get_backtests_by_field)
+    get_symbol_by_ticker, get_events, delete_backtests, get_backtests_by_field,
+    store_backtests)
 
 
 def create_trade(open_dt="2025-01-02 12:00:00",
@@ -403,7 +402,9 @@ def test_Backtest_restrict_dates():
                                name=test_name
                                ))
     bt.update_tradeseries(ts1)
-    bt.store()
+    store_backtests([bt])
+    store_tradeseries(bt.tradeseries)
+    store_trades(bt.tradeseries[0].trades)
     bt_load = get_backtests_by_field(field="bt_id",
                                      value=bt.bt_id)[0]
     assert bt_load["start_dt"] == "2025-01-01 18:00:00"
@@ -559,8 +560,11 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
     delete_trades(symbol="ES", field="name", value=test_name)
     s_tr = get_trades_by_field(field="name", value=test_name)
     assert len(s_tr) == 0
-    # Store the backtest
-    bt.store(store_tradeseries=True, store_trades=True)
+    # Store the backtest and related objects
+    store_backtests([bt])
+    for ts in bt.tradeseries:
+        store_tradeseries([ts])
+        store_trades(ts.trades)
 
     # Modify and replace the 1st tradeseries, including storage update
     ts1.start_dt = "2025-01-05 08:30:00"
@@ -590,7 +594,10 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
     assert bt.tradeseries[1].trades[1].open_dt == "2025-01-06 15:00:00"
     # Store the backtest again, which should replace itself, it's TradeSeries,
     # and their Trades without duplication occurring
-    bt.store(store_tradeseries=True, store_trades=True)
+    store_backtests([bt])
+    for ts in bt.tradeseries:
+        store_tradeseries([ts])
+        store_trades(ts.trades)
     # Get backtests with this name from storage
     s_bt = get_backtests_by_field(field="name", value=test_name)
     # Confirm exactly 1 backtest found in storage with this name
@@ -728,20 +735,21 @@ def test_Backtest_store_retrieve_load_tradeseries_and_delete():
     # Clear and confirm storage has no objects with this name currently
     clear_storage_by_name(name=test_name)
 
-    # Store using Backtest.store() method and confirm result looks ok via _ids
-    r_bt = bt.store(store_tradeseries=True,
-                    store_trades=True,
-                    )
-    assert len(r_bt["backtest"]) == 1
-    assert r_bt["backtest"][0]["bt_id"] == bt.bt_id
-    assert len(r_bt["tradeseries"]) == 1
-    assert len(r_bt["tradeseries"][0]["tradeseries"]) == 1
-    r_ts = r_bt["tradeseries"][0]["tradeseries"][0]
+    # Store using dhstore functions and confirm results
+    r_bt = store_backtests([bt])
+    r_ts_list = []
+    r_tr_list = []
+    for ts in bt.tradeseries:
+        r_ts_list.append(store_tradeseries([ts])[0])
+        r_tr_list.extend(store_trades(ts.trades))
+    assert len(r_bt) == 1
+    assert r_bt[0]["bt_id"] == bt.bt_id
+    assert len(r_ts_list) == 1
+    r_ts = r_ts_list[0]
     assert r_ts["bt_id"] == bt.bt_id
     assert r_ts["ts_id"] == ts.ts_id
-    # Yeah, there's a lot of nested returns going on here, I should
-    # look into making this cleaner some day
-    r_tr = r_bt["tradeseries"][0]["trades"][0][0]
+    assert len(r_tr_list) == 1
+    r_tr = r_tr_list[0]
     assert r_tr["bt_id"] == bt.bt_id
     assert r_tr["ts_id"] == ts.ts_id
 
