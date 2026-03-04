@@ -16,22 +16,6 @@ from dhstore import (
 from datetime import timedelta as td
 from testdata.testdata import Rebuilder
 
-# TODO Tests needed (some of these have already been written partially/fully
-# Trade Drawdown calculations (see placeholder function below for details)
-# Trade review __init__ and make sure I've covered all attributes with type and
-#       value test, as well as any calculations or scenarios where wrong
-#       things might get passed in or various flags might change behavior
-#       -- perhaps this should have it's own test to be clear and found easily
-#          for future updates?  even if all it does is call create_*
-# Trade __eq__ and __ne__ pass and fail scenarios
-# Trade __str__ and __repr__ return strings successfully
-# Trade to.json and to_clean_dict  return correct types and mock values
-# Trade .close_trade() I do some closes in other tests already, but write
-#       a test that specifically covers as many closing scenarios as I can
-#       think up and confirm it's results.  Does timeframe/trading_hours
-#       matter here?
-# TODO confirm no other TODOs remain in this file before clearing this line
-
 
 def create_trade(open_dt="2025-01-02 12:00:00",
                  direction="long",

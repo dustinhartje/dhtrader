@@ -14,69 +14,6 @@ from dhstore import (
     get_indicator_datapoints)
 
 
-# TODO think through which tests can be done simply by creating and calcing,
-#      and which should pull data from storage to confirm live results
-#      Probably many should have both.  Should they be in the same file?
-# TODO what else can I do that covers subclasses without writing the tests
-#      specifically for them?
-# TODO Tests needed (some of these have already been written partially/fully
-# IndicatorDataPoint __init__ stuff
-# IndicatorDataPoint create & outputs (to_json, to_clean_dict, pretty,
-#                    __str__, __repr__
-# IndicatorDataPoint __eq and __ne pass and fail scenarios
-# IndicatorDataPoint store, retreive, delete
-# Indicator __init__ stuff
-# Indicator create & outputs (to_json, to_clean_dict, pretty, __str__, __repr__
-# Indicator __eq and __ne pass and fail scenarios
-# Indicator store, retreive, delete
-# Indicator get_info() - do I even really need this? test or deprecate in
-#           favor of pretty()? (check dhtrader and backtesting repos for usage)
-# Indicator load_underlying_charts() success and fail scenarios
-# Indicator load_datapoints() success and fail scenarios
-# Indicator get_datapoint() success and fail
-# Indicator next/prev_datapoint() check for correct and check boundaries
-#           should fail at edges, not wrap
-# IndicatorEMA cover any additional attributes, methods, and parameters
-# IndicatorEMA Also calculate(), sub_*(), what else?
-#              --calculate should pull out-of-range candles to establish first
-#              datapoints, be sure to test their values specifically
-# TODO IndicatorEMA spotchecks "calculated" versions should build the indicator
-#      itself from scratch also rather than get it from storage before calcs.
-# TODO Write a function that tests several points around multiple holidays
-#      Use the same times for each timeframe/trading_hours around
-#      thanksgiving, christmas, and new years.  This way I get better
-#      coverage without having to expand every test range as I can pass
-#      in the indicator and then recalc or pull from storage just for the
-#      timeframe needed for the test
-# TODO rename IndicatorEMA specific functions to include EMA
-#      (not just Indicator)
-# TODO look for further ways to functionalize the IndicatorEMA tests so I will
-#      be able to add more tests as time goes on / expand back in time
-#      to improve coverage and better chance of catching edge cases.  One idea
-#      around this is to write a function that builds, calcs/retrieves, and
-#      tests for every assertion, so it would just take a bunch of parameters
-#      including timeframe, trading_hours, length, and a target dt and value.
-#      Then it would build a relatively small IndicatorEMA, test that value
-#      and return True or False.  Could include calc vs storage as a param
-#      or have two functions (probably do as param).  Try to keep the args
-#      minimal enough to have assertions still be one line.  Assertion could
-#      live inside the function or it could be on the oneline i.e.
-#      assert myfunc(timeframe, trading_hours, length, calced).  maybe just use
-#      positional args to keep it short.
-#      -- would need to test how fast this is before replacing all my current
-#         functions.  If building/calcing/retrieving slows it way down it
-#         may not be worth it or maybe it can take a list of dicts of dates &
-#         expected values to be tested and only build the indicator once for
-#         each list then building a longer indicator is less problematic
-# IndicatorSMA basically duplicate what I'm doing for Indicator
-#              -- ideally do this in a way that loops so I can do the
-#                 same for EMA and any future Indicators easily and
-#                 consistently for all shared attributes & methods
-# IndicatorSMA cover any additional attributes, methods, and parameters
-# IndicatorSMA Also calculate(), sub_*(), what else?
-#              --calculate should pull out-of-range candles to establish first
-#              datapoints, be sure to test their values specifically
-
 def hide_Indicator_demo_hod_creation_and_calculation():
     # Confirm RTH datapoints are calculated
     ind = Indicator(name="DELETEME-hod-demo",

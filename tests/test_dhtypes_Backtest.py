@@ -16,32 +16,6 @@ from dhstore import (
     store_candles, store_candle, review_candles, delete_candles,
     get_symbol_by_ticker, get_events, delete_backtests, get_backtests_by_field)
 
-# NOTE No tests are needed on the base Backtest() class for .calculate() or
-#      .incorporate_parameters() methods as these are only implemented when
-#      building subclasses
-# TODO loop through all passable attributes and ensure assertions cover
-#      whether they are passed, not passed, or passed as different obj types
-#      where applicable (i.e. symbol as str or Symbol)
-#      TODO I may not have fully covered this on other objects so duplicate
-#           this TODO for all others as well
-# TODO think through which tests can be done simply by creating and calcing,
-#      and which should pull data from storage to confirm live results
-#      Probably many should have both.  Should they be in the same file?
-# TODO confirm no other TODOs remain in this file before clearing this one
-
-# TODO Tests needed (some of these have already been written partially/fully
-# Backtest review __init__ and make sure I've covered all attributes with type
-#          and value test, as well as any calculations or scenarios where wrong
-#          things might get passed in or various flags might change behavior
-#          -- perhaps this should have it's own test to be clear and found
-#             easily for future updates?  even if all it does is call create_*
-# Backtest __eq__ and __ne__ pass and fail scenarios
-# Backtest __str__ and __repr__ return strings successfully
-# Backtest to.json and to_clean_dict  return correct types and mock values
-# BacktestIndicatorTag (backtesting repo) - needs basically everything in
-#     this file plus specific tests for calculate, subs_*, parameters, and
-#     anything else it does different
-
 
 def create_trade(open_dt="2025-01-02 12:00:00",
                  direction="long",

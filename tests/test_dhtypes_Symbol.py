@@ -8,30 +8,7 @@ from dhtypes import (
     IndicatorEMA, IndicatorSMA, Symbol)
 from dhcommon import dt_as_dt, dt_as_str
 
-# TODO think through which tests can be done simply by creating and calcing,
-#      and which should pull data from storage to confirm live results
-#      Probably many should have both.  Should they be in the same file?
-# TODO confirm all other TODOs have been cleared from this file
-# TODO Tests needed (some of these have already been written partially/fully
-# Symbol __eq__ and __ne__ pass and fail scenarios
-# Symbol __str__ and __repr__ return strings successfully
-# Symbol to.json and to_clean_dict  return correct types and mock values
-# Symbol.pretty() (already written below)
-# Symbol.set_times() creates correct attributes for ES
-# Symbol.get_next_tick_up/down() return correct values including adjacent
-#     to day/week/month/holiday closure boundaries, looping several timeframes,
-#     eth and rth both
-# Symbol.get_next/prev_rth/eth_open/close() return correct values (should
-#     run similar tests to get_market_boundaries but use different dates for
-#     more coverage.  See if there's a way I can loop this and maybe randomize?
-#     Or literally have it check every date for the last year?
-#     Maybe have it pick a bunch of random dates then detect the day-of-week
-#     to determine what it should test on them.  (do holidays separate and
-#     static, just need to ensure random datetimes are outside them)
-#     # TODO if this works well maybe revamp get_market_boundaries to also
-#            randomize.
-
-# TODO I should probalby have this be a create_symbol() function like other
+# TODO I should probably have this be a create_symbol() function like other
 #      test files?  and it will need to test all the __init__ stuff too
 SYMBOL = Symbol(ticker="ES", name="ES", leverage_ratio=50, tick_size=0.25)
 

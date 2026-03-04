@@ -12,28 +12,6 @@ from dhstore import (
     delete_tradeseries)
 from testdata.testdata import Rebuilder
 
-# TODO think through which tests can be done simply by creating and calcing,
-#      and which should pull data from storage to confirm live results
-#      Probably many should have both.  Should they be in the same file?
-# TODO confirm no other TODOs remain in this file before clearing this one
-
-
-# TODO Tests needed (some of these have already been written partially/fully
-# TradeSeries review __init__ and make sure I've covered all attributes with
-#             type and value test, as well as any calculations or scenarios
-#             where wrong things might get passed in or various flags might
-#             change behavior
-#             -- perhaps this should have it's own test to be clear and found
-#                easily for future updates?  even if all it does is call
-#                create_*
-# TradeSeries __eq__ and __ne__ pass and fail scenarios
-# TradeSeries __str__ and __repr__ return strings successfully
-# TradeSeries to.json and to_clean_dict  return correct types and mock values
-# TradeSeries .update_bt_id() success and fail scenarios, make sure trades
-#             also get updates
-# TradeSeries delete_from_storage() needs coverage, I've only used dhstore
-#             functions in tests below
-
 
 def create_trade(open_dt="2025-01-02 12:00:00",
                  close_dt=None,

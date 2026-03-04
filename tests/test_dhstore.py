@@ -8,49 +8,6 @@ from dhstore import (
     get_symbol_by_ticker, get_events, delete_backtests, get_backtests_by_field,
     review_tradeseries, review_trades)
 from dhtypes import TradeSeries, Trade
-# TODO Go through dhstore.py every function/class and write out comments
-#      here for things that need testing
-# TODO think through which tests can be done simply by creating and calcing,
-#      and which should pull data from storage to confirm live results
-#      Probably many should have both.  Should they be in the same file?
-# TODO Check that list against below tests that were transfered from my
-#      original manual testing hacks
-# TODO write any remaining tests needed here or in class specific files
-# TODO tests needed
-# list_collections() Ensure it lists a few that should always exist like
-#     candles, and probably check that it's length isn't over like 50?
-#     -- probably combine with drop_collection() using a dummy test collection
-# drop_collection() test carefully by creating a DELETEME collection then
-#     dropping it and confirming it's no longer in list
-#     --should this even exist in dhstore?  It's kind of mongo specific
-#       if anything maybe it should be drop_table or similarly generic
-#       and if I keep it shoudl I also have list_tables?  maybe call it stores?
-#       buckets?  thingboxes?
-# get_symbol_by_ticker() yeah better test that this spits out the right
-#     thing with the right type and all that
-# combined tests for store_, list_*, review_* get_, delete_ each object type
-#     No need to combine linked types in tests, just do each type indivdidually
-#     Linked tests should be done at class levels
-#     --Trades
-#     --TradeSeries
-#     --Backtests
-#     --Candles
-#     --Indicators
-#     --IndicatorDataPoints
-#     --Events
-# mock failures for remaining integrity checks to ensure they will fail
-#     if there is ever a real problem.  see test_TradeSeries_integrity_check()
-#     for an example below
-#   --review_candles(check_integrity) - see if I can safely insert and delete
-#     individual candles, and if so I can insert improper candles and
-#     potentially remove to check for gaps.  I would want to create a test
-#     copy of the candles collection to do this on though, don't muck with
-#     the real candles.  I can probably just copy a few days worth of
-#     candles into a test collection on the fly right?  should go fast...
-#   --review_trades(check_integrity) checks for duplicate trades, should also
-#     be able to run this against a (potential) copy of the collection or
-#     just build a mockup collection on the fly with a small number of
-#     Trades, since dupe check is pretty basic
 
 
 def clear_storage_by_bt_id(bt_id):
