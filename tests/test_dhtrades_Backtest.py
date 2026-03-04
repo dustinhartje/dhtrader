@@ -2,10 +2,10 @@ import datetime
 import site
 import pytest
 site.addsitedir('modulepaths')
-from dhcharts import (
+from dhtypes import (
     Candle, Chart, Day, Event, Indicator, IndicatorDataPoint, IndicatorEMA,
     IndicatorSMA, Symbol)
-from dhtrades import Trade, TradeSeries, Backtest
+from dhtypes import Trade, TradeSeries, Backtest
 from dhcommon import (
     dt_as_dt, dt_as_str, dow_name, dt_to_epoch, dt_from_epoch,
     OperationTimer, ProgBar, log_say, prompt_yn, valid_timeframe,

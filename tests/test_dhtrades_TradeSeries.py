@@ -3,9 +3,9 @@ import pytest
 import json
 import site
 site.addsitedir('modulepaths')
-from dhcharts import (
+from dhtypes import (
     Candle, Symbol)
-from dhtrades import Trade, TradeSeries
+from dhtypes import Trade, TradeSeries
 from dhcommon import dt_as_dt
 from dhstore import (
     get_trades_by_field, delete_trades, get_tradeseries_by_field,

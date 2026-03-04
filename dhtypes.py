@@ -320,6 +320,11 @@ def delete_trades(*args, **kwargs):
 def delete_backtests(*args, **kwargs):
     return _dhstore('delete_backtests', *args, **kwargs)
 
+
+def review_candles(*args, **kwargs):
+    return _dhstore('review_candles', *args, **kwargs)
+
+
 class Symbol():
     """Represents basic mechanics of a tradeable symbol a.k.a. ticker.  This
     might be a specific stock or future.

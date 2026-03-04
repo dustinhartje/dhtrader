@@ -1,7 +1,7 @@
 from testdata import Rebuilder
 from dhcommon import dt_to_epoch
-from dhcharts import Candle
-from dhtrades import Trade, TradeSeries, Backtest
+from dhtypes import Candle
+from dhtypes import Trade, TradeSeries, Backtest
 
 """Rebuild test data from json files into objects for testing and development
 purposes.  This script primarily serves as a reference template for Rebuilder

@@ -7,7 +7,7 @@ from dhstore import (
     store_candles, store_candle, review_candles, delete_candles,
     get_symbol_by_ticker, get_events, delete_backtests, get_backtests_by_field,
     review_tradeseries, review_trades)
-from dhtrades import TradeSeries, Trade
+from dhtypes import TradeSeries, Trade
 # TODO Go through dhstore.py every function/class and write out comments
 #      here for things that need testing
 # TODO think through which tests can be done simply by creating and calcing,

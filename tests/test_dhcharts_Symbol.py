@@ -3,7 +3,7 @@ import site
 # This hacky crap is needed to help imports between files in dhtrader
 # find each other when run by a script in another folder (even tests).
 site.addsitedir('modulepaths')
-from dhcharts import (
+from dhtypes import (
     Candle, Chart, Day, Event, Indicator, IndicatorDataPoint,
     IndicatorEMA, IndicatorSMA, Symbol)
 from dhcommon import dt_as_dt, dt_as_str

@@ -10,13 +10,13 @@ from datetime import timedelta
 from copy import deepcopy
 import logging
 from pathlib import Path
-from dhcharts import (
-    Candle, Event, IndicatorDataPoint, Symbol, IndicatorSMA, IndicatorEMA)
+from dhtypes import (
+    Candle, Event, IndicatorDataPoint, Symbol, IndicatorSMA, IndicatorEMA,
+    Trade, TradeSeries, Backtest, Chart, Day, Indicator)
 from dhcommon import (
     dt_as_str, dt_as_dt, dt_from_epoch, dt_to_epoch, valid_timeframe,
     this_candle_start, summarize_candles, log_say, sort_dict,
     rangify_candle_times, ProgBar, OperationTimer)
-from dhtrades import Trade, TradeSeries
 from dhutil import expected_candle_datetimes
 import dhmongo as dhm
 

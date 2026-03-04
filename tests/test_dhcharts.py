@@ -1,6 +1,6 @@
 import site
 site.addsitedir('modulepaths')
-from dhcharts import (
+from dhtypes import (
     Candle, Chart, Day, Event, Indicator, IndicatorDataPoint,
     IndicatorEMA, IndicatorSMA, Symbol)
 from dhcommon import (
