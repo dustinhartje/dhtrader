@@ -1158,7 +1158,7 @@ class Day():
         # Setup class attributes
         self.d_symbol = d_symbol
         if not isinstance(self.d_symbol, Symbol):
-            raise TypeError(f"d_symbol {type(d_symbol)} must be a"
+            raise TypeError(f"d_symbol {type(d_symbol)} must be a "
                             "<class dhtypes.Symbol> object")
         self.d_date = d_date
         if not isinstance(self.d_date, dt.date):
@@ -1170,7 +1170,7 @@ class Day():
             self.d_charts = d_charts
         for c in d_charts:
             if not isinstance(self.d_symbol, Symbol):
-                raise TypeError(f"c {type(c)} must be a"
+                raise TypeError(f"c {type(c)} must be a "
                                 "<class dhtypes.Chart> object")
         self.d_open_eth = d_open_eth
         self.d_open_rth = d_open_rth
@@ -1313,6 +1313,10 @@ class Day():
 
 
 class IndicatorDataPoint():
+    """Simple class to handle time series datapoints for indicators.
+    I might swap this out for an even more generic TSDataPoint or
+    similar if I find more uses for time series beyond this."""
+
     def __init__(self,
                  dt: str,
                  value: float,
@@ -1326,9 +1330,6 @@ class IndicatorDataPoint():
             self.epoch = dt_to_epoch(dt)
         else:
             self.epoch = epoch
-    """Simple class to handle time series datapoints for indicators.  I might
-    swap this out for an even more generic TSDataPoint or similar if I find
-    more uses for time series beyond this."""
 
     def to_json(self):
         """returns a json version of this object while normalizing
@@ -1753,6 +1754,16 @@ class IndicatorSMA(Indicator):
 
 
 class IndicatorEMA(Indicator):
+    """Subclass of Indicator() used for exponential moving averages.
+    Requires a length, method (default: close) and smoothing
+    (default: 2). The first 4*length calculated values will not be
+    kept as the early part of the calculation has to start with a
+    simple average and does not reach true EMA values until it has
+    substantial history to effectively factor out the initial non-EMA
+    baseline. Spot testing found roughly 4 times the length is when
+    accuracy reaches +/- $0.01 vs the same timestamp datapoints when
+    the series is started at a much earlier point in time."""
+
     def __init__(self,
                  description,
                  timeframe,
@@ -1784,15 +1795,6 @@ class IndicatorEMA(Indicator):
                          datapoints=datapoints,
                          parameters=parameters,
                          )
-        """Sublcass of Indicator() used for exponential moving averages.
-        Requires a length, method (default: close) and smoothing (default: 2).
-        The first 4*length calculated values will not be kept as the early
-        part of the calculation has to start with a simple average and does
-        not reach true EMA values until it has substantial history to
-        effectively factor out the initial non-EMA baseline.  Spot testing
-        found roughly 4 times the length is when accuracy reaches +/- $0.01 vs
-        the same timestamp datapoints when the series is started at a much
-        earlier point in time."""
         # Confirm that parameters includes the subclass specific arguments
         # needed for this type of indicator
         # For EMA we just need a length, method, and smoothing factor
@@ -2216,8 +2218,10 @@ class Trade():
             raise Exception("Cannot run update() on a closed Trade, this "
                             "would break reality.")
         if not isinstance(candle, Candle):
-            raise TypeError(f"candle {candle} must be a dhtypes.Candle obj, "
-                            f"we got a {type(candle)} instead")
+            raise TypeError(
+                f"candle {candle} must be a dhtypes.Candle object, "
+                f"we got a {type(candle)} instead"
+            )
         # Set short var names for calcs in this method
         tick = self.symbol.tick_size
         close_price = None
