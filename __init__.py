@@ -31,7 +31,8 @@ try:
         get_events,
         get_symbol_by_ticker,
     )
-except ImportError:
+except Exception:
+    # dhstore requires MongoDB configuration, skip if not available
     pass
 
 __all__ = [

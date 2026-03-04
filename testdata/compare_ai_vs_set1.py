@@ -219,11 +219,11 @@ if __name__ == '__main__':
 
     # Compare long trades
     long_results = compare_trades(
-        'ai_trades_long.csv', 'set1_trades_long.csv', 'long')
+        'ai_trades_long.csv', 'set1/set1_trades_long.csv', 'long')
 
     # Compare short trades
     short_results = compare_trades(
-        'ai_trades_short.csv', 'set1_trades_short.csv', 'short')
+        'ai_trades_short.csv', 'set1/set1_trades_short.csv', 'short')
 
     # Overall summary
     print(f"\n{'='*80}")

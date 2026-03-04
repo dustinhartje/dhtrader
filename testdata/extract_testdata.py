@@ -1,18 +1,32 @@
-import os
-import sys
-from dhtrader.testdata.testdata import Extractor
-from datetime import timedelta
-import json
-from dhtrader.dhcommon import dt_as_dt, dt_as_str
-"""Extract test data from storage for testing and development purposes.  Run
-as a script to extract and write to json files.  Or import and call
-extract_all() from other test modules to extract data for testing
-without writing files.
+"""Extract test data from storage for testing and development purposes.
+
+Run as: python3 extract_testdata.py from the testdata directory
+Or:     python3 -m dhtrader.testdata.extract_testdata from git root
+
+This extracts and writes to json files, or can be imported to call
+extract_all() from other test modules.
 
 NOTE - due to the nesting structure I have not been able to determine how to
 setup pathing to get all packages to import correctly when running from a unit
 test file.  Maybe circle back to that later but it works fine run as a script
 which is enough for now."""
+
+import os
+import sys
+from datetime import timedelta
+import json
+
+# Make dhtrader package importable when run as standalone script
+if __name__ == '__main__':
+    # Add git root to path (two directories up)
+    _git_root = os.path.dirname(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    )
+    if _git_root not in sys.path:
+        sys.path.insert(0, _git_root)
+
+from dhtrader.testdata import Extractor
+from dhtrader.dhcommon import dt_as_dt, dt_as_str
 
 
 def say(msg: str, console_output=True):
@@ -185,7 +199,6 @@ def extract_all(write=False, console_output=False):
     assert len(t[0]["trades"]) == 76
     assert len(t[1]["trades"]) == 54
     # Confirm first trade as expected
-    print(t[0]["trades"][0])
     assert t[0]["trades"][0] == {
         'open_dt': '2025-11-30 19:06:00', 'close_dt': '2025-11-30 19:48:00',
         'created_dt': '2025-12-06 13:20:29', 'direction': 'long',
@@ -196,7 +209,9 @@ def extract_all(write=False, console_output=False):
         'profitable': False, 'name': 'BacktestEMABounce-eth_e1h_9',
         'version': '1.0.0', 'ts_id': 'BacktestEMABounce-eth_e1h_9_s80-p160-o0',
         'bt_id': 'BacktestEMABounce-eth_e1h_9', 'tags': [], 'flipper': 1,
-        'open_epoch': 1764547560, 'first_min_open': False,
+        'open_epoch': 1764547560, 'open_date': '2025-11-30',
+        'open_time': '19:06:00', 'close_date': '2025-11-30',
+        'close_time': '19:48:00', 'first_min_open': False,
         'prev_ind_dp': 6848.23}
     # Validate indicator datapoints in long and short trades
     t = ex_test["trades"]["long_trades"]

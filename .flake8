@@ -34,9 +34,9 @@ per-file-ignores =
 
 # Report format
 format = default
-show-source = True
+show-source = False
 show_pep8 = False
 
 # Statistics
-statistics = True
-count = True
+statistics = False
+count = False

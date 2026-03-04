@@ -12,6 +12,14 @@ The environment name is the last segment of the filename.
 import os
 import sys
 import argparse
+
+# Make dhtrader package importable when run as standalone script
+if __name__ == '__main__':
+    # Add git root to path (one directory up from dhtrader)
+    _git_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if _git_root not in sys.path:
+        sys.path.insert(0, _git_root)
+
 from dhtrader.dhcommon import prompt_yn
 
 

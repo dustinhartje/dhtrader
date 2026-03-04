@@ -87,9 +87,9 @@ def calculate_trades(direction='long', offset_ticks=0,
     print(f"\nCalculating {direction.upper()} trades "
           f"(offset_ticks={offset_ticks})...")
 
-    ema_list = load_ema_data('set1_ind_dps_e1h9ema.csv')
-    hourly_candles = load_hourly_candles('set1_e1h_candles.csv')
-    minute_candles = load_minute_candles('set1_1m_candles.csv')
+    ema_list = load_ema_data('set1/set1_ind_dps_e1h9ema.csv')
+    hourly_candles = load_hourly_candles('set1/set1_e1h_candles.csv')
+    minute_candles = load_minute_candles('set1/set1_1m_candles.csv')
 
     trades = []
 

@@ -1,19 +1,34 @@
-from dhtrader.testdata.testdata import Rebuilder
-from dhtrader.dhcommon import dt_to_epoch
-from dhtrader.dhtypes import Candle
-from dhtrader.dhtypes import Trade, TradeSeries, Backtest
+"""Rebuild test data from json files into objects for testing and development.
 
-"""Rebuild test data from json files into objects for testing and development
-purposes.  This script primarily serves as a reference template for Rebuilder
-usage in unit tests.  It can also be used to verify test data is being rebuilt
+Run as: python3 build_testdata.py from the testdata directory
+Or:     python3 -m dhtrader.testdata.build_testdata from git root
+
+This script primarily serves as a reference template for Rebuilder usage in
+unit tests.  It can also be used to verify test data is being rebuilt
 accurately.  Run as a script to test ad-hoc or import and call
-extract_testdata() from other test modules to extract data for testing
-without writing files.
+extract_testdata() from other test modules.
 
 NOTE - due to the nesting structure I have not been able to determine how to
 setup pathing to get all packages to import correctly when running from a unit
 test file.  Maybe circle back to that later but it works fine run as a script
 which is enough for now."""
+
+import os
+import sys
+
+# Make dhtrader package importable when run as standalone script
+if __name__ == '__main__':
+    # Add git root to path (two directories up from testdata/build_testdata.py)
+    _git_root = os.path.dirname(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    )
+    if _git_root not in sys.path:
+        sys.path.insert(0, _git_root)
+
+from dhtrader.testdata import Rebuilder
+from dhtrader.dhcommon import dt_to_epoch
+from dhtrader.dhtypes import Candle
+from dhtrader.dhtypes import Trade, TradeSeries, Backtest
 
 
 def say(msg: str, console_output=True):
