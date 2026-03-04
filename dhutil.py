@@ -2,9 +2,9 @@ from datetime import timedelta, datetime as dt
 import csv
 import sys
 from tabulate import tabulate
-from dhtypes import (
-    Candle, get_symbol_by_ticker, get_candles,
-    get_events, review_candles)
+from dhtypes import Candle
+from dhstore import (
+    get_symbol_by_ticker, get_candles, get_events, review_candles)
 from dhcommon import (
     dt_as_dt, dt_as_str, dt_to_epoch, timeframe_delta,
     this_candle_start, valid_trading_hours, check_tf_th_compatibility)
