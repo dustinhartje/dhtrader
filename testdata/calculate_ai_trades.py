@@ -2,7 +2,9 @@
 """
 Calculate ES trades based on EMA bounce/rejection strategy for both
 long and short. Created from scratch using only the provided
-instructions.
+instructions.  Useful to generate trades outside of dhtrader system for
+validation of dhtrader results.  This script is not used regularly and there is
+a good chance it will require updates to run properly in the future.
 """
 
 import csv

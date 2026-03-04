@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
-Compare AI trades with set1 trades for both long and short directions
+Compare AI trades with set1 trades for validation purposes.  Paired with
+calculate_ai_trades.py which generates AI trades from scratch using only the
+provided instructions.  This script is not used regularly and there is a good
+chance it will require updates to run properly in the future.
 """
 
 import csv
