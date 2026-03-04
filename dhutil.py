@@ -1,3 +1,10 @@
+"""Utility functions for candle data remediation and analysis.
+
+This module provides functions for handling gaps in candle data,
+generating zero-volume candles, and comparing candles between storage
+and CSV files. It relies on dhcommon for datetime utilities and dhstore
+for data retrieval and persistence.
+"""
 from datetime import timedelta, datetime as dt
 import csv
 import sys
@@ -319,7 +326,7 @@ def read_candles_from_csv(start_dt,
                           timeframe: str = '1m',
                           ):
     """Reads lines from a csv file and returns them as a list of
-    dhcharts.Candle objects.  Assumes format matches FirstRate data
+    Candle objects.  Assumes format matches FirstRate data
     standard of no header row the the following order of fields:
     datetime,open,high,low,close,volume
     This will fail badly if the format of the source file is incorrect!"""

@@ -77,8 +77,6 @@ from dhstore import (
 #              --calculate should pull out-of-range candles to establish first
 #              datapoints, be sure to test their values specifically
 
-# TODO revamp this to have a create_* function similar to dhtrades patterns
-# Create a base class Indicator and calculate
 def hide_Indicator_demo_hod_creation_and_calculation():
     # Confirm RTH datapoints are calculated
     ind = Indicator(name="DELETEME-hod-demo",

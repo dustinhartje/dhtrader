@@ -62,7 +62,7 @@ def create_trade(open_dt="2025-01-02 12:00:00",
 
 
 def add_1m_candle(trade, dt, c_open, c_high, c_low, c_close):
-    """Creates a dhcharts.Candle representing a 1 minute candle occurring
+    """Creates a Candle representing a 1 minute candle occurring
     during an open trade.  This is used to test against actual observed live
     trade results, simulating each significant candle in the trade."""
     trade.candle_update(Candle(c_datetime=dt,

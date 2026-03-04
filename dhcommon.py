@@ -1,3 +1,31 @@
+"""Common utility functions and constants for the trading system.
+
+This module serves as a dependency-free utility layer, importing only from
+the Python standard library. It contains functions for:
+- DateTime conversion and formatting
+- Timeframe and trading hour validation
+- Market calendar calculations (with market_is_open checks via Symbol
+  objects)
+- Progress bar utilities
+- General helpers and constants
+
+CRITICAL ARCHITECTURAL ROLE: This module is at the base of the import tree
+and contains NO external dependencies (no dhstore, dhtypes, or other
+dhtrader imports). This makes it the safe place to define functions that
+would otherwise create circular import issues.
+
+Core functions here include:
+- next_candle_start(): Calculate next valid candle start time (requires
+  Symbol)
+- expected_candle_datetimes(): Calculate all expected candle times in a
+  range
+- this_candle_start(): Find the start of the current candle
+- DateTime utilities: dt_as_str, dt_as_dt, dt_to_epoch, dt_from_epoch,
+  etc.
+
+These functions are imported by other modules throughout the system,
+including dhstore, dhutil, and dhtypes.
+"""
 from datetime import datetime as dt
 from datetime import timedelta, date, time
 from copy import deepcopy

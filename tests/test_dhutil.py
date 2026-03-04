@@ -31,19 +31,19 @@
 # dow_name() Check this returns the correct name for each possibility and
 #            a reasonable error or None for anything else
 # timeframe_delta Check basic success and fail on bad input
-# next_candle_start() Check success and fail on rth and eth, various
-#                     timeframes, spans across daily closures, weekends,
-#                     and event closures
+# next_candle_start() in dhcommon - Check success and fail on rth and
+#                     eth, various timeframes, spans across daily
+#                     closures, weekends, and event closures
 # this_candle_start() check success and fail scenarios
 # rangify_candle_times test with a couple of mock setups, don't need to get
 #                      too deep here.  make sure it also fails on bad
 #                      timeframe or times that aren't formatted right
 # generate_zero_volume_candle() ensure success and fail on bad input
-# expected_candle_datetimes() Need to review the code in this one but I think
-#     I probably just need to mock up what should be expected in a short
-#     window for each timeframe and check it returns the expected result.
-#     Also check that it doesn't include anything inside closure events
-#     or when the market is closed
+# expected_candle_datetimes() in dhcommon - Need to review the code
+#     in this one but I think I probably just need to mock up what
+#     should be expected in a short window for each timeframe and check
+#     it returns the expected result. Also check that it doesn't include
+#     anything inside closure events or when the market is closed
 # remediate_candle_gaps() Need to revisit what this does, what testing is
 #    appropriate?
 # read_candles_from_csv(), store_candles_from_csv(), compare_candles_vs_csv()

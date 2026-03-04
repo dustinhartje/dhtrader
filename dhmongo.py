@@ -1,7 +1,10 @@
 # Mongo specific functions for storing and retrieving data
 #
-# These functions will be wrapped by dhstore.py functions to allow for
-# changing database layer in the future without major overhaul
+# This module provides low-level MongoDB operations for candles, trades,
+# backtests, indicators, and events. These functions are wrapped by
+# corresponding functions in dhstore.py, which provides a storage
+# abstraction layer to allow migration to a different database without
+# requiring changes to higher-level code.
 #
 # Running this script ad hoc will perform a basic connect, write, read test
 #
@@ -750,7 +753,7 @@ def store_event(start_dt,
                 start_epoch: int,
                 end_epoch: int,
                 ):
-    """Write a single dhcharts.Event() to mongo"""
+    """Write a single Event() to mongo"""
     event_doc = {"start_dt": dt_as_str(start_dt),
                  "end_dt": dt_as_str(end_dt),
                  "category": category,

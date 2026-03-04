@@ -1,3 +1,27 @@
+"""Domain model classes for trading system.
+
+This module defines core data types: Symbol, Candle, Chart, Trade, etc.
+representing:
+- Symbol: Market symbols (e.g., ES) with market hours and trading schedules
+- Candle: OHLCV bars at various timeframes (1m, 5m, 15m, r1h, e1h, 1d, 1w)
+- Day: Daily calendar wrapper around Candles
+- Chart: Collection of candles with technical analysis capabilities
+- Event: Market events (closures, announcements, etc.) that affect candle
+  validity or reflect unusual market conditions
+- Indicator: Base class for technical indicators (SMA, EMA, etc.)
+- IndicatorDataPoint: Individual indicator calculation results
+- Trade: Single trade execution with entry, exit, and P&L data
+- TradeSeries: Collection of trades with aggregate statistics
+- Backtest: Backtest results and performance metrics
+
+ARCHITECTURE NOTE: This module imports only utility functions from dhcommon
+(which has no external dependencies) and avoids importing from dhstore or
+dhutil. Storage operations are delegated to dhstore.py while this module
+focuses on data structure definitions.
+
+The MARKET_ERAS configuration defines trading hours for ES futures across
+different historical time periods.
+"""
 import datetime as dt
 from datetime import timedelta
 import sys
@@ -2936,7 +2960,7 @@ class Backtest():
             on
         trading_hours (str): whether to run trades during regular trading
             hours only ('rth') or include extended/globex hours ('eth')
-        symbol (str or dhcharts.Symbol): The symbol or "ticker" being
+        symbol (str or Symbol): The symbol or "ticker" being
             evaluated.  If passed as a str, the object will fetch the symbol
             with a matching 'name'.
         name (str): Human friendly label representing this object
@@ -2947,11 +2971,11 @@ class Backtest():
             These will vary and be handled by subclases typically.
         bt_id (str): unique ID used for storage and analysis purposes,
             can be used to link related TradeSeries() and Analyzer() objects
-        chart_tf (dhcharts.Chart): Underlying chart used for evaluation at
+        chart_tf (Chart): Underlying chart used for evaluation at
             same tf as Backtest object.  This is typically used to evaluate
             timeframe specific candle patterns and attributes that may be
             needed by the specific backtest rules.
-        chart_1m (dhcharts.Chart): underlying 1m chart is tyipcally used in
+        chart_1m (Chart): underlying 1m chart is tyipcally used in
             combination with chart_tf to find specific entries and exits and
             build Trade() objects.
         autoload_charts (bool): Whether to automatically load chart_tf and

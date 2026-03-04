@@ -37,8 +37,8 @@ SYMBOL = Symbol(ticker="ES", name="ES", leverage_ratio=50, tick_size=0.25)
 
 
 @pytest.mark.storage
-# TODO This only requires storage because dhcharts.Symbol.market_is_open uses
-#     dhcharts.Event which uses storage to load events.  This could be
+# TODO This only requires storage because Symbol.market_is_open uses
+#     Event which uses storage to load events.  This could be
 #     refactored to allow passing in a list of events and I could generate
 #     a static copy of the current events to load and use to speed this up
 #     and remove the storage requirement.  In theory.  Some day.

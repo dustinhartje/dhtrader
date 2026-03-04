@@ -1,6 +1,14 @@
-# Wrapper for current (dhmongo.py) data storage I'm using to allow
-# migration to a different storage solution in the future without
-# massive overhaul of dependant classes.
+"""Storage abstraction layer wrapping MongoDB persistence (dhmongo).
+
+This module provides high-level storage functions for candles, trades,
+backtests, indicators, and events. It abstracts the underlying MongoDB
+implementation (dhmongo.py) to allow future migration to different storage
+solutions without changing higher-level code.
+
+Core datetime-calculation utilities (expected_candle_datetimes,
+next_candle_start) are imported from dhcommon, which provides the base
+utility layer with no storage dependencies.
+"""
 
 import json
 import progressbar
@@ -170,7 +178,7 @@ def get_trades_by_field(field: str,
 def store_trades(trades: list,
                  collection: str = COLL_TRADES,
                  ):
-    """Store one or more dhtrades.Trade() objects in central storage"""
+    """Store one or more Trade() objects in central storage"""
 
     # Convert Trade objects to dictionaries for storage
     log.info(f"Preparing {len(trades)} trades to store by converting to dicts")
@@ -1101,7 +1109,7 @@ def get_symbol_by_ticker(ticker: str):
 
 
 def store_candle(candle):
-    """Write a single dhcharts.Candle() to central storage"""
+    """Write a single Candle() to central storage"""
     log.debug(f"Storing {candle.c_symbol.ticker} "
               f"{candle.c_timeframe} candle at {candle.c_datetime}")
     valid_timeframe(candle.c_timeframe)
@@ -1382,10 +1390,10 @@ def delete_candles(timeframe: str,
 ##############################################################################
 # Events
 def store_event(event):
-    """Write a single dhcharts.Event() to central storage"""
+    """Write a single Event() to central storage"""
     if not isinstance(event, Event):
         raise TypeError(f"event {type(event)} must be a "
-                        "<class dhcharts.Event> object")
+                        "<class Event> object")
     log.debug(f"Storing event: {str(event)}")
     result = dhm.store_event(start_dt=event.start_dt,
                              end_dt=event.end_dt,
