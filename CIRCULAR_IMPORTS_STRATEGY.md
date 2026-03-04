@@ -2,7 +2,10 @@
 
 **Author**: GitHub Copilot
 **Date**: March 2, 2026
-**Purpose**: Provide a comprehensive strategy to eliminate all circular imports in the `dhtrader` submodule while maintaining functionality and optimizing for modern Python architecture conventions.
+**Last Updated**: March 3, 2026
+**Purpose**: Provide a comprehensive strategy to eliminate all circular imports in the `dhtrader` module while maintaining functionality and optimizing for modern Python architecture conventions.
+
+**CURRENT STATUS (March 3, 2026)**: This is a **planned strategy** - implementation has not yet begun. This document describes the refactoring approach to be followed. The circular import problem currently exists and functions despite runtime delay binding, but the refactoring will eliminate it entirely.
 
 ---
 
@@ -10,7 +13,15 @@
 
 The `dhtrader` module currently contains a **primary circular import dependency** between `dhcharts.py` and `dhstore.py`, along with **secondary coupling issues** involving `dhutil.py`, `dhtrades.py`, and `dhcommon.py`. This document outlines a **PEP 8-compliant systematic approach** to eliminate these circular dependencies while adhering to Python standards, modern packaging conventions, and architectural best practices.
 
-**Current Status**: The module functions despite the circular imports due to late runtime binding, but this fragility creates maintenance challenges and limits IDE/type-checker support.
+**Current Status (March 3, 2026)**:
+- ✓ Circular import problem identified and documented
+- ✓ dhcharts.py and dhtrades.py still exist with their original classes and imports
+- ✓ dhstore.py has circular imports from both dhcharts and dhtrades
+- ✗ dhtypes.py has NOT yet been created
+- ✗ Refactoring has NOT begun
+- ✗ __init__.py is empty (no public API set up yet)
+
+The module functions despite the circular imports due to late runtime binding, but this fragility creates maintenance challenges and limits IDE/type-checker support. This strategy document should be followed to complete the refactoring.
 
 **Recommended Approach**: Restructure the module using a **layered architecture** with clear separation of concerns:
 - Create a new `dhtypes` module containing **pure domain model classes** (no storage methods)
@@ -18,6 +29,8 @@ The `dhtrader` module currently contains a **primary circular import dependency*
 - Move any utility functions/variables from `dhcharts.py` and `dhtrades.py` to appropriate modules (`dhutil.py` or `dhstore.py`)
 - Move all persistence operations to `dhstore.py` as **explicit functions**
 - Keep all imports at the **top of files** (100% PEP 8 compliant)
+- Do **not** maintain backward compatibility APIs; migrate all callers to final API
+- Update all callers in exactly two repositories: `dhtrader` and `backtesting`
 - Result: Functional API using `store_candle(candle)` instead of `candle.store()`
 
 This approach maintains clean architecture while preserving strict adherence to PEP 8 standards with all imports at module level.
@@ -50,17 +63,60 @@ This approach maintains clean architecture while preserving strict adherence to 
 
 ---
 
+## 0. Current Architecture State (Before Refactoring)
+
+### 0.1 Current File Status (March 3, 2026)
+
+**Files That Exist:**
+- ✓ `~/git/dhtrader/dhcharts.py` (1841 lines) - Contains Candle, Event, Symbol, Indicator classes and analysis methods
+- ✓ `~/git/dhtrader/dhtrades.py` (1588 lines) - Contains Trade, TradeSeries, Backtest classes
+- ✓ `~/git/dhtrader/dhstore.py` (1456 lines) - Contains persistence functions and circular imports
+- ✓ `~/git/dhtrader/dhutil.py` - Utility functions
+- ✓ `~/git/dhtrader/dhcommon.py` - Pure utility module (no changes needed)
+- ✓ `~/git/dhtrader/__init__.py` - **Currently empty** (no public API)
+
+**Files That Don't Exist Yet:**
+- ✗ `~/git/dhtrader/dhtypes.py` - Will be created during Phase 1
+
+### 0.2 Current Import Structure
+
+**dhcharts.py imports:**
+```python
+from dhstore import (
+    get_symbol_by_ticker, get_candles, store_candle, get_events, store_event,
+    get_indicator_datapoints, store_indicator, store_indicator_datapoints)
+```
+
+**dhstore.py imports:**
+```python
+from dhcharts import (
+    Candle, Event, IndicatorDataPoint, Symbol, IndicatorSMA, IndicatorEMA)
+from dhtrades import Trade, TradeSeries
+```
+
+**dhtrades.py imports:**
+```python
+from dhcharts import Candle, Chart
+from dhstore import (
+    get_symbol_by_ticker, get_candles,
+    get_trades_by_field, get_tradeseries_by_field, ... )
+```
+
+This creates **circular dependency chains** that function only due to Python's late binding but are fragile and problematic.
+
+---
+
 ## 1. Circular Import Analysis
 
 ### 1.1 Primary Circular Dependency: dhcharts ↔ dhstore
 
 ```
 dhcharts.py imports from dhstore.py:
-  ├─ get_symbol_by_ticker()          [Used in Line 701, 820, 1007]
-  ├─ get_candles()                   [Used in Line 918]
-  ├─ store_candle()                  [Used in Line 791 - Candle.store()]
-  ├─ get_events()                    [Used in Line 471, 926]
-  ├─ store_event()                   [Used in Line 1045 - Event.store()]
+    ├─ get_symbol_by_ticker()          [Used by Symbol/Candle/Chart initialization]
+    ├─ get_candles()                   [Used by Chart.load_candles()]
+    ├─ store_candle()                  [Used by Candle.store()]
+    ├─ get_events()                    [Used by Symbol.market_is_open() and Chart.load_candles()]
+    ├─ store_event()                   [Used by Event.store()]
   ├─ get_indicator_datapoints()      [Imported but verify usage]
   ├─ store_indicator()               [Imported but verify usage]
   └─ store_indicator_datapoints()    [Imported but verify usage]
@@ -72,6 +128,26 @@ dhstore.py imports from dhcharts.py:
   ├─ Symbol                          [Type definition for Symbol instances]
   ├─ IndicatorSMA                    [Type for indicator operations]
   └─ IndicatorEMA                    [Type for indicator operations]
+```
+
+Reference snippets from current code:
+
+```python
+# dhcharts.py
+class Candle:
+    def store(self):
+        return store_candle(self)
+
+class Chart:
+    def load_candles(self):
+        cans = get_candles(...)
+        events = get_events(...)
+```
+
+```python
+# dhstore.py
+from dhcharts import Candle, Event, IndicatorDataPoint, Symbol, IndicatorSMA, IndicatorEMA
+from dhtrades import Trade, TradeSeries
 ```
 
 **Why This is Problematic:**
@@ -96,7 +172,7 @@ dhstore.py imports from dhcharts.py:
 - **Status**: Pure utility module with NO internal imports ✓
 - **Role**: Foundation module for all others
 
-**Resolution Strategy**: 
+**Resolution Strategy**:
 - `dhcharts.py` and `dhtrades.py` will be **completely eliminated**
 - All classes from these files move to the new `dhtypes.py` module
 - Any utility functions/variables move to `dhutil.py`, `dhstore.py`, or `dhcommon.py` as appropriate
@@ -163,7 +239,7 @@ dhtypes.py (Pure data classes - NO imports from dhstore):
 dhstore.py (All persistence operations as functions):
   ├─ def store_candle(candle: dhtypes.Candle) -> bool
   ├─ def store_trade(trade: dhtypes.Trade) -> bool
-  ├─ def store_backtest(backtest: dhtypes.Backtest) -> bool
+    ├─ def store_backtests(backtests: List[dhtypes.Backtest]) -> bool
   ├─ def store_event(event: dhtypes.Event) -> bool
   ├─ def get_symbol_by_ticker(ticker: str) -> dhtypes.Symbol
   ├─ def get_candles(...) -> List[dhtypes.Candle]
@@ -197,15 +273,15 @@ Third-party libs ┘        ↑
                           │
     (Usage modules import from dhtypes + dhstore)
     ├─ dhutil.py (can import dhtypes, dhstore)
-    └─ test files
-    
+    └─ tests/
+
     [dhcharts.py and dhtrades.py eliminated - content moved to dhtypes/dhutil/dhstore]
 ```
 
 **No circular imports possible** because:
 - dhtypes.py imports ONLY from dhcommon and standard library
 - dhstore.py imports from dhtypes but NOT vice versa
-- dhcharts/dhtrades/dhutil import from dhtypes AND dhstore (one-way dependency)
+- all remaining usage modules import from dhtypes and dhstore (one-way dependency)
 - NO file imports from dhtypes after importing dhstore
 
 ### 3.3 Key Design Principles
@@ -215,7 +291,8 @@ Third-party libs ┘        ↑
 **dhtypes.py contains ONLY**:
 - Class definitions with `__init__()` methods
 - Data validation methods
-- Analysis/transformation methods (e.g., `Chart.calculate_sma()`)
+- Analysis/transformation methods (e.g., `IndicatorSMA.calculate()`,
+  `IndicatorEMA.calculate()`, `Chart.review_candles()`)
 - Utility methods needed for domain logic
 - **NO storage methods** (no `.store()`, `.save()`, `.to_db()`)
 - **NO imports** from dhstore, dhcharts, or dhtrades
@@ -244,12 +321,12 @@ class Trade:
         self.direction = direction
         # ... etc - ONLY initialization
 
-    def calculate_profit(self, exit_price):
+    def gain_loss(self, contracts: int = 1):
         """Analysis method - OK to include"""
-        if self.direction == 'long':
-            return (exit_price - self.entry_price) * self.contracts
-        else:
-            return (self.entry_price - exit_price) * self.contracts
+        return ((self.exit_price - self.entry_price)
+                * self.flipper
+                * contracts
+                * self.symbol.leverage_ratio)
 ```
 
 #### Principle 2: All Persistence in dhstore as Functions
@@ -344,15 +421,17 @@ store_candle(candle)  # Explicit function call - clear what's happening
 
 **Objective**: Create the new `dhtypes.py` module with all domain classes, without any storage methods or circular dependencies.
 
-1. **Create `/home/dusty/git/backtesting/dhtrader/dhtypes.py`**
+1. **Create `~/git/dhtrader/dhtypes.py`**
    - Copy all class definitions from existing modules:
      - From `dhcharts.py`: Candle, Event, Symbol, IndicatorDataPoint, Indicator, IndicatorSMA, IndicatorEMA, Chart, Day
      - From `dhtrades.py`: Trade, TradeSeries, Backtest
-   - **Important**: Keep only initialization and analysis methods:
-     - ✓ `__init__()` methods
-     - ✓ Utility/helper methods (e.g., `Symbol.is_market_open()`, `Candle.close_time()`)
-     - ✓ Analysis methods (e.g., `Chart.add_indicator()`)
-     - ✗ **Remove ALL storage methods** (`.store()`, `.store_to_db()`, etc.)
+     - **Important**: Keep only initialization and analysis methods:
+         - ✓ `__init__()` methods
+         - ✓ Utility/helper methods (e.g., `Symbol.market_is_open()`,
+             `Chart.restrict_dates()`)
+         - ✓ Analysis methods (e.g., `Chart.review_candles()`,
+             `IndicatorSMA.calculate()`, `IndicatorEMA.calculate()`)
+         - ✗ **Remove ALL storage methods** (`.store()`, `.store_to_db()`, etc.)
    - Ensure imports are only: `dhcommon` and Python standard library
    - Add comprehensive docstrings and type hints using PEP 484 style
    - Example structure:
@@ -371,9 +450,9 @@ store_candle(candle)  # Explicit function call - clear what's happening
              self.close = c
              self.volume = v
 
-         def is_bullish(self) -> bool:
+         def contains_price(self, p: float) -> bool:
              """Analysis method - stays on class"""
-             return self.close >= self.open
+             return self.low <= p <= self.high
 
          # ✗ NO: def store(self) -> bool: ...
          # ✗ NO: from dhstore import store_candle (would be circular)
@@ -388,7 +467,8 @@ store_candle(candle)  # Explicit function call - clear what's happening
 2. **Validation - Step 1**
    ```bash
    # Test basic import without triggering storage layer
-   python3 -c "from dhtrader.dhtypes import Candle, Symbol, Trade; print('✓ dhtypes imports successfully')"
+   cd ~/git/dhtrader
+   python3 -c "from dhtypes import Candle, Symbol, Trade; print('✓ dhtypes imports successfully')"
    ```
 
 ---
@@ -397,7 +477,7 @@ store_candle(candle)  # Explicit function call - clear what's happening
 
 **Objective**: Remove circular imports by creating all storage functions in dhstore.py with explicit imports at module top.
 
-3. **Update `/home/dusty/git/backtesting/dhtrader/dhstore.py`**
+3. **Update `~/git/dhtrader/dhstore.py`**
    - **Step A**: Add imports at the module top level (before any functions):
      ```python
      # dhtrader/dhstore.py - at TOP of file
@@ -434,64 +514,79 @@ store_candle(candle)  # Explicit function call - clear what's happening
      # ... continue for all storage operations
      ```
 
-   - **Step C**: **CRITICAL** - Remove these imports if they exist:
+   - **Step C**: **CRITICAL** - Remove these imports:
      ```python
-     # DELETE THESE LINES:
-     from dhcharts import ...  # ✗ REMOVE - creates circular import
-     from dhtrades import ...  # ✗ REMOVE - creates circular import
+     # CHANGE FROM:
+     from dhcharts import (
+         Candle, Event, IndicatorDataPoint, Symbol, IndicatorSMA, IndicatorEMA)
+     from dhtrades import Trade, TradeSeries
+
+     # CHANGE TO:
+     from dhtypes import (
+         Candle, Event, IndicatorDataPoint, Symbol, IndicatorSMA, IndicatorEMA,
+         Trade, TradeSeries)
      ```
 
 4. **Identify and relocate non-class content from dhcharts.py and dhtrades.py**
-   
-   Before deleting these files, identify any utility functions or variables that need to be preserved:
-   
-   - **Step A**: Scan dhcharts.py for non-class content:
-     ```bash
-     # Find functions that aren't part of classes
-     grep -n "^def " /home/dusty/git/backtesting/dhtrader/dhcharts.py
-     ```
-     - If utility functions exist (e.g., helper functions for chart analysis), move them to:
-       - `dhutil.py` if they're general utilities
-       - `dhstore.py` if they're storage-related
-   
-   - **Step B**: Scan dhtrades.py for non-class content:
-     ```bash
-     # Find functions and module-level variables
-     grep -n "^def \|^[A-Z_]* = " /home/dusty/git/backtesting/dhtrader/dhtrades.py
-     ```
-     - Move any utility functions to `dhutil.py`
-     - Move any constants to `dhcommon.py` if they're shared
-   
-   - **Step C**: After relocating all non-class content:
-     ```bash
-     # DELETE the files entirely
-     rm /home/dusty/git/backtesting/dhtrader/dhcharts.py
-     rm /home/dusty/git/backtesting/dhtrader/dhtrades.py
-     ```
-   
-   **Important**: All classes have already been moved to dhtypes.py in Phase 1, so these files should contain only utility functions/variables at this point.
 
-5. **Validation - Step 2**
-   ```bash
-   # Test imports individually
-   python3 -c "from dhtrader.dhtypes import Candle; print('✓ dhtypes imports')"
-   python3 -c "from dhtrader.dhstore import store_candle; print('✓ dhstore imports')"
-   
-   # Verify dhcharts.py and dhtrades.py don't exist
-   test ! -f /home/dusty/git/backtesting/dhtrader/dhcharts.py && echo "✓ dhcharts.py deleted"
-   test ! -f /home/dusty/git/backtesting/dhtrader/dhtrades.py && echo "✓ dhtrades.py deleted"
-   
-   # Test combined imports work
-   python3 -c "from dhtrader.dhtypes import Candle, Chart, Trade; from dhtrader.dhstore import get_candles, store_candle; print('✓ No circular imports!')"
+     Before deleting these files, identify any utility functions or variables
+     that need to be preserved:
+
+     - **Step A**: Scan dhcharts.py for non-class content:
+         ```bash
+         # Find functions that aren't part of classes
+         cd ~/git/dhtrader
+         grep -n "^def " dhcharts.py
+         ```
+         - Verified non-class content in `dhcharts.py`:
+             - Constants: `CANDLE_TIMEFRAMES`, `BEGINNING_OF_TIME`, `MARKET_ERAS`
+             - Logger setup: `log = logging.getLogger("dhcharts")`
+             - Function: `bot()`
+         - Handling rules:
+             - Move market/schedule constants to `dhcommon.py` (or a dedicated
+                 `dhmarket.py` module), then update imports
+             - Move `bot()` to `dhcommon.py` if still needed, or inline/remove if
+                 no longer needed
+             - Keep logger setup local to the destination module that owns each class
+
+     - **Step B**: Scan dhtrades.py for non-class content:
+         ```bash
+         cd ~/git/dhtrader
+         grep -n "^def \|^[A-Z_]* = " dhtrades.py
+         ```
+         - Verified non-class content in `dhtrades.py`:
+             - Logger setup only: `log = logging.getLogger("dhtrades")`
+             - No top-level `def` functions and no module-level constants requiring
+                 relocation
+         - Handling rules:
+             - Keep logger setup in whichever module receives `Trade`,
+                 `TradeSeries`, and `Backtest`
+
+   - **Step C**: After relocating all non-class content, delete the files:
+     ```bash
+     cd ~/git/dhtrader
+     rm dhcharts.py dhtrades.py
+
+     # Test imports individually
+     python3 -c "from dhtypes import Candle, Chart, Trade; print('✓ dhtypes imports')"
+     python3 -c "from dhstore import get_candles, store_candle; print('✓ dhstore imports')"
+
+     # Verify files were removed
+     test ! -f dhcharts.py && echo "✓ dhcharts.py deleted"
+     test ! -f dhtrades.py && echo "✓ dhtrades.py deleted"
+
+     # Test combined imports work
+     python3 -c "from dhtypes import Candle, Chart, Trade; from dhstore import get_candles, store_candle; print('✓ No circular imports!')"
    ```
 
 ---
 
 ### Phase 3: Update All Module Imports
 
-**Objective**: Ensure all remaining modules properly import from dhtypes and dhstore, not the old circular sources.
+**Objective**: Ensure all remaining imports in `dhtrader` and `backtesting`
+target the final API (no backward-compat mode).
 
-6. **Update `/home/dusty/git/backtesting/dhtrader/dhutil.py`**
+6. **Update `~/git/dhtrader/dhutil.py`**
    - Change imports:
      ```python
      # OLD:
@@ -504,15 +599,12 @@ store_candle(candle)  # Explicit function call - clear what's happening
      from dhcommon import LOGGER
      ```
 
-7. **Update `/home/dusty/git/backtesting/dhtrader/dhmongo.py`**
+7. **Update `~/git/dhtrader/dhmongo.py`**
    - Verify no problematic imports (should only use dhtypes for type hints)
    - Add any missing dhtypes imports if type hints reference moved classes
 
-8. **Update all test files**
-   - `tests/test_dhcharts.py` - **Consider renaming or eliminating**:
-     - If testing chart-specific logic: rename to `tests/test_chart_analysis.py`
-     - If only testing classes: merge into `tests/test_dhtypes.py`
-     - Update all imports:
+8. **Update all test files** (`tests/`)
+    - Update imports in each existing test file:
        ```python
        # OLD:
        from dhcharts import Candle, Chart
@@ -521,49 +613,74 @@ store_candle(candle)  # Explicit function call - clear what's happening
        from dhtypes import Candle, Chart
        from dhstore import store_candle, get_candles
        ```
-   - `tests/test_dhtrades.py` - **Consider renaming or eliminating**:
-     - Similar approach: rename to `tests/test_trade_analysis.py` or merge into `tests/test_dhtypes.py`
-   - `tests/test_dhstore.py`: Update to import from dhtypes
-   - All other test files: Replace `from dhcharts import X` and `from dhtrades import Y` with appropriate dhtypes imports
+     - Update `tests/test_dhstore.py` to import model classes from `dhtypes`
+     - Replace all remaining `from dhcharts import X` and
+         `from dhtrades import Y` imports with `dhtypes` imports
 
 9. **Validation - Step 3**
     ```bash
+    cd ~/git/dhtrader
+
     # Test that all modules import without circular errors
     python3 -c "
-    from dhtrader.dhtypes import Candle, Symbol, Trade, Chart, Backtest
-    from dhtrader.dhstore import get_candles, store_candle
-    from dhtrader.dhutil import SomeUtilFunction
+    from dhtypes import Candle, Symbol, Trade, Chart, Backtest
+    from dhstore import get_candles, store_candle
     print('✓ All modules import successfully')
     "
-    
+
     # Verify deleted files cannot be imported
-    python3 -c "try:
-        from dhtrader import dhcharts
+    python3 -c "
+    try:
+        import dhcharts
         print('✗ ERROR: dhcharts.py still exists')
-    except ModuleNotFoundError:
-        print('✓ dhcharts.py successfully eliminated')"
+    except (ModuleNotFoundError, ImportError):
+        print('✓ dhcharts.py successfully eliminated')
+    "
+
+    python3 -c "
+    try:
+        import dhtrades
+        print('✗ ERROR: dhtrades.py still exists')
+    except (ModuleNotFoundError, ImportError):
+        print('✓ dhtrades.py successfully eliminated')
+    "
     ```
+
+10. **Update `backtesting` repository imports and call sites**
+    - Only two repositories consume dhtrader and must be migrated together:
+      `dhtrader` and `~/git/backtesting`
+    - Known backtesting call-site patterns to migrate:
+      - `from dhtrader.dhcharts import ...`
+      - `from dhtrader.dhtrades import ...`
+      - `import dhcharts as dhc`
+      - method-style persistence calls like `obj.store()`
+    - Verification/migration commands:
+      ```bash
+      cd ~/git/backtesting
+      grep -RIn "from dhtrader\.dhcharts|from dhtrader\.dhtrades|import dhcharts|import dhtrades|\.store\(" . --include='*.py' --exclude-dir=env
+
+      # After updates, this should return no hits for old module imports
+      grep -RIn "from dhtrader\.dhcharts|from dhtrader\.dhtrades|import dhcharts|import dhtrades" . --include='*.py' --exclude-dir=env
+      ```
 
 ---
 
 ### Phase 4: Create Public API
 
-**Objective**: Maintain backward compatibility while establishing the new structure.
+**Objective**: Define a clean final API in `dhtrader/__init__.py` without
+backward-compat aliases.
 
-10. **Update `/home/dusty/git/backtesting/dhtrader/__init__.py`**
-    - Define public API that re-exports key classes for backward compatibility:
+11. **Update `~/git/dhtrader/__init__.py`**
+    - Define explicit final exports only (no compatibility wrappers):
       ```python
       # dhtrader/__init__.py
-      # Import from internal modules
       from .dhtypes import (
           Candle, Event, Symbol, Indicator, IndicatorSMA, IndicatorEMA,
           Chart, Day, Trade, TradeSeries, Backtest
       )
       from .dhstore import (
-          # Important: carefully expose only needed functions
           get_candles, store_candle, get_events, store_trade
       )
-      # Note: dhcharts and dhtrades have been eliminated
 
       __all__ = [
           'Candle', 'Event', 'Symbol', 'Indicator', 'IndicatorSMA', 'IndicatorEMA',
@@ -572,45 +689,38 @@ store_candle(candle)  # Explicit function call - clear what's happening
       ]
       ```
 
-    - This allows old code to continue working:
-      ```python
-      # Still works:
-      from dhtrader import Candle, Chart, Backtest
-
-      # Also works (more explicit):
-      from dhtrader.dhtypes import Candle, Chart
-      from dhtrader.dhstore import get_candles
-      ```
-
 12. **Validation - Step 4**
     ```bash
-    # Test backward compatibility
-    python3 -c "from dhtrader import Candle, Chart, Trade; print('✓ Backward compatible imports work')"
+    cd ~/git/dhtrader
+    # Test final public API imports
+    python3 -c "from dhtrader import Candle, Chart, Trade, store_candle; print('✓ Final API imports work')"
     ```
 
 ---
 
 ### Phase 5: Comprehensive Testing
 
-**Objective**: Verify the refactored architecture works correctly.
+**Objective**: Verify the refactor is correct in both repositories.
 
-13. **Run full test suite**
+13. **Run dhtrader test suite**
     ```bash
-    cd /home/dusty/git/backtesting
-    pytest dhtrader/tests/ -v
+    cd ~/git/dhtrader
+    ./test.sh
+    # or
+    pytest tests/ -v
     ```
     - All existing tests should pass
     - No import-related failures
 
 14. **Check for circular imports**
     ```bash
+    cd ~/git/dhtrader
     python3 -c "
     import sys
     try:
-        from dhtrader import dhcharts
-        from dhtrader import dhstore
-        from dhtrader import dhutil
-        from dhtrader import dhtrades
+        import dhtypes
+        import dhstore
+        import dhutil
         print('✓ No circular imports detected')
     except ImportError as e:
         print(f'✗ Import error: {e}')
@@ -620,38 +730,46 @@ store_candle(candle)  # Explicit function call - clear what's happening
 
 15. **Verify PEP 8 compliance**
     ```bash
-    # Compile check
-    python3 -m py_compile dhtrader/dhtypes.py dhtrader/dhstore.py dhtrader/dhcharts.py
+    cd ~/git/dhtrader
 
-    # Optional: Run linter if available
-    # flake8 dhtrader/ --max-line-length=79
+    # Compile check
+    python3 -m py_compile dhtypes.py dhstore.py dhutil.py
+
+    # Run linter
+    ./validate-file-quality.sh dhtypes.py
+    ./validate-file-quality.sh dhstore.py
+    ./validate-file-quality.sh dhutil.py
     ```
 
 16. **Static type checking (optional but recommended)**
     ```bash
+    cd ~/git/dhtrader
+
     # If using mypy
-    # mypy dhtrader/ --ignore-missing-imports
+    # mypy . --ignore-missing-imports
 
     # Or pyright
-    # pyright dhtrader/
+    # pyright .
     ```
-
----
 
 ### Phase 6: Documentation
 
-**Objective**: Record the new architecture for future developers.
-
-17. **Create `/home/dusty/git/backtesting/dhtrader/ARCHITECTURE_REFACTORED.md`**
+17. **Create `~/git/dhtrader/ARCHITECTURE_REFACTORED.md`**
     - Document the circular import problem and solution
     - Show the new module dependency graph
     - Provide import guidelines for new code
     - Include examples of proper usage
 
 18. **Update existing documentation**
-    - Update any existing ARCHITECTURE.md or README files
+    - Update README.md or create supplementary documentation
     - Reference the PEP 8 compliance improvements
-    - Note the functional API changes (`.store()` becomes `store_candle()`)
+    - Note the functional API changes (method-style `.store()` calls become
+      explicit storage function calls such as `store_candle()`)
+    - Update this CIRCULAR_IMPORTS_STRATEGY.md to mark refactoring as complete
+    - Show the new module dependency graph
+    - Provide import guidelines for new code
+    - Include examples of proper usage
+
 
 ---
 
@@ -660,32 +778,38 @@ store_candle(candle)  # Explicit function call - clear what's happening
 19. **Commit with clear history**
     ```bash
     # Commit 1: Create dhtypes foundation
-    git add dhtrader/dhtypes.py
+    git add dhtypes.py
     git commit -m "refactor: create dhtypes module with pure data classes from dhcharts and dhtrades"
 
     # Commit 2: Eliminate dhcharts.py and dhtrades.py
-    git rm dhtrader/dhcharts.py dhtrader/dhtrades.py
-    git add dhtrader/dhstore.py dhtrader/dhutil.py  # Updated with moved functions
+    git rm dhcharts.py dhtrades.py
+    git add dhstore.py dhutil.py  # Updated with moved functions
     git commit -m "refactor: eliminate dhcharts and dhtrades, consolidate into dhtypes/dhstore/dhutil"
 
     # Commit 3: Update secondary modules
-    git add dhtrader/dhutil.py dhtrader/dhmongo.py
+    git add dhutil.py dhmongo.py
     git commit -m "refactor: update imports to use dhtypes"
 
     # Commit 4: Test files
-    git add dhtrader/tests/
+    git add tests/
     git commit -m "test: update test imports for new module structure"
 
     # Commit 5: Public API
-    git add dhtrader/__init__.py
-    git commit -m "refactor: update public API for backward compatibility"
+    git add __init__.py
+    git commit -m "refactor: publish final explicit API (no backward-compat aliases)"
+
+    # Commit 6: Backtesting integration updates
+    cd ~/git/backtesting
+    git add .
+    git commit -m "refactor: migrate dhtrader imports/calls to final API"
     ```
 
 20. **Create pull request for code review**
     - Reference the CIRCULAR_IMPORTS_STRATEGY.md document
     - Highlight that all tests pass
     - Note PEP 8 compliance improvements
-    - Mention backward compatibility maintained
+    - Highlight that both `dhtrader` and `backtesting` were migrated to the
+      final API (no backward-compat mode)
 
 ---
 
@@ -757,42 +881,42 @@ class Symbol:
         return self._ticker
 
 # dhstore.py - functions handle storage logic
-def is_market_open(symbol: Symbol) -> bool:
+def market_is_open(symbol: Symbol, target_dt, events=None) -> bool:
     """Check if market is open for a symbol"""
-    events = get_events(symbol)
-    return len(events) > 0
+    if events is None:
+        events = get_events(symbol=symbol.ticker, categories=["Closed"])
+    return symbol.market_is_open(trading_hours="rth",
+                                 target_dt=target_dt,
+                                 events=events)
 
 # Usage:
-from dhstore import is_market_open
+from dhstore import market_is_open
 from dhtypes import Symbol
 
-if is_market_open(symbol):
+if market_is_open(symbol, target_dt="2026-03-03 10:00:00"):
     # market is open
 ```
 
-### 5.3 Backward Compatibility Strategy
+### 5.3 Migration-Only Compatibility Strategy
 
-**Trade-off**: The PEP 8 Strict approach changes the public API. Users familiar with `candle.store()` must now call `store_candle(candle)`.
-
-**Mitigation** - Provide convenience wrapper in `dhtrader/__init__.py` or dedicated compat module:
+**Approach**: Do not implement compatibility wrappers. Migrate all callers in
+`dhtrader` and `~/git/backtesting` directly to final imports and
+function-style persistence.
 
 ```python
-# dhtrader/dhcompat.py (optional backward-compat layer)
-from dhtypes import Candle as _Candle
-from dhstore import store_candle as _store_candle
+# BEFORE
+from dhtrader.dhcharts import Candle
+can = Candle(...)
+can.store()
 
-class CandleCompat(_Candle):
-    """Backward-compatible Candle with .store() method"""
-    def store(self) -> bool:
-        return _store_candle(self)
-
-# Old code can optionally use:
-from dhtrader.dhcompat import CandleCompat
-candle = CandleCompat(...)
-candle.store()  # Still works
+# AFTER
+from dhtrader.dhtypes import Candle
+from dhtrader.dhstore import store_candle
+can = Candle(...)
+store_candle(can)
 ```
 
-**Recommendation**: Don't create compat wrappers. Instead, update code to functional style and document the change in ARCHITECTURE_REFACTORED.md.
+This avoids dual APIs and keeps all call sites on one maintainable interface.
 
 ---
 
@@ -832,7 +956,7 @@ candle.store()  # Still works
 
 | Risk | Likelihood | Severity | Mitigation |
 |------|------------|----------|-----------|
-| **Breaking public API** | High | High | Comprehensive migration guide; backward-compat re-exports in __init__.py |
+| **Breaking public API** | High | High | Migration-only plan: update all call sites in `dhtrader` and `backtesting` in same rollout |
 | **Method to function signature confusion** | Medium | Medium | Clear documentation of new patterns (store_candle(c) vs c.store()) |
 | **Missed method → function migrations** | Medium | Medium | Grep for `.store(`, `.save(`, etc.; comprehensive test coverage |
 | **Complex state transitions** | Low | High | Refactor complex cases incrementally; test each phase |
@@ -843,10 +967,16 @@ candle.store()  # Still works
 1. **Comprehensive Search Before Starting**
    ```bash
    # Find all storage-related methods that need refactoring
-   grep -r "\.store(" dhtrader/ --include="*.py"
-   grep -r "def store" dhtrader/ --include="*.py"
-   grep -r "def save" dhtrader/ --include="*.py"
+    cd ~/git/dhtrader
+    grep -RIn "\.store(" . --include="*.py"
+    grep -RIn "def store" . --include="*.py"
+    grep -RIn "def save" . --include="*.py"
+
+    cd ~/git/backtesting
+    grep -RIn "\.store(" . --include="*.py" --exclude-dir=env
+    grep -RIn "from dhtrader\.dhcharts|from dhtrader\.dhtrades|import dhcharts|import dhtrades" . --include="*.py" --exclude-dir=env
    ```
+    - Build a migration checklist from these hits and mark each call site done.
 
 2. **Incremental Testing**
    - After Phase 1 (create dhtypes): Run tests
@@ -857,7 +987,8 @@ candle.store()  # Still works
 3. **Type Checking Throughout**
    ```bash
    # After each phase
-   python3 -m py_compile dhtrader/*.py
+    cd ~/git/dhtrader
+    python3 -m py_compile *.py
    # Optional: mypy or pyright if available
    ```
 
@@ -876,7 +1007,7 @@ candle.store()  # Still works
 - [ ] **Unit tests**: All existing unit tests pass unchanged
 - [ ] **Integration tests**: Cross-module functionality works (Chart + dhstore)
 - [ ] **Type hint tests**: mypy/pyright validation passes
-- [ ] **Backward compatibility tests**: Old import paths still work via __init__.py
+- [ ] **Cross-repo tests**: `backtesting` test/CLI flows pass with final API imports
 
 ### 8.2 New Test Patterns
 
@@ -884,9 +1015,9 @@ candle.store()  # Still works
 # tests/test_dhtypes.py - NEW: Test pure domain classes without storage
 from dhtypes import Candle, Event, Symbol
 
-def test_candle_is_bullish():
+def test_candle_contains_price():
     candle = Candle(o=100, h=105, l=99, c=104, v=1000)
-    assert candle.is_bullish() == True
+    assert candle.contains_price(101) == True
     # No imports of dhstore; completely isolated
 
 def test_symbol_creation():
@@ -918,18 +1049,17 @@ def test_store_and_retrieve():
 
 ```bash
 # Run all tests after each phase
-pytest dhtrader/tests/ -v
+pytest tests/ -v
 
 # Run specific test module
-pytest dhtrader/tests/test_dhtypes.py -v
+pytest tests/test_dhtypes.py -v
 
 # Run with import tracing to verify no circular imports
+cd ~/git/dhtrader
 python3 -c "
-import sys
-sys.path.insert(0, '/home/dusty/git/backtesting')
 import importlib
-importlib.import_module('dhtrader.dhcharts')
-importlib.import_module('dhtrader.dhstore')
+importlib.import_module('dhtypes')
+importlib.import_module('dhstore')
 print('✓ No circular imports')
 "
 ```
@@ -1002,8 +1132,12 @@ store_candle(my_candle)  # Function call
 **Pattern 2: Retrieving data**
 ```python
 # BEFORE (circular risk):
-from dhcharts import Symbol
-candles = symbol.get_candles()  # Method on class
+from dhcharts import Chart
+
+chart = Chart(c_timeframe="1m", c_trading_hours="rth", c_symbol="ES",
+              c_start=start_dt, c_end=end_dt, autoload=False)
+chart.load_candles()
+candles = chart.c_candles
 
 # AFTER (PEP 8 functional):
 from dhtypes import Symbol
@@ -1026,7 +1160,7 @@ from dhstore import get_candles
 
 candles = get_candles(symbol, start_dt, end_dt)
 chart = Chart(symbol, candles)  # Dependency injection
-chart.add_indicator('SMA', 20)
+chart.review_candles()
 ```
 
 ---
@@ -1043,21 +1177,25 @@ The elimination of circular imports will be considered successful when:
 
 2. ✓ **All existing tests pass**
    ```bash
-   pytest dhtrader/tests/ -v
+    pytest tests/ -v
    ```
    100% pass rate maintained (after updating test imports)
 
 3. ✓ **Type checker validation passes**
    ```bash
-   python3 -m py_compile dhtrader/*.py  # Syntax check
+    python3 -m py_compile *.py  # Syntax check
    # Optional: mypy/pyright for type checking
    ```
 
-4. ✓ **Backward compatibility maintained**
-   ```bash
-   python3 -c "from dhtrader import Candle, Chart, Trade"
-   ```
-   Old import paths still work via __init__.py re-exports
+4. ✓ **All in-repo and cross-repo call sites migrated**
+    ```bash
+    cd ~/git/dhtrader
+    grep -RIn "from dhcharts|from dhtrades|import dhcharts|import dhtrades|\.store\(" . --include='*.py'
+
+    cd ~/git/backtesting
+    grep -RIn "from dhtrader\.dhcharts|from dhtrader\.dhtrades|import dhcharts|import dhtrades|\.store\(" . --include='*.py' --exclude-dir=env
+    ```
+    No remaining legacy imports or method-style persistence calls in either repo.
 
 5. ✓ **Clean module dependency graph**
    - dhtypes.py: Pure data classes (imports only: dhcommon, stdlib)
@@ -1111,16 +1249,13 @@ The elimination of circular imports will be considered successful when:
   - Remove: `from dhcharts import ...`, `from dhtrades import ...`
   - Receives: Any utility functions from dhcharts.py and dhtrades.py
 - **Imports**: dhtypes, dhstore, dhcommon
-  - Add: `from dhtypes import Candle, Symbol, Trade, ...`
-  - Remove: `from dhcharts import ...`, `from dhtrades import ...`
-- **Imports**: dhtypes, dhstore, dhcommon
 
 ### __init__.py (UPDATED)
-- **Purpose**: Public API and backward compatibility
+- **Purpose**: Final public API (single import style)
 - **Key Changes**:
   - Export all key classes from dhtypes
   - Re-export storage functions from dhstore
-  - Maintains backward-compatible import paths
+    - No backward-compat aliases or wrappers
 - **Example**:
   ```python
   from .dhtypes import Candle, Event, Symbol, Trade, Backtest, Chart
@@ -1138,8 +1273,8 @@ The elimination of circular imports will be considered successful when:
 **Solution**:
 ```bash
 # Find problematic imports
-grep -r "from dhcharts import" dhtrader/dhstore.py
-grep -r "from dhtrades import" dhtrader/dhstore.py
+grep -r "from dhcharts import" dhstore.py
+grep -r "from dhtrades import" dhstore.py
 
 # Should return nothing - if found, remove those imports
 ```
@@ -1149,10 +1284,11 @@ grep -r "from dhtrades import" dhtrader/dhstore.py
 **Solution**:
 ```bash
 # Verify dhtypes.py exists
-ls -la /home/dusty/git/backtesting/dhtrader/dhtypes.py
+cd ~/git/dhtrader
+ls -la dhtypes.py
 
 # Verify it's importable
-python3 -c "from dhtrader.dhtypes import Candle"
+python3 -c "from dhtypes import Candle"
 ```
 
 ### Issue: Tests fail with attribute errors
@@ -1226,5 +1362,6 @@ from dhtypes import Candle, Trade
 - **v1.0** - Initial comprehensive strategy with three approaches
 - **v2.0** - Added PEP 8 Strict exploration
 - **v3.0** - Consolidated to PEP 8 Strict only
-- **v3.1** - Updated strategy to completely eliminate dhcharts.py and dhtrades.py (current)
+- **v3.1** - Updated strategy to completely eliminate dhcharts.py and dhtrades.py
+- **v3.2** (March 3, 2026) - Updated all paths to reflect actual project structure at `~/git/dhtrader/`, clarified current status (refactoring not yet begun), confirmed files still exist, marked as planned strategy
 
