@@ -7,7 +7,7 @@ chance it will require updates to run properly in the future.
 """
 
 import csv
-from datetime import datetime, timedelta
+from datetime import datetime
 from collections import defaultdict
 
 

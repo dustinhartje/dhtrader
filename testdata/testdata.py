@@ -1,6 +1,5 @@
 import json
 import csv
-from datetime import datetime
 
 try:
     # When imported as module from dhtrader package
