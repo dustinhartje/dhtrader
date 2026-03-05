@@ -3,12 +3,9 @@ import datetime
 import json
 import pytest
 from dhtrader import (
-    Candle, delete_candles, delete_trades, delete_trades_by_field,
-    delete_tradeseries, dt_as_dt, get_candles, get_events,
-    get_symbol_by_ticker, get_trades_by_field, get_tradeseries_by_field,
-    review_candles, store_candle, store_candles, store_trades,
-    store_tradeseries, Symbol, Trade)
-from datetime import timedelta as td
+    Candle, delete_trades, delete_trades_by_field,
+    dt_as_dt, get_trades_by_field, store_trades,
+    Symbol, Trade)
 from dhtrader.testdata.testdata import Rebuilder
 
 

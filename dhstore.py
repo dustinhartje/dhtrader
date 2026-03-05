@@ -20,7 +20,7 @@ import logging
 from pathlib import Path
 from .dhtypes import (
     Candle, Event, IndicatorDataPoint, Symbol, IndicatorSMA, IndicatorEMA,
-    Trade, TradeSeries, Backtest, Chart, Day, Indicator)
+    Trade, TradeSeries)
 from .dhcommon import (
     dt_as_str, dt_as_dt, dt_from_epoch, dt_to_epoch, valid_timeframe,
     this_candle_start, summarize_candles, log_say, sort_dict,

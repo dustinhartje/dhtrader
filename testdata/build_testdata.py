@@ -26,7 +26,7 @@ if __name__ == '__main__':
         sys.path.insert(0, _git_root)
 
 from dhtrader.testdata import Rebuilder
-from dhtrader import Backtest, Candle, dt_to_epoch, Trade, TradeSeries
+from dhtrader import Backtest, Candle, Trade, TradeSeries
 
 
 def say(msg: str, console_output=True):

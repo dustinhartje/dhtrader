@@ -1,10 +1,8 @@
 import pytest
 from dhtrader import (
-    delete_backtests_by_field, delete_candles, delete_trades,
-    delete_tradeseries_by_field, get_backtests_by_field, get_candles,
-    get_events, get_symbol_by_ticker, get_trades_by_field,
-    get_tradeseries_by_field, review_candles, review_trades,
-    review_tradeseries, store_candle, store_candles, store_trades,
+    delete_backtests_by_field, get_backtests_by_field, get_trades_by_field,
+    get_tradeseries_by_field, review_trades,
+    review_tradeseries, store_trades,
     store_tradeseries, Trade, TradeSeries)
 
 

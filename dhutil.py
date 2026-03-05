@@ -13,8 +13,7 @@ from .dhtypes import Candle
 from .dhstore import (
     get_symbol_by_ticker, get_candles, review_candles)
 from .dhcommon import (
-    dt_as_dt, dt_as_str, dt_to_epoch, timeframe_delta,
-    this_candle_start)
+    dt_as_dt, dt_as_str, dt_to_epoch, timeframe_delta)
 
 
 def generate_zero_volume_candle(c_datetime,

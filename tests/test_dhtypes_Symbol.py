@@ -1,7 +1,6 @@
 import pytest
 from dhtrader import (
-    Candle, Chart, Day, dt_as_dt, dt_as_str, Event, get_candles,
-    Indicator, IndicatorDataPoint, IndicatorEMA, IndicatorSMA, Symbol)
+    dt_as_dt, dt_as_str, Event, Symbol)
 
 # TODO I should probably have this be a create_symbol() function like other
 #      test files?  and it will need to test all the __init__ stuff too

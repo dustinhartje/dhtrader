@@ -31,12 +31,10 @@ from copy import copy, deepcopy
 import logging
 from math import ceil, floor
 import numpy as np
-from typing import List, Optional, Dict, Tuple, Any
 from .dhcommon import (
-    dt_as_dt, dt_as_str, dt_as_time, dt_to_epoch, dt_from_epoch,
-    timeframe_delta, valid_timeframe, valid_trading_hours, log_say,
-    this_candle_start, check_tf_th_compatibility,
-    start_of_week_date, dict_of_weeks, OperationTimer, bot)
+    dt_as_dt, dt_as_str, dt_as_time, dt_to_epoch, timeframe_delta,
+    valid_timeframe, valid_trading_hours, log_say, this_candle_start,
+    check_tf_th_compatibility, start_of_week_date, dict_of_weeks, bot)
 CANDLE_TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w']
 BEGINNING_OF_TIME = "2008-01-01 00:00:00"
 

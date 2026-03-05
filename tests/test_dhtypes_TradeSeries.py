@@ -2,7 +2,7 @@ import datetime
 import pytest
 import json
 from dhtrader import (
-    Candle, delete_trades, delete_trades_by_field,
+    Candle, delete_trades_by_field,
     delete_tradeseries, delete_tradeseries_by_field, dt_as_dt,
     get_trades_by_field, get_tradeseries_by_field, store_trades,
     store_tradeseries, Symbol, Trade, TradeSeries)
