@@ -14,6 +14,8 @@
 import os
 import sys
 import pymongo
+from pymongo import ReplaceOne
+from pymongo.errors import BulkWriteError
 import logging
 from dotenv import load_dotenv, find_dotenv
 from datetime import datetime as dt
@@ -275,25 +277,48 @@ def get_trades_by_field(field: str,
 def store_trades(trades: list,
                  collection: str,
                  ):
-    """Store one or more trades in mongo"""
+    """Store one or more trades in mongo using bulk operations"""
     c = db[collection]
-    result = []
-    for t in trades:
-        r = c.find_one_and_replace({"open_dt": t["open_dt"],
-                                    "direction": t["direction"],
-                                    "name": t["name"],
-                                    "version": t["version"],
-                                    "symbol": t["symbol"],
-                                    "ts_id": t["ts_id"],
-                                    "bt_id": t["bt_id"],
-                                    },
-                                   t,
-                                   new=True,
-                                   upsert=True,
-                                   )
-        result.append(r)
 
-    return result
+    if not trades:
+        return []
+
+    # Build bulk operations list
+    operations = []
+    for t in trades:
+        filter_doc = {
+            "open_dt": t["open_dt"],
+            "direction": t["direction"],
+            "name": t["name"],
+            "version": t["version"],
+            "symbol": t["symbol"],
+            "ts_id": t["ts_id"],
+            "bt_id": t["bt_id"],
+        }
+        operations.append(ReplaceOne(filter_doc, t, upsert=True))
+
+    # Execute as single bulk operation and return only confirmed successes.
+    successful_indexes = set(range(len(trades)))
+    try:
+        c.bulk_write(operations, ordered=False)
+    except BulkWriteError as err:
+        details = err.details or {}
+        failed_indexes = {
+            we.get("index")
+            for we in details.get("writeErrors", [])
+            if isinstance(we.get("index"), int)
+        }
+        successful_indexes -= failed_indexes
+
+        # Write concern errors make confirmation ambiguous. Be conservative.
+        if details.get("writeConcernErrors"):
+            log.error("store_trades encountered writeConcernErrors; "
+                      "cannot confirm per-trade success")
+            return []
+
+    return [dict(trades[i])
+            for i in range(len(trades))
+            if i in successful_indexes]
 
 
 def review_trades(symbol: str,
