@@ -2,9 +2,11 @@ import pytest
 from dhtrader import (
     dt_as_dt, dt_as_str, Event, Symbol)
 
-# TODO I should probably have this be a create_symbol() function like other
-#      test files?  and it will need to test all the __init__ stuff too
-SYMBOL = Symbol(ticker="ES", name="ES", leverage_ratio=50, tick_size=0.25)
+
+@pytest.fixture
+def symbol():
+    return Symbol(ticker="ES", name="ES", leverage_ratio=50,
+                  tick_size=0.25)
 
 
 @pytest.mark.storage
@@ -13,151 +15,151 @@ SYMBOL = Symbol(ticker="ES", name="ES", leverage_ratio=50, tick_size=0.25)
 #     refactored to allow passing in a list of events and I could generate
 #     a static copy of the current events to load and use to speed this up
 #     and remove the storage requirement.  In theory.  Some day.
-def test_Symbol_market_is_open():
+def test_Symbol_market_is_open(symbol):
     # ETH
     # Monday through Thursday
     for day in ["13", "14", "15", "16"]:
         date = f"2025-01-{day}"
 
         # Open at midnight
-        assert SYMBOL.market_is_open(trading_hours="eth",
+        assert symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 00:00:00")
         # Open at 12:01am
-        assert SYMBOL.market_is_open(trading_hours="eth",
+        assert symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 00:01:00")
         # Open at 9:29am
-        assert SYMBOL.market_is_open(trading_hours="eth",
+        assert symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 09:29:00")
         # Open at 9:30am
-        assert SYMBOL.market_is_open(trading_hours="eth",
+        assert symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 09:30:00")
         # Open at 4:00pm
-        assert SYMBOL.market_is_open(trading_hours="eth",
+        assert symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 16:00:00")
         # Open at 4:59pm
-        assert SYMBOL.market_is_open(trading_hours="eth",
+        assert symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 16:59:00")
         # Closed at 5:00pm
-        assert not SYMBOL.market_is_open(trading_hours="eth",
+        assert not symbol.market_is_open(trading_hours="eth",
                                          target_dt=f"{date} 17:00:00")
         # Closed at 5:59pm
-        assert not SYMBOL.market_is_open(trading_hours="eth",
+        assert not symbol.market_is_open(trading_hours="eth",
                                          target_dt=f"{date} 17:59:00")
         # Open at 6:00pm
-        assert SYMBOL.market_is_open(trading_hours="eth",
+        assert symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 18:00:00")
         # Open at 6:01pm
-        assert SYMBOL.market_is_open(trading_hours="eth",
+        assert symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 18:01:00")
         # Open at 11:59pm
-        assert SYMBOL.market_is_open(trading_hours="eth",
+        assert symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 23:59:00")
     # Friday
     date = "2025-01-17"
     # Open at midnight
-    assert SYMBOL.market_is_open(trading_hours="eth",
+    assert symbol.market_is_open(trading_hours="eth",
                                  target_dt=f"{date} 00:00:00")
     # Open at 12:01am
-    assert SYMBOL.market_is_open(trading_hours="eth",
+    assert symbol.market_is_open(trading_hours="eth",
                                  target_dt=f"{date} 00:01:00")
     # Open at 9:29am
-    assert SYMBOL.market_is_open(trading_hours="eth",
+    assert symbol.market_is_open(trading_hours="eth",
                                  target_dt=f"{date} 09:29:00")
     # Open at 9:30am
-    assert SYMBOL.market_is_open(trading_hours="eth",
+    assert symbol.market_is_open(trading_hours="eth",
                                  target_dt=f"{date} 09:30:00")
     # Open at 4:00pm
-    assert SYMBOL.market_is_open(trading_hours="eth",
+    assert symbol.market_is_open(trading_hours="eth",
                                  target_dt=f"{date} 16:00:00")
     # Open at 4:59pm
-    assert SYMBOL.market_is_open(trading_hours="eth",
+    assert symbol.market_is_open(trading_hours="eth",
                                  target_dt=f"{date} 16:59:00")
     # Closed at 5:00pm
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 17:00:00")
     # Closed at 5:59pm
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 17:59:00")
     # Closed at 6:00pm
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 18:00:00")
     # Closed at 6:01pm
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 18:01:00")
     # Closed at 11:59pm
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 23:59:00")
 
     # Saturday
     date = "2025-01-18"
     # Closed at midnight and midnight
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 00:00:00")
     # Closed at 12:01am
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 00:01:00")
     # Closed at 9:29am
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 09:29:00")
     # Closed at 9:30am
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 09:30:00")
     # Closed at 4:00pm
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 16:00:00")
     # Closed at 4:59pm
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 16:59:00")
     # Closed at 5:00pm
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 17:00:00")
     # Closed at 5:59pm
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 17:59:00")
     # Closed at 6:00pm
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 18:00:00")
     # Closed at 6:01pm
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 18:01:00")
     # Closed at 11:59pm
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 23:59:00")
 
     # Sunday
     date = "2025-01-19"
     # Closed at midnight
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 00:00:00")
     # Closed at 12:01am
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 00:01:00")
     # Closed at 9:29am
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 09:29:00")
     # Closed at 9:30am
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 09:30:00")
     # Closed at 4:00pm
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 16:00:00")
     # Closed at 4:59pm
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 16:59:00")
     # Closed at 5:00pm
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 17:00:00")
     # Closed at 5:59pm
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 17:59:00")
     # Opend at 6:00pm
-    assert SYMBOL.market_is_open(trading_hours="eth",
+    assert symbol.market_is_open(trading_hours="eth",
                                  target_dt=f"{date} 18:00:00")
     # Opend at 6:01pm
-    assert SYMBOL.market_is_open(trading_hours="eth",
+    assert symbol.market_is_open(trading_hours="eth",
                                  target_dt=f"{date} 18:01:00")
     # Opend at 11:59pm
-    assert SYMBOL.market_is_open(trading_hours="eth",
+    assert symbol.market_is_open(trading_hours="eth",
                                  target_dt=f"{date} 23:59:00")
 
     # RTH
@@ -165,86 +167,86 @@ def test_Symbol_market_is_open():
     for day in ["13", "14", "15", "16", "17"]:
         date = f"2025-01-{day}"
         # Closed at midnight
-        assert not SYMBOL.market_is_open(trading_hours="rth",
+        assert not symbol.market_is_open(trading_hours="rth",
                                          target_dt=f"{date} 00:00:00")
         # Closed at 12:01am
-        assert not SYMBOL.market_is_open(trading_hours="rth",
+        assert not symbol.market_is_open(trading_hours="rth",
                                          target_dt=f"{date} 00:01:00")
         # Closed at 9:29am
-        assert not SYMBOL.market_is_open(trading_hours="rth",
+        assert not symbol.market_is_open(trading_hours="rth",
                                          target_dt=f"{date} 09:29:00")
         # Open at 9:30am
-        assert SYMBOL.market_is_open(trading_hours="rth",
+        assert symbol.market_is_open(trading_hours="rth",
                                      target_dt=f"{date} 09:30:00")
         # Open at 9:31am
-        assert SYMBOL.market_is_open(trading_hours="rth",
+        assert symbol.market_is_open(trading_hours="rth",
                                      target_dt=f"{date} 09:31:00")
         # Open at 12:30pm
-        assert SYMBOL.market_is_open(trading_hours="rth",
+        assert symbol.market_is_open(trading_hours="rth",
                                      target_dt=f"{date} 12:30:00")
         # Open at 3:59pm
-        assert SYMBOL.market_is_open(trading_hours="rth",
+        assert symbol.market_is_open(trading_hours="rth",
                                      target_dt=f"{date} 15:59:00")
         # Closed at 4:00pm
-        assert not SYMBOL.market_is_open(trading_hours="rth",
+        assert not symbol.market_is_open(trading_hours="rth",
                                          target_dt=f"{date} 16:00:00")
         # Closed at 4:01pm
-        assert not SYMBOL.market_is_open(trading_hours="rth",
+        assert not symbol.market_is_open(trading_hours="rth",
                                          target_dt=f"{date} 16:01:00")
         # Closed at 5:59pm
-        assert not SYMBOL.market_is_open(trading_hours="rth",
+        assert not symbol.market_is_open(trading_hours="rth",
                                          target_dt=f"{date} 17:59:00")
         # Closed at 6:00pm
-        assert not SYMBOL.market_is_open(trading_hours="rth",
+        assert not symbol.market_is_open(trading_hours="rth",
                                          target_dt=f"{date} 18:00:00")
         # Closed at 6:01pm
-        assert not SYMBOL.market_is_open(trading_hours="rth",
+        assert not symbol.market_is_open(trading_hours="rth",
                                          target_dt=f"{date} 18:01:00")
         # Closed at 11:59pm
-        assert not SYMBOL.market_is_open(trading_hours="rth",
+        assert not symbol.market_is_open(trading_hours="rth",
                                          target_dt=f"{date} 23:59:00")
 
     # Saturday & Sunday
     for day in ["18", "19"]:
         date = f"2025-01-{day}"
         # Closed at midnight
-        assert not SYMBOL.market_is_open(trading_hours="rth",
+        assert not symbol.market_is_open(trading_hours="rth",
                                          target_dt=f"{date} 00:00:00")
         # Closed at 12:01am
-        assert not SYMBOL.market_is_open(trading_hours="rth",
+        assert not symbol.market_is_open(trading_hours="rth",
                                          target_dt=f"{date} 00:01:00")
         # Closed at 9:29am
-        assert not SYMBOL.market_is_open(trading_hours="rth",
+        assert not symbol.market_is_open(trading_hours="rth",
                                          target_dt=f"{date} 09:29:00")
         # Closed at 9:30am
-        assert not SYMBOL.market_is_open(trading_hours="rth",
+        assert not symbol.market_is_open(trading_hours="rth",
                                          target_dt=f"{date} 09:30:00")
         # Closed at 9:31am
-        assert not SYMBOL.market_is_open(trading_hours="rth",
+        assert not symbol.market_is_open(trading_hours="rth",
                                          target_dt=f"{date} 09:31:00")
         # Closed at 12:30pm
-        assert not SYMBOL.market_is_open(trading_hours="rth",
+        assert not symbol.market_is_open(trading_hours="rth",
                                          target_dt=f"{date} 12:30:00")
         # Closed at 3:59pm
-        assert not SYMBOL.market_is_open(trading_hours="rth",
+        assert not symbol.market_is_open(trading_hours="rth",
                                          target_dt=f"{date} 15:59:00")
         # Closed at 4:00pm
-        assert not SYMBOL.market_is_open(trading_hours="rth",
+        assert not symbol.market_is_open(trading_hours="rth",
                                          target_dt=f"{date} 16:00:00")
         # Closed at 4:01pm
-        assert not SYMBOL.market_is_open(trading_hours="rth",
+        assert not symbol.market_is_open(trading_hours="rth",
                                          target_dt=f"{date} 16:01:00")
         # Closed at 5:59pm
-        assert not SYMBOL.market_is_open(trading_hours="rth",
+        assert not symbol.market_is_open(trading_hours="rth",
                                          target_dt=f"{date} 17:59:00")
         # Closed at 6:00pm
-        assert not SYMBOL.market_is_open(trading_hours="rth",
+        assert not symbol.market_is_open(trading_hours="rth",
                                          target_dt=f"{date} 18:00:00")
         # Closed at 6:01pm
-        assert not SYMBOL.market_is_open(trading_hours="rth",
+        assert not symbol.market_is_open(trading_hours="rth",
                                          target_dt=f"{date} 18:01:00")
         # Closed at 11:59pm
-        assert not SYMBOL.market_is_open(trading_hours="rth",
+        assert not symbol.market_is_open(trading_hours="rth",
                                          target_dt=f"{date} 23:59:00")
 
     # Holidays (will need to pass events for this borred from known)
@@ -267,154 +269,154 @@ def test_Symbol_market_is_open():
 
     # ETH
     # Closed at midnight
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 00:00:00",
                                      events=events,
                                      )
     # Closed at 12:01am
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 00:01:00",
                                      events=events,
                                      )
     # Closed at 9:29am
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 09:29:00",
                                      events=events,
                                      )
     # Closed at 9:30am
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 09:30:00",
                                      events=events,
                                      )
     # Closed at 9:31am
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 09:31:00",
                                      events=events,
                                      )
     # Closed at 12:59pm
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 12:59:00",
                                      events=events,
                                      )
     # Closed at 1:00pm
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 13:00:00",
                                      events=events,
                                      )
     # Closed at 1:01pm
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 13:01:00",
                                      events=events,
                                      )
     # Closed at 3:59pm
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 15:59:00",
                                      events=events,
                                      )
     # Closed at 4:00pm
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 16:00:00",
                                      events=events,
                                      )
     # Closed at 4:01pm
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 16:01:00",
                                      events=events,
                                      )
     # Closed at 5:59pm
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 17:59:00",
                                      events=events,
                                      )
     # Closed at 6:00pm
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 18:00:00",
                                      events=events,
                                      )
     # Closed at 6:01pm
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 18:01:00",
                                      events=events,
                                      )
     # Closed at 11:59pm
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 23:59:00",
                                      events=events,
                                      )
 
     # RTH
     # Closed at midnight
-    assert not SYMBOL.market_is_open(trading_hours="rth",
+    assert not symbol.market_is_open(trading_hours="rth",
                                      target_dt=f"{date} 00:00:00",
                                      events=events,
                                      )
     # Closed at 12:01am
-    assert not SYMBOL.market_is_open(trading_hours="rth",
+    assert not symbol.market_is_open(trading_hours="rth",
                                      target_dt=f"{date} 00:01:00",
                                      events=events,
                                      )
     # Closed at 9:29am
-    assert not SYMBOL.market_is_open(trading_hours="rth",
+    assert not symbol.market_is_open(trading_hours="rth",
                                      target_dt=f"{date} 09:29:00",
                                      events=events,
                                      )
     # Closed at 9:30am
-    assert not SYMBOL.market_is_open(trading_hours="rth",
+    assert not symbol.market_is_open(trading_hours="rth",
                                      target_dt=f"{date} 09:30:00",
                                      events=events,
                                      )
     # Closed at 9:31am
-    assert not SYMBOL.market_is_open(trading_hours="rth",
+    assert not symbol.market_is_open(trading_hours="rth",
                                      target_dt=f"{date} 09:31:00",
                                      events=events,
                                      )
     # Closed at 12:59pm
-    assert not SYMBOL.market_is_open(trading_hours="rth",
+    assert not symbol.market_is_open(trading_hours="rth",
                                      target_dt=f"{date} 12:59:00",
                                      events=events,
                                      )
     # Closed at 1:00pm
-    assert not SYMBOL.market_is_open(trading_hours="rth",
+    assert not symbol.market_is_open(trading_hours="rth",
                                      target_dt=f"{date} 13:00:00",
                                      events=events,
                                      )
     # Closed at 1:01pm
-    assert not SYMBOL.market_is_open(trading_hours="rth",
+    assert not symbol.market_is_open(trading_hours="rth",
                                      target_dt=f"{date} 13:01:00",
                                      events=events,
                                      )
     # Closed at 3:59pm
-    assert not SYMBOL.market_is_open(trading_hours="rth",
+    assert not symbol.market_is_open(trading_hours="rth",
                                      target_dt=f"{date} 15:59:00",
                                      events=events,
                                      )
     # Closed at 4:00pm
-    assert not SYMBOL.market_is_open(trading_hours="rth",
+    assert not symbol.market_is_open(trading_hours="rth",
                                      target_dt=f"{date} 16:00:00",
                                      events=events,
                                      )
     # Closed at 4:01pm
-    assert not SYMBOL.market_is_open(trading_hours="rth",
+    assert not symbol.market_is_open(trading_hours="rth",
                                      target_dt=f"{date} 16:01:00",
                                      events=events,
                                      )
     # Closed at 5:59pm
-    assert not SYMBOL.market_is_open(trading_hours="rth",
+    assert not symbol.market_is_open(trading_hours="rth",
                                      target_dt=f"{date} 17:59:00",
                                      events=events,
                                      )
     # Closed at 6:00pm
-    assert not SYMBOL.market_is_open(trading_hours="rth",
+    assert not symbol.market_is_open(trading_hours="rth",
                                      target_dt=f"{date} 18:00:00",
                                      events=events,
                                      )
     # Closed at 6:01pm
-    assert not SYMBOL.market_is_open(trading_hours="rth",
+    assert not symbol.market_is_open(trading_hours="rth",
                                      target_dt=f"{date} 18:01:00",
                                      events=events,
                                      )
     # Closed at 11:59pm
-    assert not SYMBOL.market_is_open(trading_hours="rth",
+    assert not symbol.market_is_open(trading_hours="rth",
                                      target_dt=f"{date} 23:59:00",
                                      events=events,
                                      )
@@ -424,165 +426,161 @@ def test_Symbol_market_is_open():
 
     # ETH
     # Open at midnight
-    assert SYMBOL.market_is_open(trading_hours="eth",
+    assert symbol.market_is_open(trading_hours="eth",
                                  target_dt=f"{date} 00:00:00",
                                  events=events,
                                  )
     # Open at 12:01am
-    assert SYMBOL.market_is_open(trading_hours="eth",
+    assert symbol.market_is_open(trading_hours="eth",
                                  target_dt=f"{date} 00:01:00",
                                  events=events,
                                  )
     # Open at 9:29am
-    assert SYMBOL.market_is_open(trading_hours="eth",
+    assert symbol.market_is_open(trading_hours="eth",
                                  target_dt=f"{date} 09:29:00",
                                  events=events,
                                  )
     # Open at 9:30am
-    assert SYMBOL.market_is_open(trading_hours="eth",
+    assert symbol.market_is_open(trading_hours="eth",
                                  target_dt=f"{date} 09:30:00",
                                  events=events,
                                  )
     # Open at 9:31am
-    assert SYMBOL.market_is_open(trading_hours="eth",
+    assert symbol.market_is_open(trading_hours="eth",
                                  target_dt=f"{date} 09:31:00",
                                  events=events,
                                  )
     # Open at 12:59pm
-    assert SYMBOL.market_is_open(trading_hours="eth",
+    assert symbol.market_is_open(trading_hours="eth",
                                  target_dt=f"{date} 12:59:00",
                                  events=events,
                                  )
     # Closed at 1:00pm
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 13:00:00",
                                      events=events,
                                      )
     # Closed at 1:01pm
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 13:01:00",
                                      events=events,
                                      )
     # Closed at 3:59pm
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 15:59:00",
                                      events=events,
                                      )
     # Closed at 4:00pm
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 16:00:00",
                                      events=events,
                                      )
     # Closed at 4:01pm
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 16:01:00",
                                      events=events,
                                      )
     # Closed at 5:59pm
-    assert not SYMBOL.market_is_open(trading_hours="eth",
+    assert not symbol.market_is_open(trading_hours="eth",
                                      target_dt=f"{date} 17:59:00",
                                      events=events,
                                      )
     # Open at 6:00pm
-    assert SYMBOL.market_is_open(trading_hours="eth",
+    assert symbol.market_is_open(trading_hours="eth",
                                  target_dt=f"{date} 18:00:00",
                                  events=events,
                                  )
     # Open at 6:01pm
-    assert SYMBOL.market_is_open(trading_hours="eth",
+    assert symbol.market_is_open(trading_hours="eth",
                                  target_dt=f"{date} 18:01:00",
                                  events=events,
                                  )
     # Open at 11:59pm
-    assert SYMBOL.market_is_open(trading_hours="eth",
+    assert symbol.market_is_open(trading_hours="eth",
                                  target_dt=f"{date} 23:59:00",
                                  events=events,
                                  )
 
     # RTH
     # Closed at midnight
-    assert not SYMBOL.market_is_open(trading_hours="rth",
+    assert not symbol.market_is_open(trading_hours="rth",
                                      target_dt=f"{date} 00:00:00",
                                      events=events,
                                      )
     # Closed at 12:01am
-    assert not SYMBOL.market_is_open(trading_hours="rth",
+    assert not symbol.market_is_open(trading_hours="rth",
                                      target_dt=f"{date} 00:01:00",
                                      events=events,
                                      )
     # Closed at 9:29am
-    assert not SYMBOL.market_is_open(trading_hours="rth",
+    assert not symbol.market_is_open(trading_hours="rth",
                                      target_dt=f"{date} 09:29:00",
                                      events=events,
                                      )
     # Open at 9:30am
-    assert SYMBOL.market_is_open(trading_hours="rth",
+    assert symbol.market_is_open(trading_hours="rth",
                                  target_dt=f"{date} 09:30:00",
                                  events=events,
                                  )
     # Open at 9:31am
-    assert SYMBOL.market_is_open(trading_hours="rth",
+    assert symbol.market_is_open(trading_hours="rth",
                                  target_dt=f"{date} 09:31:00",
                                  events=events,
                                  )
     # Open at 12:59pm
-    assert SYMBOL.market_is_open(trading_hours="rth",
+    assert symbol.market_is_open(trading_hours="rth",
                                  target_dt=f"{date} 12:59:00",
                                  events=events,
                                  )
     # Closed at 1:00pm
-    assert not SYMBOL.market_is_open(trading_hours="rth",
+    assert not symbol.market_is_open(trading_hours="rth",
                                      target_dt=f"{date} 13:00:00",
                                      events=events,
                                      )
     # Closed at 1:01pm
-    assert not SYMBOL.market_is_open(trading_hours="rth",
+    assert not symbol.market_is_open(trading_hours="rth",
                                      target_dt=f"{date} 13:01:00",
                                      events=events,
                                      )
     # Closed at 3:59pm
-    assert not SYMBOL.market_is_open(trading_hours="rth",
+    assert not symbol.market_is_open(trading_hours="rth",
                                      target_dt=f"{date} 15:59:00",
                                      events=events,
                                      )
     # Closed at 4:00pm
-    assert not SYMBOL.market_is_open(trading_hours="rth",
+    assert not symbol.market_is_open(trading_hours="rth",
                                      target_dt=f"{date} 16:00:00",
                                      events=events,
                                      )
     # Closed at 4:01pm
-    assert not SYMBOL.market_is_open(trading_hours="rth",
+    assert not symbol.market_is_open(trading_hours="rth",
                                      target_dt=f"{date} 16:01:00",
                                      events=events,
                                      )
     # Closed at 5:59pm
-    assert not SYMBOL.market_is_open(trading_hours="rth",
+    assert not symbol.market_is_open(trading_hours="rth",
                                      target_dt=f"{date} 17:59:00",
                                      events=events,
                                      )
     # Closed at 6:00pm
-    assert not SYMBOL.market_is_open(trading_hours="rth",
+    assert not symbol.market_is_open(trading_hours="rth",
                                      target_dt=f"{date} 18:00:00",
                                      events=events,
                                      )
     # Closed at 6:01pm
-    assert not SYMBOL.market_is_open(trading_hours="rth",
+    assert not symbol.market_is_open(trading_hours="rth",
                                      target_dt=f"{date} 18:01:00",
                                      events=events,
                                      )
     # Closed at 11:59pm
-    assert not SYMBOL.market_is_open(trading_hours="rth",
+    assert not symbol.market_is_open(trading_hours="rth",
                                      target_dt=f"{date} 23:59:00",
                                      events=events,
                                      )
 
 
-def test_Symbol_get_market_boundary():
-    sym = Symbol(ticker="ES",
-                 name="ES",
-                 leverage_ratio=50.0,
-                 tick_size=0.25,
-                 )
+def test_Symbol_get_market_boundary(symbol):
+    sym = symbol
 
     # Testing All boundaries mid-week Wednesday noon datetime
     # 2024-03-20 12:00:00.  This confirms non-weekend mechanics are working
@@ -893,9 +891,9 @@ def test_Symbol_get_market_boundary():
                      events=events)) == "2024-03-15 09:30:00"
 
 
-def test_Symbol_get_next_tick_up():
+def test_Symbol_get_next_tick_up(symbol):
     """Test get_next_tick_up() rounds up to nearest 0.25 (ES tick size)"""
-    sym = SYMBOL  # ES with tick_size=0.25
+    sym = symbol  # ES with tick_size=0.25
 
     # Test exact tick boundary - should return same value
     assert sym.get_next_tick_up(100.0) == 100.0
@@ -936,9 +934,9 @@ def test_Symbol_get_next_tick_up():
     assert sym.get_next_tick_up(5000.01) == 5000.25
 
 
-def test_Symbol_get_next_tick_down():
+def test_Symbol_get_next_tick_down(symbol):
     """Test get_next_tick_down() rounds down to nearest 0.25 (ES tick size)"""
-    sym = SYMBOL  # ES with tick_size=0.25
+    sym = symbol  # ES with tick_size=0.25
 
     # Test exact tick boundary - should return same value
     assert sym.get_next_tick_down(100.0) == 100.0
@@ -979,10 +977,10 @@ def test_Symbol_get_next_tick_down():
     assert sym.get_next_tick_down(5000.01) == 5000.0
 
 
-def test_Symbol_tick_methods_roundtrip():
+def test_Symbol_tick_methods_roundtrip(symbol):
     """Test that tick boundaries are idempotent and values roundtrip
     correctly"""
-    sym = SYMBOL
+    sym = symbol
 
     # Test that values already on boundaries stay the same
     for tick in [0.0, 0.25, 0.5, 0.75, 1.0, 100.25, 5000.75]:
@@ -1022,9 +1020,9 @@ def test_Symbol_tick_methods_roundtrip():
         assert down_once == down_twice
 
 
-def test_Symbol_get_era():
+def test_Symbol_get_era(symbol):
     """Test get_era() correctly identifies all 5 market eras based on date"""
-    sym = SYMBOL
+    sym = symbol
     import datetime as dt
 
     # Test Era 1: 2008_thru_2012 (2008-01-01 to 2012-11-16)
@@ -1118,9 +1116,9 @@ def test_Symbol_get_era():
         sym.get_era("2007-12-31 12:00:00")
 
 
-def test_Symbol_get_times_for_era():
+def test_Symbol_get_times_for_era(symbol):
     """Test get_times_for_era() returns correct market times for all eras"""
-    sym = SYMBOL
+    sym = symbol
     import datetime as dt
 
     # Test 2008_thru_2012 era
@@ -1168,9 +1166,9 @@ def test_Symbol_get_times_for_era():
         sym.get_times_for_era("nonexistent_era")
 
 
-def test_Symbol_get_closed_hours_for_era():
+def test_Symbol_get_closed_hours_for_era(symbol):
     """Test get_closed_hours_for_era() for all 5 MARKET_ERAS"""
-    sym = SYMBOL
+    sym = symbol
     import datetime as dt
 
     # Test 2008_thru_2012 era
@@ -1229,9 +1227,9 @@ def test_Symbol_get_closed_hours_for_era():
         sym.get_closed_hours_for_era("2024-06-15 12:00:00", "invalid")
 
 
-def test_Symbol_market_is_open_historical_eras():
+def test_Symbol_market_is_open_historical_eras(symbol):
     """Test market_is_open() across all eras with transitions"""
-    sym = SYMBOL
+    sym = symbol
 
     # Test 2008-2012 era
     date = "2010-03-10"
@@ -1302,9 +1300,9 @@ def test_Symbol_market_is_open_historical_eras():
                               check_closed_events=False)
 
 
-def test_Symbol_get_market_boundary_historical_eras():
+def test_Symbol_get_market_boundary_historical_eras(symbol):
     """Test get_market_boundary() with historical era dates"""
-    sym = SYMBOL
+    sym = symbol
 
     # Test 2008-2012 era: RTH closes at 16:00
     # Checking from noon on Wednesday 2010-03-10 12:00:00
@@ -1368,15 +1366,12 @@ def test_Symbol_get_market_boundary_historical_eras():
     assert dt_as_str(result2) == "2012-11-19 09:30:00"
 
 
-def test_Symbol_init():
+def test_Symbol_init(symbol):
     """Test Symbol __init__ creates object with correct attributes"""
-    sym = Symbol(ticker="ES",
-                 name="E-mini S&P 500",
-                 leverage_ratio=50.0,
-                 tick_size=0.25)
+    sym = symbol
 
     assert sym.ticker == "ES"
-    assert sym.name == "E-mini S&P 500"
+    assert sym.name == "ES"
     assert sym.leverage_ratio == 50.0
     assert sym.tick_size == 0.25
 
@@ -1392,24 +1387,26 @@ def test_Symbol_init():
     assert hasattr(sym, "_closed_hours_cache")
 
     # Test that leverage_ratio and tick_size are converted to float
+    # and alternate ticker and name values apply correctly
     sym2 = Symbol(ticker="DELETEME", name="Test",
                   leverage_ratio="100", tick_size="1.5")
     assert isinstance(sym2.leverage_ratio, float)
     assert sym2.leverage_ratio == 100.0
     assert isinstance(sym2.tick_size, float)
     assert sym2.tick_size == 1.5
+    assert sym2.ticker == "DELETEME"
+    assert sym2.name == "Test"
 
 
-def test_Symbol_equality():
+def test_Symbol_equality(symbol):
     """Test Symbol __eq__ and __ne__ methods"""
-    sym1 = Symbol(ticker="ES", name="ES",
-                  leverage_ratio=50, tick_size=0.25)
+    sym1 = symbol
     sym2 = Symbol(ticker="ES", name="ES",
                   leverage_ratio=50, tick_size=0.25)
     sym3 = Symbol(ticker="ES", name="ES",
-                  leverage_ratio=50, tick_size=0.5)  # Different tick
+                  leverage_ratio=50, tick_size=0.5)
     sym4 = Symbol(ticker="DELETEME", name="DELETEME",
-                  leverage_ratio=20, tick_size=0.25)  # Different ticker
+                  leverage_ratio=20, tick_size=0.25)
 
     # Test __eq__
     assert sym1 == sym2
@@ -1427,10 +1424,9 @@ def test_Symbol_equality():
     assert sym1 != sym5
 
 
-def test_Symbol_string_representations():
+def test_Symbol_string_representations(symbol):
     """Test Symbol __str__, __repr__, and pretty methods"""
-    sym = Symbol(ticker="ES", name="ES",
-                 leverage_ratio=50, tick_size=0.25)
+    sym = symbol
 
     # Test __str__ returns a string
     str_result = str(sym)
@@ -1459,11 +1455,10 @@ def test_Symbol_string_representations():
     assert '"tick_size"' in pretty_result
 
 
-def test_Symbol_serialization():
+def test_Symbol_serialization(symbol):
     """Test Symbol to_json and to_clean_dict methods"""
     import json
-    sym = Symbol(ticker="ES", name="ES",
-                 leverage_ratio=50, tick_size=0.25)
+    sym = symbol
 
     # Test to_json returns valid JSON string
     json_str = sym.to_json()
@@ -1493,11 +1488,10 @@ def test_Symbol_serialization():
     assert clean_dict == parsed
 
 
-def test_Symbol_set_times():
+def test_Symbol_set_times(symbol):
     """Test Symbol set_times() sets correct values for current era"""
     import datetime as dt
-    sym = Symbol(ticker="ES", name="ES",
-                 leverage_ratio=50, tick_size=0.25)
+    sym = symbol
 
     # Should use latest era times (2021-06_thru_present)
     assert sym.eth_open_time == dt.time(18, 0, 0)
