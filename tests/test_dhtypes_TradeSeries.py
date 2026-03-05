@@ -8,7 +8,8 @@ from dhtrader.dhcommon import dt_as_dt
 from dhtrader.dhstore import (
     get_trades_by_field, delete_trades, delete_trades_by_field,
     get_tradeseries_by_field,
-    delete_tradeseries, store_tradeseries, store_trades)
+    delete_tradeseries_by_field, delete_tradeseries, store_tradeseries,
+    store_trades)
 from dhtrader.testdata.testdata import Rebuilder
 
 
@@ -563,7 +564,8 @@ def test_TradeSeries_store_retrieve_and_delete():
     ts.add_trade(create_trade(open_dt="2025-01-06 09:35:00",
                               close_dt="2025-01-06 09:40:00"))
     # Clear and confirm storage has no objects with this name currently
-    delete_tradeseries(symbol="ES", field="name", value="DELETEME-TEST")
+    delete_tradeseries_by_field(symbol="ES", field="name",
+                                value="DELETEME-TEST")
     s_ts = get_tradeseries_by_field(field="name", value="DELETEME-TEST")
     assert len(s_ts) == 0
     delete_trades_by_field(symbol="ES", field="name",
@@ -591,7 +593,8 @@ def test_TradeSeries_store_retrieve_and_delete():
     assert isinstance(r_tr[1], Trade)
     assert r_tr[1].ts_id == ts.ts_id
     # Delete objects by ts_id
-    delete_tradeseries(symbol="ES", field="ts_id", value=ts.ts_id)
+    delete_tradeseries_by_field(symbol="ES", field="ts_id",
+                                value=ts.ts_id)
     delete_trades_by_field(symbol="ES", field="ts_id",
                            value=ts.ts_id)
     # Confirm storage has no objects with this name or ts_id at end of test
@@ -660,6 +663,51 @@ def test_TradeSeries_historical():
                                         include_first_min=True)
     assert actual_results == expected_results
 
+
+@pytest.mark.storage
+def test_delete_tradeseries():
+    """Test delete_tradeseries function accepting TradeSeries list using
+    ts_id as the unique identifying field"""
+    # Create and store test trade series (with different names to get unique
+    # ts_ids)
+    ts1 = create_tradeseries(name="DELETEME-TEST-LIST-1")
+    ts2 = create_tradeseries(name="DELETEME-TEST-LIST-2")
+    ts1.add_trade(create_trade(open_dt="2025-01-05 12:00:00",
+                               close_dt="2025-01-05 13:00:00"))
+    ts2.add_trade(create_trade(open_dt="2025-01-05 14:00:00",
+                               close_dt="2025-01-05 15:00:00"))
+    # Clear storage of test data (clear both names and both ts_ids)
+    delete_tradeseries_by_field(symbol="ES", field="name",
+                                value="DELETEME-TEST-LIST-1")
+    delete_tradeseries_by_field(symbol="ES", field="name",
+                                value="DELETEME-TEST-LIST-2")
+    stored = get_tradeseries_by_field(field="name",
+                                      value="DELETEME-TEST-LIST-1")
+    assert len(stored) == 0
+    stored = get_tradeseries_by_field(field="name",
+                                      value="DELETEME-TEST-LIST-2")
+    assert len(stored) == 0
+    # Store the test trade series
+    store_tradeseries([ts1, ts2])
+    store_trades(ts1.trades + ts2.trades)
+    # Confirm they are stored (check each series separately)
+    retrieved1 = get_tradeseries_by_field(field="name",
+                                          value="DELETEME-TEST-LIST-1")
+    retrieved2 = get_tradeseries_by_field(field="name",
+                                          value="DELETEME-TEST-LIST-2")
+    assert len(retrieved1) == 1
+    assert len(retrieved2) == 1
+    assert all(isinstance(ts, TradeSeries)
+               for ts in retrieved1 + retrieved2)
+    # Delete using the list-based delete_tradeseries function
+    delete_tradeseries([ts1, ts2])
+    # Confirm they were deleted
+    stored1 = get_tradeseries_by_field(field="name",
+                                       value="DELETEME-TEST-LIST-1")
+    stored2 = get_tradeseries_by_field(field="name",
+                                       value="DELETEME-TEST-LIST-2")
+    assert len(stored1) == 0
+    assert len(stored2) == 0
     # SET1 LONG TRADES NO REFINING ######################################
     # Rebuild testdata/set1 long TradeSeries
     ts = Rebuilder().rebuild_tradeseries(

@@ -637,18 +637,18 @@ def review_tradeseries(symbol: str = "ES",
     return result
 
 
-def delete_tradeseries(symbol: str,
-                       field: str,
-                       value,
-                       collection: str = COLL_TRADESERIES,
-                       coll_trades=COLL_TRADES,
-                       include_trades: bool = False,
-                       ):
-    """Delete all tradeseries records in central storage with 'field' matching
-    'value'.  Typically used to delete by ts_id, or bt_id fields.
+def delete_tradeseries_by_field(symbol: str,
+                                field: str,
+                                value,
+                                collection: str = COLL_TRADESERIES,
+                                coll_trades=COLL_TRADES,
+                                include_trades: bool = False,
+                                ):
+    """Delete all tradeseries records in central storage with 'field'
+    matching 'value'.  Typically used to delete by ts_id, or bt_id fields.
     """
     result = {}
-    result["tradeseries"] = dhm.delete_tradeseries(
+    result["tradeseries"] = dhm.delete_tradeseries_by_field(
             symbol=symbol,
             collection=collection,
             field=field,
@@ -660,6 +660,22 @@ def delete_tradeseries(symbol: str,
                                                   value=value,
                                                   collection=coll_trades,
                                                   )
+
+    return result
+
+
+def delete_tradeseries(tradeseries: list,
+                       collection: str = COLL_TRADESERIES,
+                       ):
+    """Delete one or more TradeSeries() objects from central storage using
+    ts_id as the identifying field."""
+    # Extract ts_id from TradeSeries objects
+    ts_ids = []
+    for ts in tradeseries:
+        ts_ids.append(ts.ts_id)
+
+    result = dhm.delete_tradeseries(ts_ids=ts_ids,
+                                    collection=collection)
 
     return result
 
@@ -738,26 +754,27 @@ def review_backtests(symbol: str = "ES",
         return review
 
 
-def delete_backtests(symbol: str,
-                     field: str,
-                     value,
-                     collection: str = COLL_BACKTESTS,
-                     coll_tradeseries: str = COLL_TRADESERIES,
-                     coll_trades: str = COLL_TRADES,
-                     include_tradeseries: bool = False,
-                     include_trades: bool = False,
-                     ):
+def delete_backtests_by_field(symbol: str,
+                              field: str,
+                              value,
+                              collection: str = COLL_BACKTESTS,
+                              coll_tradeseries: str = COLL_TRADESERIES,
+                              coll_trades: str = COLL_TRADES,
+                              include_tradeseries: bool = False,
+                              include_trades: bool = False,
+                              ):
     """Delete all backtests records in central storage with 'field' matching
     'value'.  Typically used to delete by bt_id field.
     """
     result = {}
-    result["backtests"] = dhm.delete_backtests(symbol=symbol,
-                                               collection=collection,
-                                               field=field,
-                                               value=value,
-                                               )
+    result["backtests"] = dhm.delete_backtests_by_field(
+            symbol=symbol,
+            collection=collection,
+            field=field,
+            value=value,
+            )
     if include_tradeseries:
-        result["tradeseries"] = delete_tradeseries(
+        result["tradeseries"] = delete_tradeseries_by_field(
                 symbol=symbol,
                 field=field,
                 value=value,
@@ -765,6 +782,22 @@ def delete_backtests(symbol: str,
                 coll_trades=coll_trades,
                 include_trades=include_trades,
                 )
+
+    return result
+
+
+def delete_backtests(backtests: list,
+                     collection: str = COLL_BACKTESTS,
+                     ):
+    """Delete one or more Backtest() objects from central storage using
+    bt_id as the identifying field."""
+    # Extract bt_id from Backtest objects
+    bt_ids = []
+    for bt in backtests:
+        bt_ids.append(bt.bt_id)
+
+    result = dhm.delete_backtests(bt_ids=bt_ids,
+                                  collection=collection)
 
     return result
 

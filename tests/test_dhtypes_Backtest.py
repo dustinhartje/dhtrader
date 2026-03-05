@@ -11,10 +11,10 @@ from dhtrader.dhcommon import (
 from dhtrader.dhstore import (
     get_trades_by_field, delete_trades, delete_trades_by_field,
     get_tradeseries_by_field,
-    delete_tradeseries, store_trades, store_tradeseries, get_candles,
-    store_candles, store_candle, review_candles, delete_candles,
-    get_symbol_by_ticker, get_events, delete_backtests,
-    get_backtests_by_field,
+    delete_tradeseries_by_field, delete_tradeseries, store_trades,
+    store_tradeseries, get_candles, store_candles, store_candle,
+    review_candles, delete_candles, get_symbol_by_ticker, get_events,
+    delete_backtests_by_field, delete_backtests, get_backtests_by_field,
     store_backtests)
 
 
@@ -136,10 +136,10 @@ def create_backtest(start_dt="2025-01-01 00:00:00",
 def clear_storage_by_name(name: str):
     """Delete all Backtests, TradeSeries, and Trades with the given name from
     central storage"""
-    delete_backtests(symbol="ES", field="name", value=name)
+    delete_backtests_by_field(symbol="ES", field="name", value=name)
     s_bt = get_backtests_by_field(field="name", value=name)
     assert len(s_bt) == 0
-    delete_tradeseries(symbol="ES", field="name", value=name)
+    delete_tradeseries_by_field(symbol="ES", field="name", value=name)
     s_ts = get_tradeseries_by_field(field="name", value=name)
     assert len(s_ts) == 0
     delete_trades_by_field(symbol="ES", field="name", value=name)
@@ -550,13 +550,13 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
     assert bt.tradeseries[1].trades[1].open_dt == "2025-01-06 15:00:00"
     # Clear and confirm storage has no objects with these name currently
     # in case previous tests failed and left orphans
-    delete_backtests(symbol="ES", field="name", value=test_name)
+    delete_backtests_by_field(symbol="ES", field="name", value=test_name)
     s_bt = get_backtests_by_field(field="name", value=test_name)
     assert len(s_bt) == 0
-    delete_tradeseries(symbol="ES", field="name", value=ts1_name)
+    delete_tradeseries_by_field(symbol="ES", field="name", value=ts1_name)
     s_ts = get_tradeseries_by_field(field="name", value=ts1_name)
     assert len(s_ts) == 0
-    delete_tradeseries(symbol="ES", field="name", value=ts2_name)
+    delete_tradeseries_by_field(symbol="ES", field="name", value=ts2_name)
     s_ts = get_tradeseries_by_field(field="name", value=ts2_name)
     assert len(s_ts) == 0
     delete_trades_by_field(symbol="ES", field="name", value=test_name)
@@ -710,13 +710,13 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
     assert len(s_tr2) == 0
 
     # Delete everything from storage to cleanup
-    delete_backtests(symbol="ES", field="name", value=test_name)
+    delete_backtests_by_field(symbol="ES", field="name", value=test_name)
     s_bt = get_backtests_by_field(field="name", value=test_name)
     assert len(s_bt) == 0
-    delete_tradeseries(symbol="ES", field="name", value=ts1_name)
+    delete_tradeseries_by_field(symbol="ES", field="name", value=ts1_name)
     s_ts = get_tradeseries_by_field(field="name", value=ts1_name)
     assert len(s_ts) == 0
-    delete_tradeseries(symbol="ES", field="name", value=ts2_name)
+    delete_tradeseries_by_field(symbol="ES", field="name", value=ts2_name)
     s_ts = get_tradeseries_by_field(field="name", value=ts2_name)
     assert len(s_ts) == 0
     delete_trades_by_field(symbol="ES", field="name", value=test_name)
@@ -800,3 +800,52 @@ def test_Backtest_store_retrieve_load_tradeseries_and_delete():
     assert len(s_ts) == 0
     s_tr = get_trades_by_field(field="ts_id", value=ts.ts_id)
     assert len(s_tr) == 0
+
+
+@pytest.mark.storage
+def test_delete_backtests():
+    """Test delete_backtests function accepting Backtest list using bt_id
+    as the unique identifying field"""
+    test_name_1 = "DELETEME-TEST-LIST-1"
+    test_name_2 = "DELETEME-TEST-LIST-2"
+    # Clear storage of test data
+    delete_backtests_by_field(symbol="ES", field="name", value=test_name_1)
+    delete_backtests_by_field(symbol="ES", field="name", value=test_name_2)
+    stored = get_backtests_by_field(field="name", value=test_name_1)
+    assert len(stored) == 0
+    stored = get_backtests_by_field(field="name", value=test_name_2)
+    assert len(stored) == 0
+    # Create test backtests with trade series and trades (with different names
+    # to ensure unique bt_ids)
+    bt1 = create_backtest(name=test_name_1)
+    bt2 = create_backtest(name=test_name_2)
+    ts1 = create_tradeseries(name="".join([test_name_1, "-ts"]),
+                             start_dt="2025-01-05 10:00:00",
+                             end_dt="2025-01-05 14:00:00")
+    ts2 = create_tradeseries(name="".join([test_name_2, "-ts"]),
+                             start_dt="2025-01-05 15:00:00",
+                             end_dt="2025-01-05 19:00:00")
+    # Add trades to trade series
+    for dt in ["2025-01-05 10:00:00", "2025-01-05 11:00:00"]:
+        ts1.add_trade(create_trade(open_dt=dt, name=test_name_1))
+    for dt in ["2025-01-05 15:00:00", "2025-01-05 16:00:00"]:
+        ts2.add_trade(create_trade(open_dt=dt, name=test_name_2))
+    # Add trade series to backtests
+    bt1.update_tradeseries(ts1)
+    bt2.update_tradeseries(ts2)
+    # Store the backtest, trade series, and trades
+    store_backtests([bt1, bt2])
+    store_tradeseries([ts1, ts2])
+    store_trades(ts1.trades + ts2.trades)
+    # Confirm they are stored separately
+    retrieved1 = get_backtests_by_field(field="name", value=test_name_1)
+    retrieved2 = get_backtests_by_field(field="name", value=test_name_2)
+    assert len(retrieved1) == 1
+    assert len(retrieved2) == 1
+    # Delete using the list-based delete_backtests function
+    delete_backtests([bt1, bt2])
+    # Confirm they were deleted
+    stored1 = get_backtests_by_field(field="name", value=test_name_1)
+    stored2 = get_backtests_by_field(field="name", value=test_name_2)
+    assert len(stored1) == 0
+    assert len(stored2) == 0

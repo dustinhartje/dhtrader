@@ -1148,6 +1148,35 @@ def test_Trade_store_retrieve_delete():
     assert len(stored) == 0
 
 
+@pytest.mark.storage
+def test_delete_trades():
+    """Test delete_trades function accepting Trade list using minimal
+    identifying fields (open_dt, ts_id, symbol.ticker)"""
+    # First make sure there are no DELETEME trades in storage currently
+    delete_trades_by_field(symbol="ES", field="name",
+                           value="DELETEME-TEST-LIST")
+    stored = get_trades_by_field(field="name", value="DELETEME-TEST-LIST")
+    assert len(stored) == 0
+    # Create and store test trades
+    t1 = create_trade(open_dt="2025-01-05 10:00:00",
+                      name="DELETEME-TEST-LIST")
+    t2 = create_trade(open_dt="2025-01-05 11:00:00",
+                      name="DELETEME-TEST-LIST")
+    t1.close(price=5100, dt="2025-01-05 10:30:00")
+    t2.close(price=5100, dt="2025-01-05 11:30:00")
+    stored = store_trades([t1, t2])
+    # Confirm we can retrieve them
+    retrieved = get_trades_by_field(field="name",
+                                    value="DELETEME-TEST-LIST")
+    assert len(retrieved) == 2
+    assert all(isinstance(tr, Trade) for tr in retrieved)
+    # Delete using the list-based delete_trades function
+    delete_trades([t1, t2])
+    # Confirm they were deleted
+    stored = get_trades_by_field(field="name", value="DELETEME-TEST-LIST")
+    assert len(stored) == 0
+
+
 @pytest.mark.historical
 def test_Trade_historical():
     """Rebuild lists of Trades from historical extracted data and compare

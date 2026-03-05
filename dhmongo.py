@@ -425,16 +425,30 @@ def review_tradeseries(symbol: str,
         return tradeseries
 
 
-def delete_tradeseries(symbol: str,
-                       field: str,
-                       value,
-                       collection: str,
-                       ):
-    """Delete all tradeseries records in mongo with 'field' matching 'value'.
-    Typically used to delete by ts_id, or bt_id fields.
+def delete_tradeseries_by_field(symbol: str,
+                                field: str,
+                                value,
+                                collection: str,
+                                ):
+    """Delete all tradeseries records in mongo with 'field' matching
+    'value'.  Typically used to delete by ts_id, or bt_id fields.
     """
     c = db[collection]
     result = c.delete_many({field: value})
+
+    return result
+
+
+def delete_tradeseries(ts_ids: list,
+                       collection: str,
+                       ):
+    """Delete one or more tradeseries from mongo using ts_id as the
+    identifying field."""
+    c = db[collection]
+    result = []
+    for ts_id in ts_ids:
+        r = c.find_one_and_delete({"ts_id": ts_id})
+        result.append(r)
 
     return result
 
@@ -501,16 +515,30 @@ def review_backtests(symbol: str,
         return None
 
 
-def delete_backtests(symbol: str,
-                     field: str,
-                     value,
-                     collection: str,
-                     ):
+def delete_backtests_by_field(symbol: str,
+                              field: str,
+                              value,
+                              collection: str,
+                              ):
     """Delete all backtests records in mongo with 'field' matching 'value'.
     Typically used to delete by bt_id field.
     """
     c = db[collection]
     result = c.delete_many({field: value})
+
+    return result
+
+
+def delete_backtests(bt_ids: list,
+                     collection: str,
+                     ):
+    """Delete one or more backtests from mongo using bt_id as the
+    identifying field."""
+    c = db[collection]
+    result = []
+    for bt_id in bt_ids:
+        r = c.find_one_and_delete({"bt_id": bt_id})
+        result.append(r)
 
     return result
 

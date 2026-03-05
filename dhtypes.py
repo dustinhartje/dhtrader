@@ -312,6 +312,10 @@ def delete_tradeseries(*args, **kwargs):
     return _dhstore('delete_tradeseries', *args, **kwargs)
 
 
+def delete_tradeseries_by_field(*args, **kwargs):
+    return _dhstore('delete_tradeseries_by_field', *args, **kwargs)
+
+
 def delete_trades_by_field(*args, **kwargs):
     return _dhstore('delete_trades_by_field', *args, **kwargs)
 
@@ -322,6 +326,10 @@ def delete_trades(*args, **kwargs):
 
 def delete_backtests(*args, **kwargs):
     return _dhstore('delete_backtests', *args, **kwargs)
+
+
+def delete_backtests_by_field(*args, **kwargs):
+    return _dhstore('delete_backtests_by_field', *args, **kwargs)
 
 
 def review_candles(*args, **kwargs):
@@ -2592,10 +2600,11 @@ class TradeSeries():
         matching this object's ts_id."""
         result = {"tradeseries": None, "trades": []}
 
-        result["tradeseries"] = delete_tradeseries(symbol=self.symbol,
-                                                   field="ts_id",
-                                                   value=self.ts_id,
-                                                   )
+        result["tradeseries"] = delete_tradeseries_by_field(
+                symbol=self.symbol,
+                field="ts_id",
+                value=self.ts_id,
+                )
         if include_trades:
             result["trades"] = delete_trades_by_field(symbol=self.symbol,
                                                       field="ts_id",
@@ -2662,8 +2671,7 @@ class TradeSeries():
                              if (t.open_epoch < ns_epoch
                                  or t.open_epoch > ne_epoch)
                              ]
-            for t in remove_trades:
-                t.delete_from_storage()
+            delete_trades(remove_trades)
         # Remove trades from the current object's list as well by rebuilding
         # with only trades inside the new datetime range
         self.trades = [t for t in self.trades
@@ -3159,10 +3167,11 @@ class Backtest():
         matching this object's bt_id."""
         result = {"backtest": None, "tradeseries": []}
 
-        result["backtest"] = delete_backtests(symbol=self.symbol,
-                                              field="bt_id",
-                                              value=self.bt_id,
-                                              )
+        result["backtest"] = delete_backtests_by_field(
+                symbol=self.symbol,
+                field="bt_id",
+                value=self.bt_id,
+                )
         if include_tradeseries:
             for ts in self.tradeseries:
                 result["tradeseries"].append(ts.delete_from_storage(
@@ -3212,10 +3221,10 @@ class Backtest():
         (default = True)."""
         # Delete TradeSeries and associated Trades from storage
         if clear_storage:
-            delete_tradeseries(symbol="ES",
-                               field="ts_id",
-                               value=ts_id,
-                               )
+            delete_tradeseries_by_field(symbol="ES",
+                                        field="ts_id",
+                                        value=ts_id,
+                                        )
             delete_trades_by_field(symbol="ES",
                                    field="ts_id",
                                    value=ts_id,
@@ -3422,9 +3431,11 @@ __all__ = [
     "store_indicator",
     "get_trades_by_field",
     "get_tradeseries_by_field",
+    "delete_tradeseries_by_field",
     "delete_tradeseries",
     "delete_trades_by_field",
     "delete_trades",
+    "delete_backtests_by_field",
     "delete_backtests",
     "Symbol",
     "Candle",

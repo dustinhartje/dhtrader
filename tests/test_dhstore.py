@@ -1,16 +1,17 @@
 import pytest
 from dhtrader.dhstore import (
     get_trades_by_field, delete_trades, get_tradeseries_by_field,
-    delete_tradeseries, store_trades, store_tradeseries, get_candles,
-    store_candles, store_candle, review_candles, delete_candles,
-    get_symbol_by_ticker, get_events, delete_backtests, get_backtests_by_field,
+    delete_tradeseries_by_field, store_trades, store_tradeseries,
+    get_candles, store_candles, store_candle, review_candles,
+    delete_candles, get_symbol_by_ticker, get_events,
+    delete_backtests_by_field, get_backtests_by_field,
     review_tradeseries, review_trades)
 from dhtrader.dhtypes import TradeSeries, Trade
 
 
 def clear_storage_by_bt_id(bt_id):
-    delete_backtests(symbol="ES", field="bt_id", value=bt_id,
-                     include_tradeseries=True, include_trades=True)
+    delete_backtests_by_field(symbol="ES", field="bt_id", value=bt_id,
+                              include_tradeseries=True, include_trades=True)
     r = get_backtests_by_field(field="bt_id", value=bt_id)
     assert len(r) == 0
     r = get_tradeseries_by_field(field="bt_id", value=bt_id)
