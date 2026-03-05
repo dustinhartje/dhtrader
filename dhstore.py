@@ -524,15 +524,41 @@ def get_tradeseries_by_field(field: str,
 
 def store_tradeseries(series: list,
                       collection: str = COLL_TRADESERIES,
+                      include_trades: bool = False,
                       ):
-    """Store a list of TradeSeries() objects in central storage"""
+    """Store a list of TradeSeries() objects in central storage
+
+    Args:
+        series: List of TradeSeries objects to store
+        collection: MongoDB collection name for tradeseries
+        include_trades: If True, also stores all trades from each tradeseries
+
+    Returns:
+        List of storage results, with trades_result if include_trades=True
+    """
     # Store TradeSeries in database
-    log.info(f"Storing {len(series)} TradeSeries in collection={collection}")
+    log.info(f"Storing {len(series)} TradeSeries in collection={collection} "
+             f"include_trades={include_trades}")
     result = []
     for ts in series:
-        result.append(dhm.store_tradeseries(ts.to_clean_dict(),
-                                            collection=collection,
-                                            ))
+        ts_result = dhm.store_tradeseries(ts.to_clean_dict(),
+                                          collection=collection,
+                                          )
+        ts_result["ts_id"] = ts.ts_id
+
+        # Optionally store trades from this tradeseries
+        if include_trades and len(ts.trades) > 0:
+            log.info(f"include_trades=True, storing {len(ts.trades)} trades "
+                     f"from ts_id={ts.ts_id}")
+            trades_result = store_trades(trades=ts.trades)
+            ts_result["trades_result"] = trades_result
+        elif include_trades:
+            log.info(f"include_trades=True but ts_id={ts.ts_id} has no "
+                     "trades to store")
+            ts_result["trades_result"] = []
+
+        result.append(ts_result)
+
     log.info(f"Storage complete, {len(result)} records written")
 
     return result
@@ -718,13 +744,59 @@ def get_backtests_by_field(field: str,
 
 def store_backtests(backtests: list,
                     collection: str = COLL_BACKTESTS,
+                    include_tradeseries: bool = False,
+                    include_trades: bool = False,
                     ):
-    """Store one or more Backtest() objects in central storage"""
+    """Store one or more Backtest() objects in central storage
+
+    Args:
+        backtests: List of Backtest objects to store
+        collection: MongoDB collection name for backtests
+        include_tradeseries: If True, also stores all tradeseries from each
+                            backtest
+        include_trades: If True, also stores all trades (requires
+                       include_tradeseries=True)
+
+    Returns:
+        List of storage results, with tradeseries_result included if
+        include_tradeseries=True
+
+    Raises:
+        ValueError: If include_trades=True but include_tradeseries=False
+    """
+    # Validate arguments
+    if include_trades and not include_tradeseries:
+        raise ValueError("include_trades=True requires "
+                         "include_tradeseries=True")
+
+    log.info(f"Storing {len(backtests)} Backtests in "
+             f"collection={collection} include_tradeseries="
+             f"{include_tradeseries} include_trades={include_trades}")
+
     result = []
     for bt in backtests:
-        result.append(dhm.store_backtest(bt.to_clean_dict(),
-                                         collection=collection,
-                                         ))
+        bt_result = dhm.store_backtest(bt.to_clean_dict(),
+                                       collection=collection,
+                                       )
+        bt_result["bt_id"] = bt.bt_id
+
+        # Optionally store tradeseries from this backtest
+        if include_tradeseries and len(bt.tradeseries) > 0:
+            log.info(f"include_tradeseries=True, storing "
+                     f"{len(bt.tradeseries)} tradeseries from "
+                     f"bt_id={bt.bt_id}")
+            ts_result = store_tradeseries(series=bt.tradeseries,
+                                          include_trades=include_trades,
+                                          )
+            bt_result["tradeseries_result"] = ts_result
+        elif include_tradeseries:
+            log.info(f"include_tradeseries=True but bt_id={bt.bt_id} has no "
+                     "tradeseries to store")
+            bt_result["tradeseries_result"] = []
+
+        result.append(bt_result)
+
+    log.info(f"Storage complete, {len(result)} backtests written")
 
     return result
 
