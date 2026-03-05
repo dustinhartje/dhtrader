@@ -6,7 +6,8 @@ from dhtrader.dhtypes import (
 from dhtrader.dhtypes import Trade, TradeSeries
 from dhtrader.dhcommon import dt_as_dt
 from dhtrader.dhstore import (
-    get_trades_by_field, delete_trades, get_tradeseries_by_field,
+    get_trades_by_field, delete_trades, delete_trades_by_field,
+    get_tradeseries_by_field,
     delete_tradeseries, store_tradeseries, store_trades)
 from dhtrader.testdata.testdata import Rebuilder
 
@@ -565,7 +566,8 @@ def test_TradeSeries_store_retrieve_and_delete():
     delete_tradeseries(symbol="ES", field="name", value="DELETEME-TEST")
     s_ts = get_tradeseries_by_field(field="name", value="DELETEME-TEST")
     assert len(s_ts) == 0
-    delete_trades(symbol="ES", field="name", value="DELETEME-TEST")
+    delete_trades_by_field(symbol="ES", field="name",
+                           value="DELETEME-TEST")
     s_tr = get_trades_by_field(field="name", value="DELETEME-TEST")
     assert len(s_tr) == 0
     # Store and check the result looks successful by matching ts_id on each
@@ -590,7 +592,8 @@ def test_TradeSeries_store_retrieve_and_delete():
     assert r_tr[1].ts_id == ts.ts_id
     # Delete objects by ts_id
     delete_tradeseries(symbol="ES", field="ts_id", value=ts.ts_id)
-    delete_trades(symbol="ES", field="ts_id", value=ts.ts_id)
+    delete_trades_by_field(symbol="ES", field="ts_id",
+                           value=ts.ts_id)
     # Confirm storage has no objects with this name or ts_id at end of test
     s_ts = get_tradeseries_by_field(field="name", value="DELETEME-TEST")
     assert len(s_ts) == 0

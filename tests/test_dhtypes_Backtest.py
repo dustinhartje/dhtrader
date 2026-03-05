@@ -9,10 +9,12 @@ from dhtrader.dhcommon import (
     OperationTimer, ProgBar, log_say, prompt_yn, valid_timeframe,
     valid_trading_hours, check_tf_th_compatibility)
 from dhtrader.dhstore import (
-    get_trades_by_field, delete_trades, get_tradeseries_by_field,
+    get_trades_by_field, delete_trades, delete_trades_by_field,
+    get_tradeseries_by_field,
     delete_tradeseries, store_trades, store_tradeseries, get_candles,
     store_candles, store_candle, review_candles, delete_candles,
-    get_symbol_by_ticker, get_events, delete_backtests, get_backtests_by_field,
+    get_symbol_by_ticker, get_events, delete_backtests,
+    get_backtests_by_field,
     store_backtests)
 
 
@@ -140,7 +142,7 @@ def clear_storage_by_name(name: str):
     delete_tradeseries(symbol="ES", field="name", value=name)
     s_ts = get_tradeseries_by_field(field="name", value=name)
     assert len(s_ts) == 0
-    delete_trades(symbol="ES", field="name", value=name)
+    delete_trades_by_field(symbol="ES", field="name", value=name)
     s_tr = get_trades_by_field(field="name", value=name)
     assert len(s_tr) == 0
 
@@ -557,7 +559,7 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
     delete_tradeseries(symbol="ES", field="name", value=ts2_name)
     s_ts = get_tradeseries_by_field(field="name", value=ts2_name)
     assert len(s_ts) == 0
-    delete_trades(symbol="ES", field="name", value=test_name)
+    delete_trades_by_field(symbol="ES", field="name", value=test_name)
     s_tr = get_trades_by_field(field="name", value=test_name)
     assert len(s_tr) == 0
     # Store the backtest and related objects
@@ -717,7 +719,7 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
     delete_tradeseries(symbol="ES", field="name", value=ts2_name)
     s_ts = get_tradeseries_by_field(field="name", value=ts2_name)
     assert len(s_ts) == 0
-    delete_trades(symbol="ES", field="name", value=test_name)
+    delete_trades_by_field(symbol="ES", field="name", value=test_name)
     s_tr = get_trades_by_field(field="name", value=test_name)
     assert len(s_tr) == 0
 

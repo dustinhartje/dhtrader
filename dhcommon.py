@@ -35,7 +35,6 @@ import re
 import logging
 import json
 import progressbar
-from tabulate import tabulate
 
 TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', 'r1d', 'e1d', 'r1w', 'e1w',
               'r1mo', 'e1mo']

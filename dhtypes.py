@@ -36,7 +36,7 @@ from .dhcommon import (
     dt_as_dt, dt_as_str, dt_as_time, dt_to_epoch, dt_from_epoch,
     timeframe_delta, valid_timeframe, valid_trading_hours, log_say,
     this_candle_start, check_tf_th_compatibility,
-    start_of_week_date, dict_of_weeks, OperationTimer)
+    start_of_week_date, dict_of_weeks, OperationTimer, bot)
 CANDLE_TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w']
 BEGINNING_OF_TIME = "2008-01-01 00:00:00"
 
@@ -259,15 +259,6 @@ log = logging.getLogger("dhtypes")
 log.addHandler(logging.NullHandler())
 
 
-def bot():
-    """Return universal beginning of time for this and other modules.  This
-    represents the earliest time candles should be imported for among other
-    things, setting a limit on how far back these modules can look to keep
-    performance and resource needs reasonable."""
-
-    return BEGINNING_OF_TIME
-
-
 def _dhstore(fn_name, *args, **kwargs):
     """Delegate to dhstore if loaded."""
     # Try package-qualified name first, then bare name for compatibility
@@ -282,26 +273,8 @@ def _dhstore(fn_name, *args, **kwargs):
     return getattr(m, fn_name)(*args, **kwargs)
 
 
-def get_symbol_by_ticker(ticker: str):
-    """Resolve ticker to Symbol. Falls back for known tickers."""
-    # Try package-qualified name first, then bare name for compatibility
-    m = sys.modules.get('dhtrader.dhstore')
-    if m is None:
-        m = sys.modules.get('dhstore')
-    if m:
-        return m.get_symbol_by_ticker(ticker=ticker)
-    _known = {
-        "ES": {"name": "ES", "leverage_ratio": 50,
-               "tick_size": 0.25},
-        "DELETEME": {"name": "DELETEME", "leverage_ratio": 50,
-                     "tick_size": 0.25},
-    }
-    if ticker in _known:
-        return Symbol(ticker=ticker, **_known[ticker])
-    raise ValueError(
-        f"Ticker '{ticker}' not known without dhstore. "
-        "Import dhstore or pass a Symbol object directly."
-    )
+def get_symbol_by_ticker(*args, **kwargs):
+    return _dhstore('get_symbol_by_ticker', *args, **kwargs)
 
 
 def get_candles(*args, **kwargs):
@@ -335,12 +308,12 @@ def get_tradeseries_by_field(*args, **kwargs):
         'get_tradeseries_by_field', *args, **kwargs)
 
 
-def delete_one_trade(*args, **kwargs):
-    return _dhstore('delete_one_trade', *args, **kwargs)
-
-
 def delete_tradeseries(*args, **kwargs):
     return _dhstore('delete_tradeseries', *args, **kwargs)
+
+
+def delete_trades_by_field(*args, **kwargs):
+    return _dhstore('delete_trades_by_field', *args, **kwargs)
 
 
 def delete_trades(*args, **kwargs):
@@ -2209,13 +2182,6 @@ class Trade():
                 f"entry={self.entry_price} | exit={self.exit_price} | "
                 f"profitable={self.profitable}")
 
-    def delete_from_storage(self):
-        """Delete this Trade from central storage if it exists"""
-        return delete_one_trade(symbol=self.symbol.ticker,
-                                open_dt=self.open_dt,
-                                ts_id=self.ts_id,
-                                )
-
     def parent_bar_dt(self):
         """Returns the timeframe specific 'parent bar' (the bar within which
         this Trade opened) opening datetime as a datetime object."""
@@ -2631,10 +2597,10 @@ class TradeSeries():
                                                    value=self.ts_id,
                                                    )
         if include_trades:
-            result["trades"] = delete_trades(symbol=self.symbol,
-                                             field="ts_id",
-                                             value=self.ts_id,
-                                             )
+            result["trades"] = delete_trades_by_field(symbol=self.symbol,
+                                                      field="ts_id",
+                                                      value=self.ts_id,
+                                                      )
 
         return result
 
@@ -3250,10 +3216,10 @@ class Backtest():
                                field="ts_id",
                                value=ts_id,
                                )
-            delete_trades(symbol="ES",
-                          field="ts_id",
-                          value=ts_id,
-                          )
+            delete_trades_by_field(symbol="ES",
+                                   field="ts_id",
+                                   value=ts_id,
+                                   )
         # Rebuild Backtest's list of TradeSeries, excluding any matching ts_id
         self.tradeseries = [ts for ts in self.tradeseries if ts.ts_id != ts_id]
         return True
@@ -3456,8 +3422,8 @@ __all__ = [
     "store_indicator",
     "get_trades_by_field",
     "get_tradeseries_by_field",
-    "delete_one_trade",
     "delete_tradeseries",
+    "delete_trades_by_field",
     "delete_trades",
     "delete_backtests",
     "Symbol",

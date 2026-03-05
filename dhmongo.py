@@ -325,19 +325,37 @@ def review_trades(symbol: str,
         return None
 
 
-def delete_trades(symbol: str,
-                  field: str,
-                  value,
-                  collection: str,
-                  ):
+def delete_trades_by_field(symbol: str,
+                           field: str,
+                           value,
+                           collection: str,
+                           ):
     """Delete all trade records with 'field' matching 'value'.  Typically
     used to delete by name, ts_id, or bt_id fields.
 
     Example to delete all trade records with name=="DELETEME":
-        delete_trades(symbol="ES", field="name", value="DELETEME")
+        delete_trades_by_field(symbol="ES", field="name",
+                               value="DELETEME")
     """
     c = db[collection]
     result = c.delete_many({field: value})
+
+    return result
+
+
+def delete_trades(trades: list,
+                  collection: str,
+                  ):
+    """Delete one or more trades from mongo using open_dt, ts_id, and
+    symbol as identifying fields."""
+    c = db[collection]
+    result = []
+    for t in trades:
+        r = c.find_one_and_delete({"open_dt": t["open_dt"],
+                                   "ts_id": t["ts_id"],
+                                   "symbol": t["symbol"],
+                                   })
+        result.append(r)
 
     return result
 

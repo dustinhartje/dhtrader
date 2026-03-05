@@ -7,7 +7,8 @@ from dhtrader.dhtypes import (
 from dhtrader.dhtypes import Trade
 from dhtrader.dhcommon import dt_as_dt
 from dhtrader.dhstore import (
-    get_trades_by_field, delete_trades, get_tradeseries_by_field,
+    get_trades_by_field, delete_trades, delete_trades_by_field,
+    get_tradeseries_by_field,
     delete_tradeseries, store_trades, store_tradeseries, get_candles,
     store_candles, store_candle, review_candles, delete_candles,
     get_symbol_by_ticker, get_events)
@@ -1127,7 +1128,8 @@ def test_Trade_closed_intraday():
 @pytest.mark.storage
 def test_Trade_store_retrieve_delete():
     # First make sure there are no DELETEME trades in storage currently
-    delete_trades(symbol="ES", field="name", value="DELETEME-TEST")
+    delete_trades_by_field(symbol="ES", field="name",
+                           value="DELETEME-TEST")
     stored = get_trades_by_field(field="name", value="DELETEME-TEST")
     assert len(stored) == 0
     # Create and store a basic test, confirming it can be retreived after
@@ -1140,7 +1142,8 @@ def test_Trade_store_retrieve_delete():
     assert len(stored) == 1
     assert isinstance(stored[0], Trade)
     # Delete it from storage and confirm it can no longer be retrieved
-    delete_trades(symbol="ES", field="name", value="DELETEME-TEST")
+    delete_trades_by_field(symbol="ES", field="name",
+                           value="DELETEME-TEST")
     stored = get_trades_by_field(field="name", value="DELETEME-TEST")
     assert len(stored) == 0
 

@@ -397,37 +397,43 @@ def review_trades(symbol: str = "ES",
         return result
 
 
-def delete_one_trade(symbol: str,
-                     open_dt: str,
-                     ts_id: str,
-                     collection: str = COLL_TRADES,
-                     ):
-    """Delete a single trade from storage, identifying by symbol, open_dt, and
-    ts_id"""
-    query = {"symbol": symbol,
-             "open_dt": open_dt,
-             "ts_id": ts_id,
-             }
-
-    return dhm.delete_one_document(query=query, collection=collection)
-
-
-def delete_trades(symbol: str,
-                  field: str,
-                  value,
-                  collection: str = COLL_TRADES,
-                  ):
+def delete_trades_by_field(symbol: str,
+                           field: str,
+                           value,
+                           collection: str = COLL_TRADES,
+                           ):
     """Delete all trade records with 'field' matching 'value'.  Typically
     used to delete by name, ts_id, or bt_id fields.
 
     Example to delete all trade records with name=="DELETEME":
-        delete_trades(symbol="ES", field="name", value="DELETEME")
+        delete_trades_by_field(symbol="ES", field="name",
+                               value="DELETEME")
     """
-    result = dhm.delete_trades(symbol=symbol,
-                               collection=collection,
-                               field=field,
-                               value=value,
-                               )
+    result = dhm.delete_trades_by_field(symbol=symbol,
+                                        collection=collection,
+                                        field=field,
+                                        value=value,
+                                        )
+
+    return result
+
+
+def delete_trades(trades: list,
+                  collection: str = COLL_TRADES,
+                  ):
+    """Delete one or more Trade() objects from central storage using
+    open_dt, ts_id, and symbol.ticker as the identifying fields."""
+    # Extract identifying fields from Trade objects
+    query_dicts = []
+    for t in trades:
+        query_dicts.append({
+            "open_dt": t.open_dt,
+            "ts_id": t.ts_id,
+            "symbol": t.symbol.ticker,
+        })
+
+    result = dhm.delete_trades(trades=query_dicts,
+                               collection=collection)
 
     return result
 
@@ -649,11 +655,11 @@ def delete_tradeseries(symbol: str,
             value=value,
             )
     if include_trades:
-        result["trades"] = delete_trades(symbol=symbol,
-                                         field=field,
-                                         value=value,
-                                         collection=coll_trades,
-                                         )
+        result["trades"] = delete_trades_by_field(symbol=symbol,
+                                                  field=field,
+                                                  value=value,
+                                                  collection=coll_trades,
+                                                  )
 
     return result
 
