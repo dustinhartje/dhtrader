@@ -20,7 +20,7 @@ if __name__ == '__main__':
     if _git_root not in sys.path:
         sys.path.insert(0, _git_root)
 
-from dhtrader.dhcommon import prompt_yn
+from dhtrader import prompt_yn
 
 
 def get_script_dir(depth=0):

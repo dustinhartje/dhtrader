@@ -1,8 +1,7 @@
 import pytest
-from dhtrader.dhstore import get_candles
-from dhtrader.dhtypes import (
-    Candle, Chart, Day, Event, Indicator, IndicatorDataPoint,
-    IndicatorEMA, IndicatorSMA, Symbol)
+from dhtrader import (
+    Candle, Chart, Day, Event, get_candles, Indicator,
+    IndicatorDataPoint, IndicatorEMA, IndicatorSMA, Symbol)
 
 
 def test_Chart_create_and_verify_pretty():

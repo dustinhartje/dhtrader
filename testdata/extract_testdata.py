@@ -26,7 +26,7 @@ if __name__ == '__main__':
         sys.path.insert(0, _git_root)
 
 from dhtrader.testdata import Extractor
-from dhtrader.dhcommon import dt_as_dt, dt_as_str
+from dhtrader import dt_as_dt, dt_as_str
 
 
 def say(msg: str, console_output=True):

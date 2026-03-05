@@ -1,15 +1,11 @@
 import datetime
 import pytest
 import json
-from dhtrader.dhtypes import (
-    Candle, Symbol)
-from dhtrader.dhtypes import Trade, TradeSeries
-from dhtrader.dhcommon import dt_as_dt
-from dhtrader.dhstore import (
-    get_trades_by_field, delete_trades, delete_trades_by_field,
-    get_tradeseries_by_field,
-    delete_tradeseries_by_field, delete_tradeseries, store_tradeseries,
-    store_trades)
+from dhtrader import (
+    Candle, delete_trades, delete_trades_by_field,
+    delete_tradeseries, delete_tradeseries_by_field, dt_as_dt,
+    get_trades_by_field, get_tradeseries_by_field, store_trades,
+    store_tradeseries, Symbol, Trade, TradeSeries)
 from dhtrader.testdata.testdata import Rebuilder
 
 

@@ -1,13 +1,12 @@
 import pytest
-from dhtrader.dhtypes import (
-    Candle, Chart, Day, Event, Indicator, IndicatorDataPoint,
-    IndicatorEMA, IndicatorSMA, Symbol)
-from dhtrader.dhstore import (
-    get_trades_by_field, delete_trades, get_tradeseries_by_field,
-    delete_tradeseries, store_trades, store_tradeseries, get_candles,
-    store_candles, store_candle, review_candles, delete_candles,
-    get_symbol_by_ticker, get_events, get_indicator, delete_indicator,
-    get_indicator_datapoints, store_indicator)
+from dhtrader import (
+    Candle, Chart, Day, delete_candles, delete_indicator, delete_trades,
+    delete_tradeseries, Event, get_candles, get_events, get_indicator,
+    get_indicator_datapoints, get_symbol_by_ticker, get_trades_by_field,
+    get_tradeseries_by_field, Indicator, IndicatorDataPoint,
+    IndicatorEMA, IndicatorSMA, review_candles, store_candle,
+    store_candles, store_indicator, store_trades, store_tradeseries,
+    Symbol)
 
 
 def hide_Indicator_demo_hod_creation_and_calculation():
