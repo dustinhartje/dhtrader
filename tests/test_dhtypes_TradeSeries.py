@@ -569,14 +569,15 @@ def test_TradeSeries_store_retrieve_and_delete():
     s_tr = get_trades_by_field(field="name", value="DELETEME-TEST")
     assert len(s_tr) == 0
     # Store and check the result looks successful by matching ts_id on each
-    r_tradeseries = store_tradeseries([ts])
-    r_trades = store_trades(ts.trades)
+    r_tradeseries = store_tradeseries([ts], include_trades=True)
     assert len(r_tradeseries) == 1
     r_ts = r_tradeseries[0]
     assert r_ts["ts_id"] == ts.ts_id
-    assert len(r_trades) == 2
-    assert r_trades[0]["ts_id"] == ts.ts_id
-    assert r_trades[1]["ts_id"] == ts.ts_id
+    # Verify trades_result is included in the response
+    assert "trades_result" in r_ts
+    assert len(r_ts["trades_result"]) == 2
+    assert r_ts["trades_result"][0]["ts_id"] == ts.ts_id
+    assert r_ts["trades_result"][1]["ts_id"] == ts.ts_id
     # Confirm we can retrieve the TradeSeries and both Trades by ts_id
     r_ts = get_tradeseries_by_field(field="ts_id", value=ts.ts_id)
     assert len(r_ts) == 1
@@ -684,8 +685,7 @@ def test_delete_tradeseries():
                                       value="DELETEME-TEST-LIST-2")
     assert len(stored) == 0
     # Store the test trade series
-    store_tradeseries([ts1, ts2])
-    store_trades(ts1.trades + ts2.trades)
+    store_tradeseries([ts1, ts2], include_trades=True)
     # Confirm they are stored (check each series separately)
     retrieved1 = get_tradeseries_by_field(field="name",
                                           value="DELETEME-TEST-LIST-1")

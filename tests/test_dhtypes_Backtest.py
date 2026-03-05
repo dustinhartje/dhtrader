@@ -394,9 +394,7 @@ def test_Backtest_restrict_dates():
                                name=test_name
                                ))
     bt.update_tradeseries(ts1)
-    store_backtests([bt])
-    store_tradeseries(bt.tradeseries)
-    store_trades(bt.tradeseries[0].trades)
+    store_backtests([bt], include_tradeseries=True, include_trades=True)
     bt_load = get_backtests_by_field(field="bt_id",
                                      value=bt.bt_id)[0]
     assert bt_load["start_dt"] == "2025-01-01 18:00:00"
@@ -555,8 +553,7 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
     # Store the backtest and related objects
     store_backtests([bt])
     for ts in bt.tradeseries:
-        store_tradeseries([ts])
-        store_trades(ts.trades)
+        store_tradeseries([ts], include_trades=True)
 
     # Modify and replace the 1st tradeseries, including storage update
     ts1.start_dt = "2025-01-05 08:30:00"
@@ -588,8 +585,7 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
     # and their Trades without duplication occurring
     store_backtests([bt])
     for ts in bt.tradeseries:
-        store_tradeseries([ts])
-        store_trades(ts.trades)
+        store_tradeseries([ts], include_trades=True)
     # Get backtests with this name from storage
     s_bt = get_backtests_by_field(field="name", value=test_name)
     # Confirm exactly 1 backtest found in storage with this name
@@ -825,8 +821,7 @@ def test_delete_backtests():
     bt2.update_tradeseries(ts2)
     # Store the backtest, trade series, and trades
     store_backtests([bt1, bt2])
-    store_tradeseries([ts1, ts2])
-    store_trades(ts1.trades + ts2.trades)
+    store_tradeseries([ts1, ts2], include_trades=True)
     # Confirm they are stored separately
     retrieved1 = get_backtests_by_field(field="name", value=test_name_1)
     retrieved2 = get_backtests_by_field(field="name", value=test_name_2)

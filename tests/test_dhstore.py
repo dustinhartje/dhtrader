@@ -48,8 +48,7 @@ def test_TradeSeries_and_Trade_integrity_checks():
         entry_price=5000, exit_price=5001, high_price=5005, low_price=4995,
         prof_target=5001, stop_target=4000,
         ts_id=ts_good.ts_id, bt_id=ts_good.bt_id))
-    store_tradeseries([ts_good])
-    store_trades(ts_good.trades)
+    store_tradeseries([ts_good], include_trades=True)
     stored = get_tradeseries_by_field(field="bt_id", value=bt)
     assert len(stored) == 1
     stored = get_trades_by_field(field="bt_id", value=bt)
@@ -94,8 +93,7 @@ def test_TradeSeries_and_Trade_integrity_checks():
         entry_price=5000, exit_price=5001, high_price=5005, low_price=4995,
         prof_target=5001, stop_target=4000,
         ts_id=ts_fail.ts_id, bt_id=ts_fail.bt_id))
-    store_tradeseries([ts_fail])
-    store_trades(ts_fail.trades)
+    store_tradeseries([ts_fail], include_trades=True)
     stored = get_tradeseries_by_field(field="bt_id", value=bt)
     assert len(stored) == 1
     stored = get_trades_by_field(field="bt_id", value=bt)
@@ -144,8 +142,7 @@ def test_TradeSeries_and_Trade_integrity_checks():
         entry_price=5000, exit_price=5001, high_price=5005, low_price=4995,
         prof_target=5001, stop_target=4000,
         ts_id=ts_fail.ts_id, bt_id=ts_fail.bt_id))
-    store_tradeseries([ts_fail])
-    store_trades(ts_fail.trades)
+    store_tradeseries([ts_fail], include_trades=True)
     stored = get_tradeseries_by_field(field="bt_id", value=bt)
     assert len(stored) == 1
     stored = get_trades_by_field(field="bt_id", value=bt)
@@ -192,8 +189,7 @@ def test_TradeSeries_and_Trade_integrity_checks():
         entry_price=5000, exit_price=5001, high_price=5005, low_price=4995,
         prof_target=5001, stop_target=4000,
         ts_id=ts_fail.ts_id, bt_id=ts_fail.bt_id))
-    store_tradeseries([ts_fail])
-    store_trades(ts_fail.trades)
+    store_tradeseries([ts_fail], include_trades=True)
     stored = get_tradeseries_by_field(field="bt_id", value=bt)
     assert len(stored) == 1
     stored = get_trades_by_field(field="bt_id", value=bt)
@@ -237,8 +233,7 @@ def test_TradeSeries_and_Trade_integrity_checks():
         entry_price=5000, exit_price=5001, high_price=5005, low_price=4995,
         prof_target=5001, stop_target=4000,
         ts_id=ts_fail.ts_id, bt_id=ts_fail.bt_id))
-    store_tradeseries([ts_fail])
-    store_trades(ts_fail.trades)
+    store_tradeseries([ts_fail], include_trades=True)
     stored = get_tradeseries_by_field(field="bt_id", value=bt)
     assert len(stored) == 1
     # While we stored 2 trades, the second should have overwritten the first
