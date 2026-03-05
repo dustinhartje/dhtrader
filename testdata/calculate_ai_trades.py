@@ -2,7 +2,9 @@
 """
 Calculate ES trades based on EMA bounce/rejection strategy for both
 long and short. Created from scratch using only the provided
-instructions.
+instructions.  Useful to generate trades outside of dhtrader system for
+validation of dhtrader results.  This script is not used regularly and there is
+a good chance it will require updates to run properly in the future.
 """
 
 import csv
@@ -85,9 +87,9 @@ def calculate_trades(direction='long', offset_ticks=0,
     print(f"\nCalculating {direction.upper()} trades "
           f"(offset_ticks={offset_ticks})...")
 
-    ema_list = load_ema_data('set1_ind_dps_e1h9ema.csv')
-    hourly_candles = load_hourly_candles('set1_e1h_candles.csv')
-    minute_candles = load_minute_candles('set1_1m_candles.csv')
+    ema_list = load_ema_data('set1/set1_ind_dps_e1h9ema.csv')
+    hourly_candles = load_hourly_candles('set1/set1_e1h_candles.csv')
+    minute_candles = load_minute_candles('set1/set1_1m_candles.csv')
 
     trades = []
 

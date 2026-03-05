@@ -50,7 +50,7 @@ See [CODING_STANDARDS.md](CODING_STANDARDS.md) for complete documentation.
 
 # ES Futures Market Era Analysis
 
-For historical backtesting accuracy, the `MARKET_ERAS` configuration in `dhcharts.py` defines trading hours for different periods of ES futures history (2008-present). The configuration was derived from detailed analysis of 6.3M+ candle records and validated to 99.99% accuracy.
+For historical backtesting accuracy, the `MARKET_ERAS` configuration, defined in `dhtypes.py`, specifies trading hours for different periods of ES futures history (2008-present). The configuration was derived from detailed analysis of 6.3M+ candle records and validated to 99.99% accuracy.
 
 See [ES Market Era Analysis](docs/es_market_era_analysis.md) for:
 - Complete trading hour specifications across 4 historical periods

@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
-Compare AI trades with set1 trades for both long and short directions
+Compare AI trades with set1 trades for validation purposes.  Paired with
+calculate_ai_trades.py which generates AI trades from scratch using only the
+provided instructions.  This script is not used regularly and there is a good
+chance it will require updates to run properly in the future.
 """
 
 import csv
@@ -216,11 +219,11 @@ if __name__ == '__main__':
 
     # Compare long trades
     long_results = compare_trades(
-        'ai_trades_long.csv', 'set1_trades_long.csv', 'long')
+        'ai_trades_long.csv', 'set1/set1_trades_long.csv', 'long')
 
     # Compare short trades
     short_results = compare_trades(
-        'ai_trades_short.csv', 'set1_trades_short.csv', 'short')
+        'ai_trades_short.csv', 'set1/set1_trades_short.csv', 'short')
 
     # Overall summary
     print(f"\n{'='*80}")

@@ -1,6 +1,14 @@
-# Wrapper for current (dhmongo.py) data storage I'm using to allow
-# migration to a different storage solution in the future without
-# massive overhaul of backtest, chart, and trader code bases.
+"""Storage abstraction layer wrapping MongoDB persistence (dhmongo).
+
+This module provides high-level storage functions for candles, trades,
+backtests, indicators, and events. It abstracts the underlying MongoDB
+implementation (dhmongo.py) to allow future migration to different storage
+solutions without changing higher-level code.
+
+Core datetime-calculation utilities (expected_candle_datetimes,
+next_candle_start) are imported from dhcommon, which provides the base
+utility layer with no storage dependencies.
+"""
 
 import json
 import progressbar
@@ -10,15 +18,15 @@ from datetime import timedelta
 from copy import deepcopy
 import logging
 from pathlib import Path
-from dhcharts import (
-    Candle, Event, IndicatorDataPoint, Symbol, IndicatorSMA, IndicatorEMA)
-from dhcommon import (
+from .dhtypes import (
+    Candle, Event, IndicatorDataPoint, Symbol, IndicatorSMA, IndicatorEMA,
+    Trade, TradeSeries, Backtest, Chart, Day, Indicator)
+from .dhcommon import (
     dt_as_str, dt_as_dt, dt_from_epoch, dt_to_epoch, valid_timeframe,
     this_candle_start, summarize_candles, log_say, sort_dict,
-    rangify_candle_times, ProgBar, OperationTimer)
-from dhtrades import Trade, TradeSeries
-from dhutil import expected_candle_datetimes
-import dhmongo as dhm
+    rangify_candle_times, expected_candle_datetimes,
+    ProgBar, OperationTimer)
+from . import dhmongo as dhm
 
 COLL_TRADES = "trades"
 COLL_TRADESERIES = "tradeseries"
@@ -170,7 +178,7 @@ def get_trades_by_field(field: str,
 def store_trades(trades: list,
                  collection: str = COLL_TRADES,
                  ):
-    """Store one or more dhtrades.Trade() objects in central storage"""
+    """Store one or more Trade() objects in central storage"""
 
     # Convert Trade objects to dictionaries for storage
     log.info(f"Preparing {len(trades)} trades to store by converting to dicts")
@@ -389,37 +397,43 @@ def review_trades(symbol: str = "ES",
         return result
 
 
-def delete_one_trade(symbol: str,
-                     open_dt: str,
-                     ts_id: str,
-                     collection: str = COLL_TRADES,
-                     ):
-    """Delete a single trade from storage, identifying by symbol, open_dt, and
-    ts_id"""
-    query = {"symbol": symbol,
-             "open_dt": open_dt,
-             "ts_id": ts_id,
-             }
-
-    return dhm.delete_one_document(query=query, collection=collection)
-
-
-def delete_trades(symbol: str,
-                  field: str,
-                  value,
-                  collection: str = COLL_TRADES,
-                  ):
+def delete_trades_by_field(symbol: str,
+                           field: str,
+                           value,
+                           collection: str = COLL_TRADES,
+                           ):
     """Delete all trade records with 'field' matching 'value'.  Typically
     used to delete by name, ts_id, or bt_id fields.
 
     Example to delete all trade records with name=="DELETEME":
-        delete_trades(symbol="ES", field="name", value="DELETEME")
+        delete_trades_by_field(symbol="ES", field="name",
+                               value="DELETEME")
     """
-    result = dhm.delete_trades(symbol=symbol,
-                               collection=collection,
-                               field=field,
-                               value=value,
-                               )
+    result = dhm.delete_trades_by_field(symbol=symbol,
+                                        collection=collection,
+                                        field=field,
+                                        value=value,
+                                        )
+
+    return result
+
+
+def delete_trades(trades: list,
+                  collection: str = COLL_TRADES,
+                  ):
+    """Delete one or more Trade() objects from central storage using
+    open_dt, ts_id, and symbol.ticker as the identifying fields."""
+    # Extract identifying fields from Trade objects
+    query_dicts = []
+    for t in trades:
+        query_dicts.append({
+            "open_dt": t.open_dt,
+            "ts_id": t.ts_id,
+            "symbol": t.symbol.ticker,
+        })
+
+    result = dhm.delete_trades(trades=query_dicts,
+                               collection=collection)
 
     return result
 
@@ -623,29 +637,45 @@ def review_tradeseries(symbol: str = "ES",
     return result
 
 
-def delete_tradeseries(symbol: str,
-                       field: str,
-                       value,
-                       collection: str = COLL_TRADESERIES,
-                       coll_trades=COLL_TRADES,
-                       include_trades: bool = False,
-                       ):
-    """Delete all tradeseries records in central storage with 'field' matching
-    'value'.  Typically used to delete by ts_id, or bt_id fields.
+def delete_tradeseries_by_field(symbol: str,
+                                field: str,
+                                value,
+                                collection: str = COLL_TRADESERIES,
+                                coll_trades=COLL_TRADES,
+                                include_trades: bool = False,
+                                ):
+    """Delete all tradeseries records in central storage with 'field'
+    matching 'value'.  Typically used to delete by ts_id, or bt_id fields.
     """
     result = {}
-    result["tradeseries"] = dhm.delete_tradeseries(
+    result["tradeseries"] = dhm.delete_tradeseries_by_field(
             symbol=symbol,
             collection=collection,
             field=field,
             value=value,
             )
     if include_trades:
-        result["trades"] = delete_trades(symbol=symbol,
-                                         field=field,
-                                         value=value,
-                                         collection=coll_trades,
-                                         )
+        result["trades"] = delete_trades_by_field(symbol=symbol,
+                                                  field=field,
+                                                  value=value,
+                                                  collection=coll_trades,
+                                                  )
+
+    return result
+
+
+def delete_tradeseries(tradeseries: list,
+                       collection: str = COLL_TRADESERIES,
+                       ):
+    """Delete one or more TradeSeries() objects from central storage using
+    ts_id as the identifying field."""
+    # Extract ts_id from TradeSeries objects
+    ts_ids = []
+    for ts in tradeseries:
+        ts_ids.append(ts.ts_id)
+
+    result = dhm.delete_tradeseries(ts_ids=ts_ids,
+                                    collection=collection)
 
     return result
 
@@ -724,26 +754,27 @@ def review_backtests(symbol: str = "ES",
         return review
 
 
-def delete_backtests(symbol: str,
-                     field: str,
-                     value,
-                     collection: str = COLL_BACKTESTS,
-                     coll_tradeseries: str = COLL_TRADESERIES,
-                     coll_trades: str = COLL_TRADES,
-                     include_tradeseries: bool = False,
-                     include_trades: bool = False,
-                     ):
+def delete_backtests_by_field(symbol: str,
+                              field: str,
+                              value,
+                              collection: str = COLL_BACKTESTS,
+                              coll_tradeseries: str = COLL_TRADESERIES,
+                              coll_trades: str = COLL_TRADES,
+                              include_tradeseries: bool = False,
+                              include_trades: bool = False,
+                              ):
     """Delete all backtests records in central storage with 'field' matching
     'value'.  Typically used to delete by bt_id field.
     """
     result = {}
-    result["backtests"] = dhm.delete_backtests(symbol=symbol,
-                                               collection=collection,
-                                               field=field,
-                                               value=value,
-                                               )
+    result["backtests"] = dhm.delete_backtests_by_field(
+            symbol=symbol,
+            collection=collection,
+            field=field,
+            value=value,
+            )
     if include_tradeseries:
-        result["tradeseries"] = delete_tradeseries(
+        result["tradeseries"] = delete_tradeseries_by_field(
                 symbol=symbol,
                 field=field,
                 value=value,
@@ -751,6 +782,22 @@ def delete_backtests(symbol: str,
                 coll_trades=coll_trades,
                 include_trades=include_trades,
                 )
+
+    return result
+
+
+def delete_backtests(backtests: list,
+                     collection: str = COLL_BACKTESTS,
+                     ):
+    """Delete one or more Backtest() objects from central storage using
+    bt_id as the identifying field."""
+    # Extract bt_id from Backtest objects
+    bt_ids = []
+    for bt in backtests:
+        bt_ids.append(bt.bt_id)
+
+    result = dhm.delete_backtests(bt_ids=bt_ids,
+                                  collection=collection)
 
     return result
 
@@ -1101,7 +1148,7 @@ def get_symbol_by_ticker(ticker: str):
 
 
 def store_candle(candle):
-    """Write a single dhcharts.Candle() to central storage"""
+    """Write a single Candle() to central storage"""
     log.debug(f"Storing {candle.c_symbol.ticker} "
               f"{candle.c_timeframe} candle at {candle.c_datetime}")
     valid_timeframe(candle.c_timeframe)
@@ -1117,6 +1164,12 @@ def store_candle(candle):
                      c_date=candle.c_date,
                      c_time=candle.c_time,
                      )
+
+
+def store_candles(candles):
+    """Write multiple dhtypes.Candle() objects to central storage"""
+    for candle in candles:
+        store_candle(candle)
 
 
 def get_candles(start_epoch: int,
@@ -1230,10 +1283,15 @@ def review_candles(timeframe: str,
         log.info("Calculating expected candle datetimes for "
                  f"{symbol} {timeframe} between "
                  f"{dt_as_str(start_dt)} and {dt_as_str(end_dt)}")
+        all_events = get_events(start_epoch=start_epoch,
+                                end_epoch=end_epoch,
+                                symbol=symbol,
+                                )
         dt_expected = expected_candle_datetimes(start_dt=start_dt,
                                                 end_dt=end_dt,
                                                 symbol=symbol,
                                                 timeframe=timeframe,
+                                                events=all_events,
                                                 )
         log.info("Finished calculating expected datetimes, starting "
                  "comparison of actual (stored) vs expected candles")
@@ -1371,10 +1429,10 @@ def delete_candles(timeframe: str,
 ##############################################################################
 # Events
 def store_event(event):
-    """Write a single dhcharts.Event() to central storage"""
+    """Write a single Event() to central storage"""
     if not isinstance(event, Event):
         raise TypeError(f"event {type(event)} must be a "
-                        "<class dhcharts.Event> object")
+                        "<class Event> object")
     log.debug(f"Storing event: {str(event)}")
     result = dhm.store_event(start_dt=event.start_dt,
                              end_dt=event.end_dt,

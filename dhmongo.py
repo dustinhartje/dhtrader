@@ -1,7 +1,10 @@
 # Mongo specific functions for storing and retrieving data
 #
-# These functions will be wrapped by dhstore.py functions to allow for
-# changing database layer in the future without major overhaul
+# This module provides low-level MongoDB operations for candles, trades,
+# backtests, indicators, and events. These functions are wrapped by
+# corresponding functions in dhstore.py, which provides a storage
+# abstraction layer to allow migration to a different database without
+# requiring changes to higher-level code.
 #
 # Running this script ad hoc will perform a basic connect, write, read test
 #
@@ -14,7 +17,7 @@ import pymongo
 import logging
 from dotenv import load_dotenv, find_dotenv
 from datetime import datetime as dt
-from dhcommon import (
+from .dhcommon import (
     ProgBar, prompt_yn, valid_timeframe, dt_as_str, dt_from_epoch,
     dt_to_epoch)
 
@@ -322,19 +325,37 @@ def review_trades(symbol: str,
         return None
 
 
-def delete_trades(symbol: str,
-                  field: str,
-                  value,
-                  collection: str,
-                  ):
+def delete_trades_by_field(symbol: str,
+                           field: str,
+                           value,
+                           collection: str,
+                           ):
     """Delete all trade records with 'field' matching 'value'.  Typically
     used to delete by name, ts_id, or bt_id fields.
 
     Example to delete all trade records with name=="DELETEME":
-        delete_trades(symbol="ES", field="name", value="DELETEME")
+        delete_trades_by_field(symbol="ES", field="name",
+                               value="DELETEME")
     """
     c = db[collection]
     result = c.delete_many({field: value})
+
+    return result
+
+
+def delete_trades(trades: list,
+                  collection: str,
+                  ):
+    """Delete one or more trades from mongo using open_dt, ts_id, and
+    symbol as identifying fields."""
+    c = db[collection]
+    result = []
+    for t in trades:
+        r = c.find_one_and_delete({"open_dt": t["open_dt"],
+                                   "ts_id": t["ts_id"],
+                                   "symbol": t["symbol"],
+                                   })
+        result.append(r)
 
     return result
 
@@ -404,16 +425,30 @@ def review_tradeseries(symbol: str,
         return tradeseries
 
 
-def delete_tradeseries(symbol: str,
-                       field: str,
-                       value,
-                       collection: str,
-                       ):
-    """Delete all tradeseries records in mongo with 'field' matching 'value'.
-    Typically used to delete by ts_id, or bt_id fields.
+def delete_tradeseries_by_field(symbol: str,
+                                field: str,
+                                value,
+                                collection: str,
+                                ):
+    """Delete all tradeseries records in mongo with 'field' matching
+    'value'.  Typically used to delete by ts_id, or bt_id fields.
     """
     c = db[collection]
     result = c.delete_many({field: value})
+
+    return result
+
+
+def delete_tradeseries(ts_ids: list,
+                       collection: str,
+                       ):
+    """Delete one or more tradeseries from mongo using ts_id as the
+    identifying field."""
+    c = db[collection]
+    result = []
+    for ts_id in ts_ids:
+        r = c.find_one_and_delete({"ts_id": ts_id})
+        result.append(r)
 
     return result
 
@@ -480,16 +515,30 @@ def review_backtests(symbol: str,
         return None
 
 
-def delete_backtests(symbol: str,
-                     field: str,
-                     value,
-                     collection: str,
-                     ):
+def delete_backtests_by_field(symbol: str,
+                              field: str,
+                              value,
+                              collection: str,
+                              ):
     """Delete all backtests records in mongo with 'field' matching 'value'.
     Typically used to delete by bt_id field.
     """
     c = db[collection]
     result = c.delete_many({field: value})
+
+    return result
+
+
+def delete_backtests(bt_ids: list,
+                     collection: str,
+                     ):
+    """Delete one or more backtests from mongo using bt_id as the
+    identifying field."""
+    c = db[collection]
+    result = []
+    for bt_id in bt_ids:
+        r = c.find_one_and_delete({"bt_id": bt_id})
+        result.append(r)
 
     return result
 
@@ -750,7 +799,7 @@ def store_event(start_dt,
                 start_epoch: int,
                 end_epoch: int,
                 ):
-    """Write a single dhcharts.Event() to mongo"""
+    """Write a single Event() to mongo"""
     event_doc = {"start_dt": dt_as_str(start_dt),
                  "end_dt": dt_as_str(end_dt),
                  "category": category,
