@@ -137,7 +137,6 @@ def clear_storage_by_name(name: str):
     assert len(s_tr) == 0
 
 
-@pytest.mark.storage
 def test_Backtest_create_and_verify_pretty():
     # Check line counts of pretty output, won't change unless class changes
     bt = create_backtest()
@@ -172,6 +171,7 @@ def test_Backtest_load_charts():
     assert bt.end_dt == "2025-01-07 16:59:00"
 
 
+@pytest.mark.slow
 @pytest.mark.storage
 def test_Backtest_restrict_dates():
     test_name = "DELETEME-RESTRICTTest"

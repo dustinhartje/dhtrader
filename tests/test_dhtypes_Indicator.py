@@ -183,6 +183,7 @@ def Indicator_spotcheck_ES_eth_15m_EMA_close_l9_s2(i):
     # TODO Last candle before & after a holiday
 
 
+@pytest.mark.slow
 @pytest.mark.storage
 def test_Indicator_calculated_spotcheck_ES_eth_15m_EMA_close_l9_s2():
     ind_calced = get_indicator(ind_id="ES_eth_15m_EMA_close_l9_s2",
@@ -195,6 +196,7 @@ def test_Indicator_calculated_spotcheck_ES_eth_15m_EMA_close_l9_s2():
     Indicator_spotcheck_ES_eth_15m_EMA_close_l9_s2(ind_calced)
 
 
+@pytest.mark.slow
 @pytest.mark.storage
 def test_Indicator_storage_spotcheck_ES_eth_15m_EMA_close_l9_s2():
     ind_stored = get_indicator(ind_id="ES_eth_15m_EMA_close_l9_s2",
@@ -205,6 +207,7 @@ def test_Indicator_storage_spotcheck_ES_eth_15m_EMA_close_l9_s2():
 
 
 # 15m ETH 20
+@pytest.mark.slow
 def Indicator_spotcheck_ES_eth_15m_EMA_close_l20_s2(i):
     # Sun 12/8/24
     assert i.get_datapoint(dt="2024-12-08 18:00:00").value == 6096.55
@@ -248,6 +251,7 @@ def Indicator_spotcheck_ES_eth_15m_EMA_close_l20_s2(i):
     # TODO Last candle before & after a holiday
 
 
+@pytest.mark.slow
 @pytest.mark.storage
 def test_Indicator_calculated_spotcheck_ES_eth_15m_EMA_close_l20_s2():
     ind_calced = get_indicator(ind_id="ES_eth_15m_EMA_close_l20_s2",
@@ -260,6 +264,7 @@ def test_Indicator_calculated_spotcheck_ES_eth_15m_EMA_close_l20_s2():
     Indicator_spotcheck_ES_eth_15m_EMA_close_l20_s2(ind_calced)
 
 
+@pytest.mark.slow
 @pytest.mark.storage
 def test_Indicator_storage_spotcheck_ES_eth_15m_EMA_close_l20_s2():
     ind_stored = get_indicator(ind_id="ES_eth_15m_EMA_close_l20_s2",
@@ -270,6 +275,7 @@ def test_Indicator_storage_spotcheck_ES_eth_15m_EMA_close_l20_s2():
 
 
 # e1h ETH 9
+@pytest.mark.slow
 def Indicator_spotcheck_ES_eth_e1h_EMA_close_l9_s2(i):
     # Sun-Sat - first & last candles, rando in the middle, rando in closed
     # Sun 11/10/24
@@ -336,6 +342,7 @@ def test_Indicator_storage_spotcheck_ES_eth_e1h_EMA_close_l9_s2():
 
 
 # e1h ETH 20
+@pytest.mark.slow
 def Indicator_spotcheck_ES_eth_e1h_EMA_close_l20_s2(i):
     # Sun-Sat - first & last candles, rando in the middle, rando in closed
     # Sun 10/13/24
