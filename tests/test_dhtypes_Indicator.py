@@ -122,6 +122,7 @@ def Indicator_spotcheck_ES_eth_5m_EMA_close_l20_s2(i):
 def hide_Indicator_calculated_spotcheck_ES_eth_5m_EMA_close_l20_s2():
     ind_calced = get_indicator(ind_id="ES_eth_5m_EMA_close_l20_s2",
                                autoload_datapoints=False,
+                               autoload_chart=True,
                                )
     ind_calced.start_dt = "2025-01-01 00:00:00"
     ind_calced.end_dt = "2025-01-02 00:00:00"
@@ -133,6 +134,7 @@ def hide_Indicator_calculated_spotcheck_ES_eth_5m_EMA_close_l20_s2():
 def hide_Indicator_storage_spotcheck_ES_eth_5m_EMA_close_l20_s2():
     ind_stored = get_indicator(ind_id="ES_eth_5m_EMA_close_l20_s2",
                                autoload_datapoints=False,
+                               autoload_chart=True,
                                )
     ind_stored.load_datapoints()
     Indicator_spotcheck_ES_eth_5m_EMA_close_l20_s2(ind_stored)
@@ -188,6 +190,7 @@ def Indicator_spotcheck_ES_eth_15m_EMA_close_l9_s2(i):
 def test_Indicator_calculated_spotcheck_ES_eth_15m_EMA_close_l9_s2():
     ind_calced = get_indicator(ind_id="ES_eth_15m_EMA_close_l9_s2",
                                autoload_datapoints=False,
+                               autoload_chart=True,
                                )
     ind_calced.start_dt = "2025-01-28 00:00:00"
     ind_calced.end_dt = "2025-02-16 00:00:00"
@@ -201,6 +204,7 @@ def test_Indicator_calculated_spotcheck_ES_eth_15m_EMA_close_l9_s2():
 def test_Indicator_storage_spotcheck_ES_eth_15m_EMA_close_l9_s2():
     ind_stored = get_indicator(ind_id="ES_eth_15m_EMA_close_l9_s2",
                                autoload_datapoints=False,
+                               autoload_chart=True,
                                )
     ind_stored.load_datapoints()
     Indicator_spotcheck_ES_eth_15m_EMA_close_l9_s2(ind_stored)
@@ -256,6 +260,7 @@ def Indicator_spotcheck_ES_eth_15m_EMA_close_l20_s2(i):
 def test_Indicator_calculated_spotcheck_ES_eth_15m_EMA_close_l20_s2():
     ind_calced = get_indicator(ind_id="ES_eth_15m_EMA_close_l20_s2",
                                autoload_datapoints=False,
+                               autoload_chart=True,
                                )
     ind_calced.start_dt = "2024-11-27 00:00:00"
     ind_calced.end_dt = "2024-12-15 00:00:00"
@@ -269,6 +274,7 @@ def test_Indicator_calculated_spotcheck_ES_eth_15m_EMA_close_l20_s2():
 def test_Indicator_storage_spotcheck_ES_eth_15m_EMA_close_l20_s2():
     ind_stored = get_indicator(ind_id="ES_eth_15m_EMA_close_l20_s2",
                                autoload_datapoints=False,
+                               autoload_chart=True,
                                )
     ind_stored.load_datapoints()
     Indicator_spotcheck_ES_eth_15m_EMA_close_l20_s2(ind_stored)
@@ -324,6 +330,7 @@ def Indicator_spotcheck_ES_eth_e1h_EMA_close_l9_s2(i):
 def test_Indicator_calculated_spotcheck_ES_eth_e1h_EMA_close_l9_s2():
     ind_calced = get_indicator(ind_id="ES_eth_e1h_EMA_close_l9_s2",
                                autoload_datapoints=False,
+                               autoload_chart=True,
                                )
     ind_calced.start_dt = "2024-10-28 00:00:00"
     ind_calced.end_dt = "2024-11-17 00:00:00"
@@ -336,6 +343,7 @@ def test_Indicator_calculated_spotcheck_ES_eth_e1h_EMA_close_l9_s2():
 def test_Indicator_storage_spotcheck_ES_eth_e1h_EMA_close_l9_s2():
     ind_stored = get_indicator(ind_id="ES_eth_e1h_EMA_close_l9_s2",
                                autoload_datapoints=False,
+                               autoload_chart=True,
                                )
     ind_stored.load_datapoints()
     Indicator_spotcheck_ES_eth_e1h_EMA_close_l9_s2(ind_stored)
@@ -397,6 +405,7 @@ def Indicator_spotcheck_ES_eth_e1h_EMA_close_l20_s2(i):
 def test_Indicator_calculated_spotcheck_ES_eth_e1h_EMA_close_l20_s2():
     ind_calced = get_indicator(ind_id="ES_eth_e1h_EMA_close_l20_s2",
                                autoload_datapoints=False,
+                               autoload_chart=True,
                                )
     ind_calced.start_dt = "2024-10-01 00:00:00"
     ind_calced.end_dt = "2024-10-20 00:00:00"
@@ -409,6 +418,7 @@ def test_Indicator_calculated_spotcheck_ES_eth_e1h_EMA_close_l20_s2():
 def test_Indicator_storage_spotcheck_ES_eth_e1h_EMA_close_l20_s2():
     ind_stored = get_indicator(ind_id="ES_eth_e1h_EMA_close_l20_s2",
                                autoload_datapoints=False,
+                               autoload_chart=True,
                                )
     ind_stored.load_datapoints()
     Indicator_spotcheck_ES_eth_e1h_EMA_close_l20_s2(ind_stored)
@@ -420,6 +430,7 @@ def test_Indicator_storage_spotcheck_ES_eth_e1h_EMA_close_l20_s2():
 def hide_Indicator_spotcheck_ES_rth_5m_EMA_close_l9_s2():
     ind = get_indicator(ind_id="ES_rth_5m_EMA_close_l9_s2",
                         autoload_datapoints=True,
+                        autoload_chart=True,
                         )
     print(ind)
     # print("\n")
@@ -435,6 +446,7 @@ def hide_Indicator_spotcheck_ES_rth_5m_EMA_close_l9_s2():
 def hide_Indicator_spotcheck_ES_rth_5m_EMA_close_l20_s2():
     ind = get_indicator(ind_id="ES_rth_5m_EMA_close_l20_s2",
                         autoload_datapoints=True,
+                        autoload_chart=True,
                         )
     print(ind)
     # print("\n")
@@ -512,6 +524,7 @@ def Indicator_spotcheck_ES_rth_15m_EMA_close_l9_s2(i):
 def hide_Indicator_calculated_spotcheck_ES_rth_15m_EMA_close_l9_s2():
     ind_calced = get_indicator(ind_id="ES_rth_15m_EMA_close_l9_s2",
                                autoload_datapoints=False,
+                               autoload_chart=True,
                                )
     ind_calced.start_dt = "2024-07-08 00:00:00"
     ind_calced.end_dt = "2024-07-21 00:00:00"
@@ -523,6 +536,7 @@ def hide_Indicator_calculated_spotcheck_ES_rth_15m_EMA_close_l9_s2():
 def hide_Indicator_storage_spotcheck_ES_rth_15m_EMA_close_l9_s2():
     ind_stored = get_indicator(ind_id="ES_rth_15m_EMA_close_l9_s2",
                                autoload_datapoints=False,
+                               autoload_chart=True,
                                )
     ind_stored.load_datapoints()
     Indicator_spotcheck_ES_rth_15m_EMA_close_l9_s2(ind_stored)
@@ -658,7 +672,9 @@ def hide_Indicator_storage_and_retrieval():
     # prior test run failed early
     delete_indicator(itest.ind_id)
     # Then attempting retrieval
-    retrieve = get_indicator(ind_id=itest.ind_id)
+    retrieve = get_indicator(ind_id=itest.ind_id,
+                             autoload_datapoints=False,
+                             autoload_chart=False)
     assert retrieve is None
 
     # Store it
@@ -671,7 +687,8 @@ def hide_Indicator_storage_and_retrieval():
     # Confirm we can retrieve it from storage now
     # Dates must be set as they don't get stored
     retrieve = get_indicator(ind_id=itest.ind_id,
-                             autoload_datapoints=True)
+                             autoload_datapoints=True,
+                             autoload_chart=True)
     retrieve.start_dt = "2025-01-08 00:00:00"
     retrieve.end_dt = "2025-01-12 20:00:00"
     retrieve.load_underlying_chart()
@@ -699,7 +716,9 @@ def hide_Indicator_storage_and_retrieval():
     # Removing test object from storage
     delete_indicator(itest.ind_id)
     # And confirm it's gone
-    retrieve = get_indicator(ind_id=itest.ind_id)
+    retrieve = get_indicator(ind_id=itest.ind_id,
+                             autoload_datapoints=False,
+                             autoload_chart=False)
     assert retrieve is None
     dps = get_indicator_datapoints(ind_id=itest.ind_id)
     assert len(dps) == 0

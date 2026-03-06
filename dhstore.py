@@ -905,12 +905,12 @@ def review_indicators(meta_collection: str = COLL_IND_META,
 
 def get_indicator(ind_id: str,
                   meta_collection: str = COLL_IND_META,
-                  autoload_chart: bool = True,
-                  autoload_datapoints: bool = True,
+                  autoload_chart: bool = False,
+                  autoload_datapoints: bool = False,
                   ):
     """Returns an indicator based on ind_id (which should be unique) and
-    optionally (default=True) autoloads it's datapoints for the given range
-    of earliest_dt to latest_dt
+    optionally autoloads it's chart and datapoints for the given range
+    of earliest_dt to latest_dt. Both default to False for performance.
     """
     try:
         i = dhm.get_indicator(ind_id=ind_id,
