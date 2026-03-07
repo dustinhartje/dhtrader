@@ -29,7 +29,7 @@ from datetime import timedelta
 import sys
 import json
 from statistics import fmean
-from copy import copy, deepcopy
+from copy import copy
 import logging
 from math import ceil, floor
 import numpy as np
@@ -406,16 +406,28 @@ class Symbol():
         Converts datetime and other non-serializable types to
         strings for portability.
         """
-        w = deepcopy(self.__dict__)
-        w["eth_open_time"] = str(w["eth_open_time"])
-        w["eth_close_time"] = str(w["eth_close_time"])
-        w["rth_open_time"] = str(w["rth_open_time"])
-        w["rth_close_time"] = str(w["rth_close_time"])
-        w["eth_week_open"]["time"] = str(w["eth_week_open"]["time"])
-        w["eth_week_close"]["time"] = str(w["eth_week_close"]["time"])
-        w["rth_week_open"]["time"] = str(w["rth_week_open"]["time"])
-        w["rth_week_close"]["time"] = str(w["rth_week_close"]["time"])
-        w.pop("_closed_hours_cache", None)
+        w = {k: v for k, v in self.__dict__.items()
+             if k != "_closed_hours_cache"}
+        w["eth_open_time"] = str(self.eth_open_time)
+        w["eth_close_time"] = str(self.eth_close_time)
+        w["rth_open_time"] = str(self.rth_open_time)
+        w["rth_close_time"] = str(self.rth_close_time)
+        w["eth_week_open"] = {
+            **self.eth_week_open,
+            "time": str(self.eth_week_open["time"]),
+        }
+        w["eth_week_close"] = {
+            **self.eth_week_close,
+            "time": str(self.eth_week_close["time"]),
+        }
+        w["rth_week_open"] = {
+            **self.rth_week_open,
+            "time": str(self.rth_week_open["time"]),
+        }
+        w["rth_week_close"] = {
+            **self.rth_week_close,
+            "time": str(self.rth_week_close["time"]),
+        }
         return json.dumps(w)
 
     def to_clean_dict(self):
@@ -873,7 +885,7 @@ class Candle():
         Converts datetime and other non-serializable types to
         strings for portability.
         """
-        working = deepcopy(self.__dict__)
+        working = dict(self.__dict__)
         working["c_symbol"] = working["c_symbol"].ticker
 
         return json.dumps(working)
@@ -994,7 +1006,7 @@ class Chart():
         Converts datetime and other non-serializable types to
         strings for portability.
         """
-        working = deepcopy(self.__dict__)
+        working = dict(self.__dict__)
         if suppress_candles:
             num = len(self.c_candles)
             clean_cans = [f"{num} Candles suppressed for output sanity"]
@@ -1171,7 +1183,7 @@ class Event():
         Converts datetime and other non-serializable types to
         strings for portability.
         """
-        working = deepcopy(self.__dict__)
+        working = dict(self.__dict__)
         working["symbol"] = working["symbol"].ticker
 
         return json.dumps(working)
@@ -1586,7 +1598,7 @@ class Indicator():
         Converts datetime and other non-serializable types to
         strings for portability.
         """
-        working = deepcopy(self.__dict__)
+        working = dict(self.__dict__)
         working["candle_chart"] = working["candle_chart"].to_clean_dict(
                 suppress_candles=suppress_chart_candles,
                 )
@@ -2120,7 +2132,7 @@ class Trade():
         if tags is None:
             self.tags = []
         else:
-            self.tags = deepcopy(tags)
+            self.tags = list(tags)
 
         # Calculated attributes
         if self.direction == "long":
@@ -2284,7 +2296,7 @@ class Trade():
         """Return a JSON dict of this Trade with datetimes as strings.
         """
         # Make sure dates are strings not datetimes
-        working = deepcopy(self.__dict__)
+        working = dict(self.__dict__)
         if self.open_dt is not None:
             working["open_dt"] = dt_as_str(self.open_dt)
         if self.close_dt is not None:
@@ -2642,7 +2654,7 @@ class TradeSeries():
         if tags is None:
             self.tags = []
         else:
-            self.tags = deepcopy(tags)
+            self.tags = list(tags)
 
     def __eq__(self, other):
         """Return True if all TradeSeries attributes are equal."""
@@ -2669,7 +2681,7 @@ class TradeSeries():
         Converts datetime and other non-serializable types to
         strings for portability.
         """
-        working = deepcopy(self.__dict__)
+        working = dict(self.__dict__)
         clean_trades = []
         if suppress_trades:
             num = len(self.trades)
@@ -3158,7 +3170,7 @@ class Backtest():
         else:
             self.bt_id = bt_id
         self.class_name = class_name
-        self.parameters = deepcopy(parameters)
+        self.parameters = dict(parameters)
         self.chart_tf = chart_tf
         self.chart_1m = chart_1m
         if tradeseries is None:
@@ -3222,7 +3234,7 @@ class Backtest():
         Converts datetime and other non-serializable types to
         strings for portability.
         """
-        working = deepcopy(self.__dict__)
+        working = dict(self.__dict__)
         working["symbol"] = working["symbol"].ticker
         if suppress_charts:
             working["chart_tf"] = "Chart suppressed for output sanity"
