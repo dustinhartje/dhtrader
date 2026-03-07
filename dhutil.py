@@ -11,7 +11,7 @@ import sys
 from tabulate import tabulate
 from .dhtypes import Candle
 from .dhstore import (
-    get_symbol_by_ticker, get_candles, review_candles)
+    get_symbol_by_ticker, get_candles, review_candles, store_candle)
 from .dhcommon import (
     dt_as_dt, dt_as_str, dt_to_epoch, timeframe_delta)
 
@@ -244,7 +244,7 @@ def remediate_candle_gaps(timeframe: str = "1m",
                         print(f"DRY RUN: I would have fixed with: {z}")
                     else:
                         print(f"Storing zero volume fix candle: {z}")
-                        z.store()
+                        store_candle(z)
                 else:
                     print(f"Error creating zero volume candle, skipped {c_dt}")
                     errored.append(c)
@@ -284,7 +284,7 @@ def remediate_candle_gaps(timeframe: str = "1m",
                             fixed_unclear.append(c)
                         elif fix_unclear:
                             print(f"Storing zero volume fix candle: {z}")
-                            z.store()
+                            store_candle(z)
                             fixed_unclear.append(c)
                         else:
                             print("Skipping unclear candles for this run")
@@ -367,7 +367,7 @@ def store_candles_from_csv(filepath: str,
                                     )
     print(f"{len(candles)} candles found, storing them")
     for c in candles:
-        c.store()
+        store_candle(c)
     print("Done storing, attempting to retrieve them for validation.")
     new_candles = get_candles(start_epoch=dt_to_epoch(start_dt),
                               end_epoch=dt_to_epoch(end_dt),

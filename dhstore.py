@@ -1132,16 +1132,20 @@ def store_indicator(indicator,
                                 widgets=widgets,
                                 max_value=bar_total).start()
                         bar_started = True
-                    s = d.store()
+                    s = store_indicator_datapoints([d],
+                                                   collection=dp_collection,
+                                                   skip_dupes=False)
                 else:
-                    s = {"skipped": [d], "stored": [], "elapsed": None}
+                    s = {"skipped": [d.to_clean_dict()],
+                         "stored": [],
+                         "elapsed": None}
                     bar_total -= 1
 
             else:
                 # Slower mode that verifies each datapoint vs those stored
                 # and only writes if it's missing or different
                 # If we found a stored datapoint with the same epoch, pass it
-                # to it's .store() method to compare and store on diffs
+                # to the storage function to compare and store on diffs
                 if show_progress and not bar_started:
                     bar_label = (f"%(value)d of {bar_total} stored in "
                                  "%(elapsed)s ")
@@ -1155,10 +1159,21 @@ def store_indicator(indicator,
                             max_value=bar_total).start()
                     bar_started = True
                 if d.epoch in checkers.keys():
-                    s = d.store(checker=d.epoch)
+                    # Compare with stored datapoint
+                    if d == checkers[d.epoch]:
+                        s = {"skipped": [d.to_clean_dict()],
+                             "stored": [],
+                             "elapsed": None}
+                    else:
+                        s = store_indicator_datapoints(
+                            [d],
+                            collection=dp_collection,
+                            skip_dupes=False)
                 # Otherwise just store it, overwriting any existing
                 else:
-                    s = d.store()
+                    s = store_indicator_datapoints([d],
+                                                   collection=dp_collection,
+                                                   skip_dupes=False)
             result_dps.append(s)
             dps_skipped += len(s["skipped"])
             dps_stored += len(s["stored"])
