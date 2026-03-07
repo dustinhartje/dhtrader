@@ -52,6 +52,7 @@ from .dhutil import (
 
 try:
     from .dhstore import (
+        clear_events,
         delete_backtests,
         delete_backtests_by_field,
         delete_candles,
@@ -94,6 +95,7 @@ __all__ = [
     'Candle',
     'Chart',
     'check_tf_th_compatibility',
+    'clear_events',
     'compare_candles_vs_csv',
     'Day',
     'delete_backtests',
