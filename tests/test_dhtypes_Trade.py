@@ -1,3 +1,4 @@
+"""Tests for Trade creation, updates, storage, and calculation."""
 from copy import copy
 import datetime
 import json
@@ -75,9 +76,11 @@ def create_trade(open_dt="2025-01-02 12:00:00",
 
 
 def add_1m_candle(trade, dt, c_open, c_high, c_low, c_close):
-    """Creates a Candle representing a 1 minute candle occurring
-    during an open trade.  This is used to test against actual observed live
-    trade results, simulating each significant candle in the trade."""
+    """Create a 1-minute Candle occurring during an open trade.
+
+    Used to test against actual observed live trade results,
+    simulating each significant candle in the trade.
+    """
     trade.candle_update(Candle(c_datetime=dt,
                                c_timeframe="1m",
                                c_open=c_open,
@@ -90,13 +93,14 @@ def add_1m_candle(trade, dt, c_open, c_high, c_low, c_close):
 
 
 def test_Trade_confirm_observed_results():
-    """Validate Trade calculations against live Apex account results
-    (see Apex_Live_Trade_Observations.md). Uses real candle data for
-    most assertions; some values assumed by best understanding
-    (balance_low, balance_high, drawdown_low, drawdown_high). Covers
-    edge case combinations. Trades mostly closed manually, so
-    drawdown/balance limits may differ from target-based scenarios."""
+    """Validate Trade calculations against live Apex account results.
 
+    See Apex_Live_Trade_Observations.md for source data.  Uses real
+    candle data for most assertions; some values assumed by best
+    understanding (balance_low, balance_high, drawdown_low, drawdown_high).
+    Covers edge case combinations. Trades mostly closed manually, so
+    drawdown/balance limits may differ from target-based scenarios.
+    """
     # Long trade closed in profit after some pullback using 2 contracts
     # Also confirms multiple contracts calculate correctly for long trades
     t = create_trade(open_dt="2025-03-09 23:12:52",
@@ -778,6 +782,7 @@ def test_Trade_creation_short_close_at_loss():
 
 def test_Trade_candle_update_returns_correct_values():
     """Verify candle_update returns correct closed status for various
+
     scenarios.
     """
     # Should not return closed until some target is met (500 ticks default)
@@ -1111,7 +1116,8 @@ def test_Trade_store_retrieve_delete():
     """Verify Trade storage, retrieval, and deletion.
 
     Storage Usage: store_trades, get_trades_by_field,
-    delete_trades_by_field."""
+    delete_trades_by_field.
+    """
     # First make sure there are no DELETEME trades in storage currently
     delete_trades_by_field(symbol="ES", field="name",
                            value="DELETEME-TEST")
@@ -1167,6 +1173,7 @@ def test_delete_trades():
 @pytest.mark.historical
 def test_Trade_historical():
     """Test Trade.balance_impact and drawdown_impact against historical
+
     data.
     """
     # SET1 SHORT TRADES NO REFINING ######################################

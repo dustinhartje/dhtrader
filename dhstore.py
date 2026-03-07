@@ -46,7 +46,9 @@ log.addHandler(logging.NullHandler())
 def start_progbar(show_progress: bool, total: int,
                   desc: str) -> ProgBar:
     """Start a progress bar if show_progress is True and total > 0.
-    Returns ProgBar object or None."""
+
+    Returns ProgBar object or None.
+    """
     if show_progress and total > 0:
         return ProgBar(total=total, desc=desc)
     return None
@@ -75,7 +77,11 @@ def list_mongo_collections():
 
 def drop_mongo_collection(collection: str):
     """Used for brute force cleanup of storage, it will wipe all data from the
-    named collection in mongo.  WIELD THIS POWER CAREFULLY!!!"""
+
+    named collection in mongo.
+
+    WIELD THIS POWER CAREFULLY!!!
+    """
     return dhm.drop_collection(collection=collection)
 
 
@@ -84,7 +90,9 @@ def get_all_records_by_collection(collection: str,
                                   show_progress: bool = False,
                                   ):
     """Return <limit> (default 0 == all) records from a given collection
-    without attempting to reconstruct them into dhtrader classes."""
+
+    without attempting to reconstruct them into dhtrader classes.
+    """
     return dhm.get_all_records_by_collection(collection=collection,
                                              limit=limit,
                                              show_progress=show_progress)
@@ -93,8 +101,11 @@ def get_all_records_by_collection(collection: str,
 ##############################################################################
 # Trades
 def reconstruct_trade(t):
-    """Takes a dictionary and builds a Trade() object from it.  Primarily used
-    by other functions to convert results retrieved from storage."""
+    """Takes a dictionary and builds a Trade() object from it.
+
+    Primarily used by other functions to convert results retrieved from
+    storage.
+    """
     return Trade(open_dt=t["open_dt"],
                  direction=t["direction"],
                  timeframe=t["timeframe"],
@@ -149,7 +160,9 @@ def get_trades_by_field(field: str,
                         show_progress: bool = False,
                         ):
     """Returns Trade() objects matching the field=value provided.
-    Default limit=0 returns all objects, or set to return only top X. """
+
+    Default limit=0 returns all objects, or set to return only top X.
+    """
     # Retrieve trades from storage
     log.info(f"Retrieving trades by {field}={value}, "
              f"limit={limit}")
@@ -179,8 +192,7 @@ def get_trades_by_field(field: str,
 def store_trades(trades: list,
                  collection: str = COLL_TRADES,
                  ):
-    """Store one or more Trade() objects in central storage"""
-
+    """Store one or more Trade() objects in central storage."""
     # Convert Trade objects to dictionaries for storage
     log.info(f"Preparing {len(trades)} trades to store by converting to dicts")
     working_trades = []
@@ -210,16 +222,19 @@ def review_trades(symbol: str = "ES",
                   pretty: bool = False,
                   ):
     """Provides aggregate summary data about trades in central storage,
-    optionally filtering by bt_id and/or ts_id.  Earliest and latest dates
-    are returned as strings and include_epochs can optionally also provide them
-    as epochs.
 
-    multi_ok should be a list of strings that can appear in a Trade's ts_id,
-    typically all or part of a Backtest's bt_id.  A trade that matches any
-    string in this list will not be flagged for spanning multiple days.
+    optionally filtering by bt_id and/or ts_id.  Earliest and latest dates are
+    returned as strings and include_epochs can optionally also provide them as
+    epochs.
 
-    pretty=True returns in a print friendly, multiline, indended
-    string format."""
+    multi_ok should be a list of strings that can appear in a Trade's
+    ts_id, typically all or part of a Backtest's bt_id.  A trade that
+    matches any string in this list will not be flagged for spanning
+    multiple days.
+
+    pretty=True returns in a print friendly, multiline, indended string
+    format.
+    """
     if multi_ok is None:
         multi_ok = []
     review = dhm.review_trades(symbol=symbol,
@@ -403,12 +418,13 @@ def delete_trades_by_field(symbol: str,
                            value,
                            collection: str = COLL_TRADES,
                            ):
-    """Delete all trade records with 'field' matching 'value'.  Typically
-    used to delete by name, ts_id, or bt_id fields.
+    """Delete all trade records with 'field' matching 'value'.  Typically used
+
+    to delete by name, ts_id, or bt_id fields.
 
     Example to delete all trade records with name=="DELETEME":
-        delete_trades_by_field(symbol="ES", field="name",
-                               value="DELETEME")
+    delete_trades_by_field(symbol="ES", field="name",
+    value="DELETEME")
     """
     result = dhm.delete_trades_by_field(symbol=symbol,
                                         collection=collection,
@@ -422,8 +438,10 @@ def delete_trades_by_field(symbol: str,
 def delete_trades(trades: list,
                   collection: str = COLL_TRADES,
                   ):
-    """Delete one or more Trade() objects from central storage using
-    open_dt, ts_id, and symbol.ticker as the identifying fields."""
+    """Delete one or more Trade() objects from central storage using open_dt,
+
+    ts_id, and symbol.ticker as the identifying fields.
+    """
     # Extract identifying fields from Trade objects
     query_dicts = []
     for t in trades:
@@ -442,8 +460,11 @@ def delete_trades(trades: list,
 ##############################################################################
 # TradeSeries
 def reconstruct_tradeseries(ts):
-    """Takes a dictionary and builds a Trade() object from it.  Primarily used
-    by other functions to convert results retrieved from storage."""
+    """Takes a dictionary and builds a Trade() object from it.
+
+    Primarily used by other functions to convert results retrieved from
+    storage.
+    """
     return TradeSeries(start_dt=ts["start_dt"],
                        end_dt=ts["end_dt"],
                        timeframe=ts["timeframe"],
@@ -462,8 +483,7 @@ def get_all_tradeseries(collection: str = COLL_TRADESERIES,
                         limit=0,
                         show_progress: bool = False,
                         ):
-    """Get <limit> (default 0 == all) stored tradeseries returned as a
-    list."""
+    """Get <limit> (default 0 == all) stored tradeseries returned as a list."""
     result = []
     r = dhm.get_all_records_by_collection(collection=collection,
                                           limit=limit,
@@ -527,7 +547,7 @@ def store_tradeseries(series: list,
                       collection: str = COLL_TRADESERIES,
                       include_trades: bool = False,
                       ):
-    """Store a list of TradeSeries() objects in central storage
+    """Store a list of TradeSeries() objects in central storage.
 
     Args:
         series: List of TradeSeries objects to store
@@ -573,9 +593,13 @@ def review_tradeseries(symbol: str = "ES",
                        check_integrity: bool = False,
                        ):
     """Provides aggregate summary data about tradeseries in central storage,
-    optionally filtering by bt_id.  Earliest start_dt and latest end_dt are
-    returned as strings.  pretty=True returns in a print friendly, multiline,
-    indented string format."""
+
+    optionally filtering by bt_id.
+
+    Earliest start_dt and latest end_dt are returned as strings.
+    pretty=True returns in a print friendly, multiline, indented string
+    format.
+    """
     if check_integrity:
         if bt_id is None:
             print("Fetching all TradeSeries from storage")
@@ -671,8 +695,11 @@ def delete_tradeseries_by_field(symbol: str,
                                 coll_trades=COLL_TRADES,
                                 include_trades: bool = False,
                                 ):
-    """Delete all tradeseries records in central storage with 'field'
-    matching 'value'.  Typically used to delete by ts_id, or bt_id fields.
+    """Delete all tradeseries records in central storage with 'field' matching
+
+    'value'.
+
+    Typically used to delete by ts_id, or bt_id fields.
     """
     result = {}
     result["tradeseries"] = dhm.delete_tradeseries_by_field(
@@ -695,7 +722,9 @@ def delete_tradeseries(tradeseries: list,
                        collection: str = COLL_TRADESERIES,
                        ):
     """Delete one or more TradeSeries() objects from central storage using
-    ts_id as the identifying field."""
+
+    ts_id as the identifying field.
+    """
     # Extract ts_id from TradeSeries objects
     ts_ids = []
     for ts in tradeseries:
@@ -714,9 +743,13 @@ def get_all_backtests(collection: str = COLL_BACKTESTS,
                       show_progress: bool = False,
                       ):
     """Get <limit> (default 0 == all) stored backtests returned as a list of
-    dicts.  Because dhtrader.Backtest() is meant to be subclassed we don't
-    return Backtest() objects here.  Subclass implementations can warp this
-    function to convert dicts into their subclass object types as needed."""
+
+    dicts.
+
+    Because dhtrader.Backtest() is meant to be subclassed we don't return
+    Backtest() objects here.  Subclass implementations can warp this
+    function to convert dicts into their subclass object types as needed.
+    """
     return dhm.get_all_records_by_collection(collection=collection,
                                              limit=limit,
                                              show_progress=show_progress)
@@ -729,10 +762,14 @@ def get_backtests_by_field(field: str,
                            show_progress: bool = False,
                            ):
     """Returns a list of Backtest() objects (as dictionaries), matching the
-    field=value provided.  Because dhtrader.Backtest() is meant to be
-    subclassed we don't return Backtest() objects here.  Subclass
-    implementations can warp this function to convert dicts into their
-    subclass specific object types as needed."""
+
+    field=value provided.
+
+    Because dhtrader.Backtest() is meant to be subclassed we don't return
+    Backtest() objects here.  Subclass implementations can warp this
+    function to convert dicts into their subclass specific object types as
+    needed.
+    """
     result = dhm.get_backtests_by_field(field=field,
                                         value=value,
                                         collection=collection,
@@ -748,7 +785,7 @@ def store_backtests(backtests: list,
                     include_tradeseries: bool = False,
                     include_trades: bool = False,
                     ):
-    """Store one or more Backtest() objects in central storage
+    """Store one or more Backtest() objects in central storage.
 
     Args:
         backtests: List of Backtest objects to store
@@ -808,7 +845,7 @@ def review_backtests(symbol: str = "ES",
                      include_trades: bool = False,
                      pretty: bool = False,
                      ):
-    """Provides aggregate summary data about backtests in central storage"""
+    """Provides aggregate summary data about backtests in central storage."""
     review = dhm.review_backtests(symbol=symbol,
                                   collection=collection,
                                   )
@@ -837,7 +874,10 @@ def delete_backtests_by_field(symbol: str,
                               include_trades: bool = False,
                               ):
     """Delete all backtests records in central storage with 'field' matching
-    'value'.  Typically used to delete by bt_id field.
+
+    'value'.
+
+    Typically used to delete by bt_id field.
     """
     result = {}
     result["backtests"] = dhm.delete_backtests_by_field(
@@ -862,8 +902,10 @@ def delete_backtests_by_field(symbol: str,
 def delete_backtests(backtests: list,
                      collection: str = COLL_BACKTESTS,
                      ):
-    """Delete one or more Backtest() objects from central storage using
-    bt_id as the identifying field."""
+    """Delete one or more Backtest() objects from central storage using bt_id
+
+    as the identifying field.
+    """
     # Extract bt_id from Backtest objects
     bt_ids = []
     for bt in backtests:
@@ -878,14 +920,14 @@ def delete_backtests(backtests: list,
 ##############################################################################
 # Indicators
 def list_indicators(meta_collection: str = COLL_IND_META):
-    """Return a simple list of indicators in storage"""
+    """Return a simple list of indicators in storage."""
     result = dhm.list_indicators(meta_collection=meta_collection)
 
     return result
 
 
 def list_indicators_names(meta_collection: str = COLL_IND_META):
-    """Return a simple list of indicators (ind_id only) in storage"""
+    """Return a simple list of indicators (ind_id only) in storage."""
     indicators = dhm.list_indicators(meta_collection=meta_collection)
     result = []
     for i in indicators:
@@ -896,7 +938,7 @@ def list_indicators_names(meta_collection: str = COLL_IND_META):
 
 def review_indicators(meta_collection: str = COLL_IND_META,
                       dp_collection: str = COLL_IND_DPS):
-    """Return a more detailed overview of indicators in storage"""
+    """Return a more detailed overview of indicators in storage."""
     result = dhm.review_indicators(meta_collection=meta_collection,
                                    dp_collection=dp_collection,
                                    )
@@ -910,8 +952,11 @@ def get_indicator(ind_id: str,
                   autoload_datapoints: bool = False,
                   ):
     """Returns an indicator based on ind_id (which should be unique) and
-    optionally autoloads it's chart and datapoints for the given range
-    of earliest_dt to latest_dt. Both default to False for performance.
+
+    optionally autoloads it's chart and datapoints for the given range of
+    earliest_dt to latest_dt.
+
+    Both default to False for performance.
     """
     try:
         i = dhm.get_indicator(ind_id=ind_id,
@@ -962,8 +1007,10 @@ def get_indicator_datapoints(ind_id: str,
                              latest_dt: str = None,
                              show_progress: bool = False,
                              ):
-    """Returns a list of IndicatorDatapoint() objects for the given
-    timeframe and ind_id"""
+    """Returns a list of IndicatorDatapoint() objects for the given timeframe
+
+    and ind_id.
+    """
     # Retrieve datapoints from storage
     msg = f"Retrieving datapoints for ind_id={ind_id}"
     if earliest_dt or latest_dt:
@@ -1002,7 +1049,7 @@ def store_indicator_datapoints(datapoints: list,
                                collection: str = COLL_IND_DPS,
                                skip_dupes: bool = True,
                                ):
-    """Store one or more IndicatorDatapoint() objects in central storage"""
+    """Store one or more IndicatorDatapoint() objects in central storage."""
     log.info(f"Processing {len(datapoints)} datapoints with "
              f"skip_dupes={skip_dupes}")
     store_dps = []
@@ -1055,8 +1102,10 @@ def store_indicator(indicator,
                     fast_dps_check: bool = False,
                     show_progress: bool = False,
                     ):
-    """Store indicator meta and datapoints in central storage.  Does not
-    overwrite existing datapoints unless overwrite_dp is True"""
+    """Store indicator meta and datapoints in central storage.
+
+    Does not overwrite existing datapoints unless overwrite_dp is True
+    """
     op_timer = OperationTimer(name="Indicator Storage Job")
     # First store/replace the indicator meta doc itself
     i = indicator.to_clean_dict()
@@ -1200,7 +1249,9 @@ def delete_indicator(ind_id: str,
                      dp_collection: str = COLL_IND_DPS,
                      ):
     """Remove a single indicator and all of it's datapoints from central
-    storage based on it's ind_id attribute"""
+
+    storage based on it's ind_id attribute.
+    """
     return dhm.delete_indicator(ind_id=ind_id,
                                 meta_collection=meta_collection,
                                 dp_collection=dp_collection,
@@ -1211,14 +1262,16 @@ def delete_indicator(ind_id: str,
 # Symbols
 
 def get_symbol_by_ticker(ticker: str):
-    """Temp function to help other objects get symbols by name.  This should
-    be replaced by proper storage and retrieval functions eventually but since
-    I don't forsee working with any symbol other than ES for the forseeable
+    """Temp function to help other objects get symbols by name.  This should be
+
+    replaced by proper storage and retrieval functions eventually but since I
+    don't forsee working with any symbol other than ES for the forseeable
     future I'm deprioritizing that work.
 
     Caches Symbol instances for performance - reusing the same Symbol instance
     allows its internal caches (e.g., closed_hours_cache) to be shared across
-    all Charts and Indicators."""
+    all Charts and Indicators.
+    """
     if ticker in ["ES", "DELETEME"]:
         if ticker not in SYMBOL_CACHE:
             SYMBOL_CACHE[ticker] = Symbol(ticker=ticker,
@@ -1236,7 +1289,7 @@ def get_symbol_by_ticker(ticker: str):
 
 
 def store_candle(candle):
-    """Write a single Candle() to central storage"""
+    """Write a single Candle() to central storage."""
     log.debug(f"Storing {candle.c_symbol.ticker} "
               f"{candle.c_timeframe} candle at {candle.c_datetime}")
     valid_timeframe(candle.c_timeframe)
@@ -1255,7 +1308,7 @@ def store_candle(candle):
 
 
 def store_candles(candles):
-    """Write multiple dhtypes.Candle() objects to central storage"""
+    """Write multiple dhtypes.Candle() objects to central storage."""
     for candle in candles:
         store_candle(candle)
 
@@ -1267,7 +1320,9 @@ def get_candles(start_epoch: int,
                 show_progress: bool = False,
                 ):
     """Returns a list of candle docs within the start and end epochs given
-    inclusive of both epochs"""
+
+    inclusive of both epochs.
+    """
     # Retrieve candle dictionaries from storage
     log.info(f"Retrieving candles from storage for {symbol} "
              f"{timeframe} between "
@@ -1311,9 +1366,11 @@ def review_candles(timeframe: str,
                    check_integrity: bool = False,
                    return_detail: bool = False,
                    ):
-    """Provides aggregate summary data about candles in central storage
-    with options to further check completeness/integrity of candle data and
-    provide remediation"""
+    """Provides aggregate summary data about candles in central storage with
+
+    options to further check completeness/integrity of candle data and provide
+    remediation.
+    """
     if isinstance(symbol, str):
         symbol = get_symbol_by_ticker(ticker=symbol)
     print("Retrieving candles overview from storage")
@@ -1502,8 +1559,10 @@ def delete_candles(timeframe: str,
                    earliest_dt=None,
                    latest_dt=None,
                    ):
-    """Deletes candles from central storage either en masse or for a
-    specific datetime range."""
+    """Deletes candles from central storage either en masse or for a specific
+
+    datetime range.
+    """
     if earliest_dt is None and latest_dt is None:
         return dhm.clear_collection(f"candles_{symbol}_{timeframe}")
     else:
@@ -1517,7 +1576,7 @@ def delete_candles(timeframe: str,
 ##############################################################################
 # Events
 def store_event(event):
-    """Write a single Event() to central storage"""
+    """Write a single Event() to central storage."""
     if not isinstance(event, Event):
         raise TypeError(f"event {type(event)} must be a "
                         "<class Event> object")
@@ -1543,8 +1602,12 @@ def get_events(symbol="ES",
                show_progress: bool = False,
                ):
     """Returns a list of events starting within the start and end epochs given
-    inclusive of both epochs.  Note this will return events that end after
-    end_epoch so long as they start before or on it."""
+
+    inclusive of both epochs.
+
+    Note this will return events that end after end_epoch so long as they
+    start before or on it.
+    """
     if isinstance(symbol, str):
         symbol = get_symbol_by_ticker(ticker=symbol)
     if start_epoch is None:
@@ -1594,7 +1657,7 @@ def clear_events(symbol: str,
                  earliest_dt=None,
                  latest_dt=None,
                  ):
-    """Deletes events from central storage"""
+    """Deletes events from central storage."""
     if earliest_dt is None and latest_dt is None:
         return dhm.clear_collection(f"events_{symbol}")
     else:

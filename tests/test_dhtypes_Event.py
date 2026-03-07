@@ -1,3 +1,4 @@
+"""Tests for Event creation and datetime containment logic."""
 from dhtrader import (
     Event)
 

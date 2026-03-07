@@ -1,3 +1,4 @@
+"""Tests for Indicator, IndicatorSMA, and IndicatorEMA calculation."""
 import pytest
 from dhtrader import (
     delete_indicator, get_indicator,
@@ -196,7 +197,8 @@ def Indicator_spotcheck_ES_eth_15m_EMA_close_l9_s2(i):
 def test_Indicator_calculated_spotcheck_ES_eth_15m_EMA_close_l9_s2():
     """Spotcheck calculated EMA values.
 
-    Storage Usage: get_indicator, load_underlying_chart."""
+    Storage Usage: get_indicator, load_underlying_chart.
+    """
     ind_calced = get_indicator(ind_id="ES_eth_15m_EMA_close_l9_s2",
                                autoload_datapoints=False,
                                autoload_chart=True,
@@ -213,7 +215,8 @@ def test_Indicator_calculated_spotcheck_ES_eth_15m_EMA_close_l9_s2():
 def test_Indicator_storage_spotcheck_ES_eth_15m_EMA_close_l9_s2():
     """Spotcheck stored EMA values.
 
-    Storage Usage: get_indicator, load_datapoints."""
+    Storage Usage: get_indicator, load_datapoints.
+    """
     ind_stored = get_indicator(ind_id="ES_eth_15m_EMA_close_l9_s2",
                                autoload_datapoints=False,
                                autoload_chart=True,
@@ -272,7 +275,8 @@ def Indicator_spotcheck_ES_eth_15m_EMA_close_l20_s2(i):
 def test_Indicator_calculated_spotcheck_ES_eth_15m_EMA_close_l20_s2():
     """Spotcheck calculated EMA values.
 
-    Storage Usage: get_indicator, load_underlying_chart."""
+    Storage Usage: get_indicator, load_underlying_chart.
+    """
     ind_calced = get_indicator(ind_id="ES_eth_15m_EMA_close_l20_s2",
                                autoload_datapoints=False,
                                autoload_chart=True,
@@ -289,7 +293,8 @@ def test_Indicator_calculated_spotcheck_ES_eth_15m_EMA_close_l20_s2():
 def test_Indicator_storage_spotcheck_ES_eth_15m_EMA_close_l20_s2():
     """Spotcheck stored EMA values.
 
-    Storage Usage: get_indicator, load_datapoints."""
+    Storage Usage: get_indicator, load_datapoints.
+    """
     ind_stored = get_indicator(ind_id="ES_eth_15m_EMA_close_l20_s2",
                                autoload_datapoints=False,
                                autoload_chart=True,
@@ -348,7 +353,8 @@ def Indicator_spotcheck_ES_eth_e1h_EMA_close_l9_s2(i):
 def test_Indicator_calculated_spotcheck_ES_eth_e1h_EMA_close_l9_s2():
     """Spotcheck calculated EMA values.
 
-    Storage Usage: get_indicator, load_underlying_chart."""
+    Storage Usage: get_indicator, load_underlying_chart.
+    """
     ind_calced = get_indicator(ind_id="ES_eth_e1h_EMA_close_l9_s2",
                                autoload_datapoints=False,
                                autoload_chart=True,
@@ -364,7 +370,8 @@ def test_Indicator_calculated_spotcheck_ES_eth_e1h_EMA_close_l9_s2():
 def test_Indicator_storage_spotcheck_ES_eth_e1h_EMA_close_l9_s2():
     """Spotcheck stored EMA values.
 
-    Storage Usage: get_indicator, load_datapoints."""
+    Storage Usage: get_indicator, load_datapoints.
+    """
     ind_stored = get_indicator(ind_id="ES_eth_e1h_EMA_close_l9_s2",
                                autoload_datapoints=False,
                                autoload_chart=True,
@@ -429,7 +436,8 @@ def Indicator_spotcheck_ES_eth_e1h_EMA_close_l20_s2(i):
 def test_Indicator_calculated_spotcheck_ES_eth_e1h_EMA_close_l20_s2():
     """Spotcheck calculated EMA values.
 
-    Storage Usage: get_indicator, load_underlying_chart."""
+    Storage Usage: get_indicator, load_underlying_chart.
+    """
     ind_calced = get_indicator(ind_id="ES_eth_e1h_EMA_close_l20_s2",
                                autoload_datapoints=False,
                                autoload_chart=True,
@@ -445,7 +453,8 @@ def test_Indicator_calculated_spotcheck_ES_eth_e1h_EMA_close_l20_s2():
 def test_Indicator_storage_spotcheck_ES_eth_e1h_EMA_close_l20_s2():
     """Spotcheck stored EMA values.
 
-    Storage Usage: get_indicator, load_datapoints."""
+    Storage Usage: get_indicator, load_datapoints.
+    """
     ind_stored = get_indicator(ind_id="ES_eth_e1h_EMA_close_l20_s2",
                                autoload_datapoints=False,
                                autoload_chart=True,

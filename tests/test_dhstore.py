@@ -1,3 +1,4 @@
+"""Tests for TradeSeries and Trade storage integrity checks."""
 import pytest
 from dhtrader import (
     delete_backtests_by_field, get_backtests_by_field, get_trades_by_field,
@@ -21,9 +22,9 @@ def clear_storage_by_bt_id(bt_id):
 @pytest.mark.storage
 def test_TradeSeries_and_Trade_integrity_checks():
     """Verify storage integrity checks fail for invalid TradeSeries/Trade
+
     data.
     """
-
     # Name fake backtest and cleanup stored orphans from past failed runs
     bt = "DELETEME_TRADESERIES_INTEGRITY_TEST"
     clear_storage_by_bt_id(bt)

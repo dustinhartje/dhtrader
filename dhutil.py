@@ -1,9 +1,9 @@
 """Utility functions for candle data remediation and analysis.
 
-This module provides functions for handling gaps in candle data,
-generating zero-volume candles, and comparing candles between storage
-and CSV files. It relies on dhcommon for datetime utilities and dhstore
-for data retrieval and persistence.
+This module provides functions for handling gaps in candle data, generating
+zero-volume candles, and comparing candles between storage and CSV files.
+It relies on dhcommon for datetime utilities and dhstore for data retrieval
+and persistence.
 """
 from datetime import timedelta, datetime as dt
 import csv
@@ -21,8 +21,12 @@ def generate_zero_volume_candle(c_datetime,
                                 symbol: str = "ES",
                                 ):
     """Returns a zero volume candle with OHLC values all set to the prior
-    candle's closing value.  Primarily used to fill gaps in 1m candle storage
-    where data providers sometimes omit candles with zero trading volume."""
+
+    candle's closing value.
+
+    Primarily used to fill gaps in 1m candle storage where data providers
+    sometimes omit candles with zero trading volume.
+    """
     if symbol != "ES":
         raise ValueError("Only symbol: 'ES' is currently supported")
     if timeframe == "1m":
@@ -60,6 +64,7 @@ def remediate_candle_gaps(timeframe: str = "1m",
                           dry_run=False,
                           ):
     """Identifies gaps for review in stored candles and offers to store zero
+
     volume candles in their place.  Currently only supports 1m as the other
     timeframes are calced from these, but I wrote in timeframe to keep
     consistent argument flows and allow future expansion optionality.
@@ -71,7 +76,8 @@ def remediate_candle_gaps(timeframe: str = "1m",
             that have not been fixed due to obvious criteria being met
 
     dry_run: Run all logic as if remediation is being performed, but only
-    print candle storage actions without actually performing them."""
+    print candle storage actions without actually performing them.
+    """
     if timeframe == "1m":
         delta = timedelta(minutes=1)
     else:
@@ -324,11 +330,15 @@ def read_candles_from_csv(start_dt,
                           symbol: str = 'ES',
                           timeframe: str = '1m',
                           ):
-    """Reads lines from a csv file and returns them as a list of
-    Candle objects.  Assumes format matches FirstRate data
+    """Reads lines from a csv file and returns them as a list of Candle
+
+    objects.
+
+    Assumes format matches FirstRate data
     standard of no header row the the following order of fields:
     datetime,open,high,low,close,volume
-    This will fail badly if the format of the source file is incorrect!"""
+    This will fail badly if the format of the source file is incorrect!
+    """
     start_dt = dt_as_dt(start_dt)
     end_dt = dt_as_dt(end_dt)
     candles = []
@@ -357,8 +367,10 @@ def store_candles_from_csv(filepath: str,
                            timeframe: str = "1m",
                            symbol: str = "ES",
                            ):
-    """Loads 1m candles from a CSV file into central storage.  Mostly useful
-    for quick manual gap fill operations via python console."""
+    """Loads 1m candles from a CSV file into central storage.
+
+    Mostly useful for quick manual gap fill operations via python console.
+    """
     candles = read_candles_from_csv(start_dt=start_dt,
                                     end_dt=end_dt,
                                     filepath=filepath,
@@ -390,8 +402,10 @@ def compare_candles_vs_csv(filepath,
                            end_dt=None,
                            expect_missing_from_storage: list = None):
     """Check stored candles against a CSV source file, primarily used to
+
     confirm calculated higher timeframes against data provider equivalents
-    where available to sanity check calculation process"""
+    where available to sanity check calculation process.
+    """
     if expect_missing_from_storage is None:
         expect_missing_from_storage = []
     # Determine start/end datetimes from stored candles if not provided

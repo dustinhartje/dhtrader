@@ -352,9 +352,10 @@ def review_candles(*args, **kwargs):
 class Symbol():
     """Represents basic mechanics of a tradeable symbol a.k.a. ticker.
 
-    This might be a specific stock or future, identified by ticker,
-    name, leverage_ratio, and tick_size.
+    This might be a specific stock or future, identified by ticker, name,
+    leverage_ratio, and tick_size.
     """
+
     def __init__(self,
                  ticker: str,
                  name: str,
@@ -381,8 +382,11 @@ class Symbol():
         return not self.__eq__(other)
 
     def to_json(self):
-        """returns a json version of this object while normalizing
-        custom types (like datetime to string)"""
+        """Return a JSON representation with custom types normalized.
+
+        Converts datetime and other non-serializable types to
+        strings for portability.
+        """
         w = deepcopy(self.__dict__)
         w["eth_open_time"] = str(w["eth_open_time"])
         w["eth_close_time"] = str(w["eth_close_time"])
@@ -396,9 +400,11 @@ class Symbol():
         return json.dumps(w)
 
     def to_clean_dict(self):
-        """Converts to JSON string then back to a python dict.  This helps
-        to normalize types (I'm looking at YOU datetime) while ensuring
-        a portable python data structure"""
+        """Converts to JSON string then back to a python dict.
+
+        This helps to normalize types (I'm looking at YOU datetime) while
+        ensuring a portable python data structure
+        """
         return json.loads(self.to_json())
 
     def __str__(self):
@@ -413,16 +419,20 @@ class Symbol():
 
     def pretty(self):
         """Attempts to return an indented multiline version of this object,
-        meant to provide an easy to read output for console or other purposes.
+
+        meant to provide an easy to read output for console or other
+        purposes.
         """
         return json.dumps(self.to_clean_dict(),
                           indent=4,
                           )
 
     def set_times(self):
-        """Sets times for known Symbol objects. These are the CURRENT era
-        times (latest era in MARKET_ERAS). Use get_times_for_era() with
-        dynamic era detection for historical times.
+        """Sets times for known Symbol objects.
+
+        These are the CURRENT era times (latest era in MARKET_ERAS). Use
+        get_times_for_era() with dynamic era detection for historical
+        times.
         """
         # DELETEME mimics ES and is used for testing storage to avoid
         # polluting actual ES related data
@@ -449,11 +459,11 @@ class Symbol():
                              )
 
     def get_next_tick_up(self, f: float):
-        """Returns the next tick available at or above the provided value"""
+        """Returns the next tick available at or above the provided value."""
         return round(ceil(f / self.tick_size) * self.tick_size, 2)
 
     def get_next_tick_down(self, f: float):
-        """Returns the next tick available at or below the provided value"""
+        """Returns the next tick available at or below the provided value."""
         return round(floor(f / self.tick_size) * self.tick_size, 2)
 
     def get_era(self, target_dt):
@@ -509,6 +519,7 @@ class Symbol():
 
     def get_closed_hours_for_era(self, target_dt, trading_hours: str):
         """Build the closed hours dictionary for a specific era and
+
         trading_hours type.
 
         Args:
@@ -555,8 +566,11 @@ class Symbol():
                        events: list = None,
                        ):
         """Returns True if target_dt is within market hours and no Events with
-        category 'Closed' overlap as pulled from central storage. Uses dynamic
-        era detection to apply correct historical market hours.
+
+        category 'Closed' overlap as pulled from central storage.
+
+        Uses dynamic era detection to apply correct historical market
+        hours.
         """
         # Set vars needed to evaluate
         d = dt_as_dt(target_dt)
@@ -594,6 +608,7 @@ class Symbol():
                             events: list = None,
                             ):
         """Returns the previous or next market open or close datetime for
+
         either regular trading hours (rth) or extended/globex trading hours
         (eth).  Optionally factors in events passed in to skip ahead or back
         when an Event (such as a market closure) would impact the datetime
@@ -601,14 +616,16 @@ class Symbol():
         build the list rather than making assumptions.
 
         Typically this method does not need to be called directly, instead
-        reference it via the wrapper methods below that provide better context
-        and auto-include most of the parameters needed for streamlined code.
+        reference it via the wrapper methods below that provide better
+        context and auto-include most of the parameters needed for
+        streamlined code.
 
-        Note that the current iteration only skips ahead to the next standard
-        open or close if an event overlaps rather than evaluating the
-        boundaries of the event itself.  This should have minimal impact on
-        backtest results over meaningful periods of time and it's presumed
-        one would probably not want to trade these periods anyways.
+        Note that the current iteration only skips ahead to the next
+        standard open or close if an event overlaps rather than evaluating
+        the boundaries of the event itself.  This should have minimal
+        impact on backtest results over meaningful periods of time and it's
+        presumed one would probably not want to trade these periods
+        anyways.
         """
         # Prep vars
         if events is None:
@@ -775,8 +792,8 @@ class Symbol():
 class Candle():
     """Represents a single OHLCV candlestick for a tradeable symbol.
 
-    Derived size, direction, and wick attributes are computed
-    automatically on creation.
+    Derived size, direction, and wick attributes are computed automatically
+    on creation.
     """
 
     def __init__(self,
@@ -846,17 +863,22 @@ class Candle():
             self.c_direction = 'unchanged'
 
     def to_json(self):
-        """returns a json version of this object while normalizing
-        custom types (like datetime to string)"""
+        """Return a JSON representation with custom types normalized.
+
+        Converts datetime and other non-serializable types to
+        strings for portability.
+        """
         working = deepcopy(self.__dict__)
         working["c_symbol"] = working["c_symbol"].ticker
 
         return json.dumps(working)
 
     def to_clean_dict(self):
-        """Converts to JSON string then back to a python dict.  This helps
-        to normalize types (I'm looking at YOU datetime) while ensuring
-        a portable python data structure"""
+        """Converts to JSON string then back to a python dict.
+
+        This helps to normalize types (I'm looking at YOU datetime) while
+        ensuring a portable python data structure
+        """
         return json.loads(self.to_json())
 
     def __str__(self):
@@ -869,14 +891,16 @@ class Candle():
 
     def pretty(self):
         """Attempts to return an indented multiline version of this object,
-        meant to provide an easy to read output for console or other purposes.
+
+        meant to provide an easy to read output for console or other
+        purposes.
         """
         return json.dumps(self.to_clean_dict(),
                           indent=4,
                           )
 
     def brief(self):
-        """Return a single line summary string of this Candle's vitals"""
+        """Return a single line summary string of this Candle's vitals."""
         if isinstance(self.c_symbol, str):
             ticker = self.c_symbol
         else:
@@ -902,19 +926,25 @@ class Candle():
         return not self.__eq__(other)
 
     def contains_datetime(self, d):
-        """Return True if the datetime provided occurs in this candle"""
+        """Return True if the datetime provided occurs in this candle."""
         return (dt_as_dt(self.c_datetime) < dt_as_dt(d) and
                 dt_as_dt(d) < dt_as_dt(self.c_end_datetime))
 
     def contains_price(self, p):
         """Return True if the price provided falls at or between the high and
-        low of this candle"""
+
+        low of this candle.
+        """
         return self.c_low <= p <= self.c_high
 
 
 class Chart():
-    """Represents a collection of Candles for a given symbol, timeframe,
-    and date range. Supports both regular and extended trading hours."""
+    """Represents a collection of Candles for a given symbol, timeframe, and
+
+    date range.
+
+    Supports both regular and extended trading hours.
+    """
 
     def __init__(self,
                  c_timeframe: str,
@@ -961,8 +991,11 @@ class Chart():
     def to_json(self,
                 suppress_candles: bool = True,
                 ):
-        """returns a json version of this object while normalizing
-        custom types (like datetime to string)"""
+        """Return a JSON representation with custom types normalized.
+
+        Converts datetime and other non-serializable types to
+        strings for portability.
+        """
         working = deepcopy(self.__dict__)
         if suppress_candles:
             num = len(self.c_candles)
@@ -979,9 +1012,11 @@ class Chart():
     def to_clean_dict(self,
                       suppress_candles: bool = True,
                       ):
-        """Converts to JSON string then back to a python dict.  This helps
-        to normalize types (I'm looking at YOU datetime) while ensuring
-        a portable python data structure"""
+        """Converts to JSON string then back to a python dict.
+
+        This helps to normalize types (I'm looking at YOU datetime) while
+        ensuring a portable python data structure
+        """
         return json.loads(self.to_json(suppress_candles=suppress_candles))
 
     def __str__(self):
@@ -996,7 +1031,9 @@ class Chart():
                suppress_candles: bool = True,
                ):
         """Attempts to return an indented multiline version of this object,
-        meant to provide an easy to read output for console or other purposes.
+
+        meant to provide an easy to read output for console or other
+        purposes.
         """
         return json.dumps(self.to_clean_dict(
             suppress_candles=suppress_candles),
@@ -1031,7 +1068,7 @@ class Chart():
         self.review_candles()
 
     def load_candles(self):
-        """Load candles from central storage based on current attributes"""
+        """Load candles from central storage based on current attributes."""
         log.info(f"Loading candles for {self.c_symbol.ticker} "
                  f"{self.c_timeframe} ")
         cans = get_candles(
@@ -1076,7 +1113,9 @@ class Chart():
 
     def restrict_dates(self, new_start_dt: str, new_end_dt: str):
         """Reduce the date range of the Chart and remove any Candles that are
-        no longer in bounds"""
+
+        no longer in bounds.
+        """
         os = dt_as_dt(self.c_start)
         oe = dt_as_dt(self.c_end)
         ns = dt_as_dt(new_start_dt)
@@ -1104,13 +1143,17 @@ class Chart():
 
 class Event():
     """Classifies periods of time that are notable and may need to be
-    correlated or excluded from charts during analysis.  May include holiday
-    closures, FOMC meetings, and any other substantial occurences, planned
-    or unplanned, that have immediate impact on the data beyond the usual.
-    category is context dependent and to be defined by the user.  These should
-    be unique enough to easily group similar events together, and the
-    combination of start_dt + category is used to delineate unique events in
-    storage to prevent duplication."""
+
+    correlated or excluded from charts during analysis.
+
+    May include holiday closures, FOMC meetings, and any other substantial
+    occurences, planned or unplanned, that have immediate impact on the
+    data beyond the usual. category is context dependent and to be defined
+    by the user.  These should be unique enough to easily group similar
+    events together, and the combination of start_dt + category is used to
+    delineate unique events in storage to prevent duplication.
+    """
+
     def __init__(self,
                  start_dt,
                  end_dt,
@@ -1134,17 +1177,22 @@ class Event():
         self.end_epoch = dt_to_epoch(self.end_dt)
 
     def to_json(self):
-        """returns a json version of this object while normalizing
-        custom types (like datetime to string)"""
+        """Return a JSON representation with custom types normalized.
+
+        Converts datetime and other non-serializable types to
+        strings for portability.
+        """
         working = deepcopy(self.__dict__)
         working["symbol"] = working["symbol"].ticker
 
         return json.dumps(working)
 
     def to_clean_dict(self):
-        """Converts to JSON string then back to a python dict.  This helps
-        to normalize types (I'm looking at YOU datetime) while ensuring
-        a portable python data structure"""
+        """Converts to JSON string then back to a python dict.
+
+        This helps to normalize types (I'm looking at YOU datetime) while
+        ensuring a portable python data structure
+        """
         return json.loads(self.to_json())
 
     def __str__(self):
@@ -1157,7 +1205,9 @@ class Event():
 
     def pretty(self):
         """Attempts to return an indented multiline version of this object,
-        meant to provide an easy to read output for console or other purposes.
+
+        meant to provide an easy to read output for console or other
+        purposes.
         """
         return json.dumps(self.to_clean_dict(),
                           indent=4,
@@ -1167,6 +1217,7 @@ class Event():
                           dt,
                           ):
         """Determine if the given datetime (dt) falls within this Event's
+
         timeframe, returning True or False.
         """
         start = dt_as_dt(self.start_dt)
@@ -1179,9 +1230,11 @@ class Event():
 
 
 class Day():
-    """Represents a single trading day for a symbol, combining OHLCV data
-    for both extended (ETH) and regular (RTH) trading hours, along with
-    associated charts at various timeframes."""
+    """Represents a single trading day for a symbol, combining OHLCV data for
+
+    both extended (ETH) and regular (RTH) trading hours, along with associated
+    charts at various timeframes.
+    """
 
     def __init__(self,
                  d_symbol,
@@ -1254,14 +1307,19 @@ class Day():
         self.recalc_from_1m()
 
     def to_json(self):
-        """returns a json version of this object while normalizing
-        custom types (like datetime to string)"""
+        """Return a JSON representation with custom types normalized.
+
+        Converts datetime and other non-serializable types to
+        strings for portability.
+        """
         return json.dumps(self.__dict__)
 
     def to_clean_dict(self):
-        """Converts to JSON string then back to a python dict.  This helps
-        to normalize types (I'm looking at YOU datetime) while ensuring
-        a portable python data structure"""
+        """Converts to JSON string then back to a python dict.
+
+        This helps to normalize types (I'm looking at YOU datetime) while
+        ensuring a portable python data structure
+        """
         return json.loads(self.to_json())
 
     def __str__(self):
@@ -1274,7 +1332,9 @@ class Day():
 
     def pretty(self):
         """Attempts to return an indented multiline version of this object,
-        meant to provide an easy to read output for console or other purposes.
+
+        meant to provide an easy to read output for console or other
+        purposes.
         """
         return json.dumps(self.to_clean_dict(),
                           indent=4,
@@ -1376,8 +1436,10 @@ class Day():
 
 class IndicatorDataPoint():
     """Simple class to handle time series datapoints for indicators.
-    I might swap this out for an even more generic TSDataPoint or
-    similar if I find more uses for time series beyond this."""
+
+    I might swap this out for an even more generic TSDataPoint or similar
+    if I find more uses for time series beyond this.
+    """
 
     def __init__(self,
                  dt: str,
@@ -1394,14 +1456,19 @@ class IndicatorDataPoint():
             self.epoch = epoch
 
     def to_json(self):
-        """returns a json version of this object while normalizing
-        custom types (like datetime to string)"""
+        """Return a JSON representation with custom types normalized.
+
+        Converts datetime and other non-serializable types to
+        strings for portability.
+        """
         return json.dumps(self.__dict__)
 
     def to_clean_dict(self):
-        """Converts to JSON string then back to a python dict.  This helps
-        to normalize types (I'm looking at YOU datetime) while ensuring
-        a portable python data structure"""
+        """Converts to JSON string then back to a python dict.
+
+        This helps to normalize types (I'm looking at YOU datetime) while
+        ensuring a portable python data structure
+        """
         return json.loads(self.to_json())
 
     def __str__(self):
@@ -1414,7 +1481,9 @@ class IndicatorDataPoint():
 
     def pretty(self):
         """Attempts to return an indented multiline version of this object,
-        meant to provide an easy to read output for console or other purposes.
+
+        meant to provide an easy to read output for console or other
+        purposes.
         """
         return json.dumps(self.to_clean_dict(),
                           indent=4,
@@ -1444,10 +1513,10 @@ class IndicatorDataPoint():
 class Indicator():
     """Base class for technical indicators such as SMA and EMA.
 
-    Names should be short and simple abbreviations used in tagging
-    and storage, e.g. sma, hod, vwap.  This class is not intended
-    to be used directly; use its subclasses which provide
-    indicator type-specific logic.
+    Names should be short and simple abbreviations used in tagging and
+    storage, e.g. sma, hod, vwap.  This class is not intended to be used
+    directly; use its subclasses which provide indicator type-specific
+    logic.
     """
 
     def __init__(self,
@@ -1523,18 +1592,23 @@ class Indicator():
         return not self.__eq__(other)
 
     def sub_eq(self, other):
-        """Placeholder method for subclasses to add additional attributes
-        or conditions required to evaluate __eq__ for this class.  Any
-        comparison of parameters should be done here as they are subclass
-        specific."""
+        """Placeholder method for subclasses to add additional attributes or
+
+        conditions required to evaluate __eq__ for this class.
+
+        Any comparison of parameters should be done here as they are
+        subclass specific.
+        """
         return self.parameters == other.parameters
 
     def to_json(self,
                 suppress_datapoints: bool = True,
                 suppress_chart_candles: bool = True,
                 ):
-        """returns a json version of this object while normalizing
-        custom types (like datetime to string).
+        """Return a JSON representation with custom types normalized.
+
+        Converts datetime and other non-serializable types to
+        strings for portability.
         """
         working = deepcopy(self.__dict__)
         working["candle_chart"] = working["candle_chart"].to_clean_dict(
@@ -1556,9 +1630,11 @@ class Indicator():
                       suppress_datapoints: bool = True,
                       suppress_chart_candles: bool = True,
                       ):
-        """Converts to JSON string then back to a python dict.  This helps
-        to normalize types (I'm looking at YOU datetime) while ensuring
-        a portable python data structure"""
+        """Converts to JSON string then back to a python dict.
+
+        This helps to normalize types (I'm looking at YOU datetime) while
+        ensuring a portable python data structure
+        """
         return json.loads(self.to_json(
                           suppress_datapoints=suppress_datapoints,
                           suppress_chart_candles=suppress_chart_candles,
@@ -1569,8 +1645,11 @@ class Indicator():
                suppress_chart_candles: bool = True,
                ):
         """Attempts to return an indented multiline version of this object,
+
         meant to provide an easy to read output for console or other purposes.
-        Optionally suppress_datapoints to reduce output size when not needed.
+
+        Optionally suppress_datapoints to reduce output size when not
+        needed.
         """
         working = self.to_clean_dict(
                 suppress_datapoints=suppress_datapoints,
@@ -1592,7 +1671,7 @@ class Indicator():
     def get_info(self,
                  pretty: bool = False,
                  ):
-        """Provide a basic overview of this object"""
+        """Provide a basic overview of this object."""
         output = {"ind_id": self.ind_id,
                   "name": self.name,
                   "description": self.description,
@@ -1614,7 +1693,7 @@ class Indicator():
             return output
 
     def load_underlying_chart(self):
-        """Load the underlying candle chart from central storage"""
+        """Load the underlying candle chart from central storage."""
         if self.start_dt is None or self.end_dt is None:
             self.candle_chart = None
         else:
@@ -1629,6 +1708,7 @@ class Indicator():
 
     def load_datapoints(self):
         """Load any datapoints available from central storage by ind_id,
+
         start_dt, and end_dt.
         """
         self.datapoints = get_indicator_datapoints(ind_id=self.ind_id,
@@ -1637,7 +1717,7 @@ class Indicator():
         self.sort_datapoints()
 
     def sort_datapoints(self):
-        """Sort attached datapoints in chronological order"""
+        """Sort attached datapoints in chronological order."""
         if len(self.datapoints) == 0:
             return False
         self.datapoints.sort(key=lambda dp: dp.epoch)
@@ -1657,10 +1737,12 @@ class Indicator():
         return result
 
     def calculate(self):
-        """This method will be specific to each type of indicator.  It should
-        accept only a list of Candles, sort it, and calculate new indicator
-        datapoints from the candles.  Copy and modify this method as needed
-        in subclasses."""
+        """This method will be specific to each type of indicator.
+
+        It should accept only a list of Candles, sort it, and calculate new
+        indicator datapoints from the candles.  Copy and modify this method
+        as needed in subclasses.
+        """
         if self.candle_chart is None:
             self.load_underlying_chart()
         if not isinstance(self.candle_chart, Chart):
@@ -1699,12 +1781,13 @@ class Indicator():
                       dt,
                       offset: int = 0,
                       ):
-        """Returns a single datapoint based on datetime provided.  Because
-        this is typically based on candle close, we often want the previous
-        datapoint from the candle we are working through in a backtest so
-        offset is allowed to go back or forward in the list by the provided
-        value.  Wrapper methods assist with the most common previous and
-        next requests.
+        """Returns a single datapoint based on datetime provided.
+
+        Because this is typically based on candle close, we often want the
+        previous datapoint from the candle we are working through in a
+        backtest so offset is allowed to go back or forward in the list by
+        the provided value.  Wrapper methods assist with the most common
+        previous and next requests.
         """
         can_dt = this_candle_start(dt=dt, timeframe=self.timeframe)
         index = next((i for i, dp in enumerate(self.datapoints)
@@ -1723,13 +1806,13 @@ class Indicator():
     def next_datapoint(self,
                        dt,
                        ):
-        """Wrapper for get_datapoint"""
+        """Wrapper for get_datapoint."""
         return self.get_datapoint(dt=dt, offset=1)
 
     def prev_datapoint(self,
                        dt,
                        ):
-        """Wrapper for get_datapoint"""
+        """Wrapper for get_datapoint."""
         return self.get_datapoint(dt=dt, offset=-1)
 
 
@@ -1795,8 +1878,10 @@ class IndicatorSMA(Indicator):
         self.class_name = "IndicatorSMA"
 
     def calculate(self):
-        """Calculate a simple moving average over time.  Defaults to using
-        the 'close' value of each candle."""
+        """Calculate a simple moving average over time.
+
+        Defaults to using the 'close' value of each candle.
+        """
         if self.candle_chart is None:
             self.load_underlying_chart()
         if not isinstance(self.candle_chart, Chart):
@@ -1835,14 +1920,16 @@ class IndicatorSMA(Indicator):
 
 class IndicatorEMA(Indicator):
     """Subclass of Indicator() used for exponential moving averages.
-    Requires a length, method (default: close) and smoothing
-    (default: 2). The first 4*length calculated values will not be
-    kept as the early part of the calculation has to start with a
-    simple average and does not reach true EMA values until it has
-    substantial history to effectively factor out the initial non-EMA
-    baseline. Spot testing found roughly 4 times the length is when
-    accuracy reaches +/- $0.01 vs the same timestamp datapoints when
-    the series is started at a much earlier point in time."""
+
+    Requires a length, method (default: close) and smoothing (default: 2).
+    The first 4*length calculated values will not be kept as the early part
+    of the calculation has to start with a simple average and does not
+    reach true EMA values until it has substantial history to effectively
+    factor out the initial non-EMA baseline. Spot testing found roughly 4
+    times the length is when accuracy reaches +/- $0.01 vs the same
+    timestamp datapoints when the series is started at a much earlier point
+    in time.
+    """
 
     def __init__(self,
                  description,
@@ -1904,8 +1991,10 @@ class IndicatorEMA(Indicator):
         self.class_name = "IndicatorEMA"
 
     def calculate(self):
-        """Calculate an exponential simple moving average over time.  Defaults
-        to using the 'close' value of each candle and a smoothing factor of 2.
+        """Calculate an exponential simple moving average over time.
+
+        Defaults to using the 'close' value of each candle and a smoothing
+        factor of 2.
         """
         if self.candle_chart is None:
             self.load_underlying_chart()
@@ -1990,6 +2079,7 @@ class Trade():
         ts_id (str): unique id of associated TradeSeries this was created by
         bt_id (str): unique id of associated Backtest this was created by
     """
+
     def __init__(self,
                  open_dt: str,
                  direction: str,
@@ -2222,8 +2312,10 @@ class Trade():
         return not self.__eq__(other)
 
     def to_json(self):
-        """returns a json version of this Trade object while normalizing
-        custom types for json compatibility (i.e. datetime to string)"""
+        """Returns a json version of this Trade object while normalizing custom
+
+        types for json compatibility (i.e. datetime to string)
+        """
         # Make sure dates are strings not datetimes
         working = deepcopy(self.__dict__)
         if self.open_dt is not None:
@@ -2238,20 +2330,25 @@ class Trade():
         return json.dumps(working)
 
     def to_clean_dict(self):
-        """Converts to JSON string then back to a python dict.  This helps
-        to normalize types (I'm looking at YOU datetime) while ensuring
-        a portable python data structure"""
+        """Converts to JSON string then back to a python dict.
+
+        This helps to normalize types (I'm looking at YOU datetime) while
+        ensuring a portable python data structure
+        """
         return json.loads(self.to_json())
 
     def pretty(self):
         """Attempts to return an indented multiline version of this object,
+
         meant to provide an easy to read output for console or other purposes.
-        Optionally suppress_datapoints to reduce output size when not needed.
+
+        Optionally suppress_datapoints to reduce output size when not
+        needed.
         """
         return json.dumps(self.to_clean_dict(), indent=4)
 
     def brief(self):
-        """Return a single line summary string of this Trade's vitals"""
+        """Return a single line summary string of this Trade's vitals."""
         return (f"{self.open_dt} - {self.close_dt} | "
                 f"{dt_as_dt(self.open_dt).strftime('%A')} | "
                 f"{self.direction} | "
@@ -2260,20 +2357,26 @@ class Trade():
 
     def parent_bar_dt(self):
         """Returns the timeframe specific 'parent bar' (the bar within which
-        this Trade opened) opening datetime as a datetime object."""
+
+        this Trade opened) opening datetime as a datetime object.
+        """
         return this_candle_start(self.open_dt,
                                  timeframe=self.timeframe)
 
     def parent_bar_secs(self):
         """Returns the number of seconds that elapsed between the opening of
+
         the 'parent bar' (the timeframe specific bar within which this Trade
-        opened) and the opening of this Trade."""
+        opened) and the opening of this Trade.
+        """
         start = dt_to_epoch(self.parent_bar_dt())
         return self.open_epoch - start
 
     def closed_intraday(self):
         """Returns true if Trade closes on the same market trading day that it
-        was opened on"""
+
+        was opened on.
+        """
         # Return False if the trade is still open
         if self.is_open:
             return False
@@ -2289,8 +2392,10 @@ class Trade():
     def candle_update(self,
                       candle,
                       ):
-        """Incorporates a new candle into an open Trade, updating low and
-        high price attributes and checking for trade closing triggers."""
+        """Incorporates a new candle into an open Trade, updating low and high
+
+        price attributes and checking for trade closing triggers.
+        """
         if not self.is_open:
             raise Exception("Cannot run update() on a closed Trade, this "
                             "would break reality.")
@@ -2379,9 +2484,12 @@ class Trade():
                         contract_fee: float
                         ):
         """Calculates and returns resulting values of drawdown range and ending
+
         values seen during the trade for given series specific inputs.
-        Primarily used by TradeSeries to loop through all Trade
-        objects checking for drawdown liquidations"""
+
+        Primarily used by TradeSeries to loop through all Trade objects
+        checking for drawdown liquidations
+        """
         # Until I find a reasonable need, assume we don't care about drawdowns
         # until the trade is closed.  Returning results could cause mistakes.
         if self.is_open:
@@ -2433,8 +2541,11 @@ class Trade():
                        contract_fee: float,
                        ):
         """Calculates and returns ending balance and gain/loss values for the
-        trade given series specific inputs.  Primarily used by TradeSeries to
-        loop through all Trade objects to evaluate ending gains and balances.
+
+        trade given series specific inputs.
+
+        Primarily used by TradeSeries to loop through all Trade objects to
+        evaluate ending gains and balances.
         """
         # Cannot return balance impact until trade is closed
         if self.is_open:
@@ -2474,7 +2585,9 @@ class Trade():
               price: float,
               dt,
               ):
-        """Closes the trade at the price given, finalizing related attributes.
+        """Closes the trade at the price given, finalizing related
+
+        attributes.
         """
         self.is_open = False
         self.close_dt = dt_as_str(dt)
@@ -2488,7 +2601,10 @@ class Trade():
 
     def gain_loss(self,
                   contracts: int = 1):
-        """Return the gain/loss for a given number of contracts, before fees"""
+        """Return the gain/loss for a given number of contracts, before
+
+        fees.
+        """
         if self.is_open:
             return None
         return ((self.exit_price - self.entry_price) * self.flipper
@@ -2496,7 +2612,9 @@ class Trade():
 
     def duration(self):
         """Return a datetime.timedelta object representing the duration of this
-        Trade from open_dt to close_dt in seconds"""
+
+        Trade from open_dt to close_dt in seconds.
+        """
         if self.is_open:
             return None
         else:
@@ -2505,7 +2623,7 @@ class Trade():
 
 
 class TradeSeries():
-    """Represents a series of trades presumably following the same rules
+    """Represents a series of trades presumably following the same rules.
 
     Attributes:
         start_dt (str or datetime): Beginning of time period evaluated which
@@ -2528,6 +2646,7 @@ class TradeSeries():
         bt_id (str): bt_id of the Backtest() object that created this if any
         trades (list): list of trades in the series
     """
+
     def __init__(self,
                  start_dt,
                  end_dt,
@@ -2592,8 +2711,11 @@ class TradeSeries():
     def to_json(self,
                 suppress_trades: bool = True,
                 ):
-        """returns a json version of this object while normalizing
-        custom types (like datetime to string)"""
+        """Return a JSON representation with custom types normalized.
+
+        Converts datetime and other non-serializable types to
+        strings for portability.
+        """
         working = deepcopy(self.__dict__)
         clean_trades = []
         if suppress_trades:
@@ -2610,9 +2732,11 @@ class TradeSeries():
     def to_clean_dict(self,
                       suppress_trades: bool = True,
                       ):
-        """Converts to JSON string then back to a python dict.  This helps
-        to normalize types (I'm looking at YOU datetime) while ensuring
-        a portable python data structure"""
+        """Converts to JSON string then back to a python dict.
+
+        This helps to normalize types (I'm looking at YOU datetime) while
+        ensuring a portable python data structure
+        """
         return json.loads(self.to_json(suppress_trades=suppress_trades))
 
     def __str__(self):
@@ -2627,16 +2751,21 @@ class TradeSeries():
                suppress_trades: bool = True,
                ):
         """Attempts to return an indented multiline version of this object,
+
         meant to provide an easy to read output for console or other purposes.
-        Optionally suppress_datapoints to reduce output size when not needed.
+
+        Optionally suppress_datapoints to reduce output size when not
+        needed.
         """
         return json.dumps(self.to_clean_dict(suppress_trades=suppress_trades),
                           indent=4,
                           )
 
     def trades_brief(self):
-        """Return a list of one line brief summaries of all Trades' vitals
-        in this TradeSeries"""
+        """Return a list of one line brief summaries of all Trades' vitals in
+
+        this TradeSeries.
+        """
         result = []
         for t in self.trades:
             result.append(t.brief())
@@ -2649,16 +2778,19 @@ class TradeSeries():
             print(t)
 
     def update_bt_id(self, bt_id):
-        """Update bt_id on this and any attached Trade objects.  Typicaly
-        called by a Backtest when adding this object to it's list."""
+        """Update bt_id on this and any attached Trade objects.
+
+        Typicaly called by a Backtest when adding this object to it's list.
+        """
         self.bt_id = bt_id
         for t in self.trades:
             t.bt_id = bt_id
 
     def load_trades(self):
         """Clear all attached Trades then retrieve and attach all Trades
-        matching this ts_id from storage"""
 
+        matching this ts_id from storage.
+        """
         self.trades = get_trades_by_field(field="ts_id",
                                           value=self.ts_id)
         self.sort_trades()
@@ -2667,8 +2799,10 @@ class TradeSeries():
                             include_trades: bool = True,
                             ):
         """Delete this object from central storage if it exists by ts_id.
-        Optionally (default=True) also remove all Trade objects
-        matching this object's ts_id."""
+
+        Optionally (default=True) also remove all Trade objects matching
+        this object's ts_id.
+        """
         result = {"tradeseries": None, "trades": []}
 
         result["tradeseries"] = delete_tradeseries_by_field(
@@ -2698,7 +2832,9 @@ class TradeSeries():
 
     def get_trade_by_open_dt(self, dt):
         """Return the first trade found with open_dt matching the provided
-        datetime, or None if nothing matches."""
+
+        datetime, or None if nothing matches.
+        """
         for t in self.trades:
             if dt_as_dt(t.open_dt) == dt_as_dt(dt):
                 return t
@@ -2706,7 +2842,7 @@ class TradeSeries():
         return None
 
     def count_trades(self):
-        """Return the number of Trades currently attached"""
+        """Return the number of Trades currently attached."""
         if self.trades is None:
             return 0
         else:
@@ -2718,7 +2854,9 @@ class TradeSeries():
                        update_storage: bool = False,
                        ):
         """Reduce the date range of the TradeSeries and remove any Trades that
-        are no longer in bounds"""
+
+        are no longer in bounds.
+        """
         os = dt_as_dt(self.start_dt)
         oe = dt_as_dt(self.end_dt)
         ns = dt_as_dt(new_start_dt)
@@ -2759,8 +2897,11 @@ class TradeSeries():
                        include_first_min: bool = True,
                        ):
         """Runs through current trades list, calculating changes to a running
-        account balance starting with balance_open.  Returns high, low, and
-        ending balance."""
+
+        account balance starting with balance_open.
+
+        Returns high, low, and ending balance.
+        """
         # Make sure trades are in order or results can't be trusted
         self.sort_trades()
         # All vars start at the opening balance provided
@@ -2800,8 +2941,11 @@ class TradeSeries():
                         include_first_min: bool = True,
                         ):
         """Runs through current trades list, calculating changes to a running
-        account drawdown starting with drawdown_open.  Returns high, low, and
-        ending drawdown."""
+
+        account drawdown starting with drawdown_open.
+
+        Returns high, low, and ending drawdown.
+        """
         # Make sure trades are in order or results can't be trusted
         self.sort_trades()
         drawdown_close = drawdown_open
@@ -2830,7 +2974,7 @@ class TradeSeries():
                 }
 
     def stats(self, include_first_min=True):
-        """Return useful statistics calculated from the attached Trades"""
+        """Return useful statistics calculated from the attached Trades."""
         sequence = ""
         total_trades = 0
         profits = 0
@@ -2955,8 +3099,10 @@ class TradeSeries():
 
     def weekly_stats(self, include_first_min: bool = True):
         """Return useful statistics calculated from the attached Trades
+
         aggregated into weekly buckets using Sunday as the start of the week
-        and Sunday's date as the name of each bucket."""
+        and Sunday's date as the name of each bucket.
+        """
         # Build a dict of weeks with zeroes as default values to ensure we
         # represent non-traded weeks in the result rather than leave gaps
         template = {"total_trades": 0,
@@ -2999,11 +3145,12 @@ class TradeSeries():
 
 
 class Backtest():
-    """Represents a backtest that can be run with specific parameters.  This
-    is a parent class containing core functionality and likely won't be used
-    to run backtests directly.  Subclasses should be created with updated
-    methods and parameters representing the specific rules of the backtests
-    being performed.
+    """Represents a backtest that can be run with specific parameters.  This is
+
+    a parent class containing core functionality and likely won't be used to
+    run backtests directly.  Subclasses should be created with updated methods
+    and parameters representing the specific rules of the backtests being
+    performed.
 
     Attributes:
         start_dt (str or datetime): Beginning of time period evaluated which
@@ -3040,6 +3187,7 @@ class Backtest():
         tradeseries (list): List of TradeSeries() objects which will be
             created when the Backtest is run
     """
+
     def __init__(self,
                  start_dt,
                  end_dt,
@@ -3114,15 +3262,20 @@ class Backtest():
         return not self.__eq__(other)
 
     def sub_eq(self, other):
-        """Placeholder method for subclasses to add additional attributes
-        or conditions required to evaluate __eq__ for this class.  Any
-        comparison of parameters should be done here as they are subclass
-        specific."""
+        """Placeholder method for subclasses to add additional attributes or
+
+        conditions required to evaluate __eq__ for this class.
+
+        Any comparison of parameters should be done here as they are
+        subclass specific.
+        """
         return self.parameters == other.parameters
 
     def sub_to_json(self, working):
         """Placeholder for subclasses to normalize any additional attributes
-        they may have added to make them also JSON serializable."""
+
+        they may have added to make them also JSON serializable.
+        """
         return working
 
     def to_json(self,
@@ -3131,8 +3284,11 @@ class Backtest():
                 suppress_charts: bool = True,
                 suppress_chart_candles: bool = True,
                 ):
-        """returns a json version of this object while normalizing
-        custom types (like datetime to string)"""
+        """Return a JSON representation with custom types normalized.
+
+        Converts datetime and other non-serializable types to
+        strings for portability.
+        """
         working = deepcopy(self.__dict__)
         working["symbol"] = working["symbol"].ticker
         if suppress_charts:
@@ -3167,9 +3323,11 @@ class Backtest():
                       suppress_charts: bool = True,
                       suppress_chart_candles: bool = True,
                       ):
-        """Converts to JSON string then back to a python dict.  This helps
-        to normalize types (I'm looking at YOU datetime) while ensuring
-        a portable python data structure"""
+        """Converts to JSON string then back to a python dict.
+
+        This helps to normalize types (I'm looking at YOU datetime) while
+        ensuring a portable python data structure
+        """
         return json.loads(self.to_json(
             suppress_tradeseries=suppress_tradeseries,
             suppress_trades=suppress_trades,
@@ -3192,8 +3350,11 @@ class Backtest():
                suppress_chart_candles: bool = True,
                ):
         """Attempts to return an indented multiline version of this object,
+
         meant to provide an easy to read output for console or other purposes.
-        Optionally suppress_datapoints to reduce output size when not needed.
+
+        Optionally suppress_datapoints to reduce output size when not
+        needed.
         """
         return json.dumps(self.to_clean_dict(
             suppress_tradeseries=suppress_tradeseries,
@@ -3205,13 +3366,16 @@ class Backtest():
             )
 
     def load_charts(self):
-        """Load a Chart based on this object's datetimes, symbol, and
-        timeframe arguments.  This will be the base data for calculating
-        trades.  This method also restricts the Backtest's timeframe (start_dt
-        and end_dt attributes) to match the earliest and latest 1m candles
-        available from storage to ensure future updates do not leave
-        calculation gaps where valid candles were not yet available on earlier
-        runs."""
+        """Load a Chart based on this object's datetimes, symbol, and timeframe
+
+        arguments.
+
+        This will be the base data for calculating trades.  This method
+        also restricts the Backtest's timeframe (start_dt and end_dt
+        attributes) to match the earliest and latest 1m candles available
+        from storage to ensure future updates do not leave calculation gaps
+        where valid candles were not yet available on earlier runs.
+        """
         # Build candle charts, retrieving candles from storage
         self.chart_tf = Chart(c_timeframe=self.timeframe,
                               c_trading_hours=self.trading_hours,
@@ -3240,8 +3404,10 @@ class Backtest():
                             include_trades: bool = True,
                             ):
         """Delete this object from central storage if it exists by bt_id.
-        Optionally (default=True) also remove all TradeSeries and Trade objects
-        matching this object's bt_id."""
+
+        Optionally (default=True) also remove all TradeSeries and Trade
+        objects matching this object's bt_id.
+        """
         result = {"backtest": None, "tradeseries": []}
 
         result["backtest"] = delete_backtests_by_field(
@@ -3258,14 +3424,14 @@ class Backtest():
         return result
 
     def count_tradeseries(self):
-        """Return the number of TradeSeries currently attached"""
+        """Return the number of TradeSeries currently attached."""
         if self.tradeseries is None:
             return 0
         else:
             return len(self.tradeseries)
 
     def count_trades(self):
-        """Return the number of Trades currently attached"""
+        """Return the number of Trades currently attached."""
         count = 0
         for ts in self.tradeseries:
             count += ts.count_trades()
@@ -3274,11 +3440,14 @@ class Backtest():
     def update_tradeseries(self,
                            ts,
                            clear_storage: bool = True):
-        """Add an existing TradeSeries to this Backtest, typically used
-        for pulling results in from previous runs to update with new data.
+        """Add an existing TradeSeries to this Backtest, typically used for
+
+        pulling results in from previous runs to update with new data.
+
         If a TradeSeries with the same ts_id is already attached, this will
-        replace it.  clear_storage is passed to remove_tradeseries to delete
-        the replaced TradeSeries from storage when updating."""
+        replace it.  clear_storage is passed to remove_tradeseries to
+        delete the replaced TradeSeries from storage when updating.
+        """
         if self.tradeseries is None:
             self.tradeseries = []
         # Associate this TradeSeries with this Backtest
@@ -3294,8 +3463,10 @@ class Backtest():
                            ts_id,
                            clear_storage: bool = True):
         """Removes any TradeSeries with the given ts_id from the Backtest.
+
         Optionally remove TradeSeries and it's Trades from storage as well
-        (default = True)."""
+        (default = True).
+        """
         # Delete TradeSeries and associated Trades from storage
         if clear_storage:
             delete_tradeseries_by_field(symbol="ES",
@@ -3316,8 +3487,11 @@ class Backtest():
 
     def load_tradeseries(self):
         """Attaches any TradeSeries and their linked trades that are found in
-        storage and which match this object's bt_id.  This will replace any
-        currently attached tradeseries."""
+
+        storage and which match this object's bt_id.
+
+        This will replace any currently attached tradeseries.
+        """
         self.tradeseries = get_tradeseries_by_field(field="bt_id",
                                                     value=self.bt_id,
                                                     include_trades=True,
@@ -3329,14 +3503,18 @@ class Backtest():
                        new_end_dt: str,
                        update_storage: bool = False,
                        ):
-        """Reduce the datetime range of the Backtest which will also reduce
-        any attached TradeSeries and remove any Trades that start ouside of
-        the boundaries of the new range.  Optionally pass update_storage=True
-        to remove Trades and update dates on both Backtest and it's linked
-        TradeSeries in storage (destructive) to make this permanent.
-        Typically used to clean up failed partial calculation runs or, when
-        non-destructive, to set up for analyzing a targetted timeframe of
-        special interest within the longer Backtest."""
+        """Reduce the datetime range of the Backtest which will also reduce any
+
+        attached TradeSeries and remove any Trades that start ouside of the
+        boundaries of the new range.
+
+        Optionally pass update_storage=True to remove Trades and update
+        dates on both Backtest and it's linked TradeSeries in storage
+        (destructive) to make this permanent. Typically used to clean up
+        failed partial calculation runs or, when non-destructive, to set up
+        for analyzing a targetted timeframe of special interest within the
+        longer Backtest.
+        """
         os = dt_as_dt(self.start_dt)
         oe = dt_as_dt(self.end_dt)
         ns = dt_as_dt(new_start_dt)
@@ -3377,6 +3555,7 @@ class Backtest():
                                    closed_events,
                                    default_autoclose):
         """Determine autoclose time for a specific date by checking for Closed
+
         category events that indicate early market closes. Returns adjusted
         autoclose time (5 min before close) only if the closure time is BEFORE
         the default autoclose. Note that autoclose may not be implemented the
@@ -3434,6 +3613,7 @@ class Backtest():
                                 current_time,
                                 log_id=""):
         """Failsafe safety check: Close trade if current 1m candle time
+
         exceeds autoclose_time while trade is open. This catches edge cases
         where trades extend past autoclose (e.g., from overnight sessions).
         Uses previous candle's open for exit price.
@@ -3463,13 +3643,15 @@ class Backtest():
 
     def config_from_storage(self):
         """This class should be updated in subclasses to allow retrieval and
+
         configuration of itself from storage if there is a matching bt_id
-        stored.  Otherwise it should do nothing as the object has already
-        been created and configured by __init__ by the time it gets here.
+        stored.  Otherwise it should do nothing as the object has already been
+        created and configured by __init__ by the time it gets here.
 
         Note that in most cases this should by default also load any
-        TradeSeries that exist in storage and their associated Trades though
-        this could be suppressed by a feature flag if desired in the subclass.
+        TradeSeries that exist in storage and their associated Trades
+        though this could be suppressed by a feature flag if desired in the
+        subclass.
         """
         self.sort_tradeseries()
         # Subclass copies of this method should return True if configuration
@@ -3479,19 +3661,23 @@ class Backtest():
 
     def incorporate_parameters(self):
         """This class should be updated in subclasses to run whatever logic is
-        needed to validate any subclass-specific parameters and set them up
-        as attributes on the object. This will vary greatly from one type of
-        backtest to another.
+
+        needed to validate any subclass-specific parameters and set them up as
+        attributes on the object.
+
+        This will vary greatly from one type of backtest to another.
         """
         pass
 
     def calculate(self):
         """This class should be updated in subclasses to run whatever logic is
+
         needed to transform the chart_* attributes into multiple TradeSeries
-        using parameters supplied.  This will vary greatly from one type of
-        backtest to another.  At the end of the run it will likely need to
-        also store the Backtest object along with it's child TradeSeries and
-        grandchild Trades.
+        using parameters supplied.
+
+        This will vary greatly from one type of backtest to another.  At
+        the end of the run it will likely need to also store the Backtest
+        object along with it's child TradeSeries and grandchild Trades.
         """
         pass
 

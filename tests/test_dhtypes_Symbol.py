@@ -1,3 +1,4 @@
+"""Tests for Symbol market hours, serialization, and era detection."""
 import pytest
 from dhtrader import (
     dt_as_dt, dt_as_str, Event, Symbol)
@@ -11,9 +12,7 @@ def symbol():
 
 
 def test_Symbol_market_is_open(symbol):
-    """Verify Symbol.market_is_open() for eth and rth across various
-    times.
-    """
+    """Verify Symbol.market_is_open() for eth and rth across various times."""
     # ETH
     # Monday through Thursday
     for day in ["13", "14", "15", "16"]:
@@ -1455,7 +1454,7 @@ def test_Symbol_string_representations(symbol):
 
 
 def test_Symbol_serialization(symbol):
-    """Verify Symbol to_json() and to_clean_dict() methods"""
+    """Verify Symbol to_json() and to_clean_dict() methods."""
     import json
     sym = symbol
 

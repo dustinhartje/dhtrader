@@ -1,3 +1,4 @@
+"""Tests for Chart creation, candle loading, and date restriction."""
 import pytest
 from dhtrader import (
     Candle, Chart)
@@ -33,7 +34,8 @@ def test_Chart_create_and_verify_pretty():
 def test_Chart_restrict_dates():
     """Verify restrict_dates adjusts candle ranges.
 
-    Storage Usage: Chart autoload=True loads candles."""
+    Storage Usage: Chart autoload=True loads candles.
+    """
     # Create a multimonth chart and confirm initial dates and candle count
     ch = Chart(c_timeframe="15m",
                c_trading_hours="eth",

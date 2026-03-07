@@ -1,3 +1,4 @@
+"""Tests for Candle creation, validation, and output methods."""
 from dhtrader import (
     Candle)
 

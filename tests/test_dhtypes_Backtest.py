@@ -1,3 +1,4 @@
+"""Tests for Backtest creation, storage, retrieval, and calculation."""
 import datetime
 import pytest
 from dhtrader import (
@@ -128,7 +129,9 @@ def create_backtest(start_dt="2025-01-01 00:00:00",
 
 def clear_storage_by_name(name: str):
     """Delete all Backtests, TradeSeries, and Trades with the given name from
-    central storage"""
+
+    central storage.
+    """
     delete_backtests_by_field(symbol="ES", field="name", value=name)
     s_bt = get_backtests_by_field(field="name", value=name)
     assert len(s_bt) == 0
@@ -160,7 +163,8 @@ def test_Backtest_create_and_verify_pretty():
 def test_Backtest_load_charts():
     """Verify load_charts retrieves candles.
 
-    Storage Usage: load_charts."""
+    Storage Usage: load_charts.
+    """
     bt = create_backtest(start_dt="2025-01-01 00:00:00",
                          end_dt="2025-01-07 17:30:00",
                          timeframe="e1h",
@@ -182,7 +186,8 @@ def test_Backtest_load_charts():
 def test_Backtest_restrict_dates():
     """Verify restrict_dates adjusts candle ranges.
 
-    Storage Usage: Chart autoload=True loads candles."""
+    Storage Usage: Chart autoload=True loads candles.
+    """
     test_name = "DELETEME-RESTRICTTest"
     bt = create_backtest(name=test_name,
                          start_dt="2025-01-01 18:00:00",
@@ -486,7 +491,8 @@ def test_Backtest_restrict_dates():
 def test_Backtest_add_and_remove_tradeseries_and_trades():
     """Verify Backtest updating TradeSeries and storing/deletion.
 
-    Storage Usage: store_backtests, store_tradeseries, store_trades."""
+    Storage Usage: store_backtests, store_tradeseries, store_trades.
+    """
     test_name = "DELETEME-ARTSTest"
     ts1_name = "".join([test_name, "1"])
     ts1_ts_id = "".join([test_name, "1_a1_b2_c3_p0"])
@@ -727,7 +733,8 @@ def test_Backtest_store_retrieve_load_tradeseries_and_delete():
     """Verify full round-trip storage of Backtest+TradeSeries+Trades.
 
     Storage Usage: store_backtests, store_tradeseries, store_trades,
-    get_* methods, delete_from_storage, load_tradeseries."""
+    get_* methods, delete_from_storage, load_tradeseries.
+    """
     test_name = "DELETEME-STORELOADTest"
     # Create and link Backtest, TradeSeries, and Trade objects
     tr = create_trade()
