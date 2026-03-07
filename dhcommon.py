@@ -79,6 +79,8 @@ def log_say(msg, level="info"):
 
 
 class OperationTimer():
+    """Tracks elapsed time for a named operation."""
+
     def __init__(self,
                  name: str,
                  start_dt=None,
@@ -87,6 +89,7 @@ class OperationTimer():
                  elapsed_str="",
                  auto_start: bool = True,
                  ):
+        """Initialize the timer, optionally starting it immediately."""
         self.name = name
         self.start_dt = start_dt
         self.end_dt = end_dt
@@ -97,9 +100,11 @@ class OperationTimer():
             self.start()
 
     def __str__(self):
+        """Return a string representation of the timer's state."""
         return str(self.to_clean_dict())
 
     def __repr__(self):
+        """Return a string representation suitable for debugging."""
         return str(self)
 
     def to_json(self):
@@ -139,9 +144,11 @@ class OperationTimer():
                 f"elapsed {self.elapsed_str} | ended {dt_as_str(self.end_dt)}")
 
     def start(self):
+        """Record the current datetime as the start time."""
         self.start_dt = dt.now()
 
     def update_elapsed(self):
+        """Recalculate elapsed time from start to now or to the end time."""
         if self.end_dt is None:
             now = dt.now()
         else:
@@ -150,6 +157,7 @@ class OperationTimer():
         self.elapsed_str = re.sub("\\..*", "", str(self.elapsed_dt))
 
     def stop(self):
+        """Record the current datetime as the end time and update elapsed."""
         self.end_dt = dt.now()
         self.update_elapsed()
 
@@ -161,6 +169,7 @@ class ProgBar():
                  desc: str = "TradeSeries calculated",
                  auto_start: bool = True,
                  ):
+        """Initialize the progress bar, optionally starting it immediately."""
         self.total = total
         self.desc = desc
         self.auto_start = auto_start
@@ -168,7 +177,10 @@ class ProgBar():
             self.start()
 
     def start(self):
-        bar_label = (f"%(value)d of {self.total} {self.desc} in %(elapsed)s ")
+        """Build and start the underlying progressbar widget."""
+        bar_label = (
+            f"%(value)d of {self.total} {self.desc} in %(elapsed)s "
+        )
         eta_widget = progressbar.ETA(
                 format_not_started='--:--:--',
                 format_finished='Time: %(elapsed)8s',
@@ -185,12 +197,15 @@ class ProgBar():
                                                 max_value=self.total).start()
 
     def update(self, val):
+        """Update the progress bar to an absolute value."""
         self.this_bar.update(val)
 
     def increment(self, val=1):
+        """Advance the progress bar by val steps (default 1)."""
         self.this_bar.increment(val)
 
     def finish(self):
+        """Mark the progress bar as complete."""
         self.this_bar.finish()
 
 
@@ -230,6 +245,7 @@ def diff_dicts(dict1, dict2):
 
 
 def prompt_yn(msg):
+    """Prompt the user with msg and return True for Y/y, False for N/n."""
     p = ""
     while p not in ["Y", "y", "N", "n"]:
         p = input(f"{msg} (Y/N)?:")
@@ -240,6 +256,7 @@ def prompt_yn(msg):
 
 
 def valid_timeframe(t, exit=True):
+    """Return True if t is valid, otherwise raise or print an error."""
     if t in TIMEFRAMES:
         return True
     else:
@@ -252,6 +269,7 @@ def valid_timeframe(t, exit=True):
 
 
 def valid_trading_hours(t, exit=True):
+    """Return True if t is a valid trading hours specifier, else raise."""
     if t in TRADING_HOURS:
         return True
     else:
@@ -283,6 +301,7 @@ def check_tf_th_compatibility(tf, th, exit=True):
 
 
 def valid_event_category(c, exit=True):
+    """Return True if c is a valid event category, otherwise raise or print."""
     if c in EVENT_CATEGORIES:
         return True
     else:
@@ -652,6 +671,11 @@ def summarize_candles(timeframe: str,
                       symbol: str = "ES",
                       candles: list = None,
                       ):
+    """Return a summary of candle datetimes grouped by minute, hour, and date.
+
+    Compares actual candle times against expected times for the given
+    timeframe and returns both observed and expected sets for review.
+    """
     if not isinstance(candles, list):
         raise TypeError(f"candles must be a list, not {type(candles)}")
     times = set()
