@@ -260,7 +260,24 @@ log.addHandler(logging.NullHandler())
 
 
 def _dhstore(fn_name, *args, **kwargs):
-    """Delegate to dhstore if loaded."""
+    """Delegate to dhstore if loaded.
+
+    This function resolves the circular import between dhtypes and
+    dhstore:
+    - dhstore imports domain classes from dhtypes (Symbol, Candle, etc.)
+    - dhtypes needs storage functions from dhstore
+
+    ARCHITECTURE NOTE: External code should import storage functions
+    from dhstore (via dhtrader/__init__.py), not from dhtypes. This
+    wrapper is for internal use within dhtypes.py only, allowing class
+    constructors and methods to call storage functions without creating
+    circular imports at module load time.
+
+    The lazy loading pattern (checking sys.modules at call time rather
+    than import time) is a standard solution for circular dependencies
+    in Python. This is preferable to moving all storage logic out of
+    dhtypes or requiring all callers to pass Symbol objects explicitly.
+    """
     # Try package-qualified name first, then bare name for compatibility
     m = sys.modules.get('dhtrader.dhstore')
     if m is None:
