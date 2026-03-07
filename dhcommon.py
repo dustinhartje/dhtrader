@@ -64,7 +64,7 @@ log.addHandler(logging.NullHandler())
 
 
 def log_say(msg, level="info"):
-    """Log messages while also printing to console"""
+    """Log messages while also printing to console."""
     print(msg)
     if level == "debug":
         log.debug(msg)
@@ -79,6 +79,11 @@ def log_say(msg, level="info"):
 
 
 class OperationTimer():
+    """Tracks elapsed time for a named operation.
+
+    Starts timing automatically on creation unless auto_start is False.
+    """
+
     def __init__(self,
                  name: str,
                  start_dt=None,
@@ -97,14 +102,19 @@ class OperationTimer():
             self.start()
 
     def __str__(self):
+        """Return a string representation of the timer's state."""
         return str(self.to_clean_dict())
 
     def __repr__(self):
+        """Return a string representation suitable for debugging."""
         return str(self)
 
     def to_json(self):
-        """returns a json version of this object while normalizing
-        custom types (like datetime to string)"""
+        """Return a JSON representation with custom types normalized.
+
+        Converts datetime and other non-serializable types to strings
+        for portability.
+        """
         self.update_elapsed()
         working = deepcopy(self.__dict__)
         if self.start_dt is not None:
@@ -117,14 +127,16 @@ class OperationTimer():
         return json.dumps(working)
 
     def to_clean_dict(self):
-        """Converts to JSON string then back to a python dict.  This helps
-        to normalize types (I'm looking at YOU datetime) while ensuring
-        a portable python data structure"""
+        """Converts to JSON string then back to a python dict.
+
+        This helps to normalize types (I'm looking at YOU datetime) while
+        ensuring a portable python data structure
+        """
         return json.loads(self.to_json())
 
     def pretty(self):
-        """Attempts to return an indented multiline version of this object,
-        meant to provide an easy to read output for console or other purposes.
+        """Return a formatted, indented string representation of this object.
+
         Optionally suppress_datapoints to reduce output size when not needed.
         """
         return json.dumps(self.to_clean_dict(),
@@ -132,16 +144,20 @@ class OperationTimer():
                           )
 
     def summary(self):
-        """Provide a one line str summary of the timer's current status, useful
-        for monotiring running timers or final review."""
+        """Return a one-line string summary of the timer's current status.
+
+        Useful for monitoring running timers or final review.
+        """
         self.update_elapsed()
         return (f"OpTimer {self.name} | started {dt_as_str(self.start_dt)} | "
                 f"elapsed {self.elapsed_str} | ended {dt_as_str(self.end_dt)}")
 
     def start(self):
+        """Record the current datetime as the start time."""
         self.start_dt = dt.now()
 
     def update_elapsed(self):
+        """Recalculate elapsed time from start to now or to the end time."""
         if self.end_dt is None:
             now = dt.now()
         else:
@@ -150,12 +166,18 @@ class OperationTimer():
         self.elapsed_str = re.sub("\\..*", "", str(self.elapsed_dt))
 
     def stop(self):
+        """Record the current datetime as the end time and update elapsed."""
         self.end_dt = dt.now()
         self.update_elapsed()
 
 
 class ProgBar():
-    """Wrapper to make progress bars smoother to implement"""
+    """Wrapper to make progress bars smoother to implement.
+
+    Starts the progress bar automatically on creation unless auto_start is
+    False.
+    """
+
     def __init__(self,
                  total: int,
                  desc: str = "TradeSeries calculated",
@@ -168,7 +190,10 @@ class ProgBar():
             self.start()
 
     def start(self):
-        bar_label = (f"%(value)d of {self.total} {self.desc} in %(elapsed)s ")
+        """Build and start the underlying progressbar widget."""
+        bar_label = (
+            f"%(value)d of {self.total} {self.desc} in %(elapsed)s "
+        )
         eta_widget = progressbar.ETA(
                 format_not_started='--:--:--',
                 format_finished='Time: %(elapsed)8s',
@@ -185,17 +210,20 @@ class ProgBar():
                                                 max_value=self.total).start()
 
     def update(self, val):
+        """Update the progress bar to an absolute value."""
         self.this_bar.update(val)
 
     def increment(self, val=1):
+        """Advance the progress bar by val steps (default 1)."""
         self.this_bar.increment(val)
 
     def finish(self):
+        """Mark the progress bar as complete."""
         self.this_bar.finish()
 
 
 def sort_dict(d: dict):
-    """Uses insertion ordering to sort a dictionary by keys"""
+    """Uses insertion ordering to sort a dictionary by keys."""
     keys = []
     sorted_dict = {}
     for k in d.keys():
@@ -208,14 +236,11 @@ def sort_dict(d: dict):
 
 
 def diff_dicts(dict1, dict2):
-    """
-    Compares two dictionaries and returns a dictionary of differences in the
-    form of tuples representing the values found in each dict in the order
-    that the dicts were pass in.
+    """Compare two dicts and return a dict of differences as value tuples.
 
-    This will present None if a key in one dict was not found in the other.
-
-    It will return {} if no differences were found.
+    Each tuple holds the values from each dict in the order they were
+    passed.  None is used for keys missing from one dict.  Returns {}
+    if no differences are found.
     """
     diff = {}
     all_keys = set(dict1.keys()) | set(dict2.keys())
@@ -230,6 +255,7 @@ def diff_dicts(dict1, dict2):
 
 
 def prompt_yn(msg):
+    """Prompt the user with msg and return True for Y/y, False for N/n."""
     p = ""
     while p not in ["Y", "y", "N", "n"]:
         p = input(f"{msg} (Y/N)?:")
@@ -240,6 +266,7 @@ def prompt_yn(msg):
 
 
 def valid_timeframe(t, exit=True):
+    """Return True if t is valid, otherwise raise or print an error."""
     if t in TIMEFRAMES:
         return True
     else:
@@ -252,6 +279,7 @@ def valid_timeframe(t, exit=True):
 
 
 def valid_trading_hours(t, exit=True):
+    """Return True if t is a valid trading hours specifier, else raise."""
     if t in TRADING_HOURS:
         return True
     else:
@@ -264,9 +292,10 @@ def valid_trading_hours(t, exit=True):
 
 
 def check_tf_th_compatibility(tf, th, exit=True):
-    """Confirm that a given timeframe (tf) and trading hours (th) are
-    compatible.  Usually we want to exit if this is not so as data cannot be
-    trusted otherwise.
+    """Confirm the given timeframe (tf) and trading hours (th) are compatible.
+
+    Usually we want to exit if incompatible as data cannot be trusted
+    otherwise.
     """
     result = True
     if th == "eth":
@@ -283,6 +312,7 @@ def check_tf_th_compatibility(tf, th, exit=True):
 
 
 def valid_event_category(c, exit=True):
+    """Return True if c is a valid event category, otherwise raise or print."""
     if c in EVENT_CATEGORIES:
         return True
     else:
@@ -295,8 +325,8 @@ def valid_event_category(c, exit=True):
 
 
 def dt_as_dt(d):
-    """return a datetime object representing the given datetime, string, or
-    None input"""
+    """Return a datetime from the given datetime, string, or None input.
+    """
     if d is None:
         return None
     if isinstance(d, dt):
@@ -332,8 +362,8 @@ def dt_as_dt(d):
 
 
 def dt_as_str(d):
-    """return a string object representing the given datetime, string, or
-     None input"""
+    """Return a string from the given datetime, string, or None input.
+    """
     if d is None:
         return None
 
@@ -352,36 +382,36 @@ def dt_as_str(d):
 
 
 def dt_as_time(time: str):
-    """Return a datetime.time object for the given %H:%M:%S string"""
+    """Return a datetime.time object for the given %H:%M:%S string."""
     if time is None:
         return None
     return dt_as_dt(f"2000-01-01 {time}").time()
 
 
 def dow_name(dow: int):
-    """Return the human name for a day of the week given it's index as
-    represented in datetime.weekday()"""
+    """Return the weekday name for the given datetime.weekday() index.
+    """
     names = {0: "Monday", 1: "Tuesday", 2: "Wednesday", 3: "Thursday",
              4: "Friday", 5: "Saturday", 6: "Sunday"}
     return names[dow]
 
 
 def dt_to_epoch(d):
-    """return an epoch integer from a datetime or string"""
+    """Return an epoch integer from a datetime or string."""
     if d is None:
         return None
     return int(dt_as_dt(d).timestamp())
 
 
 def dt_from_epoch(d):
-    """return a datetime object from an epoch integer"""
+    """Return a datetime object from an epoch integer."""
     if d is None:
         return None
     return dt.fromtimestamp(d)
 
 
 def timeframe_delta(timeframe: str):
-    """return a precalculated timedelta object for the timeframe given"""
+    """Return a precalculated timedelta object for the timeframe given."""
     if timeframe in TIMEFRAME_DELTAS:
         return TIMEFRAME_DELTAS[timeframe]
 
@@ -389,8 +419,8 @@ def timeframe_delta(timeframe: str):
 
 
 def start_of_week_date(dt):
-    """Return the date object for the starting Sunday of the week in which
-    the provided datetime exists."""
+    """Return the Sunday that starts the week containing the given datetime.
+    """
     dt = dt_as_dt(dt)
     if dt.weekday() == 6:
         week_dt = dt.date()
@@ -400,21 +430,22 @@ def start_of_week_date(dt):
 
 
 def dict_of_weeks(start_dt, end_dt, template):
-    """Return a template dictionary with keys for each week that exist in
-    the provided timeframe from start_dt to end_dt, with a value equal to the
-    template passed in.  Generally this will be used for aggregating weekly
-    stats.  Sunday is used as the start of the week to match market behavior
-    and cover extended hours trading strategies.
+    """Return a template dictionary with keys for each week in the timeframe.
 
-    template should be provided as a dictionary with default values for each
-    week.  For example:
+    Keys are created for each week from start_dt to end_dt, with a value
+    equal to the template passed in.  Generally used for aggregating weekly
+    stats.  Sunday is the start of each week to match market behavior and
+    cover extended hours trading strategies.
 
-        template = {"total_trades": 0,
-                    "profitable_trades": 0,
-                    "losing_trades": 0,
-                    "gl_in_ticks": 0,
-                    "success_rate": "nil",
-                    }
+    template should be a dictionary with default values, for example:
+
+        template = {
+            "total_trades": 0,
+            "profitable_trades": 0,
+            "losing_trades": 0,
+            "gl_in_ticks": 0,
+            "success_rate": "nil",
+        }
     """
     start_dt = dt_as_dt(start_dt)
     end_dt = dt_as_dt(end_dt)
@@ -428,10 +459,10 @@ def dict_of_weeks(start_dt, end_dt, template):
 
 
 def this_candle_start(dt, timeframe: str):
-    """Returns the datetime that represents a parent candle start
-    in which the given datetime would exist in this timeframe.  May return the
-    same as input.  This does not confirm market open like next_candle_start()
-    since it may not be able to provide an answer in some cases..
+    """Return the parent candle start datetime for the given dt and timeframe.
+
+    May return the same as input.  Unlike next_candle_start(), this does
+    not confirm market open and may not be able to answer in all cases.
     """
     this_dt = dt_as_dt(dt)
     min_delta = timedelta(minutes=1)
@@ -491,8 +522,7 @@ def next_candle_start(dt,
                       timeframe: str = "1m",
                       events: list = None,
                       ):
-    """Return the next datetime that represents a valid candle start during
-    open market hours.
+    """Return the next valid candle start datetime during open market hours.
 
     symbol must be a Symbol-like object implementing market_is_open().
     """
@@ -621,9 +651,11 @@ def expected_candle_datetimes(start_dt,
 def rangify_candle_times(times: list,
                          timeframe: str,
                          ):
-    """Takes a list of datetimes and returns a list of aggregated datetime
-    ranges.  Primarily intended to make human review sane on large sets of
-    gap and unexpected candles during integrity checks"""
+    """Aggregate a list of datetimes into a list of datetime ranges.
+
+    Primarily intended to make human review sane on large sets of gap and
+    unexpected candles during integrity checks.
+    """
     delta = timeframe_delta(timeframe)
     sorted_times = sorted(times)
     ranges = []
@@ -652,6 +684,11 @@ def summarize_candles(timeframe: str,
                       symbol: str = "ES",
                       candles: list = None,
                       ):
+    """Return a summary of candle datetimes grouped by minute, hour, and date.
+
+    Compares actual candle times against expected times for the given
+    timeframe and returns both observed and expected sets for review.
+    """
     if not isinstance(candles, list):
         raise TypeError(f"candles must be a list, not {type(candles)}")
     times = set()

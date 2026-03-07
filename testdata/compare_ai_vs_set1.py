@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""
-Compare AI trades with set1 trades for validation purposes.  Paired with
-calculate_ai_trades.py which generates AI trades from scratch using only the
-provided instructions.  This script is not used regularly and there is a good
-chance it will require updates to run properly in the future.
+"""Compare AI trades with set1 trades for validation purposes.
+
+Paired with calculate_ai_trades.py which generates AI trades from scratch
+using only the provided instructions.  This script is not used regularly
+and there is a good chance it will require updates to run properly in the
+future.
 """
 
 import csv
@@ -12,12 +13,12 @@ from collections import defaultdict
 
 
 def parse_datetime(dt_str):
-    """Parse datetime string"""
+    """Parse datetime string."""
     return datetime.strptime(dt_str, "%Y-%m-%d %H:%M:%S")
 
 
 def load_ai_trades(filename):
-    """Load AI-calculated trades"""
+    """Load AI-calculated trades."""
     trades = []
     with open(filename, 'r') as f:
         reader = csv.DictReader(f)
@@ -42,7 +43,7 @@ def load_ai_trades(filename):
 
 
 def load_set1_trades(filename):
-    """Load set1 trades"""
+    """Load set1 trades."""
     trades = []
     with open(filename, 'r') as f:
         reader = csv.DictReader(f)
@@ -64,7 +65,7 @@ def load_set1_trades(filename):
 
 
 def compare_trades(ai_filename, set1_filename, direction):
-    """Compare trades for a specific direction"""
+    """Compare trades for a specific direction."""
     print(f"\n{'='*80}")
     print(f"{direction.upper()} TRADES COMPARISON")
     print('='*80)

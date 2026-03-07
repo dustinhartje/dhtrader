@@ -1,3 +1,9 @@
+"""Utilities for extracting test data from storage and rebuilding objects.
+
+Provides the Extractor class for pulling dhtrader objects out of central
+storage and saving them as JSON/CSV test data files, and the Rebuilder
+class for recreating those objects from the saved files during testing.
+"""
 import json
 import csv
 
@@ -22,8 +28,10 @@ except (ImportError, ValueError):
 
 
 def prepare_for_csv(data_list):
-    """Convert list of dicts to CSV-ready format by serializing
-    lists/dicts to JSON strings
+    """Convert list of dicts to CSV-ready format.
+
+    Serializes any list or dict values to JSON strings for CSV
+    compatibility.
     """
     result = []
     for row in data_list:
@@ -39,7 +47,7 @@ def prepare_for_csv(data_list):
 
 
 class Extractor():
-    """Extract various objects from dhstore to build test data files"""
+    """Extract various objects from dhstore to build test data files."""
 
     def extract_candles(self,
                         start_dt,
@@ -48,8 +56,7 @@ class Extractor():
                         symbol="ES",
                         out_file=None,
                         ):
-        """Extract candles from storage and optionally save as JSON
-        and CSV files
+        """Extract candles from storage, optionally saving to JSON and CSV.
         """
         cans_obj = get_candles(start_epoch=dt_to_epoch(start_dt),
                                end_epoch=dt_to_epoch(end_dt),
@@ -83,8 +90,7 @@ class Extractor():
                        ind_dps=None,
                        out_file=None,
                        ):
-        """Extract trades from storage and optionally save as JSON
-        and CSV files
+        """Extract trades from storage, optionally saving to JSON and CSV.
         """
         if isinstance(ts_ids, str):
             ts_ids = [ts_ids]
@@ -214,8 +220,7 @@ class Extractor():
                             symbol="ES",
                             out_file=None,
                             ):
-        """Extract one or more tradeseries from storage by ts_id and
-        optionally save as JSON and CSV files
+        """Extract tradeseries by ts_id, optionally saving to JSON and CSV.
         """
         if isinstance(ts_ids, str):
             ts_ids = [ts_ids]
@@ -260,8 +265,7 @@ class Extractor():
                           end_dt=None,
                           out_file=None,
                           ):
-        """Extract one or more BacktestIndTag objects from storage by
-        bt_id and optionally save as JSON and CSV files
+        """Extract BacktestIndTag objects by bt_id, optionally saving to files.
         """
         if isinstance(bt_ids, str):
             bt_ids = [bt_ids]
@@ -306,8 +310,7 @@ class Extractor():
                                      end_dt,
                                      out_file=None,
                                      ):
-        """Extract indicator datapoints from storage and optionally
-        save as JSON and CSV files
+        """Extract indicator datapoints, optionally saving to JSON and CSV.
         """
         ind_dps = get_indicator_datapoints(ind_id=ind_id,
                                            earliest_dt=start_dt,
@@ -328,13 +331,14 @@ class Extractor():
 
 
 class Rebuilder():
-    """Recreate DHTrader objects from test data files"""
+    """Recreate DHTrader objects from test data files."""
+
     def rebuild_candles(self,
                         in_file,
                         start_dt=None,
                         end_dt=None,
                         ):
-        """Rebuild candles from JSON test data file"""
+        """Rebuild candles from JSON test data file."""
         print(f"Reading candles from {in_file}")
         with (open(in_file, 'r')) as f:
             cans_json = json.load(f)
@@ -371,7 +375,7 @@ class Rebuilder():
                        start_dt=None,
                        end_dt=None,
                        ):
-        """Rebuild trades from JSON test data file"""
+        """Rebuild trades from JSON test data file."""
         print(f"Reading trades from {in_file}")
         with (open(in_file, 'r')) as f:
             all_trades = json.load(f)
@@ -437,8 +441,10 @@ class Rebuilder():
                             end_dt=None,
                             trades_file=None,
                             ):
-        """Rebuild one or more tradeseries from JSON test data file.  Provide
-        trades_file to also load Trades for each TradeSeries."""
+        """Rebuild one or more tradeseries from JSON test data file.
+
+        Provide trades_file to also load Trades for each TradeSeries.
+        """
         print(f"Reading TradeSeries from {in_file}")
         with (open(in_file, 'r')) as f:
             tss_json = json.load(f)
@@ -496,9 +502,11 @@ class Rebuilder():
                           tradeseries_file=None,
                           trades_file=None,
                           ):
-        """Rebuild one or more Backtest objects from JSON test data
-        file.  Provide tradeseries_file to also load TradeSeries for each
-        backtest, and trades_file to load Trades for each TradeSeries."""
+        """Rebuild one or more Backtest objects from JSON test data file.
+
+        Provide tradeseries_file to also load TradeSeries for each
+        backtest, and trades_file to load Trades for each TradeSeries.
+        """
         print(f"Reading Backtest from {in_file}")
         with (open(in_file, 'r')) as f:
             bts_json = json.load(f)

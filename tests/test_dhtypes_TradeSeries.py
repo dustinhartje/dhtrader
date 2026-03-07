@@ -1,3 +1,4 @@
+"""Tests for TradeSeries creation, trade management, and statistics."""
 import datetime
 import pytest
 import json
@@ -21,6 +22,7 @@ def create_trade(open_dt="2025-01-02 12:00:00",
                  prof_target=5005,
                  name="DELETEME"
                  ):
+    """Create and return a Trade with default test parameters."""
     return Trade(open_dt=open_dt,
                  close_dt=close_dt,
                  direction=direction,
@@ -36,9 +38,11 @@ def create_trade(open_dt="2025-01-02 12:00:00",
 
 
 def add_1m_candle(trade, dt, c_open, c_high, c_low, c_close):
-    """Creates a Candle representing a 1 minute candle occurring
-    during an open trade.  This is used to test against actual observed live
-    trade results, simulating each significant candle in the trade."""
+    """Create a 1-minute Candle occurring during an open trade.
+
+    Used to test against actual observed live trade results,
+    simulating each significant candle in the trade.
+    """
     trade.candle_update(Candle(c_datetime=dt,
                                c_timeframe="1m",
                                c_open=c_open,
@@ -61,6 +65,7 @@ def create_tradeseries(start_dt="2025-01-01 00:00:00",
                        bt_id=None,
                        trades=None,
                        ):
+    """Create a TradeSeries and validate its attributes and defaults."""
     r = TradeSeries(start_dt=start_dt,
                     end_dt=end_dt,
                     timeframe=timeframe,
@@ -360,9 +365,7 @@ def test_TradeSeries_balance_impact_and_stats():
 
 
 def test_TradeSeries_non_target_closes_stats_and_effective_risk_reward_calc():
-    """Verify effective_risk_reward when trades close at non-target
-    prices.
-    """
+    """Verify effective_risk_reward when trades close at non-target prices."""
     ts = create_tradeseries()
     # Long trade closing at partial profit +23pt at end of day
     t = create_trade(open_dt="2025-01-02 12:30:00", direction="long",
@@ -556,8 +559,7 @@ def test_TradeSeries_drawdown_impact():
 
 @pytest.mark.storage
 def test_TradeSeries_store_retrieve_and_delete():
-    """Verify TradeSeries storage, retrieval, and deletion including
-    trades.
+    """Verify TradeSeries storage, retrieval, and deletion including trades.
 
     Storage Usage: store_tradeseries, get/delete methods.
     """
@@ -615,8 +617,9 @@ def test_TradeSeries_store_retrieve_and_delete():
 
 @pytest.mark.historical
 def test_TradeSeries_historical():
-    """Test TradeSeries.stats, balance_impact, and drawdown_impact
-    against historical data.
+    """Test TradeSeries.stats, balance_impact, and drawdown_impact.
+
+    Validates against historical data from testdata/set1.
     """
     # SET1 SHORT TRADES NO REFINING ######################################
     # Rebuild testdata/set1 short TradeSeries

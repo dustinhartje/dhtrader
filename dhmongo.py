@@ -1,15 +1,16 @@
-# Mongo specific functions for storing and retrieving data
-#
-# This module provides low-level MongoDB operations for candles, trades,
-# backtests, indicators, and events. These functions are wrapped by
-# corresponding functions in dhstore.py, which provides a storage
-# abstraction layer to allow migration to a different database without
-# requiring changes to higher-level code.
-#
-# Running this script ad hoc will perform a basic connect, write, read test
-#
-# REF: https://github.com/mongodb-university/atlas_starter_python/blob
-#      /master/atlas-starter.py
+"""Low-level MongoDB operations for dhtrader data storage and retrieval.
+
+This module provides MongoDB operations for candles, trades, backtests,
+indicators, and events. These functions are wrapped by corresponding
+functions in dhstore.py, which provides a storage abstraction layer
+to allow migration to a different database without requiring changes
+to higher-level code.
+
+Running this script ad hoc will perform a basic connect, write, read test.
+
+REF: https://github.com/mongodb-university/atlas_starter_python/blob
+     /master/atlas-starter.py
+"""
 
 import os
 import sys
@@ -56,7 +57,9 @@ except Exception:
 def start_progbar(show_progress: bool, total: int,
                   desc: str) -> ProgBar:
     """Start a progress bar if show_progress is True and total > 0.
-    Returns ProgBar object or None."""
+
+    Returns ProgBar object or None.
+    """
     if show_progress and total > 0:
         return ProgBar(total=total, desc=desc)
     return None
@@ -79,7 +82,7 @@ def finish_progbar(pbar: ProgBar):
 ##############################################################################
 # Non-class specific functions
 def review_database():
-    """Quick function to gather useful information about the state of mongo"""
+    """Quick function to gather useful information about the state of mongo."""
     raw = db.command("dbstats")
     overview = {"collection": raw["collections"],
                 "objects": raw["objects"],
@@ -94,13 +97,13 @@ def review_database():
 
 
 def list_collections():
-    """List all current collections in mongo"""
+    """List all current collections in mongo."""
     return db.list_collection_names()
 
 
 def clear_collection(collection: str):
-    """Deletes all records from a collection but keeps the collection itself
-    and any indexes/settings intact."""
+    """Delete all records from a collection, preserving indexes and settings.
+    """
     c = db[collection]
     if not prompt_yn(f"Clear all records from collection "
                      f"'{collection}'? This cannot be undone.  You should "
@@ -111,7 +114,10 @@ def clear_collection(collection: str):
 
 
 def drop_collection(collection: str):
-    """Irretrievable drops a collection from the store.  Use carefully!"""
+    """Irretrievable drops a collection from the store.
+
+    Use carefully!
+    """
     c = db[collection]
     if not prompt_yn(f"Drop collection '{collection}'? This cannot be"
                      "undone and will delete all data, indexes, and other "
@@ -127,8 +133,10 @@ def get_all_records_by_collection(collection: str,
                                   limit=0,
                                   show_progress: bool = False,
                                   ):
-    """Return <limit> (default 0 == all) records from a collection, typically
-    wrapped by more specific functions in dhstore such as get_all_trades()."""
+    """Return records from a collection, typically via dhstore wrappers.
+
+    limit defaults to 0 which returns all records.
+    """
     c = db[collection]
     total = c.count_documents({})
     if limit > 0:
@@ -146,7 +154,7 @@ def get_all_records_by_collection(collection: str,
 
 
 def run_query(query, collection: str, show_progress: bool = False):
-    """Run a standard mongo query and return the result"""
+    """Run a standard mongo query and return the result."""
     c = db[collection]
     total = c.count_documents(query)
     pbar = start_progbar(show_progress, total,
@@ -180,11 +188,12 @@ def list_values_by_regex_match(values_field: str,
                                regex: str,
                                collection: str,
                                ):
-    """Return aggregation with list of unique values in values_field split
-    by regex match or nomatch in regex_field.  An example usage: review tags
-    list based on whether or not a Trade closed in the autoclose timeframe
-    i.e. split by those that close at 15:55:00 for rth hours and those that
-    do not."""
+    """Return unique values in values_field split by regex match/nomatch.
+
+    Example: review tags based on whether a Trade closed in the autoclose
+    timeframe, i.e. split by those closing at 15:55:00 vs. those that do
+    not.
+    """
     c = db[collection]
     pipeline = [
         {
@@ -218,11 +227,11 @@ def update_records_value(search: dict,
                          update_value: str,
                          collection: str,
                          ):
-    """Using 'search', which should be a dict representing a mongo filter,
-    update all matching records update_field with the new update_value
+    """Update all records matching a mongo filter with a new field value.
 
-    Example:
-    To replace bt_id 'foo' with 'bar' on all backtests currently matching 'foo'
+    'search' should be a dict representing the mongo filter.
+
+    Example: replace bt_id 'foo' with 'bar' on all matching backtests:
     update_record_value(search={"bt_id": "foo"},
                         update_field="bt_id",
                         update_value="bar",
@@ -239,9 +248,12 @@ def update_records_value(search: dict,
 def delete_one_document(query: dict,
                         collection: str,
                         ):
-    """Delete a single document from storage using the provided query.  This
-    is primarily called by more specific functions in dhstore.py for individual
-    object types using relevant parameters to build the query there."""
+    """Delete a single document from storage using the provided query.
+
+    This is primarily called by more specific functions in dhstore.py for
+    individual object types using relevant parameters to build the query
+    there.
+    """
     c = db[collection]
     result = c.delete_one(query)
 
@@ -277,7 +289,7 @@ def get_trades_by_field(field: str,
 def store_trades(trades: list,
                  collection: str,
                  ):
-    """Store one or more trades in mongo using bulk operations"""
+    """Store one or more trades in mongo using bulk operations."""
     c = db[collection]
 
     if not trades:
@@ -326,7 +338,7 @@ def review_trades(symbol: str,
                   bt_id: str = None,
                   ts_id: str = None,
                   ):
-    """Provides aggregate summary data about trades in mongo"""
+    """Provides aggregate summary data about trades in mongo."""
     c = db[collection]
     match = {"symbol": symbol}
     group = {"_id": {"name": "$name"},
@@ -355,12 +367,13 @@ def delete_trades_by_field(symbol: str,
                            value,
                            collection: str,
                            ):
-    """Delete all trade records with 'field' matching 'value'.  Typically
-    used to delete by name, ts_id, or bt_id fields.
+    """Delete all trade records with 'field' matching 'value'.
+
+    Typically used to delete by name, ts_id, or bt_id fields.
 
     Example to delete all trade records with name=="DELETEME":
-        delete_trades_by_field(symbol="ES", field="name",
-                               value="DELETEME")
+    delete_trades_by_field(symbol="ES", field="name",
+    value="DELETEME")
     """
     c = db[collection]
     result = c.delete_many({field: value})
@@ -371,8 +384,8 @@ def delete_trades_by_field(symbol: str,
 def delete_trades(trades: list,
                   collection: str,
                   ):
-    """Delete one or more trades from mongo using open_dt, ts_id, and
-    symbol as identifying fields."""
+    """Delete trades from mongo using open_dt, ts_id, and symbol as keys.
+    """
     c = db[collection]
     result = []
     for t in trades:
@@ -415,7 +428,7 @@ def get_tradeseries_by_field(field: str,
 def store_tradeseries(series: dict,
                       collection: str,
                       ):
-    """Store one TradeSeries object in mongo"""
+    """Store one TradeSeries object in mongo."""
     c = db[collection]
     result = c.find_one_and_replace({"ts_id": series["ts_id"]},
                                     series,
@@ -430,7 +443,7 @@ def review_tradeseries(symbol: str,
                        collection: str,
                        bt_id: str,
                        ):
-    """Provides aggregate summary data about tradeseries in mongo"""
+    """Provides aggregate summary data about tradeseries in mongo."""
     c = db[collection]
     match = {"symbol": symbol}
     group = {"_id": {"name": "$name", "bt_id": "$bt_id"},
@@ -455,8 +468,9 @@ def delete_tradeseries_by_field(symbol: str,
                                 value,
                                 collection: str,
                                 ):
-    """Delete all tradeseries records in mongo with 'field' matching
-    'value'.  Typically used to delete by ts_id, or bt_id fields.
+    """Delete all tradeseries records in mongo with 'field' matching 'value'.
+
+    Typically used to delete by ts_id, or bt_id fields.
     """
     c = db[collection]
     result = c.delete_many({field: value})
@@ -467,8 +481,8 @@ def delete_tradeseries_by_field(symbol: str,
 def delete_tradeseries(ts_ids: list,
                        collection: str,
                        ):
-    """Delete one or more tradeseries from mongo using ts_id as the
-    identifying field."""
+    """Delete tradeseries from mongo using ts_id as the identifying field.
+    """
     c = db[collection]
     result = []
     for ts_id in ts_ids:
@@ -509,7 +523,7 @@ def get_backtests_by_field(field: str,
 def store_backtest(backtest: dict,
                    collection: str,
                    ):
-    """Store one Backtest object in mongo"""
+    """Store one Backtest object in mongo."""
     c = db[collection]
     result = c.find_one_and_replace({"bt_id": backtest["bt_id"]},
                                     backtest,
@@ -522,7 +536,7 @@ def store_backtest(backtest: dict,
 def review_backtests(symbol: str,
                      collection: str,
                      ):
-    """Provides aggregate summary data about backtests in mongo"""
+    """Provides aggregate summary data about backtests in mongo."""
     c = db[collection]
     match = {"symbol": symbol}
     group = {"_id": {"name": "$name", "bt_id": "$bt_id"},
@@ -546,6 +560,7 @@ def delete_backtests_by_field(symbol: str,
                               collection: str,
                               ):
     """Delete all backtests records in mongo with 'field' matching 'value'.
+
     Typically used to delete by bt_id field.
     """
     c = db[collection]
@@ -557,8 +572,8 @@ def delete_backtests_by_field(symbol: str,
 def delete_backtests(bt_ids: list,
                      collection: str,
                      ):
-    """Delete one or more backtests from mongo using bt_id as the
-    identifying field."""
+    """Delete backtests from mongo using bt_id as the identifying field.
+    """
     c = db[collection]
     result = []
     for bt_id in bt_ids:
@@ -583,7 +598,10 @@ def store_candle(c_datetime,
                  c_date: str,
                  c_time: str,
                  ):
-    """Stores a single candle object in mongo.  Overwrites if it exists."""
+    """Stores a single candle object in mongo.
+
+    Overwrites if it exists.
+    """
     valid_timeframe(c_timeframe)
     collection = f"candles_{c_symbol}_{c_timeframe}"
     c_dt = dt_as_str(c_datetime)
@@ -614,8 +632,8 @@ def get_candles(start_epoch: int,
                 symbol: str,
                 show_progress: bool = False,
                 ):
-    """Returns a list of candle docs within the start and end epochs given
-    inclusive of both epochs"""
+    """Return candle docs within the given start and end epochs, inclusive.
+    """
     c = db[f"candles_{symbol}_{timeframe}"]
     candle_filter = {
         "$and": [
@@ -639,7 +657,7 @@ def get_candles(start_epoch: int,
 def review_candles(timeframe: str,
                    symbol: str,
                    ):
-    """Provides aggregate summary data about candles in central storage"""
+    """Provides aggregate summary data about candles in central storage."""
     c = db[f"candles_{symbol}_{timeframe}"]
     try:
         epochs = list(c.aggregate([{"$group": {"_id": "null",
@@ -667,7 +685,7 @@ def delete_candles(timeframe: str,
                    earliest_dt: str,
                    latest_dt: str,
                    ):
-    "Delete candles from mongo for a specific datetime range."""
+    """Delete candles from mongo for a specific datetime range."""
     c = db[f"candles_{symbol}_{timeframe}"]
     if earliest_dt is None:
         earliest_dt = "1970-01-01 00:00:00"
@@ -685,7 +703,7 @@ def delete_candles(timeframe: str,
 ##############################################################################
 # Indicators
 def list_indicators(meta_collection: str):
-    """Lists all available indicators in mongo based on metadata"""
+    """Lists all available indicators in mongo based on metadata."""
     c = db[meta_collection]
     result = c.find()
 
@@ -697,9 +715,10 @@ def get_indicator_datapoints(ind_id: str,
                              earliest_dt: str = None,
                              latest_dt: str = None,
                              ):
-    """Retrieves all datapoints for the given ind_id that fall within
-    the range of earliest_dt and latest_dt (inclusive of both), returning
-    them as a chronologially sorted list"""
+    """Return datapoints for ind_id within earliest_dt to latest_dt, sorted.
+
+    Range is inclusive of both endpoints.
+    """
     if earliest_dt is None:
         earliest_epoch = 0
     else:
@@ -720,7 +739,7 @@ def get_indicator_datapoints(ind_id: str,
 def store_indicator_datapoints(datapoints: list,
                                collection: str,
                                ):
-    """Store one or more IndicatorDatapoint objects in mongo"""
+    """Store one or more IndicatorDatapoint objects in mongo."""
     c = db[collection]
     result = []
     for d in datapoints:
@@ -740,7 +759,7 @@ def store_indicator_datapoints(datapoints: list,
 def review_indicators(meta_collection: str,
                       dp_collection: str,
                       ):
-    """Return a more detailed overview of indicators in storage"""
+    """Return a more detailed overview of indicators in storage."""
     meta = list_indicators(meta_collection=meta_collection)
     result = {"meta_docs": meta, "datapoints": []}
     c = db[dp_collection]
@@ -774,7 +793,7 @@ def get_indicator(ind_id: str,
                   meta_collection: str,
                   autoload_datapoints: bool,
                   ):
-    """Returns an indicator based on ind_id"""
+    """Returns an indicator based on ind_id."""
     c = db[meta_collection]
     result = c.find({"ind_id": ind_id},
                     )
@@ -785,7 +804,7 @@ def get_indicator(ind_id: str,
 def store_indicator(indicator: dict,
                     meta_collection: str,
                     ):
-    """Store indicator meta in mongo"""
+    """Store indicator meta in mongo."""
     c = db[meta_collection]
     # upsert=True updates existing or creates new if not found
     result = c.find_one_and_replace({"ind_id": indicator["ind_id"]},
@@ -801,8 +820,8 @@ def delete_indicator(ind_id: str,
                      meta_collection: str,
                      dp_collection: str,
                      ):
-    """Remove a single indicator and all of it's datapoints from central
-    storage based on it's ind_id attribute"""
+    """Remove an indicator and all its datapoints from storage by ind_id.
+    """
     c = db[meta_collection]
     result_meta = c.delete_many({"ind_id": ind_id})
     c = db[dp_collection]
@@ -824,7 +843,7 @@ def store_event(start_dt,
                 start_epoch: int,
                 end_epoch: int,
                 ):
-    """Write a single Event() to mongo"""
+    """Write a single Event() to mongo."""
     event_doc = {"start_dt": dt_as_str(start_dt),
                  "end_dt": dt_as_str(end_dt),
                  "category": category,
@@ -851,9 +870,11 @@ def get_events(symbol: str,
                categories: list = None,
                tags: list = None,
                ):
-    """Returns a list of events starting within the start and end epochs given
-    inclusive of both epochs.  Note this will return events that end after
-    end_epoch so long as they start before or on it."""
+    """Return events starting within the given start and end epochs, inclusive.
+
+    Note: events that end after end_epoch are included so long as they
+    start before or on it.
+    """
     c = db[f"events_{symbol}"]
     events = list(c.find({"$and": [{"start_epoch": {"$gte": start_epoch}},
                          {"start_epoch": {"$lte": end_epoch}}]}))

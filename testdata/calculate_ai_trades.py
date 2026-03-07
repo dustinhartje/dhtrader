@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""
-Calculate ES trades based on EMA bounce/rejection strategy for both
-long and short. Created from scratch using only the provided
-instructions.  Useful to generate trades outside of dhtrader system for
-validation of dhtrader results.  This script is not used regularly and there is
-a good chance it will require updates to run properly in the future.
+"""Calculate ES trades using EMA bounce/rejection strategy for long and short.
+
+Created from scratch using only the provided instructions.  Useful to
+generate trades outside of dhtrader system for validation of dhtrader
+results.  This script is not used regularly and there is a good chance it
+will require updates to run properly in the future.
 """
 
 import csv
@@ -14,17 +14,17 @@ from collections import defaultdict
 
 
 def round_up_quarter(value):
-    """Round up to nearest 0.25"""
+    """Round up to nearest 0.25."""
     return math.ceil(value * 4) / 4
 
 
 def round_down_quarter(value):
-    """Round down to nearest 0.25"""
+    """Round down to nearest 0.25."""
     return math.floor(value * 4) / 4
 
 
 def load_ema_data(filename):
-    """Load EMA datapoints as sorted list"""
+    """Load EMA datapoints as sorted list."""
     ema_list = []
     with open(filename, 'r') as f:
         reader = csv.DictReader(f)
@@ -37,7 +37,7 @@ def load_ema_data(filename):
 
 
 def load_hourly_candles(filename):
-    """Load hourly candles"""
+    """Load hourly candles."""
     candles = []
     with open(filename, 'r') as f:
         reader = csv.DictReader(f)
@@ -54,7 +54,7 @@ def load_hourly_candles(filename):
 
 
 def load_minute_candles(filename):
-    """Load 1-minute candles"""
+    """Load 1-minute candles."""
     candles = {}
     with open(filename, 'r') as f:
         reader = csv.DictReader(f)
@@ -71,7 +71,7 @@ def load_minute_candles(filename):
 
 
 def find_prior_ema(hour_dt, ema_list):
-    """Find the most recent EMA datapoint before hour_dt"""
+    """Find the most recent EMA datapoint before hour_dt."""
     prior_ema = None
     for ema in ema_list:
         if ema['dt'] < hour_dt:
@@ -83,7 +83,7 @@ def find_prior_ema(hour_dt, ema_list):
 
 def calculate_trades(direction='long', offset_ticks=0,
                      profit_dollars=40, stop_dollars=20):
-    """Main calculation function"""
+    """Main calculation function."""
     print(f"\nCalculating {direction.upper()} trades "
           f"(offset_ticks={offset_ticks})...")
 
@@ -325,7 +325,7 @@ def calculate_trades(direction='long', offset_ticks=0,
 
 
 def write_trades_to_csv(trades, filename, direction):
-    """Write trades to CSV file"""
+    """Write trades to CSV file."""
     if not trades:
         print(f"No {direction} trades to write")
         return

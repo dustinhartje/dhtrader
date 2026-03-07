@@ -11,7 +11,8 @@ extract_testdata() from other test modules.
 NOTE - due to the nesting structure I have not been able to determine how to
 setup pathing to get all packages to import correctly when running from a unit
 test file.  Maybe circle back to that later but it works fine run as a script
-which is enough for now."""
+which is enough for now.
+"""
 
 import os
 import sys
@@ -30,6 +31,7 @@ from dhtrader import Backtest, Candle, Trade, TradeSeries
 
 
 def say(msg: str, console_output=True):
+    """Print msg to console if console_output is True."""
     if console_output:
         print(f"{msg}")
 
@@ -38,7 +40,8 @@ def say(msg: str, console_output=True):
 
 
 def rebuild_testdata(console_output=False):
-    """Rebuild test data from json files into objects for validation testing"""
+    """Rebuild test data from JSON files into objects for validation testing.
+    """
     r = Rebuilder()
     # Candles #############################################
     # Rebuild all 1m candles
