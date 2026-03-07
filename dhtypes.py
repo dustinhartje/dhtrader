@@ -344,7 +344,7 @@ class Symbol():
                  leverage_ratio: float,
                  tick_size: float,
                  ):
-
+        """Initialize a Symbol with its core trading properties."""
         self.ticker = ticker
         self.name = name
         self.leverage_ratio = float(leverage_ratio)
@@ -353,6 +353,7 @@ class Symbol():
         self.set_times()
 
     def __eq__(self, other):
+        """Return True if this symbol equals the other symbol."""
         return (self.ticker == other.ticker
                 and self.name == other.name
                 and self.leverage_ratio == other.leverage_ratio
@@ -360,6 +361,7 @@ class Symbol():
                 )
 
     def __ne__(self, other):
+        """Return True if this symbol does not equal the other symbol."""
         return not self.__eq__(other)
 
     def to_json(self):
@@ -384,11 +386,13 @@ class Symbol():
         return json.loads(self.to_json())
 
     def __str__(self):
+        """Return string representation of this Symbol."""
         working = copy(self.__dict__)
         working.pop("_closed_hours_cache", None)
         return str(working)
 
     def __repr__(self):
+        """Return string representation of this Symbol."""
         return str(self)
 
     def pretty(self):
@@ -753,6 +757,8 @@ class Symbol():
 
 
 class Candle():
+    """Represents a single OHLCV candlestick for a tradeable symbol."""
+
     def __init__(self,
                  c_datetime,
                  c_timeframe: str,
@@ -767,7 +773,8 @@ class Candle():
                  c_date: str = None,
                  c_time: str = None
                  ):
-
+        """Initialize a Candle and compute derived size and direction
+        fields."""
         # Precalculate datetime for calculating other attributes efficiently
         c_datetime_dt = dt_as_dt(c_datetime)
 
@@ -835,9 +842,11 @@ class Candle():
         return json.loads(self.to_json())
 
     def __str__(self):
+        """Return string representation of this Candle."""
         return str(self.__dict__)
 
     def __repr__(self):
+        """Return string representation of this Candle."""
         return str(self.__dict__)
 
     def pretty(self):
@@ -859,6 +868,7 @@ class Candle():
                 f"C: {self.c_close} V: {self.c_volume}")
 
     def __eq__(self, other):
+        """Return True if this candle equals the other candle."""
         return (self.c_datetime == other.c_datetime
                 and self.c_timeframe == other.c_timeframe
                 and self.c_open == other.c_open
@@ -870,6 +880,7 @@ class Candle():
                 )
 
     def __ne__(self, other):
+        """Return True if this candle does not equal the other candle."""
         return not self.__eq__(other)
 
     def contains_datetime(self, d):
@@ -884,6 +895,9 @@ class Candle():
 
 
 class Chart():
+    """Represents a collection of Candles for a given symbol, timeframe,
+    and date range.  Supports both regular and extended trading hours."""
+
     def __init__(self,
                  c_timeframe: str,
                  c_trading_hours: str,
@@ -893,6 +907,7 @@ class Chart():
                  c_candles: list = None,
                  autoload: bool = False,
                  ):
+        """Initialize a Chart with symbol, timeframe, and optional candles."""
 
         if valid_timeframe(c_timeframe):
             self.c_timeframe = c_timeframe
@@ -915,6 +930,7 @@ class Chart():
             self.review_candles()
 
     def __eq__(self, other):
+        """Return True if this Chart equals the other Chart."""
         return (self.c_timeframe == other.c_timeframe
                 and self.c_symbol == other.c_symbol
                 and self.c_start == other.c_start
@@ -923,6 +939,7 @@ class Chart():
                 )
 
     def __ne__(self, other):
+        """Return True if this Chart does not equal the other Chart."""
         return not self.__eq__(other)
 
     def to_json(self,
@@ -952,9 +969,11 @@ class Chart():
         return json.loads(self.to_json(suppress_candles=suppress_candles))
 
     def __str__(self):
+        """Return string representation of this Chart."""
         return str(self.to_clean_dict())
 
     def __repr__(self):
+        """Return string representation of this Chart."""
         return str(self)
 
     def pretty(self,
@@ -969,9 +988,11 @@ class Chart():
             )
 
     def sort_candles(self):
+        """Sort c_candles in ascending order by candle datetime."""
         self.c_candles.sort(key=lambda c: c.c_datetime)
 
     def add_candle(self, new_candle, sort=False):
+        """Add a Candle to this Chart, optionally sorting after insertion."""
         if not isinstance(new_candle, Candle):
             raise TypeError(f"new_candle {type(new_candle)} must be a "
                             "<class dhtypes.Candle> object")
@@ -1022,6 +1043,7 @@ class Chart():
         log.info("Finished loading candles into Chart")
 
     def review_candles(self):
+        """Update candle summary attributes and return a summary dict."""
         if len(self.c_candles) > 0:
             self.candles_count = len(self.c_candles)
             self.earliest_candle = dt_as_str(self.c_candles[0].c_datetime)
@@ -1081,6 +1103,7 @@ class Event():
                  tags: list = None,
                  notes: str = "",
                  ):
+        """Initialize an Event with time range, symbol, category, and notes."""
         self.start_dt = dt_as_str(start_dt)
         self.end_dt = dt_as_str(end_dt)
         if isinstance(symbol, Symbol):
@@ -1110,9 +1133,11 @@ class Event():
         return json.loads(self.to_json())
 
     def __str__(self):
+        """Return string representation of this Event."""
         return str(self.to_clean_dict())
 
     def __repr__(self):
+        """Return string representation of this Event."""
         return str(self)
 
     def pretty(self):
@@ -1139,6 +1164,10 @@ class Event():
 
 
 class Day():
+    """Represents a single trading day for a symbol, combining OHLCV data
+    for both extended (ETH) and regular (RTH) trading hours, along with
+    associated charts at various timeframes."""
+
     def __init__(self,
                  d_symbol,
                  d_date,
@@ -1156,8 +1185,7 @@ class Day():
                  d_tags: list = None,
                  d_pattern_rth=None,  # brooks style day pattern for future use
                  ):
-
-        # Establish extended and regular hours boundaries
+        """Initialize a Day with symbol, date, charts, and OHLCV values."""
         eth_start_time = dt.datetime.strptime('2000-01-01 00:00:00',
                                               '%Y-%m-%d %H:%M:%S').time()
         rth_start_time = dt.datetime.strptime('2000-01-01 09:30:00',
@@ -1223,9 +1251,11 @@ class Day():
         return json.loads(self.to_json())
 
     def __str__(self):
+        """Return string representation of this Day."""
         return str(self.to_clean_dict())
 
     def __repr__(self):
+        """Return string representation of this Day."""
         return str(self)
 
     def pretty(self):
@@ -1237,6 +1267,7 @@ class Day():
                           )
 
     def recalc_from_1m(self):
+        """Recalculate OHLCV attributes from the 1m Chart candle data."""
         # Ensure we have a 1m chart or fail out
         base_chart = self.get_chart('1m')
         if base_chart is None:
@@ -1290,6 +1321,7 @@ class Day():
                         self.d_volume_rth += candle.c_volume
 
     def add_chart(self, new_chart):
+        """Add a Chart to this Day if no chart with that timeframe exists."""
         if not isinstance(new_chart, Chart):
             raise TypeError(f"new_chart {type(new_chart)} must be a "
                             "<class dhtypes.Chart> object")
@@ -1305,6 +1337,7 @@ class Day():
                   ' using this timeframe.  Use update_chart() to overwrite.')
 
     def update_chart(self, new_chart):
+        """Replace existing Chart with the same timeframe with new_chart."""
         if not isinstance(new_chart, Chart):
             raise TypeError(f"new_chart {type(new_chart)} must be a "
                             "<class dhtypes.Chart> object")
@@ -1320,6 +1353,7 @@ class Day():
             self.recalc_from_1m()
 
     def get_chart(self, timeframe: str):
+        """Return the Chart matching the given timeframe, or None."""
         for c in self.d_charts:
             if c.c_timeframe == timeframe:
                 return c

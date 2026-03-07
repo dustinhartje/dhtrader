@@ -69,6 +69,7 @@ def finish_progbar(pbar: ProgBar):
 ##############################################################################
 # Non-class specific functions
 def list_mongo_collections():
+    """Return a list of all collection names in the MongoDB database."""
     return dhm.list_collections()
 
 

@@ -667,7 +667,7 @@ def delete_candles(timeframe: str,
                    earliest_dt: str,
                    latest_dt: str,
                    ):
-    "Delete candles from mongo for a specific datetime range."""
+    """Delete candles from mongo for a specific datetime range."""
     c = db[f"candles_{symbol}_{timeframe}"]
     if earliest_dt is None:
         earliest_dt = "1970-01-01 00:00:00"
