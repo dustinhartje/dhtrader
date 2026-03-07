@@ -128,9 +128,7 @@ def create_backtest(start_dt="2025-01-01 00:00:00",
 
 
 def clear_storage_by_name(name: str):
-    """Delete all Backtests, TradeSeries, and Trades with the given name from
-
-    central storage.
+    """Delete Backtests, TradeSeries, and Trades with the given name.
     """
     delete_backtests_by_field(symbol="ES", field="name", value=name)
     s_bt = get_backtests_by_field(field="name", value=name)

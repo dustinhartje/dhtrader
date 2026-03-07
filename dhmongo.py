@@ -102,9 +102,7 @@ def list_collections():
 
 
 def clear_collection(collection: str):
-    """Deletes all records from a collection but keeps the collection itself
-
-    and any indexes/settings intact.
+    """Delete all records from a collection, preserving indexes and settings.
     """
     c = db[collection]
     if not prompt_yn(f"Clear all records from collection "
@@ -135,9 +133,9 @@ def get_all_records_by_collection(collection: str,
                                   limit=0,
                                   show_progress: bool = False,
                                   ):
-    """Return <limit> (default 0 == all) records from a collection, typically
+    """Return records from a collection, typically via dhstore wrappers.
 
-    wrapped by more specific functions in dhstore such as get_all_trades().
+    limit defaults to 0 which returns all records.
     """
     c = db[collection]
     total = c.count_documents({})
@@ -190,14 +188,11 @@ def list_values_by_regex_match(values_field: str,
                                regex: str,
                                collection: str,
                                ):
-    """Return aggregation with list of unique values in values_field split by
+    """Return unique values in values_field split by regex match/nomatch.
 
-    regex match or nomatch in regex_field.
-
-    An example usage: review tags
-    list based on whether or not a Trade closed in the autoclose timeframe
-    i.e. split by those that close at 15:55:00 for rth hours and those that
-    do not.
+    Example: review tags based on whether a Trade closed in the autoclose
+    timeframe, i.e. split by those closing at 15:55:00 vs. those that do
+    not.
     """
     c = db[collection]
     pipeline = [
@@ -232,12 +227,11 @@ def update_records_value(search: dict,
                          update_value: str,
                          collection: str,
                          ):
-    """Using 'search', which should be a dict representing a mongo filter,
+    """Update all records matching a mongo filter with a new field value.
 
-    update all matching records update_field with the new update_value.
+    'search' should be a dict representing the mongo filter.
 
-    Example:
-    To replace bt_id 'foo' with 'bar' on all backtests currently matching 'foo'
+    Example: replace bt_id 'foo' with 'bar' on all matching backtests:
     update_record_value(search={"bt_id": "foo"},
                         update_field="bt_id",
                         update_value="bar",
@@ -373,9 +367,9 @@ def delete_trades_by_field(symbol: str,
                            value,
                            collection: str,
                            ):
-    """Delete all trade records with 'field' matching 'value'.  Typically used
+    """Delete all trade records with 'field' matching 'value'.
 
-    to delete by name, ts_id, or bt_id fields.
+    Typically used to delete by name, ts_id, or bt_id fields.
 
     Example to delete all trade records with name=="DELETEME":
     delete_trades_by_field(symbol="ES", field="name",
@@ -390,9 +384,7 @@ def delete_trades_by_field(symbol: str,
 def delete_trades(trades: list,
                   collection: str,
                   ):
-    """Delete one or more trades from mongo using open_dt, ts_id, and symbol as
-
-    identifying fields.
+    """Delete trades from mongo using open_dt, ts_id, and symbol as keys.
     """
     c = db[collection]
     result = []
@@ -489,9 +481,7 @@ def delete_tradeseries_by_field(symbol: str,
 def delete_tradeseries(ts_ids: list,
                        collection: str,
                        ):
-    """Delete one or more tradeseries from mongo using ts_id as the identifying
-
-    field.
+    """Delete tradeseries from mongo using ts_id as the identifying field.
     """
     c = db[collection]
     result = []
@@ -582,9 +572,7 @@ def delete_backtests_by_field(symbol: str,
 def delete_backtests(bt_ids: list,
                      collection: str,
                      ):
-    """Delete one or more backtests from mongo using bt_id as the identifying
-
-    field.
+    """Delete backtests from mongo using bt_id as the identifying field.
     """
     c = db[collection]
     result = []
@@ -644,9 +632,7 @@ def get_candles(start_epoch: int,
                 symbol: str,
                 show_progress: bool = False,
                 ):
-    """Returns a list of candle docs within the start and end epochs given
-
-    inclusive of both epochs.
+    """Return candle docs within the given start and end epochs, inclusive.
     """
     c = db[f"candles_{symbol}_{timeframe}"]
     candle_filter = {
@@ -729,10 +715,9 @@ def get_indicator_datapoints(ind_id: str,
                              earliest_dt: str = None,
                              latest_dt: str = None,
                              ):
-    """Retrieves all datapoints for the given ind_id that fall within the range
+    """Return datapoints for ind_id within earliest_dt to latest_dt, sorted.
 
-    of earliest_dt and latest_dt (inclusive of both), returning them as a
-    chronologially sorted list.
+    Range is inclusive of both endpoints.
     """
     if earliest_dt is None:
         earliest_epoch = 0
@@ -835,9 +820,7 @@ def delete_indicator(ind_id: str,
                      meta_collection: str,
                      dp_collection: str,
                      ):
-    """Remove a single indicator and all of it's datapoints from central
-
-    storage based on it's ind_id attribute.
+    """Remove an indicator and all its datapoints from storage by ind_id.
     """
     c = db[meta_collection]
     result_meta = c.delete_many({"ind_id": ind_id})
@@ -887,11 +870,9 @@ def get_events(symbol: str,
                categories: list = None,
                tags: list = None,
                ):
-    """Returns a list of events starting within the start and end epochs given
+    """Return events starting within the given start and end epochs, inclusive.
 
-    inclusive of both epochs.
-
-    Note this will return events that end after end_epoch so long as they
+    Note: events that end after end_epoch are included so long as they
     start before or on it.
     """
     c = db[f"events_{symbol}"]

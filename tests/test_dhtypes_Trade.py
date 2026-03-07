@@ -781,9 +781,7 @@ def test_Trade_creation_short_close_at_loss():
 
 
 def test_Trade_candle_update_returns_correct_values():
-    """Verify candle_update returns correct closed status for various
-
-    scenarios.
+    """Verify candle_update returns correct closed status in various scenarios.
     """
     # Should not return closed until some target is met (500 ticks default)
     c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
@@ -1172,9 +1170,7 @@ def test_delete_trades():
 
 @pytest.mark.historical
 def test_Trade_historical():
-    """Test Trade.balance_impact and drawdown_impact against historical
-
-    data.
+    """Test Trade.balance_impact and drawdown_impact against historical data.
     """
     # SET1 SHORT TRADES NO REFINING ######################################
     # Rebuild trades list from historical extracted data file

@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""Calculate ES trades based on EMA bounce/rejection strategy for both long and
-
-short.
+"""Calculate ES trades using EMA bounce/rejection strategy for long and short.
 
 Created from scratch using only the provided instructions.  Useful to
 generate trades outside of dhtrader system for validation of dhtrader

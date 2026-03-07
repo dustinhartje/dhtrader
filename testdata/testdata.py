@@ -56,9 +56,7 @@ class Extractor():
                         symbol="ES",
                         out_file=None,
                         ):
-        """Extract candles from storage and optionally save as JSON and CSV
-
-        files.
+        """Extract candles from storage, optionally saving to JSON and CSV.
         """
         cans_obj = get_candles(start_epoch=dt_to_epoch(start_dt),
                                end_epoch=dt_to_epoch(end_dt),
@@ -92,9 +90,7 @@ class Extractor():
                        ind_dps=None,
                        out_file=None,
                        ):
-        """Extract trades from storage and optionally save as JSON and CSV
-
-        files.
+        """Extract trades from storage, optionally saving to JSON and CSV.
         """
         if isinstance(ts_ids, str):
             ts_ids = [ts_ids]
@@ -224,9 +220,7 @@ class Extractor():
                             symbol="ES",
                             out_file=None,
                             ):
-        """Extract one or more tradeseries from storage by ts_id and optionally
-
-        save as JSON and CSV files.
+        """Extract tradeseries by ts_id, optionally saving to JSON and CSV.
         """
         if isinstance(ts_ids, str):
             ts_ids = [ts_ids]
@@ -271,9 +265,7 @@ class Extractor():
                           end_dt=None,
                           out_file=None,
                           ):
-        """Extract one or more BacktestIndTag objects from storage by bt_id and
-
-        optionally save as JSON and CSV files.
+        """Extract BacktestIndTag objects by bt_id, optionally saving to files.
         """
         if isinstance(bt_ids, str):
             bt_ids = [bt_ids]
@@ -318,9 +310,7 @@ class Extractor():
                                      end_dt,
                                      out_file=None,
                                      ):
-        """Extract indicator datapoints from storage and optionally save as
-
-        JSON and CSV files.
+        """Extract indicator datapoints, optionally saving to JSON and CSV.
         """
         ind_dps = get_indicator_datapoints(ind_id=ind_id,
                                            earliest_dt=start_dt,

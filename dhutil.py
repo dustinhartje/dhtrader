@@ -20,9 +20,7 @@ def generate_zero_volume_candle(c_datetime,
                                 timeframe: str = "1m",
                                 symbol: str = "ES",
                                 ):
-    """Returns a zero volume candle with OHLC values all set to the prior
-
-    candle's closing value.
+    """Return a zero volume candle with all OHLC values set to prior close.
 
     Primarily used to fill gaps in 1m candle storage where data providers
     sometimes omit candles with zero trading volume.
@@ -63,11 +61,11 @@ def remediate_candle_gaps(timeframe: str = "1m",
                           fix_unclear: bool = False,
                           dry_run=False,
                           ):
-    """Identifies gaps for review in stored candles and offers to store zero
+    """Identify candle gaps and offer to fill them with zero volume candles.
 
-    volume candles in their place.  Currently only supports 1m as the other
-    timeframes are calced from these, but I wrote in timeframe to keep
-    consistent argument flows and allow future expansion optionality.
+    Currently only supports 1m as the other timeframes are calculated from
+    these, but timeframe is included to keep consistent argument flows and
+    allow future expansion optionality.
 
     fix_obvious: Automatically fix any candles that are obviously gaps due to
     normal after hours zero volume periods
@@ -330,13 +328,10 @@ def read_candles_from_csv(start_dt,
                           symbol: str = 'ES',
                           timeframe: str = '1m',
                           ):
-    """Reads lines from a csv file and returns them as a list of Candle
+    """Read lines from a CSV file and return them as a list of Candle objects.
 
-    objects.
-
-    Assumes format matches FirstRate data
-    standard of no header row the the following order of fields:
-    datetime,open,high,low,close,volume
+    Assumes format matches FirstRate data standard: no header row and
+    fields in order: datetime,open,high,low,close,volume
     This will fail badly if the format of the source file is incorrect!
     """
     start_dt = dt_as_dt(start_dt)
@@ -401,10 +396,10 @@ def compare_candles_vs_csv(filepath,
                            start_dt=None,
                            end_dt=None,
                            expect_missing_from_storage: list = None):
-    """Check stored candles against a CSV source file, primarily used to
+    """Check stored candles against a CSV source file.
 
-    confirm calculated higher timeframes against data provider equivalents
-    where available to sanity check calculation process.
+    Primarily used to confirm calculated higher timeframes against data
+    provider equivalents to sanity check the calculation process.
     """
     if expect_missing_from_storage is None:
         expect_missing_from_storage = []

@@ -40,9 +40,7 @@ def say(msg: str, console_output=True):
 
 
 def rebuild_testdata(console_output=False):
-    """Rebuild test data from json files into objects for validation
-
-    testing.
+    """Rebuild test data from JSON files into objects for validation testing.
     """
     r = Rebuilder()
     # Candles #############################################
