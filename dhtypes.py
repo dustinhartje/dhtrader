@@ -1371,6 +1371,7 @@ class IndicatorDataPoint():
                  ind_id: str,
                  epoch: int = None,
                  ):
+        """Initialize an IndicatorDataPoint with dt, value, and ind_id."""
         self.dt = dt_as_str(dt)
         self.value = value
         self.ind_id = ind_id
@@ -1391,9 +1392,11 @@ class IndicatorDataPoint():
         return json.loads(self.to_json())
 
     def __str__(self):
+        """Return a string representation of this datapoint."""
         return str(self.to_clean_dict())
 
     def __repr__(self):
+        """Return the canonical string representation of this datapoint."""
         return str(self)
 
     def pretty(self):
@@ -1420,6 +1423,7 @@ class IndicatorDataPoint():
             return False
 
     def __ne__(self, other):
+        """Return True if this datapoint does not equal other."""
         return not self.__eq__(other)
 
 
@@ -1480,6 +1484,7 @@ class Indicator():
         self.sort_datapoints()
 
     def __eq__(self, other):
+        """Return True if all indicator attributes and datapoints match."""
         return (self.name == other.name
                 and self.description == other.description
                 and self.timeframe == other.timeframe
@@ -1558,9 +1563,11 @@ class Indicator():
                           )
 
     def __str__(self):
+        """Return a string representation of this indicator."""
         return str(self.get_info())
 
     def __repr__(self):
+        """Return the canonical string representation of this indicator."""
         return str(self)
 
     def get_info(self,
@@ -1617,12 +1624,14 @@ class Indicator():
         self.datapoints.sort(key=lambda dp: dp.epoch)
 
     def datapoint_indexes_by_epoch(self):
+        """Return a dict mapping each datapoint's epoch to its list index."""
         result = {}
         for i, dp in enumerate(self.datapoints):
             result[dp.epoch] = i
         return result
 
     def datapoint_indexes_by_dt(self):
+        """Return a dict mapping each datapoint's dt to its list index."""
         result = {}
         for i, dp in enumerate(self.datapoints):
             result[dp.dt] = i
@@ -1706,6 +1715,8 @@ class Indicator():
 
 
 class IndicatorSMA(Indicator):
+    """Subclass of Indicator() specifically used for simple moving avg."""
+
     def __init__(self,
                  description,
                  timeframe,
@@ -1722,6 +1733,7 @@ class IndicatorSMA(Indicator):
                  datapoints=None,
                  parameters={},
                  ):
+        """Initialize IndicatorSMA; requires 'length' and 'method' params."""
         super().__init__(name=name,
                          description=description,
                          timeframe=timeframe,
@@ -1737,7 +1749,6 @@ class IndicatorSMA(Indicator):
                          datapoints=datapoints,
                          parameters=parameters,
                          )
-        """Subclass of Indicator() specifically used for simple moving avg"""
         # Confirm that parameters includes the subclass specific arguments
         # needed for this type of indicator
         # For simple SMA we just need a length and a method/value to use
@@ -1827,6 +1838,7 @@ class IndicatorEMA(Indicator):
                  datapoints=None,
                  parameters={},
                  ):
+        """Initialize IndicatorEMA; requires 'length', 'method', smoothing."""
         super().__init__(name=name,
                          description=description,
                          timeframe=timeframe,
