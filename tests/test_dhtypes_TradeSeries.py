@@ -21,6 +21,7 @@ def create_trade(open_dt="2025-01-02 12:00:00",
                  prof_target=5005,
                  name="DELETEME"
                  ):
+    """Create and return a Trade with default test parameters."""
     return Trade(open_dt=open_dt,
                  close_dt=close_dt,
                  direction=direction,
@@ -61,6 +62,7 @@ def create_tradeseries(start_dt="2025-01-01 00:00:00",
                        bt_id=None,
                        trades=None,
                        ):
+    """Create a TradeSeries and validate its attributes and defaults."""
     r = TradeSeries(start_dt=start_dt,
                     end_dt=end_dt,
                     timeframe=timeframe,

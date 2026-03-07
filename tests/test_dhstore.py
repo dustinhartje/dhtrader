@@ -7,6 +7,7 @@ from dhtrader import (
 
 
 def clear_storage_by_bt_id(bt_id):
+    """Delete all Backtests, TradeSeries, and Trades with bt_id."""
     delete_backtests_by_field(symbol="ES", field="bt_id", value=bt_id,
                               include_tradeseries=True, include_trades=True)
     r = get_backtests_by_field(field="bt_id", value=bt_id)

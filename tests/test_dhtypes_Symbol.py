@@ -5,6 +5,7 @@ from dhtrader import (
 
 @pytest.fixture
 def symbol():
+    """Create and return a default ES Symbol fixture."""
     return Symbol(ticker="ES", name="ES", leverage_ratio=50,
                   tick_size=0.25)
 

@@ -20,6 +20,7 @@ def create_trade(open_dt="2025-01-02 12:00:00",
                  prof_target=None,
                  name="DELETEME",
                  ):
+    """Create a Trade and validate its attributes and defaults."""
     # Do not add further arguments to this function where defaults are set
     # by Trade() or it will break assertions below meant to test defaults
     # and calculated attributes.  For further testing in test_* functions using

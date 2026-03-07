@@ -6,6 +6,7 @@ from dhtrader import (
 
 
 def hide_Indicator_demo_hod_creation_and_calculation():
+    """Demo HOD Indicator creation, calculation, and datapoint checks."""
     # Confirm RTH datapoints are calculated
     ind = Indicator(name="DELETEME-hod-demo",
                     description="Code testing use only",
@@ -92,6 +93,7 @@ def hide_Indicator_demo_hod_creation_and_calculation():
 
 # TODO 5m ETH 9
 def Indicator_spotcheck_ES_eth_5m_EMA_close_l9_s2():
+    """Placeholder spotcheck for ES ETH 5m EMA close l9 s2."""
     pass
 
 
@@ -116,10 +118,12 @@ def Indicator_spotcheck_ES_eth_5m_EMA_close_l9_s2():
 
 # TODO 5m ETH 20
 def Indicator_spotcheck_ES_eth_5m_EMA_close_l20_s2(i):
+    """Placeholder spotcheck for ES ETH 5m EMA close l20 s2."""
     return True
 
 
 def hide_Indicator_calculated_spotcheck_ES_eth_5m_EMA_close_l20_s2():
+    """Hidden calculated spotcheck for ES ETH 5m EMA close l20 s2."""
     ind_calced = get_indicator(ind_id="ES_eth_5m_EMA_close_l20_s2",
                                autoload_datapoints=False,
                                autoload_chart=True,
@@ -132,6 +136,7 @@ def hide_Indicator_calculated_spotcheck_ES_eth_5m_EMA_close_l20_s2():
 
 
 def hide_Indicator_storage_spotcheck_ES_eth_5m_EMA_close_l20_s2():
+    """Hidden storage spotcheck for ES ETH 5m EMA close l20 s2."""
     ind_stored = get_indicator(ind_id="ES_eth_5m_EMA_close_l20_s2",
                                autoload_datapoints=False,
                                autoload_chart=True,
@@ -142,6 +147,7 @@ def hide_Indicator_storage_spotcheck_ES_eth_5m_EMA_close_l20_s2():
 
 # 15m ETH 9
 def Indicator_spotcheck_ES_eth_15m_EMA_close_l9_s2(i):
+    """Assert ES ETH 15m EMA close l9 s2 datapoint values."""
     # Sun-Sat - first & last candles, rando in the middle, rando in closed
     # Sun 2/9/25
     assert i.get_datapoint(dt="2025-02-09 18:00:00").value == 6048.67
@@ -218,6 +224,7 @@ def test_Indicator_storage_spotcheck_ES_eth_15m_EMA_close_l9_s2():
 
 # 15m ETH 20
 def Indicator_spotcheck_ES_eth_15m_EMA_close_l20_s2(i):
+    """Assert ES ETH 15m EMA close l20 s2 datapoint values."""
     # Sun 12/8/24
     assert i.get_datapoint(dt="2024-12-08 18:00:00").value == 6096.55
     assert i.get_datapoint(dt="2024-12-08 23:05:00").value == 6096.91
@@ -293,6 +300,7 @@ def test_Indicator_storage_spotcheck_ES_eth_15m_EMA_close_l20_s2():
 
 # e1h ETH 9
 def Indicator_spotcheck_ES_eth_e1h_EMA_close_l9_s2(i):
+    """Assert ES ETH e1h EMA close l9 s2 datapoint values."""
     # Sun-Sat - first & last candles, rando in the middle, rando in closed
     # Sun 11/10/24
     assert i.get_datapoint(dt="2024-11-10 18:00:00").value == 6025.22
@@ -367,6 +375,7 @@ def test_Indicator_storage_spotcheck_ES_eth_e1h_EMA_close_l9_s2():
 
 # e1h ETH 20
 def Indicator_spotcheck_ES_eth_e1h_EMA_close_l20_s2(i):
+    """Assert ES ETH e1h EMA close l20 s2 datapoint values."""
     # Sun-Sat - first & last candles, rando in the middle, rando in closed
     # Sun 10/13/24
     assert i.get_datapoint(dt="2024-10-13 18:00:00").value == 5844.16
@@ -449,6 +458,7 @@ def test_Indicator_storage_spotcheck_ES_eth_e1h_EMA_close_l20_s2():
 
 
 def hide_Indicator_spotcheck_ES_rth_5m_EMA_close_l9_s2():
+    """Hidden spotcheck for ES RTH 5m EMA close l9 s2."""
     ind = get_indicator(ind_id="ES_rth_5m_EMA_close_l9_s2",
                         autoload_datapoints=True,
                         autoload_chart=True,
@@ -465,6 +475,7 @@ def hide_Indicator_spotcheck_ES_rth_5m_EMA_close_l9_s2():
 
 # TODO 5m RTH 20
 def hide_Indicator_spotcheck_ES_rth_5m_EMA_close_l20_s2():
+    """Hidden spotcheck for ES RTH 5m EMA close l20 s2."""
     ind = get_indicator(ind_id="ES_rth_5m_EMA_close_l20_s2",
                         autoload_datapoints=True,
                         autoload_chart=True,
@@ -482,6 +493,7 @@ def hide_Indicator_spotcheck_ES_rth_5m_EMA_close_l20_s2():
 
 
 def Indicator_spotcheck_ES_rth_15m_EMA_close_l9_s2(i):
+    """Assert ES RTH 15m EMA close l9 s2 datapoint values."""
     # TODO values below should be correct based on TV, enable and run this
     #      once RTH calculations have been fixed and results wiped/restored
     #      in mongo
@@ -543,6 +555,7 @@ def Indicator_spotcheck_ES_rth_15m_EMA_close_l9_s2(i):
 
 
 def hide_Indicator_calculated_spotcheck_ES_rth_15m_EMA_close_l9_s2():
+    """Hidden calculated spotcheck for ES RTH 15m EMA close l9 s2."""
     ind_calced = get_indicator(ind_id="ES_rth_15m_EMA_close_l9_s2",
                                autoload_datapoints=False,
                                autoload_chart=True,
@@ -555,6 +568,7 @@ def hide_Indicator_calculated_spotcheck_ES_rth_15m_EMA_close_l9_s2():
 
 
 def hide_Indicator_storage_spotcheck_ES_rth_15m_EMA_close_l9_s2():
+    """Hidden storage spotcheck for ES RTH 15m EMA close l9 s2."""
     ind_stored = get_indicator(ind_id="ES_rth_15m_EMA_close_l9_s2",
                                autoload_datapoints=False,
                                autoload_chart=True,
@@ -566,20 +580,24 @@ def hide_Indicator_storage_spotcheck_ES_rth_15m_EMA_close_l9_s2():
 
 
 def hide_Indicator_spotcheck_ES_rth_15m_EMA_close_l20_s2():
+    """Hidden placeholder spotcheck for ES RTH 15m EMA close l20 s2."""
     pass
 
 
 # TODO r1h RTH 9
 def Indicator_spotcheck_ES_rth_r1h_EMA_close_l9_s2(i):
+    """Placeholder spotcheck for ES RTH r1h EMA close l9 s2."""
     pass
 
 
 # TODO r1h RTH 20
 def Indicator_spotcheck_ES_rth_r1h_EMA_close_l20_s2(i):
+    """Placeholder spotcheck for ES RTH r1h EMA close l20 s2."""
     pass
 
 
 def hide_Indicator_create_and_calculate():
+    """Hidden test for Indicator creation and calculation."""
     # TODO break this up into however many functions make sense once converted
     # Building 5m9sma for 2025-01-08 9:30am-11:30am
     itest = IndicatorSMA(name="TestSMA-DELETEME",
@@ -647,6 +665,7 @@ def hide_Indicator_create_and_calculate():
 
 
 def hide_Indicator_get_datapoints():
+    """Hidden test for Indicator get_datapoint, next, and prev methods."""
     itest = IndicatorEMA(name="TestEMA-DELETEME",
                          timeframe="e1h",
                          trading_hours="eth",
@@ -674,6 +693,7 @@ def hide_Indicator_get_datapoints():
 
 
 def hide_Indicator_storage_and_retrieval():
+    """Hidden test for Indicator storage, retrieval, and datapoints."""
     itest = IndicatorEMA(name="TestEMA-DELETEME",
                          timeframe="e1h",
                          trading_hours="eth",
