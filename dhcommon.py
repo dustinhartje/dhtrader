@@ -452,6 +452,33 @@ def this_candle_start(dt, timeframe: str):
     elif timeframe == "e1h":
         while this_dt.minute != 0:
             this_dt = this_dt - min_delta
+    elif timeframe == "e1d":
+        # e1d candles start at 18:00:00
+        # Return the most recent 18:00:00 datetime
+        if this_dt.hour >= 18:
+            # At or after 6pm, return today at 18:00
+            this_dt = this_dt.replace(
+                hour=18, minute=0, second=0, microsecond=0)
+        else:
+            # Before 6pm, return yesterday at 18:00
+            this_dt = (this_dt - timedelta(days=1)).replace(
+                hour=18, minute=0, second=0, microsecond=0)
+    elif timeframe == "e1w":
+        # e1w candles start at Sunday 18:00:00
+        # Return the most recent Sunday at 18:00:00
+        if this_dt.weekday() == 6 and this_dt.hour >= 18:
+            # Sunday at/after 6pm, return Sunday at 18:00
+            this_dt = this_dt.replace(
+                hour=18, minute=0, second=0, microsecond=0)
+        else:
+            # Find the most recent Sunday
+            if this_dt.weekday() == 6:  # Already Sunday but before 6pm
+                days_back = 7
+            else:
+                # Days since last Sunday (weekday 6)
+                days_back = (this_dt.weekday() + 1) % 7
+            this_dt = (this_dt - timedelta(days=days_back)).replace(
+                hour=18, minute=0, second=0, microsecond=0)
     else:
         raise ValueError(f"timeframe: {timeframe} not supported")
 
@@ -464,7 +491,8 @@ def next_candle_start(dt,
                       timeframe: str = "1m",
                       events: list = None,
                       ):
-    """Return the next datetime that represents a valid candle start.
+    """Return the next datetime that represents a valid candle start during
+    open market hours.
 
     symbol must be a Symbol-like object implementing market_is_open().
     """
@@ -490,6 +518,37 @@ def next_candle_start(dt,
         elif timeframe == "e1h":
             while next_dt.minute != 0:
                 next_dt = next_dt + min_delta
+        elif timeframe == "e1d":
+            # e1d candles start at 18:00:00
+            # Return the next 18:00:00 after current datetime
+            if next_dt.hour < 18:
+                # Before 6pm, move to today at 18:00
+                next_dt = next_dt.replace(
+                    hour=18, minute=0, second=0, microsecond=0)
+            else:
+                # At or after 6pm, move to tomorrow at 18:00
+                next_dt = (next_dt + timedelta(days=1)).replace(
+                    hour=18, minute=0, second=0, microsecond=0)
+        elif timeframe == "e1w":
+            # e1w candles start at Sunday 18:00:00
+            # Return the next Sunday 18:00:00 after current datetime
+            if next_dt.weekday() == 6:  # Sunday
+                if next_dt.hour < 18:
+                    # Sunday before 6pm, move to Sunday 18:00
+                    next_dt = next_dt.replace(
+                        hour=18, minute=0, second=0, microsecond=0)
+                else:
+                    # Sunday at/after 6pm, move to next Sunday 18:00
+                    next_dt = (next_dt + timedelta(days=7)).replace(
+                        hour=18, minute=0, second=0, microsecond=0)
+            else:
+                # Not Sunday, find next Sunday
+                days_until_sunday = (6 - next_dt.weekday()) % 7
+                if days_until_sunday == 0:
+                    days_until_sunday = 7
+                next_dt = (next_dt + timedelta(
+                    days=days_until_sunday)).replace(
+                    hour=18, minute=0, second=0, microsecond=0)
         elif timeframe != "1m":
             raise ValueError(f"timeframe: {timeframe} not supported")
         done = symbol.market_is_open(trading_hours=trading_hours,
