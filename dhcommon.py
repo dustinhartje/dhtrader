@@ -79,7 +79,10 @@ def log_say(msg, level="info"):
 
 
 class OperationTimer():
-    """Tracks elapsed time for a named operation."""
+    """Tracks elapsed time for a named operation.
+
+    Starts timing automatically on creation unless auto_start is False.
+    """
 
     def __init__(self,
                  name: str,
@@ -89,7 +92,6 @@ class OperationTimer():
                  elapsed_str="",
                  auto_start: bool = True,
                  ):
-        """Initialize the timer, optionally starting it immediately."""
         self.name = name
         self.start_dt = start_dt
         self.end_dt = end_dt
@@ -163,13 +165,16 @@ class OperationTimer():
 
 
 class ProgBar():
-    """Wrapper to make progress bars smoother to implement"""
+    """Wrapper to make progress bars smoother to implement.
+
+    Starts the progress bar automatically on creation unless
+    auto_start is False.
+    """
     def __init__(self,
                  total: int,
                  desc: str = "TradeSeries calculated",
                  auto_start: bool = True,
                  ):
-        """Initialize the progress bar, optionally starting it immediately."""
         self.total = total
         self.desc = desc
         self.auto_start = auto_start

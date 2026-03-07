@@ -350,8 +350,10 @@ def review_candles(*args, **kwargs):
 
 
 class Symbol():
-    """Represents basic mechanics of a tradeable symbol a.k.a. ticker.  This
-    might be a specific stock or future.
+    """Represents basic mechanics of a tradeable symbol a.k.a. ticker.
+
+    This might be a specific stock or future, identified by ticker,
+    name, leverage_ratio, and tick_size.
     """
     def __init__(self,
                  ticker: str,
@@ -359,7 +361,6 @@ class Symbol():
                  leverage_ratio: float,
                  tick_size: float,
                  ):
-        """Initialize a Symbol with its core trading properties."""
         self.ticker = ticker
         self.name = name
         self.leverage_ratio = float(leverage_ratio)
@@ -772,7 +773,11 @@ class Symbol():
 
 
 class Candle():
-    """Represents a single OHLCV candlestick for a tradeable symbol."""
+    """Represents a single OHLCV candlestick for a tradeable symbol.
+
+    Derived size, direction, and wick attributes are computed
+    automatically on creation.
+    """
 
     def __init__(self,
                  c_datetime,
@@ -788,8 +793,6 @@ class Candle():
                  c_date: str = None,
                  c_time: str = None
                  ):
-        """Initialize a Candle and compute derived size and direction
-        fields."""
         # Precalculate datetime for calculating other attributes efficiently
         c_datetime_dt = dt_as_dt(c_datetime)
 
@@ -922,8 +925,6 @@ class Chart():
                  c_candles: list = None,
                  autoload: bool = False,
                  ):
-        """Initialize a Chart with symbol, timeframe, and optional candles."""
-
         if valid_timeframe(c_timeframe):
             self.c_timeframe = c_timeframe
         if valid_trading_hours(c_trading_hours):
@@ -1118,7 +1119,6 @@ class Event():
                  tags: list = None,
                  notes: str = "",
                  ):
-        """Initialize an Event with time range, symbol, category, and notes."""
         self.start_dt = dt_as_str(start_dt)
         self.end_dt = dt_as_str(end_dt)
         if isinstance(symbol, Symbol):
@@ -1200,7 +1200,6 @@ class Day():
                  d_tags: list = None,
                  d_pattern_rth=None,  # brooks style day pattern for future use
                  ):
-        """Initialize a Day with symbol, date, charts, and OHLCV values."""
         eth_start_time = dt.datetime.strptime('2000-01-01 00:00:00',
                                               '%Y-%m-%d %H:%M:%S').time()
         rth_start_time = dt.datetime.strptime('2000-01-01 09:30:00',
@@ -1386,7 +1385,6 @@ class IndicatorDataPoint():
                  ind_id: str,
                  epoch: int = None,
                  ):
-        """Initialize an IndicatorDataPoint with dt, value, and ind_id."""
         self.dt = dt_as_str(dt)
         self.value = value
         self.ind_id = ind_id
@@ -1444,7 +1442,13 @@ class IndicatorDataPoint():
 
 
 class Indicator():
-    """Base class for technical indicators such as SMA and EMA."""
+    """Base class for technical indicators such as SMA and EMA.
+
+    Names should be short and simple abbreviations used in tagging
+    and storage, e.g. sma, hod, vwap.  This class is not intended
+    to be used directly; use its subclasses which provide
+    indicator type-specific logic.
+    """
 
     def __init__(self,
                  name: str,
@@ -1462,10 +1466,6 @@ class Indicator():
                  datapoints: list = None,
                  parameters={},
                  ):
-        """Base class for indicators.  Names should be short and simple
-        abbreviations as they are used in tagging and storage, think like
-        sma, hod, vwap, etc.  This class won't be used directly, use it's
-        child classes which will be indicator type specific"""
         self.name = name
         self.description = description
         if not valid_timeframe(timeframe):
@@ -1734,7 +1734,11 @@ class Indicator():
 
 
 class IndicatorSMA(Indicator):
-    """Subclass of Indicator() specifically used for simple moving avg."""
+    """Subclass of Indicator() specifically used for simple moving avg.
+
+    Requires 'length' (int) in parameters. Optionally accepts 'method'
+    (default: 'close') to specify which candle value to average.
+    """
 
     def __init__(self,
                  description,
@@ -1752,7 +1756,6 @@ class IndicatorSMA(Indicator):
                  datapoints=None,
                  parameters={},
                  ):
-        """Initialize IndicatorSMA; requires 'length' and 'method' params."""
         super().__init__(name=name,
                          description=description,
                          timeframe=timeframe,
@@ -1857,7 +1860,6 @@ class IndicatorEMA(Indicator):
                  datapoints=None,
                  parameters={},
                  ):
-        """Initialize IndicatorEMA; requires 'length', 'method', smoothing."""
         super().__init__(name=name,
                          description=description,
                          timeframe=timeframe,
@@ -2014,7 +2016,6 @@ class Trade():
                  bt_id: str = None,
                  tags: list = None,
                  ):
-        """Initialize a Trade with entry details and validate targets."""
         # Passable attributes
         self.open_dt = open_dt
         self.close_dt = close_dt
@@ -2540,7 +2541,6 @@ class TradeSeries():
                  trades: list = None,
                  tags: list = None,
                  ):
-        """Initialize a TradeSeries with date range, symbol, and trades."""
         self.start_dt = dt_as_str(start_dt)
         self.end_dt = dt_as_str(end_dt)
         if valid_timeframe(timeframe):
@@ -3056,7 +3056,6 @@ class Backtest():
                  prefer_stored: bool = True,
                  tradeseries: list = None,
                  ):
-        """Initialize a Backtest with date range, symbol, and parameters."""
         self.start_dt = dt_as_str(start_dt)
         self.end_dt = dt_as_str(end_dt)
         if valid_timeframe(timeframe):
