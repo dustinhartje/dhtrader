@@ -231,11 +231,14 @@ def update_records_value(search: dict,
 
     'search' should be a dict representing the mongo filter.
 
-    Example: replace bt_id 'foo' with 'bar' on all matching backtests:
-    update_record_value(search={"bt_id": "foo"},
-                        update_field="bt_id",
-                        update_value="bar",
-                        collection="backtests")
+    Example replacing bt_id 'foo' with 'bar' on all matching backtests::
+
+        update_record_value(
+            search={"bt_id": "foo"},
+            update_field="bt_id",
+            update_value="bar",
+            collection="backtests"
+        )
     """
     c = db[collection]
     result = c.update_many(search,

@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>dhtrader dhcommon &#8212; dhtrader 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=6625fa76" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=28289cfa" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom_responsive.css?v=f9ab5c37" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom_doc_styling.css?v=6c324e95" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=359c27e9"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../_static/collapsible_toc.js?v=2f0d682c"></script>
+    <script src="../_static/module_docstring.js?v=6173792f"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="dhtrader dhmongo" href="dhtrader.dhmongo.html" />
+    <link rel="prev" title="API Reference" href="__init__.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-dhtrader.dhcommon">
+<span id="dhtrader-dhcommon"></span><h1>dhtrader dhcommon<a class="headerlink" href="#module-dhtrader.dhcommon" title="Permalink to this heading">¶</a></h1>
+<p>Common utility functions and constants for the trading system.</p>
+<p>This module serves as a dependency-free utility layer, importing only from
+the Python standard library. It contains functions for:</p>
+<ul class="simple">
+<li><p>DateTime conversion and formatting</p></li>
+<li><p>Timeframe and trading hour validation</p></li>
+<li><p>Market calendar calculations (with market_is_open checks via Symbol
+objects)</p></li>
+<li><p>Progress bar utilities</p></li>
+<li><p>General helpers and constants</p></li>
+</ul>
+<p>CRITICAL ARCHITECTURAL ROLE: This module is at the base of the import tree
+and contains NO external dependencies (no dhstore, dhtypes, or other
+dhtrader imports). This makes it the safe place to define functions that
+would otherwise create circular import issues.</p>
+<p>Core functions here include:</p>
+<ul class="simple">
+<li><p>next_candle_start(): Calculate next valid candle start time
+(requires Symbol)</p></li>
+<li><p>expected_candle_datetimes(): Calculate all expected candle times
+in a range</p></li>
+<li><p>this_candle_start(): Find the start of the current candle</p></li>
+<li><p>DateTime utilities: dt_as_str, dt_as_dt, dt_to_epoch,
+dt_from_epoch, etc.</p></li>
+</ul>
+<p>These functions are imported by other modules throughout the system,
+including dhstore, dhutil, and dhtypes.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.log_say">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">log_say</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'info'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#log_say"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.log_say" title="Permalink to this definition">¶</a></dt>
+<dd><p>Log messages while also printing to console.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.OperationTimer">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">OperationTimer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_dt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_dt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">elapsed_dt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">elapsed_str</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auto_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#OperationTimer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.OperationTimer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Tracks elapsed time for a named operation.</p>
+<p>Starts timing automatically on creation unless auto_start is False.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>auto_start</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – </p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.OperationTimer.__str__">
+<span class="sig-name descname"><span class="pre">__str__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#OperationTimer.__str__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.OperationTimer.__str__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a string representation of the timer’s state.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.OperationTimer.__repr__">
+<span class="sig-name descname"><span class="pre">__repr__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#OperationTimer.__repr__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.OperationTimer.__repr__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a string representation suitable for debugging.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.OperationTimer.to_json">
+<span class="sig-name descname"><span class="pre">to_json</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#OperationTimer.to_json"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.OperationTimer.to_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a JSON representation with custom types normalized.</p>
+<p>Converts datetime and other non-serializable types to strings
+for portability.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.OperationTimer.to_clean_dict">
+<span class="sig-name descname"><span class="pre">to_clean_dict</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#OperationTimer.to_clean_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.OperationTimer.to_clean_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts to JSON string then back to a python dict.</p>
+<p>This helps to normalize types (I’m looking at YOU datetime) while
+ensuring a portable python data structure</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.OperationTimer.pretty">
+<span class="sig-name descname"><span class="pre">pretty</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#OperationTimer.pretty"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.OperationTimer.pretty" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a formatted, indented string representation of this object.</p>
+<p>Optionally suppress_datapoints to reduce output size when not needed.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.OperationTimer.summary">
+<span class="sig-name descname"><span class="pre">summary</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#OperationTimer.summary"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.OperationTimer.summary" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a one-line string summary of the timer’s current status.</p>
+<p>Useful for monitoring running timers or final review.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.OperationTimer.start">
+<span class="sig-name descname"><span class="pre">start</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#OperationTimer.start"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.OperationTimer.start" title="Permalink to this definition">¶</a></dt>
+<dd><p>Record the current datetime as the start time.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.OperationTimer.update_elapsed">
+<span class="sig-name descname"><span class="pre">update_elapsed</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#OperationTimer.update_elapsed"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.OperationTimer.update_elapsed" title="Permalink to this definition">¶</a></dt>
+<dd><p>Recalculate elapsed time from start to now or to the end time.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.OperationTimer.stop">
+<span class="sig-name descname"><span class="pre">stop</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#OperationTimer.stop"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.OperationTimer.stop" title="Permalink to this definition">¶</a></dt>
+<dd><p>Record the current datetime as the end time and update elapsed.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.ProgBar">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">ProgBar</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">total</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'TradeSeries</span> <span class="pre">calculated'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auto_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#ProgBar"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.ProgBar" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<p>Wrapper to make progress bars smoother to implement.</p>
+<p>Starts the progress bar automatically on creation unless auto_start is
+False.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>total</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – </p></li>
+<li><p><strong>desc</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>auto_start</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – </p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.ProgBar.start">
+<span class="sig-name descname"><span class="pre">start</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#ProgBar.start"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.ProgBar.start" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build and start the underlying progressbar widget.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.ProgBar.update">
+<span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">val</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#ProgBar.update"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.ProgBar.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update the progress bar to an absolute value.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.ProgBar.increment">
+<span class="sig-name descname"><span class="pre">increment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">val</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#ProgBar.increment"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.ProgBar.increment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Advance the progress bar by val steps (default 1).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.ProgBar.finish">
+<span class="sig-name descname"><span class="pre">finish</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#ProgBar.finish"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.ProgBar.finish" title="Permalink to this definition">¶</a></dt>
+<dd><p>Mark the progress bar as complete.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.sort_dict">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">sort_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">d</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#sort_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.sort_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Uses insertion ordering to sort a dictionary by keys.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>d</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.diff_dicts">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">diff_dicts</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dict1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dict2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#diff_dicts"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.diff_dicts" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compare two dicts and return a dict of differences as value tuples.</p>
+<p>Each tuple holds the values from each dict in the order they were
+passed.  None is used for keys missing from one dict.  Returns {}
+if no differences are found.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.prompt_yn">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">prompt_yn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#prompt_yn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.prompt_yn" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prompt the user with msg and return True for Y/y, False for N/n.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.valid_timeframe">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">valid_timeframe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#valid_timeframe"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.valid_timeframe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return True if t is valid, otherwise raise or print an error.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.valid_trading_hours">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">valid_trading_hours</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#valid_trading_hours"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.valid_trading_hours" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return True if t is a valid trading hours specifier, else raise.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.check_tf_th_compatibility">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">check_tf_th_compatibility</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">th</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#check_tf_th_compatibility"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.check_tf_th_compatibility" title="Permalink to this definition">¶</a></dt>
+<dd><p>Confirm the given timeframe (tf) and trading hours (th) are compatible.</p>
+<p>Usually we want to exit if incompatible as data cannot be trusted
+otherwise.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.valid_event_category">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">valid_event_category</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">c</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#valid_event_category"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.valid_event_category" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return True if c is a valid event category, otherwise raise or print.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.dt_as_dt">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">dt_as_dt</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">d</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#dt_as_dt"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.dt_as_dt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a datetime from the given datetime, string, or None input.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.dt_as_str">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">dt_as_str</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">d</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#dt_as_str"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.dt_as_str" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a string from the given datetime, string, or None input.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.dt_as_time">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">dt_as_time</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">time</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#dt_as_time"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.dt_as_time" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a datetime.time object for the given %H:%M:%S string.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>time</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.dow_name">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">dow_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dow</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#dow_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.dow_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the weekday name for the given datetime.weekday() index.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>dow</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.dt_to_epoch">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">dt_to_epoch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">d</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#dt_to_epoch"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.dt_to_epoch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return an epoch integer from a datetime or string.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.dt_from_epoch">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">dt_from_epoch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">d</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#dt_from_epoch"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.dt_from_epoch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a datetime object from an epoch integer.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.timeframe_delta">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">timeframe_delta</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timeframe</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#timeframe_delta"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.timeframe_delta" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a precalculated timedelta object for the timeframe given.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>timeframe</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.start_of_week_date">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">start_of_week_date</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dt</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#start_of_week_date"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.start_of_week_date" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the Sunday that starts the week containing the given datetime.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.dict_of_weeks">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">dict_of_weeks</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">template</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#dict_of_weeks"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.dict_of_weeks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a template dictionary with keys for each week in the timeframe.</p>
+<p>Keys are created for each week from start_dt to end_dt, with a value
+equal to the template passed in.  Generally used for aggregating weekly
+stats.  Sunday is the start of each week to match market behavior and
+cover extended hours trading strategies.</p>
+<p>template should be a dictionary with default values, for example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">template</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;total_trades&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;profitable_trades&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;losing_trades&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;gl_in_ticks&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;success_rate&quot;</span><span class="p">:</span> <span class="s2">&quot;nil&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.this_candle_start">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">this_candle_start</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeframe</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#this_candle_start"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.this_candle_start" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the parent candle start datetime for the given dt and timeframe.</p>
+<p>May return the same as input.  Unlike next_candle_start(), this does
+not confirm market open and may not be able to answer in all cases.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>timeframe</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.next_candle_start">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">next_candle_start</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">trading_hours</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbol</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeframe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'1m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">events</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#next_candle_start"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.next_candle_start" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the next valid candle start datetime during open market hours.</p>
+<p>symbol must be a Symbol-like object implementing market_is_open().</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>trading_hours</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>timeframe</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>events</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em> | </em><em>None</em>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.expected_candle_datetimes">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">expected_candle_datetimes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeframe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbol</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">events</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exclude_categories</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#expected_candle_datetimes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.expected_candle_datetimes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return expected candle datetimes for a symbol in a datetime range.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timeframe</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>events</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em> | </em><em>None</em>) – </p></li>
+<li><p><strong>exclude_categories</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em> | </em><em>None</em>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.rangify_candle_times">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">rangify_candle_times</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">times</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeframe</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#rangify_candle_times"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.rangify_candle_times" title="Permalink to this definition">¶</a></dt>
+<dd><p>Aggregate a list of datetimes into a list of datetime ranges.</p>
+<p>Primarily intended to make human review sane on large sets of gap and
+unexpected candles during integrity checks.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>times</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a>) – </p></li>
+<li><p><strong>timeframe</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.summarize_candles">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">summarize_candles</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timeframe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ES'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">candles</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#summarize_candles"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.summarize_candles" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a summary of candle datetimes grouped by minute, hour, and date.</p>
+<p>Compares actual candle times against expected times for the given
+timeframe and returns both observed and expected sets for review.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timeframe</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>symbol</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>candles</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em> | </em><em>None</em>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.bot">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">bot</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#bot"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.bot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return universal beginning of time for this and other modules.</p>
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">dhtrader</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="__init__.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">dhtrader dhcommon</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dhtrader.dhmongo.html">dhtrader dhmongo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dhtrader.dhstore.html">dhtrader dhstore</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dhtrader.dhtypes.html">dhtrader dhtypes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dhtrader.dhutil.html">dhtrader dhutil</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dhtrader.use.html">dhtrader use</a></li>
+</ul>
+</li>
+</ul>
+
+
+  <div>
+    <h3><a href="../index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">dhtrader dhcommon</a><ul>
+<li><a class="reference internal" href="#dhtrader.dhcommon.log_say"><code class="docutils literal notranslate"><span class="pre">log_say()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.OperationTimer"><code class="docutils literal notranslate"><span class="pre">OperationTimer</span></code></a><ul>
+<li><a class="reference internal" href="#dhtrader.dhcommon.OperationTimer.__str__"><code class="docutils literal notranslate"><span class="pre">__str__()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.OperationTimer.__repr__"><code class="docutils literal notranslate"><span class="pre">__repr__()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.OperationTimer.to_json"><code class="docutils literal notranslate"><span class="pre">to_json()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.OperationTimer.to_clean_dict"><code class="docutils literal notranslate"><span class="pre">to_clean_dict()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.OperationTimer.pretty"><code class="docutils literal notranslate"><span class="pre">pretty()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.OperationTimer.summary"><code class="docutils literal notranslate"><span class="pre">summary()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.OperationTimer.start"><code class="docutils literal notranslate"><span class="pre">start()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.OperationTimer.update_elapsed"><code class="docutils literal notranslate"><span class="pre">update_elapsed()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.OperationTimer.stop"><code class="docutils literal notranslate"><span class="pre">stop()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.ProgBar"><code class="docutils literal notranslate"><span class="pre">ProgBar</span></code></a><ul>
+<li><a class="reference internal" href="#dhtrader.dhcommon.ProgBar.start"><code class="docutils literal notranslate"><span class="pre">start()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.ProgBar.update"><code class="docutils literal notranslate"><span class="pre">update()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.ProgBar.increment"><code class="docutils literal notranslate"><span class="pre">increment()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.ProgBar.finish"><code class="docutils literal notranslate"><span class="pre">finish()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.sort_dict"><code class="docutils literal notranslate"><span class="pre">sort_dict()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.diff_dicts"><code class="docutils literal notranslate"><span class="pre">diff_dicts()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.prompt_yn"><code class="docutils literal notranslate"><span class="pre">prompt_yn()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.valid_timeframe"><code class="docutils literal notranslate"><span class="pre">valid_timeframe()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.valid_trading_hours"><code class="docutils literal notranslate"><span class="pre">valid_trading_hours()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.check_tf_th_compatibility"><code class="docutils literal notranslate"><span class="pre">check_tf_th_compatibility()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.valid_event_category"><code class="docutils literal notranslate"><span class="pre">valid_event_category()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.dt_as_dt"><code class="docutils literal notranslate"><span class="pre">dt_as_dt()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.dt_as_str"><code class="docutils literal notranslate"><span class="pre">dt_as_str()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.dt_as_time"><code class="docutils literal notranslate"><span class="pre">dt_as_time()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.dow_name"><code class="docutils literal notranslate"><span class="pre">dow_name()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.dt_to_epoch"><code class="docutils literal notranslate"><span class="pre">dt_to_epoch()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.dt_from_epoch"><code class="docutils literal notranslate"><span class="pre">dt_from_epoch()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.timeframe_delta"><code class="docutils literal notranslate"><span class="pre">timeframe_delta()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.start_of_week_date"><code class="docutils literal notranslate"><span class="pre">start_of_week_date()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.dict_of_weeks"><code class="docutils literal notranslate"><span class="pre">dict_of_weeks()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.this_candle_start"><code class="docutils literal notranslate"><span class="pre">this_candle_start()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.next_candle_start"><code class="docutils literal notranslate"><span class="pre">next_candle_start()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.expected_candle_datetimes"><code class="docutils literal notranslate"><span class="pre">expected_candle_datetimes()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.rangify_candle_times"><code class="docutils literal notranslate"><span class="pre">rangify_candle_times()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.summarize_candles"><code class="docutils literal notranslate"><span class="pre">summarize_candles()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.bot"><code class="docutils literal notranslate"><span class="pre">bot()</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+  </div><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="__init__.html">API Reference</a><ul>
+      <li>Previous: <a href="__init__.html" title="previous chapter">API Reference</a></li>
+      <li>Next: <a href="dhtrader.dhmongo.html" title="next chapter">dhtrader dhmongo</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2026.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="../_sources/api/dhtrader.dhcommon.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

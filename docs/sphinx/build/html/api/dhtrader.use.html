@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>dhtrader use &#8212; dhtrader 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=6625fa76" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=28289cfa" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom_responsive.css?v=f9ab5c37" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom_doc_styling.css?v=6c324e95" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=359c27e9"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../_static/collapsible_toc.js?v=2f0d682c"></script>
+    <script src="../_static/module_docstring.js?v=6173792f"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="dhtrader dhutil" href="dhtrader.dhutil.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-dhtrader.use">
+<span id="dhtrader-use"></span><h1>dhtrader use<a class="headerlink" href="#module-dhtrader.use" title="Permalink to this heading">¶</a></h1>
+<p>Environment management utilities for MongoDB configuration.</p>
+<p>This module provides functions to detect, switch, and display the currently
+active MongoDB environment. It’s designed to be portable and can be used
+across multiple projects.</p>
+<p>Environment files follow the pattern: mongo.env.&lt;env&gt;
+The environment name is the last segment of the filename.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.use.get_script_dir">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.use.</span></span><span class="sig-name descname"><span class="pre">get_script_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">depth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/use.html#get_script_dir"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.use.get_script_dir" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the directory of the calling script.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>depth</strong> – Stack depth. 0 = caller of this function,
+1 = caller’s caller, etc.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.use.list_environment_files">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.use.</span></span><span class="sig-name descname"><span class="pre">list_environment_files</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">script_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/use.html#list_environment_files"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.use.list_environment_files" title="Permalink to this definition">¶</a></dt>
+<dd><p>List available environment files.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>script_dir</strong> – Directory containing mongo.env files. If None, uses the
+current working directory.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Mapping of environment name to file path</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.use.available_environments">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.use.</span></span><span class="sig-name descname"><span class="pre">available_environments</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">script_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/use.html#available_environments"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.use.available_environments" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a sorted list of available environment names.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.use.detect_environment">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.use.</span></span><span class="sig-name descname"><span class="pre">detect_environment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">script_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/use.html#detect_environment"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.use.detect_environment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Detect which environment is currently active.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>script_dir</strong> – Directory containing mongo.env files. If None, uses the
+current working directory.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Environment name, or ‘unknown’</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.use.read_environment">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.use.</span></span><span class="sig-name descname"><span class="pre">read_environment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">script_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/use.html#read_environment"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.use.read_environment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read the contents of the current mongo.env file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>script_dir</strong> – Directory containing mongo.env. If None, uses current
+working directory.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Contents of mongo.env, or empty string if file not found</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.use.display_environment">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.use.</span></span><span class="sig-name descname"><span class="pre">display_environment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">script_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/use.html#display_environment"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.use.display_environment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Display details of the current environment.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>env</strong> – Environment name or ‘unknown’</p></li>
+<li><p><strong>script_dir</strong> – Directory containing mongo.env files</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.use.switch_environment">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.use.</span></span><span class="sig-name descname"><span class="pre">switch_environment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">env</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">script_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/use.html#switch_environment"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.use.switch_environment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Switch to a different environment.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>env</strong> – Target environment name</p></li>
+<li><p><strong>script_dir</strong> – Directory containing mongo.env files. If None, uses current
+working directory.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True if successful, False otherwise</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)">bool</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.use.check_environment_and_prompt">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.use.</span></span><span class="sig-name descname"><span class="pre">check_environment_and_prompt</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">script_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/use.html#check_environment_and_prompt"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.use.check_environment_and_prompt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check current environment and prompt if not production.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>script_dir</strong> – Directory containing mongo.env files. If None, uses the
+directory of the script calling this function.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True if user confirms or environment is prod, False if aborted</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)">bool</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">dhtrader</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="__init__.html">API Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="dhtrader.dhcommon.html">dhtrader dhcommon</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dhtrader.dhmongo.html">dhtrader dhmongo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dhtrader.dhstore.html">dhtrader dhstore</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dhtrader.dhtypes.html">dhtrader dhtypes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dhtrader.dhutil.html">dhtrader dhutil</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">dhtrader use</a></li>
+</ul>
+</li>
+</ul>
+
+
+  <div>
+    <h3><a href="../index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">dhtrader use</a><ul>
+<li><a class="reference internal" href="#dhtrader.use.get_script_dir"><code class="docutils literal notranslate"><span class="pre">get_script_dir()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.use.list_environment_files"><code class="docutils literal notranslate"><span class="pre">list_environment_files()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.use.available_environments"><code class="docutils literal notranslate"><span class="pre">available_environments()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.use.detect_environment"><code class="docutils literal notranslate"><span class="pre">detect_environment()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.use.read_environment"><code class="docutils literal notranslate"><span class="pre">read_environment()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.use.display_environment"><code class="docutils literal notranslate"><span class="pre">display_environment()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.use.switch_environment"><code class="docutils literal notranslate"><span class="pre">switch_environment()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.use.check_environment_and_prompt"><code class="docutils literal notranslate"><span class="pre">check_environment_and_prompt()</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+  </div><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="__init__.html">API Reference</a><ul>
+      <li>Previous: <a href="dhtrader.dhutil.html" title="previous chapter">dhtrader dhutil</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2026.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="../_sources/api/dhtrader.use.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

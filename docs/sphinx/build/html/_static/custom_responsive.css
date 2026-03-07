@@ -1,0 +1,14 @@
+/* Override Alabaster's responsive breakpoint to show sidebar on smaller screens */
+@media screen and (max-width: 870px) {
+    div.sphinxsidebar {
+        display: block !important;
+        position: static;
+    }
+}
+
+/* Lower breakpoint threshold */
+@media screen and (max-width: 600px) {
+    div.sphinxsidebar {
+        display: block !important;
+    }
+}

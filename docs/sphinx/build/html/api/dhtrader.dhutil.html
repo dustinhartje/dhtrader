@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>dhtrader dhutil &#8212; dhtrader 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=6625fa76" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=28289cfa" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom_responsive.css?v=f9ab5c37" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom_doc_styling.css?v=6c324e95" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js?v=359c27e9"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../_static/collapsible_toc.js?v=2f0d682c"></script>
+    <script src="../_static/module_docstring.js?v=6173792f"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="dhtrader use" href="dhtrader.use.html" />
+    <link rel="prev" title="dhtrader dhtypes" href="dhtrader.dhtypes.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-dhtrader.dhutil">
+<span id="dhtrader-dhutil"></span><h1>dhtrader dhutil<a class="headerlink" href="#module-dhtrader.dhutil" title="Permalink to this heading">¶</a></h1>
+<p>Utility functions for candle data remediation and analysis.</p>
+<p>This module provides functions for handling gaps in candle data, generating
+zero-volume candles, and comparing candles between storage and CSV files.
+It relies on dhcommon for datetime utilities and dhstore for data retrieval
+and persistence.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhutil.generate_zero_volume_candle">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhutil.</span></span><span class="sig-name descname"><span class="pre">generate_zero_volume_candle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">c_datetime</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeframe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'1m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ES'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhutil.html#generate_zero_volume_candle"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhutil.generate_zero_volume_candle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a zero volume candle with all OHLC values set to prior close.</p>
+<p>Primarily used to fill gaps in 1m candle storage where data providers
+sometimes omit candles with zero trading volume.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timeframe</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>symbol</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhutil.remediate_candle_gaps">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhutil.</span></span><span class="sig-name descname"><span class="pre">remediate_candle_gaps</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timeframe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'1m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ES'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prompt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fix_obvious</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fix_unclear</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dry_run</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhutil.html#remediate_candle_gaps"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhutil.remediate_candle_gaps" title="Permalink to this definition">¶</a></dt>
+<dd><p>Identify candle gaps and offer to fill them with zero volume candles.</p>
+<p>Currently only supports 1m as the other timeframes are calculated from
+these, but timeframe is included to keep consistent argument flows and
+allow future expansion optionality.</p>
+<p>fix_obvious: Automatically fix any candles that are obviously gaps due to
+normal after hours zero volume periods</p>
+<dl class="simple">
+<dt>prompt: Whether to prompt the user for confirmation before fixing candles</dt><dd><p>that have not been fixed due to obvious criteria being met</p>
+</dd>
+</dl>
+<p>dry_run: Run all logic as if remediation is being performed, but only
+print candle storage actions without actually performing them.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timeframe</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>prompt</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – </p></li>
+<li><p><strong>fix_obvious</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – </p></li>
+<li><p><strong>fix_unclear</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhutil.read_candles_from_csv">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhutil.</span></span><span class="sig-name descname"><span class="pre">read_candles_from_csv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filepath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ES'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeframe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'1m'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhutil.html#read_candles_from_csv"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhutil.read_candles_from_csv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read lines from a CSV file and return them as a list of Candle objects.</p>
+<p>Assumes format matches FirstRate data standard: no header row and
+fields in order: datetime,open,high,low,close,volume
+This will fail badly if the format of the source file is incorrect!</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filepath</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>symbol</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>timeframe</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhutil.store_candles_from_csv">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhutil.</span></span><span class="sig-name descname"><span class="pre">store_candles_from_csv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filepath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeframe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'1m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ES'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhutil.html#store_candles_from_csv"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhutil.store_candles_from_csv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads 1m candles from a CSV file into central storage.</p>
+<p>Mostly useful for quick manual gap fill operations via python console.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filepath</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>timeframe</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>symbol</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhutil.compare_candles_vs_csv">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhutil.</span></span><span class="sig-name descname"><span class="pre">compare_candles_vs_csv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filepath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeframe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'1m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ES'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">price_diff_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vol_diff_threshold_perc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_dt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_dt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expect_missing_from_storage</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhutil.html#compare_candles_vs_csv"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhutil.compare_candles_vs_csv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check stored candles against a CSV source file.</p>
+<p>Primarily used to confirm calculated higher timeframes against data
+provider equivalents to sanity check the calculation process.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>timeframe</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>symbol</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>price_diff_threshold</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – </p></li>
+<li><p><strong>vol_diff_threshold_perc</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – </p></li>
+<li><p><strong>expect_missing_from_storage</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em> | </em><em>None</em>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">dhtrader</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="__init__.html">API Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="dhtrader.dhcommon.html">dhtrader dhcommon</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dhtrader.dhmongo.html">dhtrader dhmongo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dhtrader.dhstore.html">dhtrader dhstore</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dhtrader.dhtypes.html">dhtrader dhtypes</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">dhtrader dhutil</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dhtrader.use.html">dhtrader use</a></li>
+</ul>
+</li>
+</ul>
+
+
+  <div>
+    <h3><a href="../index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">dhtrader dhutil</a><ul>
+<li><a class="reference internal" href="#dhtrader.dhutil.generate_zero_volume_candle"><code class="docutils literal notranslate"><span class="pre">generate_zero_volume_candle()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhutil.remediate_candle_gaps"><code class="docutils literal notranslate"><span class="pre">remediate_candle_gaps()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhutil.read_candles_from_csv"><code class="docutils literal notranslate"><span class="pre">read_candles_from_csv()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhutil.store_candles_from_csv"><code class="docutils literal notranslate"><span class="pre">store_candles_from_csv()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhutil.compare_candles_vs_csv"><code class="docutils literal notranslate"><span class="pre">compare_candles_vs_csv()</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+  </div><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="__init__.html">API Reference</a><ul>
+      <li>Previous: <a href="dhtrader.dhtypes.html" title="previous chapter">dhtrader dhtypes</a></li>
+      <li>Next: <a href="dhtrader.use.html" title="next chapter">dhtrader use</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2026.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="../_sources/api/dhtrader.dhutil.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

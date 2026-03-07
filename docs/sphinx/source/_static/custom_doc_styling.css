@@ -1,0 +1,55 @@
+/* NumPy-style documentation styling for better visual separation */
+
+/* Style module-level docstrings as unified block */
+.module-docstring {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #444;
+    background-color: #fdf8f0;
+    padding-left: 16px;
+    padding-right: 16px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    border: none;
+}
+
+/* First docstring element gets extra top padding and rounded top */
+.module-docstring-first {
+    padding-top: 16px;
+    border-radius: 3px 3px 0 0;
+}
+
+/* Last docstring element gets bottom border, padding, and rounded bottom */
+.module-docstring-last {
+    padding-bottom: 16px;
+    border-bottom: 2px solid #e0e0e0;
+    border-radius: 0 0 3px 3px;
+    margin-bottom: 24px !important;
+}
+
+/* Add background and border to function/class/method signatures */
+dl.py dt.sig {
+    background-color: #ececec;
+    padding: 8px 12px;
+    border-radius: 3px;
+    border-left: 3px solid #2980b9;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+/* Subtle hover effect for interactivity */
+dl.py dt.sig:hover {
+    background-color: #e0e0e0;
+}
+
+/* Increase spacing between documentation items */
+dl.py {
+    margin-top: 24px;
+}
+
+/* Ensure proper spacing for nested methods */
+dl.py dd dl.py {
+    margin-top: 16px;
+}

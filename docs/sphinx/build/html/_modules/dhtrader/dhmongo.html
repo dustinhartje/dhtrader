@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>dhtrader.dhmongo &#8212; dhtrader 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=6625fa76" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=28289cfa" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom_responsive.css?v=f9ab5c37" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom_doc_styling.css?v=6c324e95" />
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=359c27e9"></script>
+    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../_static/collapsible_toc.js?v=2f0d682c"></script>
+    <script src="../../_static/module_docstring.js?v=6173792f"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for dhtrader.dhmongo</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Low-level MongoDB operations for dhtrader data storage and retrieval.</span>
+
+<span class="sd">This module provides MongoDB operations for candles, trades, backtests,</span>
+<span class="sd">indicators, and events. These functions are wrapped by corresponding</span>
+<span class="sd">functions in dhstore.py, which provides a storage abstraction layer</span>
+<span class="sd">to allow migration to a different database without requiring changes</span>
+<span class="sd">to higher-level code.</span>
+
+<span class="sd">Running this script ad hoc will perform a basic connect, write, read test.</span>
+
+<span class="sd">REF: https://github.com/mongodb-university/atlas_starter_python/blob</span>
+<span class="sd">     /master/atlas-starter.py</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pymongo</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pymongo</span><span class="w"> </span><span class="kn">import</span> <span class="n">ReplaceOne</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pymongo.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">BulkWriteError</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dotenv</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_dotenv</span><span class="p">,</span> <span class="n">find_dotenv</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span> <span class="k">as</span> <span class="n">dt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.dhcommon</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">ProgBar</span><span class="p">,</span> <span class="n">prompt_yn</span><span class="p">,</span> <span class="n">valid_timeframe</span><span class="p">,</span> <span class="n">dt_as_str</span><span class="p">,</span> <span class="n">dt_from_epoch</span><span class="p">,</span>
+    <span class="n">dt_to_epoch</span><span class="p">)</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;dhmongo&quot;</span><span class="p">)</span>
+<span class="n">log</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">NullHandler</span><span class="p">())</span>
+
+
+<span class="c1"># Establish mongo connection parameters and client</span>
+<span class="n">MONGO_ENV_FILE</span> <span class="o">=</span> <span class="s1">&#39;mongo.env&#39;</span>
+<span class="n">load_dotenv</span><span class="p">(</span><span class="n">find_dotenv</span><span class="p">(</span><span class="n">MONGO_ENV_FILE</span><span class="p">))</span>
+
+<span class="n">MONGO_CONN</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;MONGO_CONN&quot;</span><span class="p">)</span>
+<span class="n">MONGO_DB</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;MONGO_DB&quot;</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">MONGO_CONN</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unable to retrieve MONGO_CONN from </span><span class="si">{</span><span class="n">MONGO_ENV_FILE</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">MONGO_DB</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unable to retrieve MONGO_DB from </span><span class="si">{</span><span class="n">MONGO_ENV_FILE</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">mc</span> <span class="o">=</span> <span class="n">pymongo</span><span class="o">.</span><span class="n">MongoClient</span><span class="p">(</span><span class="n">MONGO_CONN</span><span class="p">)</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">mc</span><span class="p">[</span><span class="n">MONGO_DB</span><span class="p">]</span>
+<span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">Well that failed.  So sad!&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">There&#39;s a good chance it&#39;s because my current IP address is not &quot;</span>
+          <span class="s2">&quot;allowed on the Atlas side.&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Log into the Atlas web interface &gt; Clusters &gt; Cluster0 &gt; Connect &quot;</span>
+          <span class="s2">&quot;button.  It should show a dialogue that allows me to add it.&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;If this keeps happening maybe add a subnet range too?&quot;</span><span class="p">)</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">()</span>
+
+
+<span class="c1">##############################################################################</span>
+<span class="c1"># Progress bar helper functions</span>
+<div class="viewcode-block" id="start_progbar"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.start_progbar">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">start_progbar</span><span class="p">(</span><span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">total</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                  <span class="n">desc</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ProgBar</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Start a progress bar if show_progress is True and total &gt; 0.</span>
+
+<span class="sd">    Returns ProgBar object or None.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">show_progress</span> <span class="ow">and</span> <span class="n">total</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">ProgBar</span><span class="p">(</span><span class="n">total</span><span class="o">=</span><span class="n">total</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="n">desc</span><span class="p">)</span>
+    <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="update_progbar"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.update_progbar">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">update_progbar</span><span class="p">(</span><span class="n">pbar</span><span class="p">:</span> <span class="n">ProgBar</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">total</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                   <span class="n">update_every</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">500</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Update progress bar at intervals and at final item.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">pbar</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="p">(</span><span class="n">index</span> <span class="o">%</span> <span class="n">update_every</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span>
+                             <span class="n">index</span> <span class="o">==</span> <span class="n">total</span><span class="p">):</span>
+        <span class="n">pbar</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">index</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="finish_progbar"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.finish_progbar">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">finish_progbar</span><span class="p">(</span><span class="n">pbar</span><span class="p">:</span> <span class="n">ProgBar</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Finish and cleanup progress bar if it exists.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">pbar</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">pbar</span><span class="o">.</span><span class="n">finish</span><span class="p">()</span></div>
+
+
+<span class="c1">##############################################################################</span>
+<span class="c1"># Non-class specific functions</span>
+<div class="viewcode-block" id="review_database"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.review_database">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">review_database</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Quick function to gather useful information about the state of mongo.&quot;&quot;&quot;</span>
+    <span class="n">raw</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="s2">&quot;dbstats&quot;</span><span class="p">)</span>
+    <span class="n">overview</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;collection&quot;</span><span class="p">:</span> <span class="n">raw</span><span class="p">[</span><span class="s2">&quot;collections&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;objects&quot;</span><span class="p">:</span> <span class="n">raw</span><span class="p">[</span><span class="s2">&quot;objects&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;data_GB&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">raw</span><span class="p">[</span><span class="s2">&quot;dataSize&quot;</span><span class="p">]</span><span class="o">/</span><span class="mi">1024</span><span class="o">/</span><span class="mi">1024</span><span class="o">/</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+                <span class="s2">&quot;storage_GB&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">raw</span><span class="p">[</span><span class="s2">&quot;storageSize&quot;</span><span class="p">]</span><span class="o">/</span><span class="mi">1024</span><span class="o">/</span><span class="mi">1024</span><span class="o">/</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+                <span class="p">}</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;raw&quot;</span><span class="p">:</span> <span class="n">raw</span><span class="p">,</span>
+              <span class="s2">&quot;overview&quot;</span><span class="p">:</span> <span class="n">overview</span><span class="p">,</span>
+              <span class="p">}</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="list_collections"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.list_collections">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">list_collections</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;List all current collections in mongo.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">db</span><span class="o">.</span><span class="n">list_collection_names</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="clear_collection"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.clear_collection">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">clear_collection</span><span class="p">(</span><span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete all records from a collection, preserving indexes and settings.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">prompt_yn</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Clear all records from collection &quot;</span>
+                     <span class="sa">f</span><span class="s2">&quot;&#39;</span><span class="si">{</span><span class="n">collection</span><span class="si">}</span><span class="s2">&#39;? This cannot be undone.  You should &quot;</span>
+                     <span class="s2">&quot;probably do a backup first...&quot;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">return</span> <span class="n">c</span><span class="o">.</span><span class="n">delete_many</span><span class="p">({})</span></div>
+
+
+<div class="viewcode-block" id="drop_collection"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.drop_collection">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">drop_collection</span><span class="p">(</span><span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Irretrievable drops a collection from the store.</span>
+
+<span class="sd">    Use carefully!</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">prompt_yn</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Drop collection &#39;</span><span class="si">{</span><span class="n">collection</span><span class="si">}</span><span class="s2">&#39;? This cannot be&quot;</span>
+                     <span class="s2">&quot;undone and will delete all data, indexes, and other &quot;</span>
+                     <span class="s2">&quot;collection settings. You probably actually want to &quot;</span>
+                     <span class="s2">&quot;use clear_collection() instead, right?  Are you &quot;</span>
+                     <span class="s2">&quot;SURE you want to drop this?&quot;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">return</span> <span class="n">c</span><span class="o">.</span><span class="n">drop</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="get_all_records_by_collection"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.get_all_records_by_collection">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_all_records_by_collection</span><span class="p">(</span><span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                                  <span class="n">limit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                                  <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                                  <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return records from a collection, typically via dhstore wrappers.</span>
+
+<span class="sd">    limit defaults to 0 which returns all records.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+    <span class="n">total</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">count_documents</span><span class="p">({})</span>
+    <span class="k">if</span> <span class="n">limit</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">total</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">total</span><span class="p">,</span> <span class="n">limit</span><span class="p">)</span>
+    <span class="n">pbar</span> <span class="o">=</span> <span class="n">start_progbar</span><span class="p">(</span><span class="n">show_progress</span><span class="p">,</span> <span class="n">total</span><span class="p">,</span>
+                         <span class="sa">f</span><span class="s2">&quot;records fetched from </span><span class="si">{</span><span class="n">collection</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">cursor</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">find</span><span class="p">()</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="n">limit</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">doc</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span>
+        <span class="n">update_progbar</span><span class="p">(</span><span class="n">pbar</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">total</span><span class="p">)</span>
+    <span class="n">finish_progbar</span><span class="p">(</span><span class="n">pbar</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="run_query"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.run_query">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">run_query</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Run a standard mongo query and return the result.&quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+    <span class="n">total</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">count_documents</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+    <span class="n">pbar</span> <span class="o">=</span> <span class="n">start_progbar</span><span class="p">(</span><span class="n">show_progress</span><span class="p">,</span> <span class="n">total</span><span class="p">,</span>
+                         <span class="sa">f</span><span class="s2">&quot;records fetched from </span><span class="si">{</span><span class="n">collection</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">cursor</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">doc</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span>
+        <span class="n">update_progbar</span><span class="p">(</span><span class="n">pbar</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">total</span><span class="p">)</span>
+    <span class="n">finish_progbar</span><span class="p">(</span><span class="n">pbar</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="count_records_by_field"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.count_records_by_field">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">count_records_by_field</span><span class="p">(</span><span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                           <span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                           <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return aggregation with count of records split by a single field.&quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">aggregate</span><span class="p">([{</span><span class="s2">&quot;$group&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;_id&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;$</span><span class="si">{</span><span class="n">field</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                                           <span class="s2">&quot;count&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;$sum&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">},</span>
+                                           <span class="p">}}]))</span>
+    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">result</span><span class="p">:</span>
+        <span class="n">r</span><span class="p">[</span><span class="n">field</span><span class="p">]</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;_id&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="list_values_by_regex_match"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.list_values_by_regex_match">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">list_values_by_regex_match</span><span class="p">(</span><span class="n">values_field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                               <span class="n">regex_field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                               <span class="n">regex</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                               <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                               <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return unique values in values_field split by regex match/nomatch.</span>
+
+<span class="sd">    Example: review tags based on whether a Trade closed in the autoclose</span>
+<span class="sd">    timeframe, i.e. split by those closing at 15:55:00 vs. those that do</span>
+<span class="sd">    not.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+    <span class="n">pipeline</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="c1"># Add a field to categorize by match vs no match</span>
+            <span class="s2">&quot;$addFields&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;matches_regex&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;$cond&quot;</span><span class="p">:</span> <span class="p">{</span>
+                        <span class="s2">&quot;if&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;$regexMatch&quot;</span><span class="p">:</span>
+                               <span class="p">{</span><span class="s2">&quot;input&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;$</span><span class="si">{</span><span class="n">regex_field</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                                <span class="s2">&quot;regex&quot;</span><span class="p">:</span> <span class="n">regex</span><span class="p">}</span>
+                               <span class="p">},</span>
+                        <span class="s2">&quot;then&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                        <span class="s2">&quot;else&quot;</span><span class="p">:</span> <span class="kc">False</span>
+                    <span class="p">}</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+            <span class="c1"># Group and collect unique values</span>
+            <span class="s2">&quot;$group&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;_id&quot;</span><span class="p">:</span> <span class="s2">&quot;$matches_regex&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;unique_values&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;$addToSet&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;$</span><span class="si">{</span><span class="n">values_field</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">]</span>
+    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">aggregate</span><span class="p">(</span><span class="n">pipeline</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="update_records_value"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.update_records_value">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">update_records_value</span><span class="p">(</span><span class="n">search</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+                         <span class="n">update_field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                         <span class="n">update_value</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                         <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                         <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Update all records matching a mongo filter with a new field value.</span>
+
+<span class="sd">    &#39;search&#39; should be a dict representing the mongo filter.</span>
+
+<span class="sd">    Example replacing bt_id &#39;foo&#39; with &#39;bar&#39; on all matching backtests::</span>
+
+<span class="sd">        update_record_value(</span>
+<span class="sd">            search={&quot;bt_id&quot;: &quot;foo&quot;},</span>
+<span class="sd">            update_field=&quot;bt_id&quot;,</span>
+<span class="sd">            update_value=&quot;bar&quot;,</span>
+<span class="sd">            collection=&quot;backtests&quot;</span>
+<span class="sd">        )</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">update_many</span><span class="p">(</span><span class="n">search</span><span class="p">,</span>
+                           <span class="p">{</span><span class="s2">&quot;$set&quot;</span><span class="p">:</span> <span class="p">{</span><span class="n">update_field</span><span class="p">:</span> <span class="n">update_value</span><span class="p">}}</span>
+                           <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="delete_one_document"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.delete_one_document">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">delete_one_document</span><span class="p">(</span><span class="n">query</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+                        <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                        <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete a single document from storage using the provided query.</span>
+
+<span class="sd">    This is primarily called by more specific functions in dhstore.py for</span>
+<span class="sd">    individual object types using relevant parameters to build the query</span>
+<span class="sd">    there.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">delete_one</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+<span class="c1">##############################################################################</span>
+<span class="c1"># Trades</span>
+
+
+<div class="viewcode-block" id="get_trades_by_field"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.get_trades_by_field">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_trades_by_field</span><span class="p">(</span><span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                        <span class="n">value</span><span class="p">,</span>
+                        <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                        <span class="n">limit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                        <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                        <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns &lt;limit&gt; (0 = all) Trade documents matching (field == value).&quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+    <span class="n">total</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">count_documents</span><span class="p">({</span><span class="n">field</span><span class="p">:</span> <span class="n">value</span><span class="p">})</span>
+    <span class="k">if</span> <span class="n">limit</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">total</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">total</span><span class="p">,</span> <span class="n">limit</span><span class="p">)</span>
+    <span class="n">pbar</span> <span class="o">=</span> <span class="n">start_progbar</span><span class="p">(</span><span class="n">show_progress</span><span class="p">,</span> <span class="n">total</span><span class="p">,</span>
+                         <span class="sa">f</span><span class="s2">&quot;trade records fetched from </span><span class="si">{</span><span class="n">collection</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">cursor</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="n">field</span><span class="p">:</span> <span class="n">value</span><span class="p">})</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="n">limit</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">doc</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span>
+        <span class="n">update_progbar</span><span class="p">(</span><span class="n">pbar</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">total</span><span class="p">)</span>
+    <span class="n">finish_progbar</span><span class="p">(</span><span class="n">pbar</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="store_trades"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.store_trades">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">store_trades</span><span class="p">(</span><span class="n">trades</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+                 <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                 <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Store one or more trades in mongo using bulk operations.&quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">trades</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+
+    <span class="c1"># Build bulk operations list</span>
+    <span class="n">operations</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">trades</span><span class="p">:</span>
+        <span class="n">filter_doc</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;open_dt&quot;</span><span class="p">:</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;open_dt&quot;</span><span class="p">],</span>
+            <span class="s2">&quot;direction&quot;</span><span class="p">:</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;direction&quot;</span><span class="p">],</span>
+            <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">],</span>
+            <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;version&quot;</span><span class="p">],</span>
+            <span class="s2">&quot;symbol&quot;</span><span class="p">:</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;symbol&quot;</span><span class="p">],</span>
+            <span class="s2">&quot;ts_id&quot;</span><span class="p">:</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;ts_id&quot;</span><span class="p">],</span>
+            <span class="s2">&quot;bt_id&quot;</span><span class="p">:</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;bt_id&quot;</span><span class="p">],</span>
+        <span class="p">}</span>
+        <span class="n">operations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ReplaceOne</span><span class="p">(</span><span class="n">filter_doc</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">upsert</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+
+    <span class="c1"># Execute as single bulk operation and return only confirmed successes.</span>
+    <span class="n">successful_indexes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">trades</span><span class="p">)))</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">c</span><span class="o">.</span><span class="n">bulk_write</span><span class="p">(</span><span class="n">operations</span><span class="p">,</span> <span class="n">ordered</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">BulkWriteError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+        <span class="n">details</span> <span class="o">=</span> <span class="n">err</span><span class="o">.</span><span class="n">details</span> <span class="ow">or</span> <span class="p">{}</span>
+        <span class="n">failed_indexes</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">we</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;index&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">we</span> <span class="ow">in</span> <span class="n">details</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;writeErrors&quot;</span><span class="p">,</span> <span class="p">[])</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">we</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;index&quot;</span><span class="p">),</span> <span class="nb">int</span><span class="p">)</span>
+        <span class="p">}</span>
+        <span class="n">successful_indexes</span> <span class="o">-=</span> <span class="n">failed_indexes</span>
+
+        <span class="c1"># Write concern errors make confirmation ambiguous. Be conservative.</span>
+        <span class="k">if</span> <span class="n">details</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;writeConcernErrors&quot;</span><span class="p">):</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;store_trades encountered writeConcernErrors; &quot;</span>
+                      <span class="s2">&quot;cannot confirm per-trade success&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">[]</span>
+
+    <span class="k">return</span> <span class="p">[</span><span class="nb">dict</span><span class="p">(</span><span class="n">trades</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">trades</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">successful_indexes</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="review_trades"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.review_trades">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">review_trades</span><span class="p">(</span><span class="n">symbol</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                  <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                  <span class="n">bt_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                  <span class="n">ts_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                  <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Provides aggregate summary data about trades in mongo.&quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+    <span class="n">match</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;symbol&quot;</span><span class="p">:</span> <span class="n">symbol</span><span class="p">}</span>
+    <span class="n">group</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;_id&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;$name&quot;</span><span class="p">},</span>
+             <span class="s2">&quot;earliest_epoch&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;$min&quot;</span><span class="p">:</span> <span class="s2">&quot;$open_epoch&quot;</span><span class="p">},</span>
+             <span class="s2">&quot;latest_epoch&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;$max&quot;</span><span class="p">:</span> <span class="s2">&quot;$open_epoch&quot;</span><span class="p">},</span>
+             <span class="p">}</span>
+    <span class="k">if</span> <span class="n">bt_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">match</span><span class="p">[</span><span class="s2">&quot;bt_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">bt_id</span>
+        <span class="n">group</span><span class="p">[</span><span class="s2">&quot;_id&quot;</span><span class="p">][</span><span class="s2">&quot;bt_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;$bt_id&quot;</span>
+    <span class="k">if</span> <span class="n">ts_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">match</span><span class="p">[</span><span class="s2">&quot;ts_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ts_id</span>
+        <span class="n">group</span><span class="p">[</span><span class="s2">&quot;_id&quot;</span><span class="p">][</span><span class="s2">&quot;ts_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;$ts_id&quot;</span>
+    <span class="n">group</span><span class="p">[</span><span class="s2">&quot;count&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;$sum&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">}</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">trades</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">aggregate</span><span class="p">([{</span><span class="s2">&quot;$match&quot;</span><span class="p">:</span> <span class="n">match</span><span class="p">},</span>
+                                   <span class="p">{</span><span class="s2">&quot;$group&quot;</span><span class="p">:</span> <span class="n">group</span><span class="p">}]))</span>
+
+        <span class="k">return</span> <span class="n">trades</span>
+    <span class="c1"># IndexError is raised if collection does not exist yet</span>
+    <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="delete_trades_by_field"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.delete_trades_by_field">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">delete_trades_by_field</span><span class="p">(</span><span class="n">symbol</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                           <span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                           <span class="n">value</span><span class="p">,</span>
+                           <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                           <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete all trade records with &#39;field&#39; matching &#39;value&#39;.</span>
+
+<span class="sd">    Typically used to delete by name, ts_id, or bt_id fields.</span>
+
+<span class="sd">    Example to delete all trade records with name==&quot;DELETEME&quot;:</span>
+<span class="sd">    delete_trades_by_field(symbol=&quot;ES&quot;, field=&quot;name&quot;,</span>
+<span class="sd">    value=&quot;DELETEME&quot;)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">delete_many</span><span class="p">({</span><span class="n">field</span><span class="p">:</span> <span class="n">value</span><span class="p">})</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="delete_trades"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.delete_trades">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">delete_trades</span><span class="p">(</span><span class="n">trades</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+                  <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                  <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete trades from mongo using open_dt, ts_id, and symbol as keys.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">trades</span><span class="p">:</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">find_one_and_delete</span><span class="p">({</span><span class="s2">&quot;open_dt&quot;</span><span class="p">:</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;open_dt&quot;</span><span class="p">],</span>
+                                   <span class="s2">&quot;ts_id&quot;</span><span class="p">:</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;ts_id&quot;</span><span class="p">],</span>
+                                   <span class="s2">&quot;symbol&quot;</span><span class="p">:</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;symbol&quot;</span><span class="p">],</span>
+                                   <span class="p">})</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<span class="c1">##############################################################################</span>
+<span class="c1"># TradeSeries</span>
+
+<div class="viewcode-block" id="get_tradeseries_by_field"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.get_tradeseries_by_field">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_tradeseries_by_field</span><span class="p">(</span><span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                             <span class="n">value</span><span class="p">,</span>
+                             <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                             <span class="n">limit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                             <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                             <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns a list of TradeSeries() matching the field=value provided.&quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+    <span class="n">total</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">count_documents</span><span class="p">({</span><span class="n">field</span><span class="p">:</span> <span class="n">value</span><span class="p">})</span>
+    <span class="k">if</span> <span class="n">limit</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">total</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">total</span><span class="p">,</span> <span class="n">limit</span><span class="p">)</span>
+    <span class="n">pbar</span> <span class="o">=</span> <span class="n">start_progbar</span><span class="p">(</span><span class="n">show_progress</span><span class="p">,</span> <span class="n">total</span><span class="p">,</span>
+                         <span class="s2">&quot;tradeseries records fetched from &quot;</span>
+                         <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">collection</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">cursor</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="n">field</span><span class="p">:</span> <span class="n">value</span><span class="p">})</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="n">limit</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">doc</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span>
+        <span class="n">update_progbar</span><span class="p">(</span><span class="n">pbar</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">total</span><span class="p">)</span>
+    <span class="n">finish_progbar</span><span class="p">(</span><span class="n">pbar</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="store_tradeseries"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.store_tradeseries">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">store_tradeseries</span><span class="p">(</span><span class="n">series</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+                      <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                      <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Store one TradeSeries object in mongo.&quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">find_one_and_replace</span><span class="p">({</span><span class="s2">&quot;ts_id&quot;</span><span class="p">:</span> <span class="n">series</span><span class="p">[</span><span class="s2">&quot;ts_id&quot;</span><span class="p">]},</span>
+                                    <span class="n">series</span><span class="p">,</span>
+                                    <span class="n">new</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                    <span class="n">upsert</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="review_tradeseries"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.review_tradeseries">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">review_tradeseries</span><span class="p">(</span><span class="n">symbol</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                       <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                       <span class="n">bt_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                       <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Provides aggregate summary data about tradeseries in mongo.&quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+    <span class="n">match</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;symbol&quot;</span><span class="p">:</span> <span class="n">symbol</span><span class="p">}</span>
+    <span class="n">group</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;_id&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;$name&quot;</span><span class="p">,</span> <span class="s2">&quot;bt_id&quot;</span><span class="p">:</span> <span class="s2">&quot;$bt_id&quot;</span><span class="p">},</span>
+             <span class="s2">&quot;earliest_start&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;$min&quot;</span><span class="p">:</span> <span class="s2">&quot;$start_dt&quot;</span><span class="p">},</span>
+             <span class="s2">&quot;latest_end&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;$max&quot;</span><span class="p">:</span> <span class="s2">&quot;$end_dt&quot;</span><span class="p">},</span>
+             <span class="p">}</span>
+    <span class="k">if</span> <span class="n">bt_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">match</span><span class="p">[</span><span class="s2">&quot;bt_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">bt_id</span>
+    <span class="n">group</span><span class="p">[</span><span class="s2">&quot;count&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;$sum&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">}</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">tradeseries</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">aggregate</span><span class="p">([{</span><span class="s2">&quot;$match&quot;</span><span class="p">:</span> <span class="n">match</span><span class="p">},</span>
+                                        <span class="p">{</span><span class="s2">&quot;$group&quot;</span><span class="p">:</span> <span class="n">group</span><span class="p">}]))</span>
+    <span class="c1"># IndexError is raised if collection does not exist yet</span>
+    <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">tradeseries</span></div>
+
+
+<div class="viewcode-block" id="delete_tradeseries_by_field"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.delete_tradeseries_by_field">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">delete_tradeseries_by_field</span><span class="p">(</span><span class="n">symbol</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                                <span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                                <span class="n">value</span><span class="p">,</span>
+                                <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                                <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete all tradeseries records in mongo with &#39;field&#39; matching &#39;value&#39;.</span>
+
+<span class="sd">    Typically used to delete by ts_id, or bt_id fields.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">delete_many</span><span class="p">({</span><span class="n">field</span><span class="p">:</span> <span class="n">value</span><span class="p">})</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="delete_tradeseries"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.delete_tradeseries">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">delete_tradeseries</span><span class="p">(</span><span class="n">ts_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+                       <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                       <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete tradeseries from mongo using ts_id as the identifying field.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">ts_id</span> <span class="ow">in</span> <span class="n">ts_ids</span><span class="p">:</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">find_one_and_delete</span><span class="p">({</span><span class="s2">&quot;ts_id&quot;</span><span class="p">:</span> <span class="n">ts_id</span><span class="p">})</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<span class="c1">##############################################################################</span>
+<span class="c1"># Backtests</span>
+
+
+<div class="viewcode-block" id="get_backtests_by_field"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.get_backtests_by_field">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_backtests_by_field</span><span class="p">(</span><span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                           <span class="n">value</span><span class="p">,</span>
+                           <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                           <span class="n">limit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                           <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                           <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns a list of Backtest() matching the field=value provided.&quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+    <span class="n">total</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">count_documents</span><span class="p">({</span><span class="n">field</span><span class="p">:</span> <span class="n">value</span><span class="p">})</span>
+    <span class="k">if</span> <span class="n">limit</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">total</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">total</span><span class="p">,</span> <span class="n">limit</span><span class="p">)</span>
+    <span class="n">pbar</span> <span class="o">=</span> <span class="n">start_progbar</span><span class="p">(</span><span class="n">show_progress</span><span class="p">,</span> <span class="n">total</span><span class="p">,</span>
+                         <span class="s2">&quot;backtest records fetched from &quot;</span>
+                         <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">collection</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">cursor</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="n">field</span><span class="p">:</span> <span class="n">value</span><span class="p">})</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="n">limit</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">doc</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span>
+        <span class="n">update_progbar</span><span class="p">(</span><span class="n">pbar</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">total</span><span class="p">)</span>
+    <span class="n">finish_progbar</span><span class="p">(</span><span class="n">pbar</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="store_backtest"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.store_backtest">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">store_backtest</span><span class="p">(</span><span class="n">backtest</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+                   <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                   <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Store one Backtest object in mongo.&quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">find_one_and_replace</span><span class="p">({</span><span class="s2">&quot;bt_id&quot;</span><span class="p">:</span> <span class="n">backtest</span><span class="p">[</span><span class="s2">&quot;bt_id&quot;</span><span class="p">]},</span>
+                                    <span class="n">backtest</span><span class="p">,</span>
+                                    <span class="n">new</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                    <span class="n">upsert</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="review_backtests"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.review_backtests">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">review_backtests</span><span class="p">(</span><span class="n">symbol</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                     <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                     <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Provides aggregate summary data about backtests in mongo.&quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+    <span class="n">match</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;symbol&quot;</span><span class="p">:</span> <span class="n">symbol</span><span class="p">}</span>
+    <span class="n">group</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;_id&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;$name&quot;</span><span class="p">,</span> <span class="s2">&quot;bt_id&quot;</span><span class="p">:</span> <span class="s2">&quot;$bt_id&quot;</span><span class="p">},</span>
+             <span class="s2">&quot;earliest_start&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;$min&quot;</span><span class="p">:</span> <span class="s2">&quot;$start_dt&quot;</span><span class="p">},</span>
+             <span class="s2">&quot;latest_end&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;$max&quot;</span><span class="p">:</span> <span class="s2">&quot;$end_dt&quot;</span><span class="p">},</span>
+             <span class="p">}</span>
+    <span class="n">group</span><span class="p">[</span><span class="s2">&quot;count&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;$sum&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">}</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">backtests</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">aggregate</span><span class="p">([{</span><span class="s2">&quot;$match&quot;</span><span class="p">:</span> <span class="n">match</span><span class="p">},</span>
+                                      <span class="p">{</span><span class="s2">&quot;$group&quot;</span><span class="p">:</span> <span class="n">group</span><span class="p">}]))</span>
+
+        <span class="k">return</span> <span class="n">backtests</span>
+    <span class="c1"># IndexError is raised if collection does not exist yet</span>
+    <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="delete_backtests_by_field"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.delete_backtests_by_field">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">delete_backtests_by_field</span><span class="p">(</span><span class="n">symbol</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                              <span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                              <span class="n">value</span><span class="p">,</span>
+                              <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                              <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete all backtests records in mongo with &#39;field&#39; matching &#39;value&#39;.</span>
+
+<span class="sd">    Typically used to delete by bt_id field.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">delete_many</span><span class="p">({</span><span class="n">field</span><span class="p">:</span> <span class="n">value</span><span class="p">})</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="delete_backtests"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.delete_backtests">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">delete_backtests</span><span class="p">(</span><span class="n">bt_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+                     <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                     <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete backtests from mongo using bt_id as the identifying field.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">bt_id</span> <span class="ow">in</span> <span class="n">bt_ids</span><span class="p">:</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">find_one_and_delete</span><span class="p">({</span><span class="s2">&quot;bt_id&quot;</span><span class="p">:</span> <span class="n">bt_id</span><span class="p">})</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<span class="c1">##############################################################################</span>
+<span class="c1"># Candles</span>
+
+<div class="viewcode-block" id="store_candle"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.store_candle">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">store_candle</span><span class="p">(</span><span class="n">c_datetime</span><span class="p">,</span>
+                 <span class="n">c_timeframe</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                 <span class="n">c_open</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                 <span class="n">c_high</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                 <span class="n">c_low</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                 <span class="n">c_close</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                 <span class="n">c_volume</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                 <span class="n">c_symbol</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                 <span class="n">c_epoch</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                 <span class="n">c_date</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                 <span class="n">c_time</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                 <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Stores a single candle object in mongo.</span>
+
+<span class="sd">    Overwrites if it exists.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">valid_timeframe</span><span class="p">(</span><span class="n">c_timeframe</span><span class="p">)</span>
+    <span class="n">collection</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;candles_</span><span class="si">{</span><span class="n">c_symbol</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">c_timeframe</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="n">c_dt</span> <span class="o">=</span> <span class="n">dt_as_str</span><span class="p">(</span><span class="n">c_datetime</span><span class="p">)</span>
+    <span class="n">candle_doc</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;c_datetime&quot;</span><span class="p">:</span> <span class="n">c_dt</span><span class="p">,</span>
+                  <span class="s2">&quot;c_timeframe&quot;</span><span class="p">:</span> <span class="n">c_timeframe</span><span class="p">,</span>
+                  <span class="s2">&quot;c_open&quot;</span><span class="p">:</span> <span class="n">c_open</span><span class="p">,</span>
+                  <span class="s2">&quot;c_high&quot;</span><span class="p">:</span> <span class="n">c_high</span><span class="p">,</span>
+                  <span class="s2">&quot;c_low&quot;</span><span class="p">:</span> <span class="n">c_low</span><span class="p">,</span>
+                  <span class="s2">&quot;c_close&quot;</span><span class="p">:</span> <span class="n">c_close</span><span class="p">,</span>
+                  <span class="s2">&quot;c_volume&quot;</span><span class="p">:</span> <span class="n">c_volume</span><span class="p">,</span>
+                  <span class="s2">&quot;c_symbol&quot;</span><span class="p">:</span> <span class="n">c_symbol</span><span class="p">,</span>
+                  <span class="s2">&quot;c_epoch&quot;</span><span class="p">:</span> <span class="n">c_epoch</span><span class="p">,</span>
+                  <span class="s2">&quot;c_date&quot;</span><span class="p">:</span> <span class="n">c_date</span><span class="p">,</span>
+                  <span class="s2">&quot;c_time&quot;</span><span class="p">:</span> <span class="n">c_time</span><span class="p">,</span>
+                  <span class="p">}</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">find_one_and_replace</span><span class="p">({</span><span class="s2">&quot;c_datetime&quot;</span><span class="p">:</span> <span class="n">c_dt</span><span class="p">},</span>
+                                    <span class="n">candle_doc</span><span class="p">,</span>
+                                    <span class="n">new</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                    <span class="n">upsert</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="get_candles"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.get_candles">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_candles</span><span class="p">(</span><span class="n">start_epoch</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                <span class="n">end_epoch</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                <span class="n">timeframe</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                <span class="n">symbol</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return candle docs within the given start and end epochs, inclusive.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;candles_</span><span class="si">{</span><span class="n">symbol</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">timeframe</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span>
+    <span class="n">candle_filter</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;$and&quot;</span><span class="p">:</span> <span class="p">[</span>
+            <span class="p">{</span><span class="s2">&quot;c_epoch&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;$gte&quot;</span><span class="p">:</span> <span class="n">start_epoch</span><span class="p">}},</span>
+            <span class="p">{</span><span class="s2">&quot;c_epoch&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;$lte&quot;</span><span class="p">:</span> <span class="n">end_epoch</span><span class="p">}},</span>
+        <span class="p">]</span>
+    <span class="p">}</span>
+    <span class="n">total</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">count_documents</span><span class="p">(</span><span class="n">candle_filter</span><span class="p">)</span>
+    <span class="n">pbar</span> <span class="o">=</span> <span class="n">start_progbar</span><span class="p">(</span><span class="n">show_progress</span><span class="p">,</span> <span class="n">total</span><span class="p">,</span>
+                         <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">symbol</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">timeframe</span><span class="si">}</span><span class="s2"> candles fetched&quot;</span><span class="p">)</span>
+    <span class="n">cursor</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">candle_filter</span><span class="p">)</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="s2">&quot;c_epoch&quot;</span><span class="p">,</span> <span class="n">pymongo</span><span class="o">.</span><span class="n">ASCENDING</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">doc</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span>
+        <span class="n">update_progbar</span><span class="p">(</span><span class="n">pbar</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">total</span><span class="p">)</span>
+    <span class="n">finish_progbar</span><span class="p">(</span><span class="n">pbar</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="review_candles"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.review_candles">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">review_candles</span><span class="p">(</span><span class="n">timeframe</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                   <span class="n">symbol</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                   <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Provides aggregate summary data about candles in central storage.&quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;candles_</span><span class="si">{</span><span class="n">symbol</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">timeframe</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">epochs</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">aggregate</span><span class="p">([{</span><span class="s2">&quot;$group&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;_id&quot;</span><span class="p">:</span> <span class="s2">&quot;null&quot;</span><span class="p">,</span>
+                      <span class="s2">&quot;earliest_epoch&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;$min&quot;</span><span class="p">:</span> <span class="s2">&quot;$c_epoch&quot;</span><span class="p">},</span>
+                      <span class="s2">&quot;latest_epoch&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;$max&quot;</span><span class="p">:</span> <span class="s2">&quot;$c_epoch&quot;</span><span class="p">}}}]))[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="c1"># IndexError is raised if collection does not exist yet</span>
+    <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">earliest_epoch</span> <span class="o">=</span> <span class="n">dt_from_epoch</span><span class="p">(</span><span class="n">epochs</span><span class="p">[</span><span class="s1">&#39;earliest_epoch&#39;</span><span class="p">])</span>
+        <span class="n">earliest_dt</span> <span class="o">=</span> <span class="n">dt_as_str</span><span class="p">(</span><span class="n">earliest_epoch</span><span class="p">)</span>
+        <span class="n">latest_epoch</span> <span class="o">=</span> <span class="n">dt_from_epoch</span><span class="p">(</span><span class="n">epochs</span><span class="p">[</span><span class="s1">&#39;latest_epoch&#39;</span><span class="p">])</span>
+        <span class="n">latest_dt</span> <span class="o">=</span> <span class="n">dt_as_str</span><span class="p">(</span><span class="n">latest_epoch</span><span class="p">)</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">count_documents</span><span class="p">({})</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;earliest_dt&quot;</span><span class="p">:</span> <span class="n">earliest_dt</span><span class="p">,</span> <span class="s2">&quot;latest_dt&quot;</span><span class="p">:</span> <span class="n">latest_dt</span><span class="p">,</span>
+                  <span class="s2">&quot;latest_dt&quot;</span><span class="p">:</span> <span class="n">latest_dt</span><span class="p">,</span> <span class="s2">&quot;latest_dt&quot;</span><span class="p">:</span> <span class="n">latest_dt</span><span class="p">,</span>
+                  <span class="s2">&quot;timeframe&quot;</span><span class="p">:</span> <span class="n">timeframe</span><span class="p">,</span> <span class="s2">&quot;count&quot;</span><span class="p">:</span> <span class="n">count</span><span class="p">,</span>
+                  <span class="p">}</span>
+
+        <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="delete_candles"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.delete_candles">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">delete_candles</span><span class="p">(</span><span class="n">timeframe</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                   <span class="n">symbol</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                   <span class="n">earliest_dt</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                   <span class="n">latest_dt</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                   <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete candles from mongo for a specific datetime range.&quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;candles_</span><span class="si">{</span><span class="n">symbol</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">timeframe</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">earliest_dt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">earliest_dt</span> <span class="o">=</span> <span class="s2">&quot;1970-01-01 00:00:00&quot;</span>
+    <span class="k">if</span> <span class="n">latest_dt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">latest_dt</span> <span class="o">=</span> <span class="n">dt_as_str</span><span class="p">(</span><span class="n">dt</span><span class="o">.</span><span class="n">now</span><span class="p">())</span>
+    <span class="n">start_epoch</span> <span class="o">=</span> <span class="n">dt_to_epoch</span><span class="p">(</span><span class="n">earliest_dt</span><span class="p">)</span>
+    <span class="n">end_epoch</span> <span class="o">=</span> <span class="n">dt_to_epoch</span><span class="p">(</span><span class="n">latest_dt</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">delete_many</span><span class="p">({</span><span class="s2">&quot;$and&quot;</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;c_epoch&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;$gte&quot;</span><span class="p">:</span> <span class="n">start_epoch</span><span class="p">}},</span>
+                                     <span class="p">{</span><span class="s2">&quot;c_epoch&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;$lte&quot;</span><span class="p">:</span> <span class="n">end_epoch</span><span class="p">}},</span>
+                                     <span class="p">]})</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<span class="c1">##############################################################################</span>
+<span class="c1"># Indicators</span>
+<div class="viewcode-block" id="list_indicators"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.list_indicators">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">list_indicators</span><span class="p">(</span><span class="n">meta_collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Lists all available indicators in mongo based on metadata.&quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">meta_collection</span><span class="p">]</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">find</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">result</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_indicator_datapoints"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.get_indicator_datapoints">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_indicator_datapoints</span><span class="p">(</span><span class="n">ind_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                             <span class="n">dp_collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                             <span class="n">earliest_dt</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                             <span class="n">latest_dt</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                             <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return datapoints for ind_id within earliest_dt to latest_dt, sorted.</span>
+
+<span class="sd">    Range is inclusive of both endpoints.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">earliest_dt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">earliest_epoch</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">earliest_epoch</span> <span class="o">=</span> <span class="n">dt_to_epoch</span><span class="p">(</span><span class="n">earliest_dt</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">latest_dt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">latest_epoch</span> <span class="o">=</span> <span class="n">dt_to_epoch</span><span class="p">(</span><span class="n">dt</span><span class="o">.</span><span class="n">now</span><span class="p">())</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">latest_epoch</span> <span class="o">=</span> <span class="n">dt_to_epoch</span><span class="p">(</span><span class="n">latest_dt</span><span class="p">)</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">dp_collection</span><span class="p">]</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s2">&quot;$and&quot;</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;ind_id&quot;</span><span class="p">:</span> <span class="n">ind_id</span><span class="p">},</span>
+                              <span class="p">{</span><span class="s2">&quot;epoch&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;$gte&quot;</span><span class="p">:</span> <span class="n">earliest_epoch</span><span class="p">}},</span>
+                              <span class="p">{</span><span class="s2">&quot;epoch&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;$lte&quot;</span><span class="p">:</span> <span class="n">latest_epoch</span><span class="p">}},</span>
+                              <span class="p">]})</span>
+
+    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">result</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="store_indicator_datapoints"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.store_indicator_datapoints">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">store_indicator_datapoints</span><span class="p">(</span><span class="n">datapoints</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+                               <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                               <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Store one or more IndicatorDatapoint objects in mongo.&quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">datapoints</span><span class="p">:</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">find_one_and_replace</span><span class="p">({</span><span class="s2">&quot;ind_id&quot;</span><span class="p">:</span> <span class="n">d</span><span class="p">[</span><span class="s2">&quot;ind_id&quot;</span><span class="p">],</span>
+                                    <span class="s2">&quot;dt&quot;</span><span class="p">:</span> <span class="n">d</span><span class="p">[</span><span class="s2">&quot;dt&quot;</span><span class="p">],</span>
+                                    <span class="s2">&quot;epoch&quot;</span><span class="p">:</span> <span class="n">d</span><span class="p">[</span><span class="s2">&quot;epoch&quot;</span><span class="p">],</span>
+                                    <span class="p">},</span>
+                                   <span class="n">d</span><span class="p">,</span>
+                                   <span class="n">new</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                   <span class="n">upsert</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                   <span class="p">)</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="review_indicators"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.review_indicators">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">review_indicators</span><span class="p">(</span><span class="n">meta_collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                      <span class="n">dp_collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                      <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a more detailed overview of indicators in storage.&quot;&quot;&quot;</span>
+    <span class="n">meta</span> <span class="o">=</span> <span class="n">list_indicators</span><span class="p">(</span><span class="n">meta_collection</span><span class="o">=</span><span class="n">meta_collection</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;meta_docs&quot;</span><span class="p">:</span> <span class="n">meta</span><span class="p">,</span> <span class="s2">&quot;datapoints&quot;</span><span class="p">:</span> <span class="p">[]}</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">dp_collection</span><span class="p">]</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">dps</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">aggregate</span><span class="p">([{</span><span class="s2">&quot;$group&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;_id&quot;</span><span class="p">:</span> <span class="s2">&quot;$ind_id&quot;</span><span class="p">,</span>
+                                       <span class="s2">&quot;earliest_epoch&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;$min&quot;</span><span class="p">:</span> <span class="s2">&quot;$epoch&quot;</span><span class="p">},</span>
+                                       <span class="s2">&quot;latest_epoch&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;$max&quot;</span><span class="p">:</span> <span class="s2">&quot;$epoch&quot;</span><span class="p">},</span>
+                                       <span class="s2">&quot;count&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;$sum&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">},</span>
+                                       <span class="p">}}])</span>
+    <span class="c1"># IndexError is raised if collection does not exist yet</span>
+    <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+        <span class="n">this</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">dps</span><span class="p">):</span>
+            <span class="n">ind_id</span> <span class="o">=</span> <span class="n">i</span><span class="p">[</span><span class="s1">&#39;_id&#39;</span><span class="p">]</span>
+            <span class="n">earliest_epoch</span> <span class="o">=</span> <span class="n">dt_from_epoch</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="s1">&#39;earliest_epoch&#39;</span><span class="p">])</span>
+            <span class="n">earliest_dt</span> <span class="o">=</span> <span class="n">dt_as_str</span><span class="p">(</span><span class="n">earliest_epoch</span><span class="p">)</span>
+            <span class="n">latest_epoch</span> <span class="o">=</span> <span class="n">dt_from_epoch</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="s1">&#39;latest_epoch&#39;</span><span class="p">])</span>
+            <span class="n">latest_dt</span> <span class="o">=</span> <span class="n">dt_as_str</span><span class="p">(</span><span class="n">latest_epoch</span><span class="p">)</span>
+            <span class="n">count</span> <span class="o">=</span> <span class="n">i</span><span class="p">[</span><span class="s1">&#39;count&#39;</span><span class="p">]</span>
+            <span class="n">this</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;ind_id&quot;</span><span class="p">:</span> <span class="n">ind_id</span><span class="p">,</span> <span class="s2">&quot;count&quot;</span><span class="p">:</span> <span class="n">count</span><span class="p">,</span>
+                    <span class="s2">&quot;earliest_dt&quot;</span><span class="p">:</span> <span class="n">earliest_dt</span><span class="p">,</span> <span class="s2">&quot;latest_dt&quot;</span><span class="p">:</span> <span class="n">latest_dt</span><span class="p">,</span>
+                    <span class="s2">&quot;latest_dt&quot;</span><span class="p">:</span> <span class="n">latest_dt</span><span class="p">,</span> <span class="s2">&quot;latest_dt&quot;</span><span class="p">:</span> <span class="n">latest_dt</span><span class="p">,</span>
+                    <span class="p">}</span>
+            <span class="n">result</span><span class="p">[</span><span class="s2">&quot;datapoints&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">this</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="get_indicator"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.get_indicator">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_indicator</span><span class="p">(</span><span class="n">ind_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                  <span class="n">meta_collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                  <span class="n">autoload_datapoints</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+                  <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns an indicator based on ind_id.&quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">meta_collection</span><span class="p">]</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s2">&quot;ind_id&quot;</span><span class="p">:</span> <span class="n">ind_id</span><span class="p">},</span>
+                    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">result</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="store_indicator"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.store_indicator">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">store_indicator</span><span class="p">(</span><span class="n">indicator</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+                    <span class="n">meta_collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                    <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Store indicator meta in mongo.&quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">meta_collection</span><span class="p">]</span>
+    <span class="c1"># upsert=True updates existing or creates new if not found</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">find_one_and_replace</span><span class="p">({</span><span class="s2">&quot;ind_id&quot;</span><span class="p">:</span> <span class="n">indicator</span><span class="p">[</span><span class="s2">&quot;ind_id&quot;</span><span class="p">]},</span>
+                                    <span class="n">indicator</span><span class="p">,</span>
+                                    <span class="n">new</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                    <span class="n">upsert</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="delete_indicator"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.delete_indicator">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">delete_indicator</span><span class="p">(</span><span class="n">ind_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                     <span class="n">meta_collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                     <span class="n">dp_collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                     <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Remove an indicator and all its datapoints from storage by ind_id.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">meta_collection</span><span class="p">]</span>
+    <span class="n">result_meta</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">delete_many</span><span class="p">({</span><span class="s2">&quot;ind_id&quot;</span><span class="p">:</span> <span class="n">ind_id</span><span class="p">})</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">dp_collection</span><span class="p">]</span>
+    <span class="n">result_datapoints</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">delete_many</span><span class="p">({</span><span class="s2">&quot;ind_id&quot;</span><span class="p">:</span> <span class="n">ind_id</span><span class="p">})</span>
+
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;meta&quot;</span><span class="p">:</span> <span class="n">result_meta</span><span class="p">,</span>
+            <span class="s2">&quot;datapoints&quot;</span><span class="p">:</span> <span class="n">result_datapoints</span><span class="p">,</span>
+            <span class="p">}</span></div>
+
+
+<span class="c1">##############################################################################</span>
+<span class="c1"># Events</span>
+<div class="viewcode-block" id="store_event"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.store_event">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">store_event</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span>
+                <span class="n">end_dt</span><span class="p">,</span>
+                <span class="n">symbol</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                <span class="n">category</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                <span class="n">tags</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+                <span class="n">notes</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                <span class="n">start_epoch</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                <span class="n">end_epoch</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Write a single Event() to mongo.&quot;&quot;&quot;</span>
+    <span class="n">event_doc</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;start_dt&quot;</span><span class="p">:</span> <span class="n">dt_as_str</span><span class="p">(</span><span class="n">start_dt</span><span class="p">),</span>
+                 <span class="s2">&quot;end_dt&quot;</span><span class="p">:</span> <span class="n">dt_as_str</span><span class="p">(</span><span class="n">end_dt</span><span class="p">),</span>
+                 <span class="s2">&quot;category&quot;</span><span class="p">:</span> <span class="n">category</span><span class="p">,</span>
+                 <span class="s2">&quot;tags&quot;</span><span class="p">:</span> <span class="n">tags</span><span class="p">,</span>
+                 <span class="s2">&quot;notes&quot;</span><span class="p">:</span> <span class="n">notes</span><span class="p">,</span>
+                 <span class="s2">&quot;start_epoch&quot;</span><span class="p">:</span> <span class="n">start_epoch</span><span class="p">,</span>
+                 <span class="s2">&quot;end_epoch&quot;</span><span class="p">:</span> <span class="n">end_epoch</span><span class="p">,</span>
+                 <span class="p">}</span>
+    <span class="n">collection</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;events_</span><span class="si">{</span><span class="n">symbol</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">find_one_and_replace</span><span class="p">({</span><span class="s2">&quot;start_dt&quot;</span><span class="p">:</span> <span class="n">event_doc</span><span class="p">[</span><span class="s2">&quot;start_dt&quot;</span><span class="p">],</span>
+                                     <span class="s2">&quot;category&quot;</span><span class="p">:</span> <span class="n">event_doc</span><span class="p">[</span><span class="s2">&quot;category&quot;</span><span class="p">]},</span>
+                                    <span class="n">event_doc</span><span class="p">,</span>
+                                    <span class="n">new</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                    <span class="n">upsert</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="get_events"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.get_events">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_events</span><span class="p">(</span><span class="n">symbol</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+               <span class="n">start_epoch</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+               <span class="n">end_epoch</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+               <span class="n">categories</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+               <span class="n">tags</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+               <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return events starting within the given start and end epochs, inclusive.</span>
+
+<span class="sd">    Note: events that end after end_epoch are included so long as they</span>
+<span class="sd">    start before or on it.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;events_</span><span class="si">{</span><span class="n">symbol</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span>
+    <span class="n">events</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s2">&quot;$and&quot;</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;start_epoch&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;$gte&quot;</span><span class="p">:</span> <span class="n">start_epoch</span><span class="p">}},</span>
+                         <span class="p">{</span><span class="s2">&quot;start_epoch&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;$lte&quot;</span><span class="p">:</span> <span class="n">end_epoch</span><span class="p">}}]}))</span>
+    <span class="k">if</span> <span class="n">categories</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">filtered_by_cat</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">events</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;category&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="n">categories</span><span class="p">:</span>
+                <span class="n">filtered_by_cat</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">filtered_by_cat</span> <span class="o">=</span> <span class="n">events</span>
+
+    <span class="k">if</span> <span class="n">tags</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">filtered_by_tag</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">filtered_by_cat</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">tags</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;tags&quot;</span><span class="p">]:</span>
+                    <span class="n">filtered_by_tag</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+                    <span class="k">break</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">filtered_by_tag</span> <span class="o">=</span> <span class="n">filtered_by_cat</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="n">filtered_by_tag</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">dhtrader</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api/__init__.html">API Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2026.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

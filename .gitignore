@@ -20,6 +20,9 @@ __pycache__/
 # Distribution / packaging
 .Python
 build/
+!docs/sphinx/build/
+!docs/sphinx/build/html/
+!docs/sphinx/build/html/**
 develop-eggs/
 dist/
 downloads/

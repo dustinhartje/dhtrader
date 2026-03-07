@@ -1,0 +1,24 @@
+# Sphinx build output
+*.egg-info/
+dist/
+build/html/.doctrees/
+build/html/.buildinfo
+
+# Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

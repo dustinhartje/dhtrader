@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>dhtrader.use &#8212; dhtrader 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=6625fa76" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=28289cfa" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom_responsive.css?v=f9ab5c37" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom_doc_styling.css?v=6c324e95" />
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js?v=359c27e9"></script>
+    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../_static/collapsible_toc.js?v=2f0d682c"></script>
+    <script src="../../_static/module_docstring.js?v=6173792f"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for dhtrader.use</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="sd">&quot;&quot;&quot;Environment management utilities for MongoDB configuration.</span>
+
+<span class="sd">This module provides functions to detect, switch, and display the currently</span>
+<span class="sd">active MongoDB environment. It&#39;s designed to be portable and can be used</span>
+<span class="sd">across multiple projects.</span>
+
+<span class="sd">Environment files follow the pattern: mongo.env.&lt;env&gt;</span>
+<span class="sd">The environment name is the last segment of the filename.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
+
+<span class="c1"># Make dhtrader package importable when run as standalone script</span>
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="c1"># Add git root to path (one directory up from dhtrader)</span>
+    <span class="n">_git_root</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)))</span>
+    <span class="k">if</span> <span class="n">_git_root</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">_git_root</span><span class="p">)</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">dhtrader</span><span class="w"> </span><span class="kn">import</span> <span class="n">prompt_yn</span>
+
+
+<div class="viewcode-block" id="get_script_dir"><a class="viewcode-back" href="../../api/dhtrader.use.html#dhtrader.use.get_script_dir">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_script_dir</span><span class="p">(</span><span class="n">depth</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the directory of the calling script.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        depth: Stack depth. 0 = caller of this function,</span>
+<span class="sd">               1 = caller&#39;s caller, etc.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">frame</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">_getframe</span><span class="p">(</span><span class="n">depth</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">frame</span><span class="o">.</span><span class="n">f_globals</span><span class="p">[</span><span class="s1">&#39;__file__&#39;</span><span class="p">]))</span></div>
+
+
+<div class="viewcode-block" id="list_environment_files"><a class="viewcode-back" href="../../api/dhtrader.use.html#dhtrader.use.list_environment_files">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">list_environment_files</span><span class="p">(</span><span class="n">script_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;List available environment files.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        script_dir: Directory containing mongo.env files. If None, uses the</span>
+<span class="sd">                    current working directory.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dict: Mapping of environment name to file path</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">script_dir</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">script_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+
+    <span class="n">env_files</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">script_dir</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;mongo.env.&#39;</span><span class="p">):</span>
+                <span class="k">continue</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">script_dir</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+                <span class="k">continue</span>
+            <span class="n">env_name</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">env_files</span><span class="p">[</span><span class="n">env_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">path</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="k">pass</span>
+
+    <span class="k">return</span> <span class="n">env_files</span></div>
+
+
+<div class="viewcode-block" id="available_environments"><a class="viewcode-back" href="../../api/dhtrader.use.html#dhtrader.use.available_environments">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">available_environments</span><span class="p">(</span><span class="n">script_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a sorted list of available environment names.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">list_environment_files</span><span class="p">(</span><span class="n">script_dir</span><span class="p">)</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span></div>
+
+
+<div class="viewcode-block" id="detect_environment"><a class="viewcode-back" href="../../api/dhtrader.use.html#dhtrader.use.detect_environment">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">detect_environment</span><span class="p">(</span><span class="n">script_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Detect which environment is currently active.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        script_dir: Directory containing mongo.env files. If None, uses the</span>
+<span class="sd">                    current working directory.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: Environment name, or &#39;unknown&#39;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">script_dir</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">script_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+
+    <span class="n">mongo_env_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">script_dir</span><span class="p">,</span> <span class="s1">&#39;mongo.env&#39;</span><span class="p">)</span>
+    <span class="n">env_files</span> <span class="o">=</span> <span class="n">list_environment_files</span><span class="p">(</span><span class="n">script_dir</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">mongo_env_path</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s1">&#39;unknown&#39;</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">mongo_env_path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">current_content</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">env_name</span><span class="p">,</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">env_files</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">current_content</span> <span class="o">==</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">():</span>
+                        <span class="k">return</span> <span class="n">env_name</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="k">continue</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="k">pass</span>
+
+    <span class="k">return</span> <span class="s1">&#39;unknown&#39;</span></div>
+
+
+<div class="viewcode-block" id="read_environment"><a class="viewcode-back" href="../../api/dhtrader.use.html#dhtrader.use.read_environment">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">read_environment</span><span class="p">(</span><span class="n">script_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Read the contents of the current mongo.env file.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        script_dir: Directory containing mongo.env. If None, uses current</span>
+<span class="sd">                    working directory.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: Contents of mongo.env, or empty string if file not found</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">script_dir</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">script_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+
+    <span class="n">mongo_env_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">script_dir</span><span class="p">,</span> <span class="s1">&#39;mongo.env&#39;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">mongo_env_path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;&#39;</span></div>
+
+
+<div class="viewcode-block" id="display_environment"><a class="viewcode-back" href="../../api/dhtrader.use.html#dhtrader.use.display_environment">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">display_environment</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">script_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Display details of the current environment.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        env: Environment name or &#39;unknown&#39;</span>
+<span class="sd">        script_dir: Directory containing mongo.env files</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">42</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Current MongoDB Environment: </span><span class="si">{</span><span class="n">env</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">42</span><span class="p">)</span>
+    <span class="n">content</span> <span class="o">=</span> <span class="n">read_environment</span><span class="p">(</span><span class="n">script_dir</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">content</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">42</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="switch_environment"><a class="viewcode-back" href="../../api/dhtrader.use.html#dhtrader.use.switch_environment">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">switch_environment</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">script_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Switch to a different environment.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        env: Target environment name</span>
+<span class="sd">        script_dir: Directory containing mongo.env files. If None, uses current</span>
+<span class="sd">                    working directory.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        bool: True if successful, False otherwise</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">script_dir</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">script_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+    <span class="n">env_files</span> <span class="o">=</span> <span class="n">list_environment_files</span><span class="p">(</span><span class="n">script_dir</span><span class="p">)</span>
+    <span class="n">source</span> <span class="o">=</span> <span class="n">env_files</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">env</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">source</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error: Invalid environment &#39;</span><span class="si">{</span><span class="n">env</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="n">dest</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">script_dir</span><span class="p">,</span> <span class="s1">&#39;mongo.env&#39;</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">content</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">dest</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">content</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error: Failed to switch to &#39;</span><span class="si">{</span><span class="n">env</span><span class="si">}</span><span class="s2">&#39; environment&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
+
+
+<div class="viewcode-block" id="check_environment_and_prompt"><a class="viewcode-back" href="../../api/dhtrader.use.html#dhtrader.use.check_environment_and_prompt">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">check_environment_and_prompt</span><span class="p">(</span><span class="n">script_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check current environment and prompt if not production.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        script_dir: Directory containing mongo.env files. If None, uses the</span>
+<span class="sd">                    directory of the script calling this function.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        bool: True if user confirms or environment is prod, False if aborted</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">script_dir</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">script_dir</span> <span class="o">=</span> <span class="n">get_script_dir</span><span class="p">(</span><span class="n">depth</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">current_env</span> <span class="o">=</span> <span class="n">detect_environment</span><span class="p">(</span><span class="n">script_dir</span><span class="p">)</span>
+
+    <span class="c1"># Always allow prod without prompting</span>
+    <span class="k">if</span> <span class="n">current_env</span> <span class="o">==</span> <span class="s1">&#39;prod&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Warning: Running in &#39;</span><span class="si">{</span><span class="n">current_env</span><span class="si">}</span><span class="s2">&#39; environment&quot;</span><span class="p">)</span>
+
+    <span class="n">prompt_fn</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">prompt_fn</span> <span class="o">=</span> <span class="n">prompt_yn</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="n">prompt_fn</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">if</span> <span class="n">prompt_fn</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="n">prompt_fn</span><span class="p">(</span><span class="s2">&quot;Continue with current environment?&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">EOFError</span><span class="p">:</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">response_str</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s2">&quot;Continue with current environment? (Y/N): &quot;</span><span class="p">)</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="n">response_str</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;yes&#39;</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">EOFError</span><span class="p">:</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">response</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Aborted.&quot;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="kc">True</span></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span>
+        <span class="n">description</span><span class="o">=</span><span class="s1">&#39;Manage MongoDB environment configuration&#39;</span><span class="p">,</span>
+        <span class="n">epilog</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">%(prog)s</span><span class="s1"> [ENV|detect|display|list]</span><span class="se">\n</span><span class="s1">&#39;</span>
+                <span class="s1">&#39;ENV     switch to environment in mongo.env.ENV</span><span class="se">\n</span><span class="s1">&#39;</span>
+                <span class="s1">&#39;detect  print active environment name</span><span class="se">\n</span><span class="s1">&#39;</span>
+                <span class="s1">&#39;display show active environment and contents</span><span class="se">\n</span><span class="s1">&#39;</span>
+                <span class="s1">&#39;list    list available environments&#39;</span><span class="p">),</span>
+        <span class="n">formatter_class</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">RawTextHelpFormatter</span><span class="p">,</span>
+        <span class="n">usage</span><span class="o">=</span><span class="n">argparse</span><span class="o">.</span><span class="n">SUPPRESS</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;action&#39;</span><span class="p">,</span>
+                        <span class="n">nargs</span><span class="o">=</span><span class="s1">&#39;?&#39;</span><span class="p">,</span>
+                        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;Environment to switch to or action &#39;</span>
+                              <span class="s1">&#39;(detect, display, list)&#39;</span><span class="p">))</span>
+
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+    <span class="n">script_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+
+    <span class="c1"># Default: display for human review</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">action</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">args</span><span class="o">.</span><span class="n">action</span> <span class="o">==</span> <span class="s1">&#39;display&#39;</span><span class="p">:</span>
+        <span class="n">current_env</span> <span class="o">=</span> <span class="n">detect_environment</span><span class="p">(</span><span class="n">script_dir</span><span class="p">)</span>
+        <span class="n">display_environment</span><span class="p">(</span><span class="n">current_env</span><span class="p">,</span> <span class="n">script_dir</span><span class="p">)</span>
+    <span class="c1"># Identify and print the detected environment name for automation</span>
+    <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">action</span> <span class="o">==</span> <span class="s1">&#39;detect&#39;</span><span class="p">:</span>
+        <span class="n">current_env</span> <span class="o">=</span> <span class="n">detect_environment</span><span class="p">(</span><span class="n">script_dir</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">current_env</span><span class="p">)</span>
+    <span class="c1"># Display available environments</span>
+    <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">action</span> <span class="o">==</span> <span class="s1">&#39;list&#39;</span><span class="p">:</span>
+        <span class="n">envs</span> <span class="o">=</span> <span class="n">available_environments</span><span class="p">(</span><span class="n">script_dir</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">envs</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">envs</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;No environments found&quot;</span><span class="p">)</span>
+    <span class="c1"># Switch to a specific mongo environment</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">switch_environment</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">action</span><span class="p">,</span> <span class="n">script_dir</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Switched to &#39;</span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">action</span><span class="si">}</span><span class="s2">&#39; environment&quot;</span><span class="p">)</span>
+            <span class="n">display_environment</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">action</span><span class="p">,</span> <span class="n">script_dir</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error: Failed to switch to &#39;</span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">action</span><span class="si">}</span><span class="s2">&#39; environment&quot;</span><span class="p">)</span>
+            <span class="n">envs</span> <span class="o">=</span> <span class="n">available_environments</span><span class="p">(</span><span class="n">script_dir</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">envs</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Available environments:&quot;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">envs</span><span class="p">))</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">dhtrader</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api/__init__.html">API Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2026.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

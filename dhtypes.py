@@ -2,12 +2,14 @@
 
 This module defines core data types: Symbol, Candle, Chart, Trade, etc.
 representing:
-- Symbol: Market symbols (e.g., ES) with market hours and trading schedules
-- Candle: OHLCV bars at various timeframes (1m, 5m, 15m, r1h, e1h, 1d, 1w)
+
+- Symbol: Market symbols (e.g., ES) with market hours and schedules
+- Candle: OHLCV bars at various timeframes
+  (1m, 5m, 15m, r1h, e1h, 1d, 1w)
 - Day: Daily calendar wrapper around Candles
 - Chart: Collection of candles with technical analysis capabilities
-- Event: Market events (closures, announcements, etc.) that affect candle
-  validity or reflect unusual market conditions
+- Event: Market events (closures, announcements, etc.) that affect
+  candle validity or reflect unusual market conditions
 - Indicator: Base class for technical indicators (SMA, EMA, etc.)
 - IndicatorDataPoint: Individual indicator calculation results
 - Trade: Single trade execution with entry, exit, and P&L data
@@ -2006,8 +2008,6 @@ class Trade():
         trading_hours (str): regular trading hours (rth)
             or extended/globex (eth) of the underlying chart
         entry_price (float): price at which trade was initiated
-        stop_target (float): price at which trade would auto exit at loss
-        prof_target (float): price at which trade would auto exit at profit
         close_dt (str): datetime trade was closed
         created_dt (str): datetime this object was created
         high_price (float): highest price seen during trade

@@ -2,6 +2,7 @@
 
 This module serves as a dependency-free utility layer, importing only from
 the Python standard library. It contains functions for:
+
 - DateTime conversion and formatting
 - Timeframe and trading hour validation
 - Market calendar calculations (with market_is_open checks via Symbol
@@ -15,13 +16,14 @@ dhtrader imports). This makes it the safe place to define functions that
 would otherwise create circular import issues.
 
 Core functions here include:
-- next_candle_start(): Calculate next valid candle start time (requires
-  Symbol)
-- expected_candle_datetimes(): Calculate all expected candle times in a
-  range
+
+- next_candle_start(): Calculate next valid candle start time
+  (requires Symbol)
+- expected_candle_datetimes(): Calculate all expected candle times
+  in a range
 - this_candle_start(): Find the start of the current candle
-- DateTime utilities: dt_as_str, dt_as_dt, dt_to_epoch, dt_from_epoch,
-  etc.
+- DateTime utilities: dt_as_str, dt_as_dt, dt_to_epoch,
+  dt_from_epoch, etc.
 
 These functions are imported by other modules throughout the system,
 including dhstore, dhutil, and dhtypes.
@@ -437,7 +439,7 @@ def dict_of_weeks(start_dt, end_dt, template):
     stats.  Sunday is the start of each week to match market behavior and
     cover extended hours trading strategies.
 
-    template should be a dictionary with default values, for example:
+    template should be a dictionary with default values, for example::
 
         template = {
             "total_trades": 0,
