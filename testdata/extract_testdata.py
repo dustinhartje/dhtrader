@@ -30,11 +30,13 @@ from dhtrader import dt_as_dt, dt_as_str
 
 
 def say(msg: str, console_output=True):
+    """Print msg to console if console_output is True."""
     if console_output:
         print(f"{msg}")
 
 
 def extract_testdata(blob: dict, write=False, console_output=False):
+    """Extract all test data objects from storage for the given blob config."""
     e = Extractor()
     name = blob["name"]
     description = blob["description"]
@@ -163,6 +165,7 @@ def extract_testdata(blob: dict, write=False, console_output=False):
 
 
 def extract_all(write=False, console_output=False):
+    """Extract and validate all test data sets, optionally writing to files."""
     # Test extracting all objects from storage.  If anything fails, raise
     # an exception before writing any files.
     set1 = {"name": "set1",

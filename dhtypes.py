@@ -272,65 +272,80 @@ def _dhstore(fn_name, *args, **kwargs):
 
 
 def get_symbol_by_ticker(*args, **kwargs):
+    """Delegate to dhstore.get_symbol_by_ticker."""
     return _dhstore('get_symbol_by_ticker', *args, **kwargs)
 
 
 def get_candles(*args, **kwargs):
+    """Delegate to dhstore.get_candles."""
     return _dhstore('get_candles', *args, **kwargs)
 
 
 def get_events(*args, **kwargs):
+    """Delegate to dhstore.get_events."""
     return _dhstore('get_events', *args, **kwargs)
 
 
 def get_indicator_datapoints(*args, **kwargs):
+    """Delegate to dhstore.get_indicator_datapoints."""
     return _dhstore(
         'get_indicator_datapoints', *args, **kwargs)
 
 
 def store_indicator_datapoints(*args, **kwargs):
+    """Delegate to dhstore.store_indicator_datapoints."""
     return _dhstore(
         'store_indicator_datapoints', *args, **kwargs)
 
 
 def store_indicator(*args, **kwargs):
+    """Delegate to dhstore.store_indicator."""
     return _dhstore('store_indicator', *args, **kwargs)
 
 
 def get_trades_by_field(*args, **kwargs):
+    """Delegate to dhstore.get_trades_by_field."""
     return _dhstore('get_trades_by_field', *args, **kwargs)
 
 
 def get_tradeseries_by_field(*args, **kwargs):
+    """Delegate to dhstore.get_tradeseries_by_field."""
     return _dhstore(
         'get_tradeseries_by_field', *args, **kwargs)
 
 
 def delete_tradeseries(*args, **kwargs):
+    """Delegate to dhstore.delete_tradeseries."""
     return _dhstore('delete_tradeseries', *args, **kwargs)
 
 
 def delete_tradeseries_by_field(*args, **kwargs):
+    """Delegate to dhstore.delete_tradeseries_by_field."""
     return _dhstore('delete_tradeseries_by_field', *args, **kwargs)
 
 
 def delete_trades_by_field(*args, **kwargs):
+    """Delegate to dhstore.delete_trades_by_field."""
     return _dhstore('delete_trades_by_field', *args, **kwargs)
 
 
 def delete_trades(*args, **kwargs):
+    """Delegate to dhstore.delete_trades."""
     return _dhstore('delete_trades', *args, **kwargs)
 
 
 def delete_backtests(*args, **kwargs):
+    """Delegate to dhstore.delete_backtests."""
     return _dhstore('delete_backtests', *args, **kwargs)
 
 
 def delete_backtests_by_field(*args, **kwargs):
+    """Delegate to dhstore.delete_backtests_by_field."""
     return _dhstore('delete_backtests_by_field', *args, **kwargs)
 
 
 def review_candles(*args, **kwargs):
+    """Delegate to dhstore.review_candles."""
     return _dhstore('review_candles', *args, **kwargs)
 
 
@@ -896,7 +911,7 @@ class Candle():
 
 class Chart():
     """Represents a collection of Candles for a given symbol, timeframe,
-    and date range.  Supports both regular and extended trading hours."""
+    and date range. Supports both regular and extended trading hours."""
 
     def __init__(self,
                  c_timeframe: str,
@@ -1408,6 +1423,7 @@ class IndicatorDataPoint():
                           )
 
     def __eq__(self, other):
+        """Return True if this datapoint equals the other datapoint."""
         # Testing isinstance fails due to namespace differences when running
         # this as a script and it's a rabbithole to fix.  Since other types
         # are very unlikely to have these same attributes it's reasonably safe
@@ -1428,6 +1444,8 @@ class IndicatorDataPoint():
 
 
 class Indicator():
+    """Base class for technical indicators such as SMA and EMA."""
+
     def __init__(self,
                  name: str,
                  description: str,
@@ -1501,6 +1519,7 @@ class Indicator():
                 )
 
     def __ne__(self, other):
+        """Return True if any indicator attribute or datapoint differs."""
         return not self.__eq__(other)
 
     def sub_eq(self, other):

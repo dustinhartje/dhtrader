@@ -30,6 +30,7 @@ from dhtrader import Backtest, Candle, Trade, TradeSeries
 
 
 def say(msg: str, console_output=True):
+    """Print msg to console if console_output is True."""
     if console_output:
         print(f"{msg}")
 
