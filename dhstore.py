@@ -15,7 +15,6 @@ import progressbar
 from collections import Counter, defaultdict
 from datetime import datetime as dt
 from datetime import timedelta
-from copy import deepcopy
 import logging
 from pathlib import Path
 from .dhtypes import (
@@ -299,16 +298,16 @@ def review_trades(symbol: str = "ES",
                 max_value=bar_total).start()
 
         # Loop through all TradeSeries, checking for duplicates and multidays
-        for i, x in enumerate(all_ts):
-            log.info(f"Checking stored Trade integrity for ts_id={x.ts_id}")
+        for i, ts in enumerate(all_ts):
+            log.info(
+                f"Checking stored Trade integrity for ts_id={ts.ts_id}")
             bar.update(i)
             unique = set()
-            ts = deepcopy(x)
             ts.load_trades()
             # Determine if this ts_id allows multiday trades
             check_multi = True
-            for x in multi_ok:
-                if x in ts.ts_id:
+            for m in multi_ok:
+                if m in ts.ts_id:
                     check_multi = False
                     break
             # Check for duplicate Trades w/matching ts_id and open_dt values
@@ -392,12 +391,17 @@ def review_trades(symbol: str = "ES",
     if out_path is not None:
         # Write result and any issues found to disk
         filename = Path(out_path) / out_file
-        blob = deepcopy(result)
-        # Add issue details for disk output if not already included
-        if not list_issues:
-            blob["integrity"]["duplicates"] = duplicates
-            blob["integrity"]["multidays"] = multidays
-            blob["integrity"]["autoclosed_issues"] = autoclosed_issues
+        # Build blob for disk with issue details if not already in result
+        if list_issues:
+            blob_integrity = integrity
+        else:
+            blob_integrity = {
+                **integrity,
+                "duplicates": duplicates,
+                "multidays": multidays,
+                "autoclosed_issues": autoclosed_issues,
+            }
+        blob = {"integrity": blob_integrity, "review": review}
         with open(filename, "w") as f:
             f.write(json.dumps(blob))
         log_say(f"Wrote integrity results and issues to {filename}")

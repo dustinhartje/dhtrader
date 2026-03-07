@@ -30,7 +30,7 @@ including dhstore, dhutil, and dhtypes.
 """
 from datetime import datetime as dt
 from datetime import timedelta, date, time
-from copy import deepcopy
+
 import re
 import logging
 import json
@@ -118,7 +118,7 @@ class OperationTimer():
         for portability.
         """
         self.update_elapsed()
-        working = deepcopy(self.__dict__)
+        working = dict(self.__dict__)
         if self.start_dt is not None:
             working["start_dt"] = dt_as_str(self.start_dt)
         if self.end_dt is not None:
@@ -455,7 +455,7 @@ def dict_of_weeks(start_dt, end_dt, template):
     week_dt = start_of_week_date(start_dt)
     result = {}
     while week_dt <= end_dt.date():
-        result[f"{week_dt}"] = deepcopy(template)
+        result[f"{week_dt}"] = template.copy()
         week_dt += adder
     return result
 
