@@ -1995,7 +1995,7 @@ class Trade():
                  bt_id: str = None,
                  tags: list = None,
                  ):
-
+        """Initialize a Trade with entry details and validate targets."""
         # Passable attributes
         self.open_dt = open_dt
         self.close_dt = close_dt
@@ -2163,12 +2163,15 @@ class Trade():
                        )
 
     def __str__(self):
+        """Return the string representation of this Trade."""
         return str(self.to_clean_dict())
 
     def __repr__(self):
+        """Return the repr string of this Trade."""
         return str(self)
 
     def __eq__(self, other):
+        """Return True if all Trade attributes are equal."""
         return (self.open_dt == other.open_dt
                 and self.timeframe == other.timeframe
                 and self.trading_hours == other.trading_hours
@@ -2195,6 +2198,7 @@ class Trade():
                 )
 
     def __ne__(self, other):
+        """Return True if any Trade attribute differs."""
         return not self.__eq__(other)
 
     def to_json(self):
@@ -2517,7 +2521,7 @@ class TradeSeries():
                  trades: list = None,
                  tags: list = None,
                  ):
-
+        """Initialize a TradeSeries with date range, symbol, and trades."""
         self.start_dt = dt_as_str(start_dt)
         self.end_dt = dt_as_str(end_dt)
         if valid_timeframe(timeframe):
@@ -2550,6 +2554,7 @@ class TradeSeries():
             self.tags = deepcopy(tags)
 
     def __eq__(self, other):
+        """Return True if all TradeSeries attributes are equal."""
         return (self.start_dt == other.start_dt
                 and self.end_dt == other.end_dt
                 and self.timeframe == other.timeframe
@@ -2562,6 +2567,7 @@ class TradeSeries():
                 )
 
     def __ne__(self, other):
+        """Return True if any TradeSeries attribute differs."""
         return not self.__eq__(other)
 
     def to_json(self,
@@ -2591,9 +2597,11 @@ class TradeSeries():
         return json.loads(self.to_json(suppress_trades=suppress_trades))
 
     def __str__(self):
+        """Return the string representation of this TradeSeries."""
         return str(self.to_clean_dict())
 
     def __repr__(self):
+        """Return the repr string of this TradeSeries."""
         return str(self)
 
     def pretty(self,
@@ -2660,11 +2668,13 @@ class TradeSeries():
     def add_trade(self,
                   trade,
                   ):
+        """Append a Trade to this TradeSeries, setting its ts_id."""
         # Associate this Trade with this Backtest
         trade.ts_id = self.ts_id
         self.trades.append(trade)
 
     def sort_trades(self):
+        """Sort attached Trades in ascending open_epoch order."""
         self.trades.sort(key=lambda t: t.open_epoch)
 
     def get_trade_by_open_dt(self, dt):
@@ -3027,6 +3037,7 @@ class Backtest():
                  prefer_stored: bool = True,
                  tradeseries: list = None,
                  ):
+        """Initialize a Backtest with date range, symbol, and parameters."""
         self.start_dt = dt_as_str(start_dt)
         self.end_dt = dt_as_str(end_dt)
         if valid_timeframe(timeframe):
@@ -3065,6 +3076,7 @@ class Backtest():
             self.load_charts()
 
     def __eq__(self, other):
+        """Return True if all Backtest attributes are equal."""
         return (self.start_dt == other.start_dt
                 and self.end_dt == other.end_dt
                 and self.timeframe == other.timeframe
@@ -3080,6 +3092,7 @@ class Backtest():
                 )
 
     def __ne__(self, other):
+        """Return True if any Backtest attribute differs."""
         return not self.__eq__(other)
 
     def sub_eq(self, other):
@@ -3147,9 +3160,11 @@ class Backtest():
             ))
 
     def __str__(self):
+        """Return the string representation of this Backtest."""
         return str(self.to_clean_dict())
 
     def __repr__(self):
+        """Return the repr string of this Backtest."""
         return str(self)
 
     def pretty(self,
@@ -3278,6 +3293,7 @@ class Backtest():
         return True
 
     def sort_tradeseries(self):
+        """Sort attached TradeSeries in ascending ts_id order."""
         self.tradeseries.sort(key=lambda t: t.ts_id)
 
     def load_tradeseries(self):
