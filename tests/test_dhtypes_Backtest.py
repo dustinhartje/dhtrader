@@ -72,7 +72,7 @@ def create_backtest(start_dt="2025-01-01 00:00:00",
                     autoload_charts=False,
                     tradeseries=None,
                     ):
-    """Create and return a Backtest with validated default test params."""
+    """Create a Backtest and validate its attributes and defaults."""
     r = Backtest(start_dt=start_dt,
                  end_dt=end_dt,
                  timeframe=timeframe,
