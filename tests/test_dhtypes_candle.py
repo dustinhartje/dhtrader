@@ -3,6 +3,7 @@ from dhtrader import (
 
 
 def test_Candle_create_and_verify_pretty():
+    """Verify Candle.pretty() output line count."""
     out_candle = Candle(c_datetime="2025-01-02 12:00:00",
                         c_timeframe="1m",
                         c_open=5000,

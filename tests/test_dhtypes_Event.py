@@ -3,6 +3,7 @@ from dhtrader import (
 
 
 def test_Event_create_and_verify_pretty():
+    """Verify Event.pretty() output line count."""
     # Check line counts of pretty output, won't change unless class changes
     out_event = Event(start_dt="2025-01-02 12:00:00",
                       end_dt="2025-01-02 18:00:00",

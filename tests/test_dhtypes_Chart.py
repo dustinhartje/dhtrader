@@ -4,7 +4,7 @@ from dhtrader import (
 
 
 def test_Chart_create_and_verify_pretty():
-    # Check line counts of pretty output, won't change unless class changes
+    """Verify Chart.pretty() output line count."""
     out_candle = Candle(c_datetime="2025-01-02 12:00:00",
                         c_timeframe="1m",
                         c_open=5000,
@@ -31,6 +31,9 @@ def test_Chart_create_and_verify_pretty():
 
 @pytest.mark.storage
 def test_Chart_restrict_dates():
+    """Verify restrict_dates adjusts candle ranges.
+
+    Storage Usage: Chart autoload=True loads candles."""
     # Create a multimonth chart and confirm initial dates and candle count
     ch = Chart(c_timeframe="15m",
                c_trading_hours="eth",

@@ -110,7 +110,7 @@ def create_tradeseries(start_dt="2025-01-01 00:00:00",
 
 
 def test_TradeSeries_create_and_verify_pretty():
-    # Check line counts of pretty output, won't change unless class changes
+    """Verify TradeSeries.pretty() output line count."""
     ts = create_tradeseries()
     test_trade = create_trade()
     assert isinstance(ts, TradeSeries)
@@ -121,6 +121,7 @@ def test_TradeSeries_create_and_verify_pretty():
 
 
 def test_TradeSeries_add_sort_and_get_trades():
+    """Verify add_trade, get_trade_by_open_dt, and trade sorting."""
     ts = create_tradeseries()
     assert len(ts.trades) == 0
     # Create and add 2 trades out of order (later trade goes in first)
@@ -146,6 +147,7 @@ def test_TradeSeries_add_sort_and_get_trades():
 
 
 def test_TradeSeries_balance_impact_and_stats():
+    """Verify TradeSeries.balance_impact() and stats() calculations."""
     # Test a TradeSeries with winning and losing trades that does not liquidate
     ts = create_tradeseries()
     # Trade closes 25pts/$1250 in profit with rr=4
@@ -358,9 +360,9 @@ def test_TradeSeries_balance_impact_and_stats():
 
 
 def test_TradeSeries_non_target_closes_stats_and_effective_risk_reward_calc():
-    """Confirm effective_risk_reward calculations when trades close at prices
-       other than their expected targets.  This would typically happen when
-       auto closing a trade that is still open at the end of the day."""
+    """Verify effective_risk_reward when trades close at non-target
+    prices.
+    """
     ts = create_tradeseries()
     # Long trade closing at partial profit +23pt at end of day
     t = create_trade(open_dt="2025-01-02 12:30:00", direction="long",
@@ -434,6 +436,7 @@ def test_TradeSeries_non_target_closes_stats_and_effective_risk_reward_calc():
 
 
 def test_TradeSeries_drawdown_impact():
+    """Verify TradeSeries.drawdown_impact() calculations."""
     # Test a TradeSeries with winning and losing trades that does not liquidate
     ts = create_tradeseries()
     t = create_trade(open_dt="2025-01-02 12:30:00",
@@ -553,6 +556,11 @@ def test_TradeSeries_drawdown_impact():
 
 @pytest.mark.storage
 def test_TradeSeries_store_retrieve_and_delete():
+    """Verify TradeSeries storage, retrieval, and deletion including
+    trades.
+
+    Storage Usage: store_tradeseries, get/delete methods.
+    """
     # Create a TradeSeries with 2 Trade objects to test with
     ts = create_tradeseries(name="DELETEME-TEST")
     ts.add_trade(create_trade(open_dt="2025-01-05 12:00:00",
@@ -607,13 +615,8 @@ def test_TradeSeries_store_retrieve_and_delete():
 
 @pytest.mark.historical
 def test_TradeSeries_historical():
-    """Rebuild  TradeSeries from historical extracted data to compare methods
-    output to expected results manually calculated outside of dhtrader
-
-    Tests methods:
-        TradeSeries.stats()
-        TradeSeries.balance_impact()
-        TradeSeries.drawdown_impact()
+    """Test TradeSeries.stats, balance_impact, and drawdown_impact
+    against historical data.
     """
     # SET1 SHORT TRADES NO REFINING ######################################
     # Rebuild testdata/set1 short TradeSeries
@@ -663,8 +666,10 @@ def test_TradeSeries_historical():
 
 @pytest.mark.storage
 def test_delete_tradeseries():
-    """Test delete_tradeseries function accepting TradeSeries list using
-    ts_id as the unique identifying field"""
+    """Verify delete_tradeseries() using TradeSeries list.
+
+    Storage Usage: delete_tradeseries.
+    """
     # Create and store test trade series (with different names to get unique
     # ts_ids)
     ts1 = create_tradeseries(name="DELETEME-TEST-LIST-1")

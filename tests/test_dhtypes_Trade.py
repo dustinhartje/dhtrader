@@ -89,34 +89,12 @@ def add_1m_candle(trade, dt, c_open, c_high, c_low, c_close):
 
 
 def test_Trade_confirm_observed_results():
-    """Confirm the results of a number of live trades match the values that
-    were seen "in the wild".  All of the trades in this test were performed
-    in an Apex trading account with drawdown and balance before/after recorded
-    in Apex_Live_Trade_Observations.md to use as assertion targets directly and
-    to use in directly calculating additional assertions such as gain_loss and
-    drawdown_trailing_increase.
-
-    Actual candle data is used to update the trades in most cases with many
-    assertions being based on this data such as high_price and low_price.
-
-    Some assertions could not be observed so they are assumed based on my best
-    understanding of the math involved.  This includes balance_low,
-    balance_high, drawdown_low, and drawdown_high
-
-    These trades cover all combinations and edge cases I could think of and
-    check all potential outputs.  Collectively they should cover most potential
-    regression issues though I'll still create targetted mock values tests as
-    well to be on the safe side.
-
-    Note that stop and profit targets are seldom used to close these trades as
-    they mostly were closed manually to catch specific scenarios, as such the
-    drawdown_low/max and balance_low/max might have been different if I were
-    using targets.  Other tests will cover target based scenarios."""
-
-    # These tests compare to real trade results captured in an Apex evaluation
-    # account as noted in Apex_Drawdown_Observations.md.  Using real trade
-    # results ensures all calculations match real life and not just my
-    # assumptions about real life that may be inaccurate.
+    """Validate Trade calculations against live Apex account results
+    (see Apex_Live_Trade_Observations.md). Uses real candle data for
+    most assertions; some values assumed by best understanding
+    (balance_low, balance_high, drawdown_low, drawdown_high). Covers
+    edge case combinations. Trades mostly closed manually, so
+    drawdown/balance limits may differ from target-based scenarios."""
 
     # Long trade closed in profit after some pullback using 2 contracts
     # Also confirms multiple contracts calculate correctly for long trades
@@ -553,13 +531,14 @@ def test_Trade_confirm_observed_results():
 
 
 def test_Trade_create_and_verify_pretty():
-    # Check line counts of pretty output, won't change unless class changes
+    """Verify Trade.pretty() output line count."""
     trade = create_trade()
     assert isinstance(trade, Trade)
     assert len(trade.pretty().splitlines()) == 32
 
 
 def test_Trade_tick_and_target_calculations_correct():
+    """Verify stop/profit tick and target calculations for longs/shorts."""
     # LONG Providing both accurately should result in the values as provided
     t = create_trade(direction="long",
                      entry_price=5000,
@@ -680,7 +659,7 @@ def test_Trade_tick_and_target_calculations_correct():
 
 
 def test_Trade_gain_loss():
-    """Confirms Trade.gain_loss() method math working as expected"""
+    """Verify Trade.gain_loss() calculation."""
     # Closing long trade at a gain
     t = create_trade()
     t.close(price=5005, dt="2025-01-02 12:45:00")
@@ -700,7 +679,7 @@ def test_Trade_gain_loss():
 
 
 def test_Trade_duration():
-    """Confirms Trade.duration method math working as expected"""
+    """Verify Trade.duration() calculation."""
     t = create_trade(open_dt="2025-01-02 12:45:00")
     t.close(price=5005, dt="2025-01-02 12:45:00")
     assert t.duration() == 0
@@ -713,6 +692,7 @@ def test_Trade_duration():
 
 
 def test_Trade_creation_long_close_at_profit():
+    """Verify long trade closed at profit calculates correctly."""
     # Create a trade (create_trade() covers creation assertions)
     t = create_trade(direction="long")
     # Update drawdown_impact
@@ -732,6 +712,7 @@ def test_Trade_creation_long_close_at_profit():
 
 
 def test_Trade_creation_long_close_at_loss():
+    """Verify long trade closed at loss calculates correctly."""
     # Create a trade (create_trade() covers creation assertions)
     t = create_trade(direction="long")
     # Update drawdown_impact
@@ -750,6 +731,7 @@ def test_Trade_creation_long_close_at_loss():
 
 
 def test_Trade_creation_short_close_at_profit():
+    """Verify short trade closed at profit calculates correctly."""
     # Create a trade (create_trade() covers creation assertions)
     t = create_trade(direction="short",
                      stop_target=5005,
@@ -772,6 +754,7 @@ def test_Trade_creation_short_close_at_profit():
 
 
 def test_Trade_creation_short_close_at_loss():
+    """Verify short trade closed at loss calculates correctly."""
     # Create a trade (create_trade() covers creation assertions)
     t = create_trade(direction="short",
                      stop_target=5005,
@@ -793,6 +776,9 @@ def test_Trade_creation_short_close_at_loss():
 
 
 def test_Trade_candle_update_returns_correct_values():
+    """Verify candle_update returns correct closed status for various
+    scenarios.
+    """
     # Should not return closed until some target is met (500 ticks default)
     c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
                c_open=5000, c_high=5001, c_low=4999, c_close=5000,
@@ -837,6 +823,7 @@ def test_Trade_candle_update_returns_correct_values():
 
 
 def test_Trade_candle_update_closes_trades_correctly():
+    """Verify candle_update closes trades correctly at targets."""
     # Check close status and related attribs/methods for all target scenarios
     # Long trade should not close with no target hit
     t = create_trade(direction="long")
@@ -955,6 +942,7 @@ def test_Trade_candle_update_closes_trades_correctly():
 
 
 def test_Trade_sets_high_low_exit_prices_correctly():
+    """Verify high/low/exit prices set correctly during trade updates."""
     # Long trade sets candle high and low if exit targets are not hit
     t = create_trade(direction="long")
     assert t.high_price == 5000
@@ -1020,7 +1008,7 @@ def test_Trade_sets_high_low_exit_prices_correctly():
 
 
 def test_Trade_parent_bar_secs():
-    """Test method parent_bar_secs() returns accurate on several timeframes"""
+    """Verify Trade.parent_bar_secs() for various timeframes."""
     t = create_trade(open_dt="2025-01-02 11:52:44", timeframe="1m")
     assert t.parent_bar_secs() == 44
     t = create_trade(open_dt="2025-01-02 11:52:44", timeframe="5m")
@@ -1034,8 +1022,7 @@ def test_Trade_parent_bar_secs():
 
 
 def test_Trade_closed_intraday():
-    """Confirms .closed_intraday() method returns correct values for all known
-    scenarios"""
+    """Verify Trade.closed_intraday() for rth and eth scenarios."""
     # RTH trade closes same day before rth close
     t = create_trade(open_dt="2025-01-05 12:00:00",
                      trading_hours="rth")
@@ -1120,6 +1107,10 @@ def test_Trade_closed_intraday():
 
 @pytest.mark.storage
 def test_Trade_store_retrieve_delete():
+    """Verify Trade storage, retrieval, and deletion.
+
+    Storage Usage: store_trades, get_trades_by_field,
+    delete_trades_by_field."""
     # First make sure there are no DELETEME trades in storage currently
     delete_trades_by_field(symbol="ES", field="name",
                            value="DELETEME-TEST")
@@ -1143,8 +1134,10 @@ def test_Trade_store_retrieve_delete():
 
 @pytest.mark.storage
 def test_delete_trades():
-    """Test delete_trades function accepting Trade list using minimal
-    identifying fields (open_dt, ts_id, symbol.ticker)"""
+    """Verify delete_trades() using Trade list.
+
+    Storage Usage: delete_trades.
+    """
     # First make sure there are no DELETEME trades in storage currently
     delete_trades_by_field(symbol="ES", field="name",
                            value="DELETEME-TEST-LIST")
@@ -1172,12 +1165,8 @@ def test_delete_trades():
 
 @pytest.mark.historical
 def test_Trade_historical():
-    """Rebuild lists of Trades from historical extracted data and compare
-    methods output to expected results manually calculated outside of dhtrader
-
-    Tests methods:
-        Trade.balance_impact()
-        Trade.drawdown_impact()
+    """Test Trade.balance_impact and drawdown_impact against historical
+    data.
     """
     # SET1 SHORT TRADES NO REFINING ######################################
     # Rebuild trades list from historical extracted data file

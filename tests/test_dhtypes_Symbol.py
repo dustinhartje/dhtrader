@@ -10,6 +10,9 @@ def symbol():
 
 
 def test_Symbol_market_is_open(symbol):
+    """Verify Symbol.market_is_open() for eth and rth across various
+    times.
+    """
     # ETH
     # Monday through Thursday
     for day in ["13", "14", "15", "16"]:
@@ -574,6 +577,7 @@ def test_Symbol_market_is_open(symbol):
 
 
 def test_Symbol_get_market_boundary(symbol):
+    """Verify Symbol.get_next/previous_open/close for eth and rth."""
     sym = symbol
 
     # Testing All boundaries mid-week Wednesday noon datetime
@@ -886,7 +890,7 @@ def test_Symbol_get_market_boundary(symbol):
 
 
 def test_Symbol_get_next_tick_up(symbol):
-    """Test get_next_tick_up() rounds up to nearest 0.25 (ES tick size)"""
+    """Verify Symbol.get_next_tick_up() rounds to tick_size."""
     sym = symbol  # ES with tick_size=0.25
 
     # Test exact tick boundary - should return same value
@@ -929,6 +933,7 @@ def test_Symbol_get_next_tick_up(symbol):
 
 
 def test_Symbol_get_next_tick_down(symbol):
+    """Verify Symbol.get_next_tick_down() rounds to tick_size."""
     """Test get_next_tick_down() rounds down to nearest 0.25 (ES tick size)"""
     sym = symbol  # ES with tick_size=0.25
 
@@ -972,8 +977,7 @@ def test_Symbol_get_next_tick_down(symbol):
 
 
 def test_Symbol_tick_methods_roundtrip(symbol):
-    """Test that tick boundaries are idempotent and values roundtrip
-    correctly"""
+    """Verify get_next_tick_up and down roundtrip correctly."""
     sym = symbol
 
     # Test that values already on boundaries stay the same
@@ -1015,7 +1019,7 @@ def test_Symbol_tick_methods_roundtrip(symbol):
 
 
 def test_Symbol_get_era(symbol):
-    """Test get_era() correctly identifies all 5 market eras based on date"""
+    """Verify Symbol.get_era() identifies correct market hour eras."""
     sym = symbol
     import datetime as dt
 
@@ -1111,7 +1115,7 @@ def test_Symbol_get_era(symbol):
 
 
 def test_Symbol_get_times_for_era(symbol):
-    """Test get_times_for_era() returns correct market times for all eras"""
+    """Verify Symbol.get_times_for_era() returns correct hours."""
     sym = symbol
     import datetime as dt
 
@@ -1161,7 +1165,7 @@ def test_Symbol_get_times_for_era(symbol):
 
 
 def test_Symbol_get_closed_hours_for_era(symbol):
-    """Test get_closed_hours_for_era() for all 5 MARKET_ERAS"""
+    """Verify Symbol.get_closed_hours_for_era() returns correct gaps."""
     sym = symbol
     import datetime as dt
 
@@ -1222,7 +1226,7 @@ def test_Symbol_get_closed_hours_for_era(symbol):
 
 
 def test_Symbol_market_is_open_historical_eras(symbol):
-    """Test market_is_open() across all eras with transitions"""
+    """Verify Symbol.market_is_open() for historical hour changes."""
     sym = symbol
 
     # Test 2008-2012 era
@@ -1295,7 +1299,7 @@ def test_Symbol_market_is_open_historical_eras(symbol):
 
 
 def test_Symbol_get_market_boundary_historical_eras(symbol):
-    """Test get_market_boundary() with historical era dates"""
+    """Verify Symbol boundary methods for historical hour changes."""
     sym = symbol
 
     # Test 2008-2012 era: RTH closes at 16:00
@@ -1361,7 +1365,7 @@ def test_Symbol_get_market_boundary_historical_eras(symbol):
 
 
 def test_Symbol_init(symbol):
-    """Test Symbol __init__ creates object with correct attributes"""
+    """Verify Symbol initialization and attributes."""
     sym = symbol
 
     assert sym.ticker == "ES"
@@ -1393,7 +1397,7 @@ def test_Symbol_init(symbol):
 
 
 def test_Symbol_equality(symbol):
-    """Test Symbol __eq__ and __ne__ methods"""
+    """Verify Symbol equality comparison."""
     sym1 = symbol
     sym2 = Symbol(ticker="ES", name="ES",
                   leverage_ratio=50, tick_size=0.25)
@@ -1419,7 +1423,7 @@ def test_Symbol_equality(symbol):
 
 
 def test_Symbol_string_representations(symbol):
-    """Test Symbol __str__, __repr__, and pretty methods"""
+    """Verify Symbol.__str__, __repr__, and pretty() methods."""
     sym = symbol
 
     # Test __str__ returns a string
@@ -1450,7 +1454,7 @@ def test_Symbol_string_representations(symbol):
 
 
 def test_Symbol_serialization(symbol):
-    """Test Symbol to_json and to_clean_dict methods"""
+    """Verify Symbol to_json() and to_clean_dict() methods"""
     import json
     sym = symbol
 
@@ -1483,7 +1487,7 @@ def test_Symbol_serialization(symbol):
 
 
 def test_Symbol_set_times(symbol):
-    """Test Symbol set_times() sets correct values for current era"""
+    """Verify Symbol.set_times() updates trading hours correctly."""
     import datetime as dt
     sym = symbol
 

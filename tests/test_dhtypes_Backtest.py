@@ -138,7 +138,7 @@ def clear_storage_by_name(name: str):
 
 
 def test_Backtest_create_and_verify_pretty():
-    # Check line counts of pretty output, won't change unless class changes
+    """Verify Backtest.pretty() output line count."""
     bt = create_backtest()
     assert isinstance(bt, Backtest)
     ts = create_tradeseries()
@@ -155,6 +155,9 @@ def test_Backtest_create_and_verify_pretty():
 
 @pytest.mark.storage
 def test_Backtest_load_charts():
+    """Verify load_charts retrieves candles.
+
+    Storage Usage: load_charts."""
     bt = create_backtest(start_dt="2025-01-01 00:00:00",
                          end_dt="2025-01-07 17:30:00",
                          timeframe="e1h",
@@ -174,6 +177,9 @@ def test_Backtest_load_charts():
 @pytest.mark.slow
 @pytest.mark.storage
 def test_Backtest_restrict_dates():
+    """Verify restrict_dates adjusts candle ranges.
+
+    Storage Usage: Chart autoload=True loads candles."""
     test_name = "DELETEME-RESTRICTTest"
     bt = create_backtest(name=test_name,
                          start_dt="2025-01-01 18:00:00",
@@ -475,6 +481,9 @@ def test_Backtest_restrict_dates():
 
 @pytest.mark.storage
 def test_Backtest_add_and_remove_tradeseries_and_trades():
+    """Verify Backtest updating TradeSeries and storing/deletion.
+
+    Storage Usage: store_backtests, store_tradeseries, store_trades."""
     test_name = "DELETEME-ARTSTest"
     ts1_name = "".join([test_name, "1"])
     ts1_ts_id = "".join([test_name, "1_a1_b2_c3_p0"])
@@ -712,6 +721,10 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
 
 @pytest.mark.storage
 def test_Backtest_store_retrieve_load_tradeseries_and_delete():
+    """Verify full round-trip storage of Backtest+TradeSeries+Trades.
+
+    Storage Usage: store_backtests, store_tradeseries, store_trades,
+    get_* methods, delete_from_storage, load_tradeseries."""
     test_name = "DELETEME-STORELOADTest"
     # Create and link Backtest, TradeSeries, and Trade objects
     tr = create_trade()
@@ -790,8 +803,10 @@ def test_Backtest_store_retrieve_load_tradeseries_and_delete():
 
 @pytest.mark.storage
 def test_delete_backtests():
-    """Test delete_backtests function accepting Backtest list using bt_id
-    as the unique identifying field"""
+    """Verify delete_backtests() using Backtest list.
+
+    Storage Usage: delete_backtests.
+    """
     test_name_1 = "DELETEME-TEST-LIST-1"
     test_name_2 = "DELETEME-TEST-LIST-2"
     # Clear storage of test data
