@@ -48,6 +48,21 @@ flake8 .                                # Lint all files
 
 See [CODING_STANDARDS.md](CODING_STANDARDS.md) for complete documentation.
 
+## Setup
+
+### Git Hooks
+To ensure code quality standards are enforced on commits:
+```bash
+cd /path/to/dhtrader
+./bin/create-hook-symlinks.sh
+```
+
+This creates symlinks in the git hooks directory pointing to the scripts
+in `githooks/`. The pre-commit hook validates:
+- Line length (79 chars max)
+- No trailing whitespace
+- Other code quality standards
+
 # ES Futures Market Era Analysis
 
 For historical backtesting accuracy, the `MARKET_ERAS` configuration, defined in `dhtypes.py`, specifies trading hours for different periods of ES futures history (2008-present). The configuration was derived from detailed analysis of 6.3M+ candle records and validated to 99.99% accuracy.
