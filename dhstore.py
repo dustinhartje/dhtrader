@@ -1465,6 +1465,11 @@ def review_candles(timeframe: str,
             missing_count_by_hour[k] = len(v)
         unexpected_in_actual = sorted(set_actual - set_expected)
         unexpected_candles_count = len(unexpected_in_actual)
+        # Log individual candle issues at DEBUG level
+        for c in missing_from_actual:
+            log.debug(f"{symbol} {timeframe} MISSING: {c}")
+        for c in unexpected_in_actual:
+            log.debug(f"{symbol} {timeframe} UNEXPECTED: {c}")
         # Create human digestible ranges
         missing_ranges = rangify_candle_times(times=missing_from_actual,
                                               timeframe=timeframe)
