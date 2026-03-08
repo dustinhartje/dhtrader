@@ -68,6 +68,34 @@ def available_environments(script_dir=None):
     return sorted(list_environment_files(script_dir).keys())
 
 
+def get_mongo_conn_from_file(file_path):
+    """Extract MONGO_CONN value from an environment file.
+
+    Args:
+        file_path: Full path to mongo.env.<env> file
+
+    Returns:
+        str: Value of MONGO_CONN, or '' if not found
+    """
+    try:
+        with open(file_path, 'r') as f:
+            for raw_line in f:
+                line = raw_line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                if '=' not in line:
+                    continue
+                key, value = line.split('=', 1)
+                normalized_key = key.strip().replace('export ', '')
+                if normalized_key != 'MONGO_CONN':
+                    continue
+                return value.strip().strip('"').strip("'")
+    except Exception:
+        return ''
+
+    return ''
+
+
 def detect_environment(script_dir=None):
     """Detect which environment is currently active.
 
@@ -248,9 +276,20 @@ if __name__ == '__main__':
         print(current_env)
     # Display available environments
     elif args.action == 'list':
-        envs = available_environments(script_dir)
-        if envs:
-            print("\n".join(envs))
+        env_files = list_environment_files(script_dir)
+        if env_files:
+            rows = []
+            for env, path in env_files.items():
+                mongo_conn = get_mongo_conn_from_file(path)
+                rows.append((env, mongo_conn))
+
+            rows.sort(key=lambda item: (item[1], item[0]))
+
+            longest = max(len(env) for env, _ in rows)
+            min_gap = 3
+            for env, mongo_conn in rows:
+                spacing = ' ' * (longest - len(env) + min_gap)
+                print(f"{env}{spacing}{mongo_conn}")
         else:
             print("No environments found")
     # Switch to a specific mongo environment
