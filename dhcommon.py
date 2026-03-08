@@ -597,7 +597,6 @@ def expected_candle_datetimes(start_dt,
                               timeframe: str,
                               symbol,
                               events: list = None,
-                              exclude_categories: list = None,
                               ):
     """Return expected candle datetimes for a symbol in a datetime range."""
     if isinstance(symbol, str):
@@ -607,45 +606,60 @@ def expected_candle_datetimes(start_dt,
     else:
         raise ValueError("Only ES is currently supported as symbol for now")
 
-    result_std = []
+    # Only include closure events (event.category == "Closed")
+    if events is None:
+        events = []
+    closed_events = []
+    for event in events:
+        if event.category != "Closed":
+            continue
+        closed_events.append(event)
+
+    # Create a helper to expect candles that open after their start minute
+    def _has_open_minute_in_bucket(bucket_start, bucket_delta, thours,
+                                   evts):
+        """Return True if any minute in bucket falls in open market hours."""
+        minute = dt_as_dt(bucket_start)
+        bucket_end = minute + bucket_delta - timedelta(minutes=1)
+
+        while minute <= bucket_end:
+            if symbol.market_is_open(trading_hours=thours,
+                                     target_dt=minute,
+                                     check_closed_events=True,
+                                     events=evts):
+                return True
+            minute = minute + timedelta(minutes=1)
+
+        return False
+
+    # Determine start and end boundaries to loop through
+    result = []
     adder = timeframe_delta(timeframe)
     this = this_candle_start(dt=start_dt,
                              timeframe=timeframe,
                              )
+    # Align to next candle start when requested start_dt is not a candle start
     if this != dt_as_dt(start_dt):
         this = next_candle_start(dt=start_dt,
                                  timeframe=timeframe,
                                  trading_hours=trading_hours,
                                  symbol=symbol,
-                                 events=events,
+                                 events=closed_events,
                                  )
+
     ender = dt_as_dt(end_dt)
+
+    # Loop through timeframe candles, adding if any 1m candles fall within
     while this <= ender:
-        if symbol.market_is_open(trading_hours=trading_hours,
-                                 target_dt=this,
-                                 check_closed_events=False,
-                                 ):
-            result_std.append(this)
+        if timeframe in TIMEFRAMES:
+            if _has_open_minute_in_bucket(bucket_start=this,
+                                          bucket_delta=adder,
+                                          thours=trading_hours,
+                                          evts=closed_events):
+                result.append(this)
+        else:
+            raise ValueError(f"timeframe: {timeframe} not supported")
         this = this + adder
-
-    if events is None:
-        events = []
-    closures = []
-    for event in events:
-        if event.category == "Closed":
-            if exclude_categories and event.category in exclude_categories:
-                continue
-            closures.append(event)
-
-    result = []
-    for candle_dt in result_std:
-        include = True
-        candle_epoch = dt_to_epoch(candle_dt)
-        for event in closures:
-            if event.start_epoch <= candle_epoch <= event.end_epoch:
-                include = False
-        if include:
-            result.append(candle_dt)
 
     return result
 
