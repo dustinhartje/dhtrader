@@ -1402,7 +1402,7 @@ def review_candles(timeframe: str,
                                 symbol=symbol,
                                 )
         log_say("Calculating expected candle datetimes for "
-                f"{symbol} {timeframe} between "
+                f"{symbol.ticker} {timeframe} between "
                 f"{dt_as_str(start_dt)} and {dt_as_str(end_dt)}")
         dt_expected = expected_candle_datetimes(start_dt=start_dt,
                                                 end_dt=end_dt,
