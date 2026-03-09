@@ -25,6 +25,7 @@ The MARKET_ERAS configuration defines trading hours for ES futures across
 different historical time periods.
 """
 import datetime as dt
+from bisect import bisect_right
 from datetime import timedelta
 import sys
 import json
@@ -40,6 +41,54 @@ from .dhcommon import (
     ProgBar)
 CANDLE_TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w']
 BEGINNING_OF_TIME = "2008-01-01 00:00:00"
+
+
+def _merge_epoch_ranges(ranges):
+    """Sort and merge overlapping/touching [start, end] epoch ranges."""
+    if not ranges:
+        return []
+
+    sorted_ranges = sorted(ranges, key=lambda i: i[0])
+    merged = [sorted_ranges[0]]
+
+    for start, end in sorted_ranges[1:]:
+        prev_start, prev_end = merged[-1]
+        if start <= prev_end + 1:
+            merged[-1] = (prev_start, max(prev_end, end))
+        else:
+            merged.append((start, end))
+
+    return merged
+
+
+def _epoch_in_ranges(
+        target_epoch: int,
+        merged_ranges,
+        range_starts=None,
+        ) -> bool:
+    """Return True if target_epoch falls in any merged closed range."""
+    if not merged_ranges:
+        return False
+
+    if range_starts is None:
+        range_starts = [r[0] for r in merged_ranges]
+
+    idx = bisect_right(range_starts, target_epoch) - 1
+    if idx < 0:
+        return False
+
+    return target_epoch <= merged_ranges[idx][1]
+
+
+def _iter_dates(start_date: dt.date,
+                end_date: dt.date,
+                ):
+    """Yield each date from start_date through end_date, inclusive."""
+    this_date = start_date
+    while this_date <= end_date:
+        yield this_date
+        this_date = this_date + timedelta(days=1)
+
 
 # Market Era Definitions
 # Define different historical market structures with start dates and schedules.
@@ -611,6 +660,97 @@ class Symbol():
 
         # If we got this far it must be inside market hours, right?
         return True
+
+    def build_market_hours_context(self,
+                                   trading_hours: str,
+                                   events: list = None,
+                                   start_dt=None,
+                                   end_dt=None,
+                                   ):
+        """Build merged closed ranges and metadata for fast open checks."""
+        if not valid_trading_hours(trading_hours):
+            raise ValueError("trading_hours must be either 'eth' or 'rth'")
+
+        if events is None:
+            events = []
+
+        if start_dt is None and end_dt is None:
+            if events:
+                start_epoch = min(dt_to_epoch(e.start_dt) for e in events)
+                end_epoch = max(dt_to_epoch(e.end_dt) for e in events)
+                start_bound = dt.datetime.fromtimestamp(start_epoch)
+                end_bound = dt.datetime.fromtimestamp(end_epoch)
+            else:
+                now = dt_as_dt(dt.datetime.now())
+                start_bound = now
+                end_bound = now
+        else:
+            if start_dt is None:
+                start_dt = end_dt
+            if end_dt is None:
+                end_dt = start_dt
+            start_bound = dt_as_dt(start_dt)
+            end_bound = dt_as_dt(end_dt)
+
+        if start_bound > end_bound:
+            start_bound, end_bound = end_bound, start_bound
+
+        schedule_ranges = []
+        schedule_days = 0
+        for date in _iter_dates(start_bound.date(), end_bound.date()):
+            schedule_days += 1
+            closed_hours = self.get_closed_hours_for_era(
+                target_dt=dt.datetime.combine(date, dt.time(0, 0, 0)),
+                trading_hours=trading_hours,
+            )
+            for period in closed_hours[date.weekday()]:
+                closed_start_dt = dt.datetime.combine(date, period["close"])
+                closed_end_dt = dt.datetime.combine(date, period["open"])
+                start_epoch = dt_to_epoch(closed_start_dt)
+                end_epoch = dt_to_epoch(closed_end_dt) - 1
+                if end_epoch >= start_epoch:
+                    schedule_ranges.append((start_epoch, end_epoch))
+
+        event_ranges = []
+        for event in events:
+            event_start = dt_to_epoch(event.start_dt)
+            event_end = dt_to_epoch(event.end_dt)
+            if event_start > event_end:
+                event_start, event_end = event_end, event_start
+            event_ranges.append((event_start, event_end))
+
+        closed_ranges = _merge_epoch_ranges(schedule_ranges + event_ranges)
+
+        return {
+            "trading_hours": trading_hours,
+            "start_epoch": dt_to_epoch(start_bound),
+            "end_epoch": dt_to_epoch(end_bound),
+            "closed_ranges": closed_ranges,
+            "closed_range_starts": [r[0] for r in closed_ranges],
+            "source_event_count": len(events),
+            "source_schedule_range_days": schedule_days,
+        }
+
+    def is_open_epoch(self,
+                      target_epoch: int,
+                      context: dict,
+                      ) -> bool:
+        """Fast O(log n) open check via merged closed ranges."""
+        return not _epoch_in_ranges(
+            target_epoch=target_epoch,
+            merged_ranges=context["closed_ranges"],
+            range_starts=context.get("closed_range_starts"),
+        )
+
+    def is_open_dt(self,
+                   target_dt,
+                   context: dict,
+                   ) -> bool:
+        """Datetime wrapper that converts once then uses is_open_epoch()."""
+        return self.is_open_epoch(
+            target_epoch=dt_to_epoch(target_dt),
+            context=context,
+        )
 
     def get_market_boundary(self,
                             target_dt,

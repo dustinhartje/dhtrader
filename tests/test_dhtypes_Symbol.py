@@ -1,7 +1,9 @@
 """Tests for Symbol market hours, serialization, and era detection."""
+import datetime as dt
 import pytest
 from dhtrader import (
     dt_as_dt, dt_as_str, Event, Symbol)
+from dhtrader.dhtypes import MARKET_ERAS
 
 
 @pytest.fixture
@@ -9,6 +11,89 @@ def symbol():
     """Create and return a default ES Symbol fixture."""
     return Symbol(ticker="ES", name="ES", leverage_ratio=50,
                   tick_size=0.25)
+
+
+def test_build_market_hours_context_metadata(symbol):
+    """Verify context shape and schedule-day tracking for date spans."""
+    context = symbol.build_market_hours_context(
+        trading_hours="eth",
+        start_dt="2025-01-13 00:00:00",
+        end_dt="2025-01-19 23:59:59",
+    )
+
+    assert context["trading_hours"] == "eth"
+    assert context["source_event_count"] == 0
+    assert context["source_schedule_range_days"] == 7
+    assert context["closed_ranges"]
+    assert len(context["closed_ranges"]) == len(context["closed_range_starts"])
+
+
+def test_is_open_dt_matches_market_is_open_across_eras(symbol):
+    """Verify is_open_dt preserves market_is_open semantics by era."""
+    test_times = [
+        "00:00:00",
+        "09:30:00",
+        "16:14:00",
+        "16:30:00",
+        "17:00:00",
+        "17:59:00",
+        "18:00:00",
+        "23:59:00",
+    ]
+
+    for era in MARKET_ERAS:
+        probe_date = era["start_date"] + dt.timedelta(days=2)
+        day_start = dt.datetime.combine(probe_date, dt.time(0, 0, 0))
+        day_end = dt.datetime.combine(probe_date, dt.time(23, 59, 59))
+        context = symbol.build_market_hours_context(
+            trading_hours="eth",
+            start_dt=day_start,
+            end_dt=day_end,
+        )
+
+        for time_str in test_times:
+            probe_dt = f"{probe_date} {time_str}"
+            assert symbol.is_open_dt(target_dt=probe_dt, context=context) == (
+                symbol.market_is_open(
+                    trading_hours="eth",
+                    target_dt=probe_dt,
+                )
+            )
+
+
+def test_is_open_dt_matches_market_is_open_for_event_boundaries(symbol):
+    """Verify event inclusivity boundaries are preserved by helpers."""
+    events = [
+        Event(
+            start_dt="2025-01-14 12:00:00",
+            end_dt="2025-01-14 13:00:00",
+            symbol="ES",
+            category="Closed",
+            tags=["test"],
+            notes="event-boundary-check",
+        ),
+    ]
+    context = symbol.build_market_hours_context(
+        trading_hours="eth",
+        events=events,
+        start_dt="2025-01-14 00:00:00",
+        end_dt="2025-01-14 23:59:59",
+    )
+
+    for probe_dt in [
+            "2025-01-14 11:59:00",
+            "2025-01-14 12:00:00",
+            "2025-01-14 12:30:00",
+            "2025-01-14 13:00:00",
+            "2025-01-14 13:01:00",
+    ]:
+        assert symbol.is_open_dt(target_dt=probe_dt, context=context) == (
+            symbol.market_is_open(
+                trading_hours="eth",
+                target_dt=probe_dt,
+                events=events,
+            )
+        )
 
 
 def test_Symbol_market_is_open(symbol):
