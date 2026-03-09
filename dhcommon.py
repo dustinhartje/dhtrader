@@ -534,6 +534,12 @@ def next_candle_start(dt,
     check_tf_th_compatibility(tf=timeframe, th=trading_hours)
     next_dt = dt_as_dt(dt).replace(microsecond=0, second=0)
     min_delta = timedelta(minutes=1)
+    # Check if symbol has context-based predicates for efficient lookups
+    use_context = all([
+        hasattr(symbol, "build_market_hours_context"),
+        hasattr(symbol, "is_open_dt"),
+    ])
+    context = None
 
     done = False
     while not done:
@@ -583,11 +589,24 @@ def next_candle_start(dt,
                     hour=18, minute=0, second=0, microsecond=0)
         elif timeframe != "1m":
             raise ValueError(f"timeframe: {timeframe} not supported")
-        done = symbol.market_is_open(trading_hours=trading_hours,
-                                     target_dt=next_dt,
-                                     check_closed_events=True,
-                                     events=events,
-                                     )
+        if use_context:
+            # Reuse context for 14-day window, rebuilding when moved beyond end
+            if (context is None
+                    or dt_to_epoch(next_dt) > context["end_epoch"]):
+                context = symbol.build_market_hours_context(
+                    trading_hours=trading_hours,
+                    events=events,
+                    start_dt=next_dt,
+                    end_dt=next_dt + timedelta(days=14),
+                )
+            done = symbol.is_open_dt(target_dt=next_dt,
+                                     context=context)
+        else:
+            done = symbol.market_is_open(trading_hours=trading_hours,
+                                         target_dt=next_dt,
+                                         check_closed_events=True,
+                                         events=events,
+                                         )
 
     return next_dt
 
@@ -612,7 +631,14 @@ def expected_candle_datetimes(start_dt,
         events = []
     closed_events = [e for e in events if e.category == "Closed"]
 
-    # Create a helper to expect candles that open after their start minute
+    # Check if symbol has context-based predicates for efficient lookups
+    use_context = all([
+        hasattr(symbol, "build_market_hours_context"),
+        hasattr(symbol, "is_open_dt"),
+    ])
+
+    # Create a helper to check if any minute in a candle bucket falls
+    # within open market hours
     def _has_open_minute_in_bucket(bucket_start, bucket_delta, thours,
                                    evts):
         """Return True if any minute in bucket falls in open market hours."""
@@ -620,11 +646,16 @@ def expected_candle_datetimes(start_dt,
         bucket_end = minute + bucket_delta - timedelta(minutes=1)
 
         while minute <= bucket_end:
-            if symbol.market_is_open(trading_hours=thours,
-                                     target_dt=minute,
-                                     check_closed_events=True,
-                                     events=evts):
-                return True
+            if use_context:
+                if symbol.is_open_dt(target_dt=minute,
+                                     context=context):
+                    return True
+            else:
+                if symbol.market_is_open(trading_hours=thours,
+                                         target_dt=minute,
+                                         check_closed_events=True,
+                                         events=evts):
+                    return True
             minute = minute + timedelta(minutes=1)
 
         return False
@@ -645,6 +676,15 @@ def expected_candle_datetimes(start_dt,
                                  )
 
     ender = dt_as_dt(end_dt)
+    # Build one shared context for entire date range if symbol supports it
+    context = None
+    if use_context and this <= ender:
+        context = symbol.build_market_hours_context(
+            trading_hours=trading_hours,
+            events=closed_events,
+            start_dt=this,
+            end_dt=ender,
+        )
 
     if show_progress and this <= ender:
         total = ((ender - this) // adder) + 1

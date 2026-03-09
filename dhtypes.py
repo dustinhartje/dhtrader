@@ -44,17 +44,34 @@ BEGINNING_OF_TIME = "2008-01-01 00:00:00"
 
 
 def _merge_epoch_ranges(ranges):
-    """Sort and merge overlapping/touching [start, end] epoch ranges."""
+    """Sort and merge overlapping/touching [start, end] epoch ranges.
+
+    This helper normalizes a list of epoch-based closed time intervals
+    (both schedule closures and event closures) into a minimal set of
+    non-overlapping merged intervals. This enables fast O(log n) binary
+    search lookups via bisect rather than iterating each input interval.
+
+    Args:
+        ranges: List of tuples [(start_epoch, end_epoch), ...]
+
+    Returns:
+        List of merged, non-overlapping tuples, sorted by start_epoch.
+        Empty list if input is empty.
+    """
     if not ranges:
         return []
 
+    # Sort by start epoch so we can merge left-to-right
     sorted_ranges = sorted(ranges, key=lambda i: i[0])
     merged = [sorted_ranges[0]]
 
+    # Merge overlapping or adjacent ranges
     for start, end in sorted_ranges[1:]:
         prev_start, prev_end = merged[-1]
+        # If current range overlaps or touches previous, merge
         if start <= prev_end + 1:
             merged[-1] = (prev_start, max(prev_end, end))
+        # Otherwise, append as new interval
         else:
             merged.append((start, end))
 
@@ -66,24 +83,55 @@ def _epoch_in_ranges(
         merged_ranges,
         range_starts=None,
         ) -> bool:
-    """Return True if target_epoch falls in any merged closed range."""
+    """Return True if target_epoch falls in any merged closed range.
+
+    Performs fast O(log n) binary search to check if a single epoch value
+    is contained within any precomputed closed-time interval. Used internally
+    by Symbol.is_open_epoch() to accelerate hot-loop market openness checks.
+
+    Args:
+        target_epoch: Unix timestamp (seconds) to check.
+        merged_ranges: List of (start_epoch, end_epoch) tuples, sorted and
+                      non-overlapping (output from _merge_epoch_ranges).
+        range_starts: Optional pre-extracted list of range start epochs for
+                     faster bisect operations. If None, computed from
+                     merged_ranges (minor overhead on first call).
+
+    Returns:
+        True if target_epoch falls within any closed range, False otherwise.
+    """
     if not merged_ranges:
         return False
 
+    # Extract start epochs if not provided (for binary search)
     if range_starts is None:
         range_starts = [r[0] for r in merged_ranges]
 
+    # Binary search: find the rightmost range that could contain target
     idx = bisect_right(range_starts, target_epoch) - 1
     if idx < 0:
-        return False
+        return False  # target is before all ranges
 
+    # Check if target falls within the found range's boundaries
     return target_epoch <= merged_ranges[idx][1]
 
 
 def _iter_dates(start_date: dt.date,
                 end_date: dt.date,
                 ):
-    """Yield each date from start_date through end_date, inclusive."""
+    """Yield each date from start_date through end_date, inclusive.
+
+    Simple iterator used internally to build schedule closure ranges by date.
+    Essential for context building: we iterate each date, look up its era's
+    closed hours schedule, then convert to epoch intervals for binary search.
+
+    Args:
+        start_date: First date to yield (datetime.date object).
+        end_date: Last date to yield (datetime.date object).
+
+    Yields:
+        datetime.date objects in ascending order from start_date to end_date.
+    """
     this_date = start_date
     while this_date <= end_date:
         yield this_date
@@ -667,7 +715,44 @@ class Symbol():
                                    start_dt=None,
                                    end_dt=None,
                                    ):
-        """Build merged closed ranges and metadata for fast open checks."""
+        """Build merged closed ranges and metadata for fast open checks.
+
+        Precomputes all closed times for a date range into merged epoch
+        intervals. Callers build one context per batch of lookups and
+        reuse it rather than calling market_is_open() repeatedly.
+
+        The context includes both era-specific schedule closures (from
+        get_closed_hours_for_era per MARKET_ERAS) and event-based
+        closures. All intervals are merged to eliminate redundant
+        boundaries, enabling fast O(log n) binary search on the merged
+        range list.
+
+        Args:
+            trading_hours: "eth" or "rth".
+            events: Optional list of Event objects with
+                   category="Closed". If None, only schedule closures
+                   are included.
+            start_dt: Start datetime for schedule range. If None and
+                     events provided, auto-derived from events; else
+                     defaults to now.
+            end_dt: End datetime for schedule range. Same defaulting as
+                   start_dt.
+
+        Returns:
+            Dict with keys:
+              - trading_hours: Input trading_hours.
+              - start_epoch, end_epoch: Requested date range as epochs.
+              - closed_ranges: List of merged (start, end) epoch tuples
+                             representing all closed times.
+              - closed_range_starts: Pre-extracted list of range start
+                                    epochs for fast bisect lookups
+                                    (internal).
+              - source_event_count: Count of input closure events.
+              - source_schedule_range_days: Number of dates processed.
+
+        Raises:
+            ValueError: If trading_hours is not "eth" or "rth".
+        """
         if not valid_trading_hours(trading_hours):
             raise ValueError("trading_hours must be either 'eth' or 'rth'")
 
@@ -695,14 +780,17 @@ class Symbol():
         if start_bound > end_bound:
             start_bound, end_bound = end_bound, start_bound
 
+        # Build epoch intervals from schedule (era-based closed hours)
         schedule_ranges = []
         schedule_days = 0
         for date in _iter_dates(start_bound.date(), end_bound.date()):
             schedule_days += 1
+            # Lookup what's closed for this date/era/trading_hours
             closed_hours = self.get_closed_hours_for_era(
                 target_dt=dt.datetime.combine(date, dt.time(0, 0, 0)),
                 trading_hours=trading_hours,
             )
+            # Convert each closed period to epoch range
             for period in closed_hours[date.weekday()]:
                 closed_start_dt = dt.datetime.combine(date, period["close"])
                 closed_end_dt = dt.datetime.combine(date, period["open"])
@@ -711,6 +799,7 @@ class Symbol():
                 if end_epoch >= start_epoch:
                     schedule_ranges.append((start_epoch, end_epoch))
 
+        # Build epoch intervals from closure events
         event_ranges = []
         for event in events:
             event_start = dt_to_epoch(event.start_dt)
@@ -719,6 +808,7 @@ class Symbol():
                 event_start, event_end = event_end, event_start
             event_ranges.append((event_start, event_end))
 
+        # Merge all closed ranges into minimal non-overlapping set
         closed_ranges = _merge_epoch_ranges(schedule_ranges + event_ranges)
 
         return {
@@ -735,7 +825,27 @@ class Symbol():
                       target_epoch: int,
                       context: dict,
                       ) -> bool:
-        """Fast O(log n) open check via merged closed ranges."""
+        """Check if epoch timestamp falls in open market hours.
+
+        Given a precomputed context (from build_market_hours_context)
+        and a single epoch value, returns True if that time is open
+        (not in any merged closed range).
+
+        Intended for use within tight loops where many checks share
+        the same context. For one-off checks or mixed trading_hours,
+        use is_open_dt() instead.
+
+        Args:
+            target_epoch: Unix timestamp (seconds since epoch, as int)
+                         to check.
+            context: Dict returned from build_market_hours_context().
+                    Must contain "closed_ranges" and
+                    "closed_range_starts".
+
+        Returns:
+            True if target_epoch is during open market hours (not in
+            any closed range), False otherwise.
+        """
         return not _epoch_in_ranges(
             target_epoch=target_epoch,
             merged_ranges=context["closed_ranges"],
@@ -746,7 +856,23 @@ class Symbol():
                    target_dt,
                    context: dict,
                    ) -> bool:
-        """Datetime wrapper that converts once then uses is_open_epoch()."""
+        """Check if datetime falls in open market hours.
+
+        Wraps is_open_epoch() by handling datetime-to-epoch conversion.
+        For repeated checks, prefer extracting c_epoch from Candle
+        objects or caching converted epochs outside the loop, then
+        calling is_open_epoch() directly.
+
+        Args:
+            target_dt: Datetime as string, date, or datetime object.
+                      Converted to epoch internally.
+            context: Dict returned from build_market_hours_context(),
+                    matching the trading_hours to check.
+
+        Returns:
+            True if target_dt is during open market hours, False
+            otherwise.
+        """
         return self.is_open_epoch(
             target_epoch=dt_to_epoch(target_dt),
             context=context,
@@ -759,15 +885,37 @@ class Symbol():
                               start_dt=None,
                               end_dt=None,
                               ) -> list:
-        """Return only datetimes that are open, using one shared context."""
+        """Return only datetimes that are open, using one shared context.
+
+        Filters a list of datetimes to include only those during open
+        market hours. Builds one context for the input date range and
+        reuses it across all checks.
+
+        Args:
+            target_dts: List of datetime strings, dates, or datetime
+                       objects.
+            trading_hours: "eth" or "rth".
+            events: Optional list of closure Event objects.
+            start_dt: Optional start of range for context. If None,
+                     auto-derived from min(target_dts).
+            end_dt: Optional end of range for context. If None,
+                   auto-derived from max(target_dts).
+
+        Returns:
+            Filtered list of original datetime objects, containing
+            only those that fall within open market hours
+            (same order as input).
+        """
         if target_dts is None or len(target_dts) == 0:
             return []
 
+        # Auto-derive bounds from input if not provided
         if start_dt is None:
             start_dt = min(dt_as_dt(d) for d in target_dts)
         if end_dt is None:
             end_dt = max(dt_as_dt(d) for d in target_dts)
 
+        # Build context once, reuse for all checks
         context = self.build_market_hours_context(
             trading_hours=trading_hours,
             events=events,
@@ -775,6 +923,7 @@ class Symbol():
             end_dt=end_dt,
         )
 
+        # Filter using shared context
         filtered = []
         for target_dt in target_dts:
             if self.is_open_dt(target_dt=target_dt, context=context):
@@ -793,15 +942,42 @@ class Symbol():
                                 "Candles filtered for market hours"
                             ),
                             ) -> list:
-        """Return only open-market candles using one shared context."""
+        """Return only open-market candles using one shared context.
+
+        Filters a list of Candle objects to include only those during
+        open market hours. Builds one context for the input date range
+        and reuses it across all checks. Uses Candle.c_epoch directly
+        for fast lookups (no per-candle datetime parsing).
+
+        Args:
+            candles: List of Candle objects (must have c_datetime and
+                    c_epoch).
+            trading_hours: "eth" or "rth".
+            events: Optional list of closure Event objects.
+            start_dt: Optional start of range for context. If None,
+                     auto-derived from min(c.c_datetime for c in
+                     candles).
+            end_dt: Optional end of range for context. If None,
+                   auto-derived from max(c.c_datetime for c in candles).
+            show_progress: If True, displays a progress bar during
+                          filtering.
+            progress_desc: Label for progress bar (if
+                          show_progress=True).
+
+        Returns:
+            Filtered list of Candle objects, containing only those that
+            fall within open market hours (same order as input).
+        """
         if candles is None or len(candles) == 0:
             return []
 
+        # Auto-derive bounds from input if not provided
         if start_dt is None:
             start_dt = min(c.c_datetime for c in candles)
         if end_dt is None:
             end_dt = max(c.c_datetime for c in candles)
 
+        # Build context once, reuse for all checks
         context = self.build_market_hours_context(
             trading_hours=trading_hours,
             events=events,
@@ -809,13 +985,16 @@ class Symbol():
             end_dt=end_dt,
         )
 
+        # Optionally show progress
         if show_progress:
             pbar = ProgBar(total=len(candles), desc=progress_desc)
         else:
             pbar = None
 
+        # Filter using shared context, leveraging c_epoch for fast lookup
         filtered = []
         for candle in candles:
+            # Use c_epoch directly (already computed, no string parsing needed)
             if self.is_open_epoch(
                 target_epoch=candle.c_epoch,
                 context=context,
@@ -1298,24 +1477,17 @@ class Chart():
                             categories=["Closed"],
                             )
         log.info("Filtering candles for market hours and events...")
-
-        if show_progress and len(cans) > 0:
-            pbar = ProgBar(total=len(cans),
-                           desc="Candles filtered for market hours")
-        else:
-            pbar = None
-
-        for c in cans:
-            if self.c_symbol.market_is_open(target_dt=c.c_datetime,
-                                            trading_hours=self.c_trading_hours,
-                                            events=events,
-                                            ):
-                self.c_candles.append(c)
-            if pbar is not None:
-                pbar.increment()
-
-        if pbar is not None:
-            pbar.finish()
+        # Use shared context helper to filter candles by market hours,
+        # building one context that is reused for all candles
+        self.c_candles = self.c_symbol.filter_open_candles(
+            candles=cans,
+            trading_hours=self.c_trading_hours,
+            events=events,
+            start_dt=self.c_start,
+            end_dt=self.c_end,
+            show_progress=show_progress,
+            progress_desc="Candles filtered for market hours",
+        )
 
         log.info("Sorting candles")
         self.sort_candles()

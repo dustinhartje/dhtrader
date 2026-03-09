@@ -109,6 +109,19 @@ def remediate_candle_gaps(timeframe: str = "1m",
     for d in dates:
         obvious_fix = []
         unclear_fix = []
+        day_start = dt_as_dt(f"{d} 00:00:00") - delta
+        day_end = dt_as_dt(f"{d} 23:59:59") + delta
+        # Build contexts per day for efficient reuse
+        eth_context = symbol.build_market_hours_context(
+            trading_hours="eth",
+            start_dt=day_start,
+            end_dt=day_end,
+        )
+        rth_context = symbol.build_market_hours_context(
+            trading_hours="rth",
+            start_dt=day_start,
+            end_dt=day_end,
+        )
         print("\n============================================================")
         print(f"{d} - {len(missing_candles[d])} missing candles")
         for c in missing_candles[d]:
@@ -162,27 +175,21 @@ def remediate_candle_gaps(timeframe: str = "1m",
             else:
                 avg_vol = 0
             # Check if market is open, including after hours.
-            is_open = symbol.market_is_open(trading_hours="eth",
-                                            target_dt=c_dt,
-                                            check_closed_events=True,
-                                            )
+            is_open = symbol.is_open_dt(target_dt=c_dt,
+                                        context=eth_context)
             # Check if market is in regular trading hours, which should very
             # rarely have zero volume candles and thus would not be obvious.
-            is_open_rth = symbol.market_is_open(trading_hours="rth",
-                                                target_dt=c_dt,
-                                                check_closed_events=True,
-                                                )
+            is_open_rth = symbol.is_open_dt(target_dt=c_dt,
+                                            context=rth_context)
             # Check if this candle is the first or last open minute before or
             # after a market closure, in which case we can skip neighbor checks
-            is_first_open_min = (is_open and not symbol.market_is_open(
-                trading_hours="eth",
+            is_first_open_min = (is_open and not symbol.is_open_dt(
                 target_dt=c_dt - delta,
-                check_closed_events=True,
+                context=eth_context,
                 ))
-            is_last_open_min = (is_open and not symbol.market_is_open(
-                trading_hours="eth",
+            is_last_open_min = (is_open and not symbol.is_open_dt(
                 target_dt=c_dt + delta,
-                check_closed_events=True,
+                context=eth_context,
                 ))
             # Consider the candle to have neighbors if found, or if the
             # previous/next candle would fall outside of market hours
