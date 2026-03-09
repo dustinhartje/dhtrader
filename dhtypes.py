@@ -752,6 +752,83 @@ class Symbol():
             context=context,
         )
 
+    def filter_open_datetimes(self,
+                              target_dts: list,
+                              trading_hours: str,
+                              events: list = None,
+                              start_dt=None,
+                              end_dt=None,
+                              ) -> list:
+        """Return only datetimes that are open, using one shared context."""
+        if target_dts is None or len(target_dts) == 0:
+            return []
+
+        if start_dt is None:
+            start_dt = min(dt_as_dt(d) for d in target_dts)
+        if end_dt is None:
+            end_dt = max(dt_as_dt(d) for d in target_dts)
+
+        context = self.build_market_hours_context(
+            trading_hours=trading_hours,
+            events=events,
+            start_dt=start_dt,
+            end_dt=end_dt,
+        )
+
+        filtered = []
+        for target_dt in target_dts:
+            if self.is_open_dt(target_dt=target_dt, context=context):
+                filtered.append(target_dt)
+
+        return filtered
+
+    def filter_open_candles(self,
+                            candles: list,
+                            trading_hours: str,
+                            events: list = None,
+                            start_dt=None,
+                            end_dt=None,
+                            show_progress: bool = False,
+                            progress_desc: str = (
+                                "Candles filtered for market hours"
+                            ),
+                            ) -> list:
+        """Return only open-market candles using one shared context."""
+        if candles is None or len(candles) == 0:
+            return []
+
+        if start_dt is None:
+            start_dt = min(c.c_datetime for c in candles)
+        if end_dt is None:
+            end_dt = max(c.c_datetime for c in candles)
+
+        context = self.build_market_hours_context(
+            trading_hours=trading_hours,
+            events=events,
+            start_dt=start_dt,
+            end_dt=end_dt,
+        )
+
+        if show_progress:
+            pbar = ProgBar(total=len(candles), desc=progress_desc)
+        else:
+            pbar = None
+
+        filtered = []
+        for candle in candles:
+            if self.is_open_epoch(
+                target_epoch=candle.c_epoch,
+                context=context,
+            ):
+                filtered.append(candle)
+            if pbar is not None:
+                pbar.increment()
+
+        if pbar is not None:
+            pbar.finish()
+
+        return filtered
+
     def get_market_boundary(self,
                             target_dt,
                             trading_hours: str,

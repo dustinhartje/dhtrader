@@ -2,7 +2,7 @@
 import datetime as dt
 import pytest
 from dhtrader import (
-    dt_as_dt, dt_as_str, Event, Symbol)
+    dt_as_dt, dt_as_str, dt_to_epoch, Event, Symbol)
 from dhtrader.dhtypes import MARKET_ERAS
 
 
@@ -94,6 +94,88 @@ def test_is_open_dt_matches_market_is_open_for_event_boundaries(symbol):
                 events=events,
             )
         )
+
+
+def test_filter_open_datetimes_matches_market_is_open(symbol):
+    """Verify bulk datetime filtering matches per-datetime checks."""
+    events = [
+        Event(
+            start_dt="2025-01-13 12:00:00",
+            end_dt="2025-01-13 13:00:00",
+            symbol="ES",
+            category="Closed",
+            tags=["test"],
+            notes="bulk-datetime-check",
+        ),
+    ]
+    target_dts = [
+        "2025-01-13 11:59:00",
+        "2025-01-13 12:00:00",
+        "2025-01-13 12:30:00",
+        "2025-01-13 13:01:00",
+        "2025-01-13 17:00:00",
+        "2025-01-13 18:00:00",
+    ]
+
+    filtered = symbol.filter_open_datetimes(
+        target_dts=target_dts,
+        trading_hours="eth",
+        events=events,
+    )
+    expected = [
+        d for d in target_dts
+        if symbol.market_is_open(
+            trading_hours="eth",
+            target_dt=d,
+            events=events,
+        )
+    ]
+
+    assert filtered == expected
+
+
+def test_filter_open_candles_matches_market_is_open(symbol):
+    """Verify bulk candle filtering matches per-candle checks."""
+
+    class TestCandle:
+        def __init__(self, c_datetime):
+            self.c_datetime = c_datetime
+            self.c_epoch = dt_to_epoch(c_datetime)
+
+    events = [
+        Event(
+            start_dt="2025-01-13 12:00:00",
+            end_dt="2025-01-13 13:00:00",
+            symbol="ES",
+            category="Closed",
+            tags=["test"],
+            notes="bulk-candle-check",
+        ),
+    ]
+    candles = [
+        TestCandle("2025-01-13 11:59:00"),
+        TestCandle("2025-01-13 12:00:00"),
+        TestCandle("2025-01-13 12:30:00"),
+        TestCandle("2025-01-13 13:01:00"),
+        TestCandle("2025-01-13 17:00:00"),
+        TestCandle("2025-01-13 18:00:00"),
+    ]
+
+    filtered = symbol.filter_open_candles(
+        candles=candles,
+        trading_hours="eth",
+        events=events,
+    )
+    expected = [
+        c for c in candles
+        if symbol.market_is_open(
+            trading_hours="eth",
+            target_dt=c.c_datetime,
+            events=events,
+        )
+    ]
+
+    assert [c.c_datetime for c in filtered] == [c.c_datetime for c in expected]
 
 
 def test_Symbol_market_is_open(symbol):
