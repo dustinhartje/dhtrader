@@ -36,7 +36,8 @@ import numpy as np
 from .dhcommon import (
     dt_as_dt, dt_as_str, dt_as_time, dt_to_epoch, timeframe_delta,
     valid_timeframe, valid_trading_hours, log_say, this_candle_start,
-    check_tf_th_compatibility, start_of_week_date, dict_of_weeks, bot)
+    check_tf_th_compatibility, start_of_week_date, dict_of_weeks, bot,
+    ProgBar)
 CANDLE_TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w']
 BEGINNING_OF_TIME = "2008-01-01 00:00:00"
 
@@ -952,6 +953,7 @@ class Chart():
                  c_end: str = None,
                  c_candles: list = None,
                  autoload: bool = False,
+                 show_progress: bool = False,
                  ):
         if valid_timeframe(c_timeframe):
             self.c_timeframe = c_timeframe
@@ -968,8 +970,9 @@ class Chart():
         else:
             self.c_candles = c_candles
         self.autoload = autoload
+        self.show_progress = show_progress
         if self.autoload:
-            self.load_candles()  # includes review_candles()
+            self.load_candles(show_progress=self.show_progress)
         else:
             self.review_candles()
 
@@ -1062,7 +1065,7 @@ class Chart():
             self.c_end = new_candle.c_datetime
         self.review_candles()
 
-    def load_candles(self):
+    def load_candles(self, show_progress: bool = False):
         """Load candles from central storage based on current attributes."""
         log.info(f"Loading candles for {self.c_symbol.ticker} "
                  f"{self.c_timeframe} ")
@@ -1078,12 +1081,25 @@ class Chart():
                             categories=["Closed"],
                             )
         log.info("Filtering candles for market hours and events...")
+
+        if show_progress and len(cans) > 0:
+            pbar = ProgBar(total=len(cans),
+                           desc="Candles filtered for market hours")
+        else:
+            pbar = None
+
         for c in cans:
             if self.c_symbol.market_is_open(target_dt=c.c_datetime,
                                             trading_hours=self.c_trading_hours,
                                             events=events,
                                             ):
                 self.c_candles.append(c)
+            if pbar is not None:
+                pbar.increment()
+
+        if pbar is not None:
+            pbar.finish()
+
         log.info("Sorting candles")
         self.sort_candles()
         log.info("Reviewing candles")

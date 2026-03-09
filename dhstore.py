@@ -1333,6 +1333,7 @@ def get_candles(start_epoch: int,
 def review_candles(timeframe: str,
                    symbol="ES",
                    check_integrity: bool = False,
+                   show_progress: bool = False,
                    return_detail: bool = False,
                    ):
     """Provide aggregate summary data about candles in central storage.
@@ -1408,6 +1409,7 @@ def review_candles(timeframe: str,
                                                 symbol=symbol,
                                                 timeframe=timeframe,
                                                 events=all_events,
+                                                show_progress=show_progress,
                                                 )
         log_say("Finished calculating expected datetimes, starting "
                 "comparison of actual (stored) vs expected candles")

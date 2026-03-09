@@ -597,6 +597,7 @@ def expected_candle_datetimes(start_dt,
                               timeframe: str,
                               symbol,
                               events: list = None,
+                              show_progress: bool = False,
                               ):
     """Return expected candle datetimes for a symbol in a datetime range."""
     if isinstance(symbol, str):
@@ -609,11 +610,7 @@ def expected_candle_datetimes(start_dt,
     # Only include closure events (event.category == "Closed")
     if events is None:
         events = []
-    closed_events = []
-    for event in events:
-        if event.category != "Closed":
-            continue
-        closed_events.append(event)
+    closed_events = [e for e in events if e.category == "Closed"]
 
     # Create a helper to expect candles that open after their start minute
     def _has_open_minute_in_bucket(bucket_start, bucket_delta, thours,
@@ -649,6 +646,14 @@ def expected_candle_datetimes(start_dt,
 
     ender = dt_as_dt(end_dt)
 
+    if show_progress and this <= ender:
+        total = ((ender - this) // adder) + 1
+        pbar = ProgBar(total=total,
+                       desc="Expected candle starts calculated")
+    else:
+        total = 0
+        pbar = None
+
     # Loop through timeframe candles, adding if any 1m candles fall within
     while this <= ender:
         if timeframe in TIMEFRAMES:
@@ -659,7 +664,12 @@ def expected_candle_datetimes(start_dt,
                 result.append(this)
         else:
             raise ValueError(f"timeframe: {timeframe} not supported")
+        if pbar is not None:
+            pbar.increment()
         this = this + adder
+
+    if pbar is not None:
+        pbar.finish()
 
     return result
 
