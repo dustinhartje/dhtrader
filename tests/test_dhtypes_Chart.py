@@ -26,8 +26,8 @@ def test_Chart_create_and_verify_pretty():
                       )
     assert isinstance(out_chart, Chart)
     out_chart.add_candle(out_candle)
-    assert len(out_chart.pretty().splitlines()) == 14
-    assert len(out_chart.pretty(suppress_candles=False).splitlines()) == 36
+    assert len(out_chart.pretty().splitlines()) == 15
+    assert len(out_chart.pretty(suppress_candles=False).splitlines()) == 37
 
 
 @pytest.mark.storage
