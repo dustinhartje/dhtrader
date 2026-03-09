@@ -1342,24 +1342,24 @@ def review_candles(timeframe: str,
     """
     if isinstance(symbol, str):
         symbol = get_symbol_by_ticker(ticker=symbol)
-    print("Retrieving candles overview from storage")
+    log_say("Retrieving candles overview from storage")
     log.info(f"Retrieving candles from storage for {symbol} {timeframe}")
     overview = dhm.review_candles(timeframe=timeframe,
                                   symbol=symbol.ticker,
                                   )
-    log.info(f"Finished retrieval from storage for {symbol} {timeframe}")
+    log_say(f"Finished retrieval from storage for {symbol} {timeframe}")
     if overview is None:
-        print(f"No candles found for the specified timeframe {timeframe}")
+        log_say(f"No candles found for the specified timeframe {timeframe}")
         return None
     start_epoch = dt_to_epoch(overview["earliest_dt"])
     end_epoch = dt_to_epoch(overview["latest_dt"])
     if check_integrity:
-        log.info("Starting integrity checks and gap analysis because "
-                 "check_integrity=True")
-        log.info("Retrieving candles from storage for "
-                 f"{symbol} {timeframe} between "
-                 f"{dt_as_str(dt_from_epoch(start_epoch))} and "
-                 f"{dt_as_str(dt_from_epoch(end_epoch))}")
+        log_say("Starting integrity checks and gap analysis because "
+                "check_integrity=True")
+        log_say("Retrieving candles from storage for "
+                f"{symbol} {timeframe} between "
+                f"{dt_as_str(dt_from_epoch(start_epoch))} and "
+                f"{dt_as_str(dt_from_epoch(end_epoch))}")
         candles = get_candles(timeframe=timeframe,
                               symbol=symbol.ticker,
                               start_epoch=start_epoch,
@@ -1367,7 +1367,7 @@ def review_candles(timeframe: str,
                               )
 
         # Perform a basic check on the times list vs expected for the timeframe
-        log.info("Summarizing retrieved candles")
+        log_say("Summarizing retrieved candles")
         breakdown = summarize_candles(timeframe=timeframe,
                                       symbol=symbol,
                                       candles=candles,)
@@ -1387,28 +1387,30 @@ def review_candles(timeframe: str,
             err_msg = f"Expected data not defined for timeframe: {timeframe}"
 
         # Perform a detailed analysis of actual vs expected timestamps
-        log.info("Performing detailed analysis of actual vs expected "
-                 "candle datetimes")
+        log_say("Performing detailed analysis of actual vs expected "
+                "candle datetimes")
         dt_actual = []
         for c in candles:
             dt_actual.append(dt_as_str(c.c_datetime))
         start_dt = dt_from_epoch(start_epoch)
         end_dt = dt_from_epoch(end_epoch)
-        log.info("Calculating expected candle datetimes for "
-                 f"{symbol} {timeframe} between "
-                 f"{dt_as_str(start_dt)} and {dt_as_str(end_dt)}")
+        log_say("Fetching all events from storage for {symbol} in the "
+                "target datetime range")
         all_events = get_events(start_epoch=start_epoch,
                                 end_epoch=end_epoch,
                                 symbol=symbol,
                                 )
+        log_say("Calculating expected candle datetimes for "
+                f"{symbol} {timeframe} between "
+                f"{dt_as_str(start_dt)} and {dt_as_str(end_dt)}")
         dt_expected = expected_candle_datetimes(start_dt=start_dt,
                                                 end_dt=end_dt,
                                                 symbol=symbol,
                                                 timeframe=timeframe,
                                                 events=all_events,
                                                 )
-        log.info("Finished calculating expected datetimes, starting "
-                 "comparison of actual (stored) vs expected candles")
+        log_say("Finished calculating expected datetimes, starting "
+                "comparison of actual (stored) vs expected candles")
 
         # Convert expected to strings for comparison and review
         dt_expected_str = []
@@ -1495,8 +1497,8 @@ def review_candles(timeframe: str,
             err_msg += f"{unexpected_candles_count} unexpected candles found"
         integrity_data = {"status": status, "err_msg": err_msg}
     else:
-        log.info("Skipping integrity checks and gap analysis because "
-                 "check_integrity=False")
+        log_say("Skipping integrity checks and gap analysis because "
+                "check_integrity=False")
         integrity_data = None
         breakdown = None
         summary_data = None
@@ -1504,7 +1506,7 @@ def review_candles(timeframe: str,
         gap_analysis = None
 
     if return_detail:
-        log.info("Returning detailed review")
+        log_say("Returning detailed review")
         result = {"overview": overview,
                   "integrity_data": integrity_data,
                   "summary_data": summary_data,
@@ -1516,7 +1518,7 @@ def review_candles(timeframe: str,
                   "missing_candles_by_hour": missing_candles_by_hour,
                   }
     else:
-        log.info("Returning summary review")
+        log_say("Returning summary review")
         result = {"overview": overview,
                   "integrity_data": integrity_data,
                   "gap_analysis": gap_analysis,
