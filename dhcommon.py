@@ -631,35 +631,6 @@ def expected_candle_datetimes(start_dt,
         events = []
     closed_events = [e for e in events if e.category == "Closed"]
 
-    # Check if symbol has context-based predicates for efficient lookups
-    use_context = all([
-        hasattr(symbol, "build_market_hours_context"),
-        hasattr(symbol, "is_open_dt"),
-    ])
-
-    # Create a helper to check if any minute in a candle bucket falls
-    # within open market hours
-    def _has_open_minute_in_bucket(bucket_start, bucket_delta, thours,
-                                   evts):
-        """Return True if any minute in bucket falls in open market hours."""
-        minute = dt_as_dt(bucket_start)
-        bucket_end = minute + bucket_delta - timedelta(minutes=1)
-
-        while minute <= bucket_end:
-            if use_context:
-                if symbol.is_open_dt(target_dt=minute,
-                                     context=context):
-                    return True
-            else:
-                if symbol.market_is_open(trading_hours=thours,
-                                         target_dt=minute,
-                                         check_closed_events=True,
-                                         events=evts):
-                    return True
-            minute = minute + timedelta(minutes=1)
-
-        return False
-
     # Determine start and end boundaries to loop through
     result = []
     adder = timeframe_delta(timeframe)
@@ -676,9 +647,10 @@ def expected_candle_datetimes(start_dt,
                                  )
 
     ender = dt_as_dt(end_dt)
-    # Build one shared context for entire date range if symbol supports it
+
+    # Build one shared context for entire date range for efficient lookups
     context = None
-    if use_context and this <= ender:
+    if this <= ender:
         context = symbol.build_market_hours_context(
             trading_hours=trading_hours,
             events=closed_events,
@@ -694,13 +666,22 @@ def expected_candle_datetimes(start_dt,
         total = 0
         pbar = None
 
-    # Loop through timeframe candles, adding if any 1m candles fall within
+    # Loop through timeframe candles, check if any minute falls within
+    # open market hours using shared context
     while this <= ender:
         if timeframe in TIMEFRAMES:
-            if _has_open_minute_in_bucket(bucket_start=this,
-                                          bucket_delta=adder,
-                                          thours=trading_hours,
-                                          evts=closed_events):
+            # Check each minute in this candle bucket
+            minute = dt_as_dt(this)
+            bucket_end = minute + adder - timedelta(minutes=1)
+            has_open_minute = False
+
+            while minute <= bucket_end:
+                if symbol.is_open_dt(target_dt=minute, context=context):
+                    has_open_minute = True
+                    break
+                minute = minute + timedelta(minutes=1)
+
+            if has_open_minute:
                 result.append(this)
         else:
             raise ValueError(f"timeframe: {timeframe} not supported")
