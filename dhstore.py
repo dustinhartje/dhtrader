@@ -1293,7 +1293,8 @@ def get_candles(start_epoch: int,
     """Return candle docs within the given start and end epochs, inclusive.
     """
     # Retrieve candle dictionaries from storage
-    log.info(f"Retrieving candles from storage for {symbol} "
+    log_sym = symbol if isinstance(symbol, str) else symbol.ticker
+    log.info(f"Retrieving candles from storage for {log_sym} "
              f"{timeframe} between "
              f"{dt_as_str(dt_from_epoch(start_epoch))} and "
              f"{dt_as_str(dt_from_epoch(end_epoch))}")
@@ -1344,11 +1345,12 @@ def review_candles(timeframe: str,
     if isinstance(symbol, str):
         symbol = get_symbol_by_ticker(ticker=symbol)
     log_say("Retrieving candles overview from storage")
-    log.info(f"Retrieving candles from storage for {symbol} {timeframe}")
+    log_sym = symbol if isinstance(symbol, str) else symbol.ticker
+    log.info(f"Retrieving candles from storage for {log_sym} {timeframe}")
     overview = dhm.review_candles(timeframe=timeframe,
                                   symbol=symbol.ticker,
                                   )
-    log_say(f"Finished retrieval from storage for {symbol} {timeframe}")
+    log_say(f"Finished retrieval from storage for {log_sym} {timeframe}")
     if overview is None:
         log_say(f"No candles found for the specified timeframe {timeframe}")
         return None
@@ -1358,7 +1360,7 @@ def review_candles(timeframe: str,
         log_say("Starting integrity checks and gap analysis because "
                 "check_integrity=True")
         log_say("Retrieving candles from storage for "
-                f"{symbol} {timeframe} between "
+                f"{log_sym} {timeframe} between "
                 f"{dt_as_str(dt_from_epoch(start_epoch))} and "
                 f"{dt_as_str(dt_from_epoch(end_epoch))}")
         candles = get_candles(timeframe=timeframe,
