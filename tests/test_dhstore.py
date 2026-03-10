@@ -1,10 +1,11 @@
-"""Tests for TradeSeries and Trade storage integrity checks."""
+"""Tests for TradeSeries and backtests integrity storage checks."""
 import pytest
 from dhtrader import (
+    Backtest,
     delete_backtests_by_field, get_backtests_by_field, get_trades_by_field,
     get_tradeseries_by_field, review_trades,
     review_tradeseries, store_trades,
-    store_tradeseries, Trade, TradeSeries)
+    store_backtests, store_tradeseries, Trade, TradeSeries)
 
 
 def clear_storage_by_bt_id(bt_id):
@@ -20,11 +21,12 @@ def clear_storage_by_bt_id(bt_id):
 
 
 @pytest.mark.storage
-def test_TradeSeries_and_Trade_integrity_checks():
-    """Verify storage integrity checks fail for invalid TradeSeries/Trade data.
+def test_Backtest_TradeSeries_and_Trade_integrity_checks():
+    """Verify storage integrity checks fail for invalid Backtests, TradeSeries,
+    and Trades.
     """
     # Name fake backtest and cleanup stored orphans from past failed runs
-    bt = "DELETEME_TRADESERIES_INTEGRITY_TEST"
+    bt = "INTEGRITY_CHECK"
     clear_storage_by_bt_id(bt)
 
     # Store a control TradeSeries that has compliant Trades
@@ -55,13 +57,14 @@ def test_TradeSeries_and_Trade_integrity_checks():
     stored = get_trades_by_field(field="bt_id", value=bt)
     assert len(stored) == 2
 
-    # Confirm TradeSEries storage integrity check against test bt_id passes
+    # Confirm storage integrity check against sample bt_id passes
     r = review_tradeseries(bt_id=bt, check_integrity=True)
     assert r["integrity"]["status"] == "OK"
     assert r["integrity"]["issues"] is None
 
     # Confirm Trade storage integrity check against bt_id passes
     r = review_trades(bt_id=bt, check_integrity=True)
+    print(r)
     assert r["integrity"]["status"] == "OK"
     assert r["integrity"]["issues"] is None
 
@@ -100,7 +103,7 @@ def test_TradeSeries_and_Trade_integrity_checks():
     stored = get_trades_by_field(field="bt_id", value=bt)
     assert len(stored) == 2
 
-    # Confirm TradeSeries integrity check fails test bt_id fails
+    # Confirm storage integrity check fails for sample bt_id
     r = review_tradeseries(bt_id=bt, check_integrity=True)
     assert r["integrity"]["status"] == "ERRORS"
     assert r["integrity"]["issues"] == {"trade_overlaps": [
@@ -148,12 +151,12 @@ def test_TradeSeries_and_Trade_integrity_checks():
     assert len(stored) == 1
     stored = get_trades_by_field(field="bt_id", value=bt)
     assert len(stored) == 2
-    # Confirm storage integrity check against test bt_id fails
+    # Confirm storage integrity check against sample bt_id fails
     r = review_tradeseries(bt_id=bt, check_integrity=True)
     assert r["integrity"]["status"] == "ERRORS"
     assert r["integrity"]["issues"] == {'trade_overlaps': [
         {'issue_type': 'Trade timeframe bar overlap',
-         'ts_id': 'DELETEME_TRADESERIES_INTEGRITY_TEST_next_bar_fail',
+         'ts_id': f'{bt}_next_bar_fail',
          'timeframe': 'e1h',
          'trade_open': '2025-01-05 11:53:18',
          'trade_open_tf': '2025-01-05 11:00:00',
@@ -167,7 +170,7 @@ def test_TradeSeries_and_Trade_integrity_checks():
     stored = get_trades_by_field(field="bt_id", value=bt)
     assert len(stored) == 0
 
-    # Add a multiday Trade and confirm Trades integrity check fails
+    # Add a multiday Trade and confirm Trades storage integrity check fails
     # Store TradeSeries with a Trade that spans multiple days
     ts_fail = TradeSeries(start_dt="2025-01-06 00:00:00",
                           end_dt="2025-01-08 00:00:00",
@@ -195,14 +198,14 @@ def test_TradeSeries_and_Trade_integrity_checks():
     assert len(stored) == 1
     stored = get_trades_by_field(field="bt_id", value=bt)
     assert len(stored) == 2
-    # Confirm Trade integrity check against test bt_id fails
+    # Confirm Trade storage integrity check against sample bt_id fails
     r = review_trades(bt_id=bt, check_integrity=True)
     assert r["integrity"]["status"] == "ERRORS"
     assert r["integrity"]["issues"] == ["1 invalid multiday trades found"]
     # Confirm Trade multi_ok list passes otherwise invalid Trades
     r = review_trades(bt_id=bt,
                       check_integrity=True,
-                      multi_ok=["DELETEME"])
+                      multi_ok=[bt])
     assert r["integrity"]["status"] == "OK"
     assert r["integrity"]["issues"] is None
     # Clean from storage and verify gone
@@ -212,7 +215,89 @@ def test_TradeSeries_and_Trade_integrity_checks():
     stored = get_trades_by_field(field="bt_id", value=bt)
     assert len(stored) == 0
 
-    # Confirm duplicate trades fail during Trade integrity check
+    # Add an unclosed Trade and confirm it is flagged as unclosed_trade
+    ts_fail = TradeSeries(start_dt="2025-01-06 00:00:00",
+                          end_dt="2025-01-08 00:00:00",
+                          timeframe="e1h",
+                          trading_hours="eth",
+                          symbol="ES",
+                          name=f"{bt}_unclosed_fail",
+                          params_str="",
+                          ts_id=f"{bt}_unclosed_fail",
+                          bt_id=bt)
+    t_unclosed = Trade(
+        open_dt="2025-01-06 10:03:24", direction="long",
+        close_dt="2025-01-06 10:45:32", timeframe="e1h",
+        trading_hours="eth",
+        entry_price=5000, exit_price=5001, high_price=5005, low_price=4995,
+        prof_target=5001, stop_target=4000,
+        ts_id=ts_fail.ts_id, bt_id=ts_fail.bt_id)
+    t_unclosed.close_dt = None
+    t_unclosed.close_date = None
+    t_unclosed.close_time = None
+    t_unclosed.exit_price = None
+    t_unclosed.profitable = None
+    t_unclosed.is_open = True
+    ts_fail.add_trade(t_unclosed)
+    store_tradeseries([ts_fail], include_trades=True)
+    r = review_trades(bt_id=bt,
+                      check_integrity=True,
+                      list_issues=True)
+    assert r["integrity"]["status"] == "ERRORS"
+    assert r["integrity"]["unclosed_trade_errors"] == 1
+    assert r["integrity"]["invalid_multiday_trades"] == 0
+    assert r["integrity"]["issues"] == [
+        "1 unclosed_trade errors found"
+    ]
+    assert r["integrity"]["unclosed_trades"][0]["issue_type"] == (
+        "unclosed_trade"
+    )
+    ts_fail.delete_from_storage(include_trades=True)
+
+    # Confirm orphaned_test_objects catches all supported object types
+    bt_orphan = Backtest(start_dt="2025-01-01 00:00:00",
+                         end_dt="2025-01-02 00:00:00",
+                         timeframe="e1h",
+                         trading_hours="eth",
+                         symbol="ES",
+                         name="TEST_orphan_backtest",
+                         parameters={},
+                         bt_id=bt,
+                         prefer_stored=False,
+                         autoload_charts=False)
+    ts_orphan = TradeSeries(start_dt="2025-01-01 00:00:00",
+                            end_dt="2025-01-01 23:59:59",
+                            timeframe="e1h",
+                            trading_hours="eth",
+                            symbol="ES",
+                            name="TEST_orphan_tradeseries",
+                            params_str="",
+                            ts_id=f"{bt}_TEST_TS",
+                            bt_id=bt)
+    ts_orphan.add_trade(Trade(
+        open_dt="2025-01-01 10:03:24", direction="long",
+        close_dt="2025-01-01 10:45:32", timeframe="e1h",
+        trading_hours="eth",
+        entry_price=5000, exit_price=5001, high_price=5005, low_price=4995,
+        prof_target=5001, stop_target=4000,
+        name="TEST_orphan_trade",
+        ts_id=ts_orphan.ts_id, bt_id=ts_orphan.bt_id))
+    bt_orphan.tradeseries = [ts_orphan]
+    store_backtests([bt_orphan],
+                    include_tradeseries=True,
+                    include_trades=True)
+    r = review_trades(bt_id=bt,
+                      check_integrity=True,
+                      list_issues=True)
+    assert r["integrity"]["status"] == "ERRORS"
+    assert r["integrity"]["orphaned_test_objects_errors"] >= 3
+    issue_types = {
+        x["object_type"] for x in r["integrity"]["orphaned_test_objects"]
+    }
+    assert {"backtest", "tradeseries", "trade"}.issubset(issue_types)
+    clear_storage_by_bt_id(bt)
+
+    # Confirm duplicate trades fail during Trade backtests_integrity check
     ts_fail = TradeSeries(start_dt="2025-01-06 00:00:00",
                           end_dt="2025-01-08 00:00:00",
                           timeframe="e1h",

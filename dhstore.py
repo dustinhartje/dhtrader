@@ -104,31 +104,42 @@ def reconstruct_trade(t):
     Primarily used by other functions to convert results retrieved from
     storage.
     """
-    return Trade(open_dt=t["open_dt"],
-                 direction=t["direction"],
-                 timeframe=t["timeframe"],
-                 trading_hours=t["trading_hours"],
-                 entry_price=t["entry_price"],
-                 close_dt=t["close_dt"],
-                 created_dt=t["created_dt"],
-                 open_epoch=t["open_epoch"],
-                 high_price=t["high_price"],
-                 low_price=t["low_price"],
-                 exit_price=t["exit_price"],
-                 stop_target=t["stop_target"],
-                 prof_target=t["prof_target"],
-                 stop_ticks=t["stop_ticks"],
-                 prof_ticks=t["prof_ticks"],
-                 offset_ticks=t["offset_ticks"],
-                 symbol=t["symbol"],
-                 is_open=t["is_open"],
-                 profitable=t["profitable"],
-                 name=t["name"],
-                 version=t["version"],
-                 ts_id=t["ts_id"],
-                 bt_id=t["bt_id"],
-                 tags=t["tags"],
-                 )
+    close_dt = t["close_dt"]
+    # Trade() expects a close_dt during initialization; rebuild unclosed
+    # trades using open_dt first, then restore unclosed state.
+    init_close_dt = close_dt if close_dt is not None else t["open_dt"]
+    result = Trade(open_dt=t["open_dt"],
+                   direction=t["direction"],
+                   timeframe=t["timeframe"],
+                   trading_hours=t["trading_hours"],
+                   entry_price=t["entry_price"],
+                   close_dt=init_close_dt,
+                   created_dt=t["created_dt"],
+                   open_epoch=t["open_epoch"],
+                   high_price=t["high_price"],
+                   low_price=t["low_price"],
+                   exit_price=t["exit_price"],
+                   stop_target=t["stop_target"],
+                   prof_target=t["prof_target"],
+                   stop_ticks=t["stop_ticks"],
+                   prof_ticks=t["prof_ticks"],
+                   offset_ticks=t["offset_ticks"],
+                   symbol=t["symbol"],
+                   is_open=t["is_open"],
+                   profitable=t["profitable"],
+                   name=t["name"],
+                   version=t["version"],
+                   ts_id=t["ts_id"],
+                   bt_id=t["bt_id"],
+                   tags=t["tags"],
+                   )
+    if close_dt is None:
+        result.close_dt = None
+        result.close_date = None
+        result.close_time = None
+        result.is_open = True
+
+    return result
 
 
 def get_all_trades(collection: str = COLL_TRADES,
@@ -216,7 +227,7 @@ def review_trades(symbol: str = "ES",
                   multi_ok: list = None,
                   list_issues: bool = False,
                   out_path: str = None,
-                  out_file: str = "trade_integrity_results.json",
+                  out_file: str = "backtests_integrity_results.json",
                   pretty: bool = False,
                   ):
     """Provide aggregate summary data about trades in central storage.
@@ -247,9 +258,9 @@ def review_trades(symbol: str = "ES",
             t.pop("latest_epoch")
 
     if check_integrity:
-        log_say("Checking integrity of all Trades in storage")
+        log_say("Checking integrity for all Backtests in storage")
         time_full = OperationTimer(
-                name="Trade integrity check full run timer")
+            name="backtests_integrity check full run timer")
 
         # Get all TradeSeries in storage to loop through
         if bt_id is None and ts_id is None:
@@ -267,9 +278,43 @@ def review_trades(symbol: str = "ES",
                              f"both!  We got ts_id={ts_id} bt_id={bt_id}")
         duplicates = []
         multidays = []
+        unclosed_trades = []
+        orphaned_test_objects = []
         autoclosed_issues = {}
         total_trades = 0
         unique_trades = 0
+
+        def contains_test_marker(value):
+            """Check for substrings only used in unit test objects."""
+            if value is None:
+                return False
+            check = str(value)
+            return "DELETEME" in check or "TEST" in check
+
+        def append_orphaned(object_type, name, this_ts_id, this_bt_id):
+            """Detect and flag any orphaned test objects."""
+            if (contains_test_marker(name)
+                    or contains_test_marker(this_ts_id)
+                    or contains_test_marker(this_bt_id)):
+                orphaned_test_objects.append({
+                    "issue_type": "orphaned_test_objects",
+                    "object_type": object_type,
+                    "name": name,
+                    "ts_id": this_ts_id,
+                    "bt_id": this_bt_id,
+                })
+
+        # Check backtests for orphaned test objects
+        if bt_id is None:
+            all_backtests = get_all_backtests()
+        else:
+            all_backtests = get_backtests_by_field(field="bt_id",
+                                                   value=bt_id)
+        for b in all_backtests:
+            append_orphaned(object_type="backtest",
+                            name=b.get("name"),
+                            this_ts_id=None,
+                            this_bt_id=b.get("bt_id"))
 
         # Cache all events for autoclosed trade integrity checking
         log_say("Caching all events for autoclosed integrity checks")
@@ -300,20 +345,29 @@ def review_trades(symbol: str = "ES",
 
         # Loop through all TradeSeries, checking for duplicates and multidays
         for i, x in enumerate(all_ts):
-            log.info(f"Checking stored Trade integrity for ts_id={x.ts_id}")
+            log.info("Checking stored Backtests and child objects integrity "
+                     f"for ts_id={x.ts_id}")
             bar.update(i)
             unique = set()
             ts = deepcopy(x)
             ts.load_trades()
+            append_orphaned(object_type="tradeseries",
+                            name=ts.name,
+                            this_ts_id=ts.ts_id,
+                            this_bt_id=ts.bt_id)
             # Determine if this ts_id allows multiday trades
             check_multi = True
-            for x in multi_ok:
-                if x in ts.ts_id:
+            for allowed in multi_ok:
+                if allowed in ts.ts_id:
                     check_multi = False
                     break
             # Check for duplicate Trades w/matching ts_id and open_dt values
             for t in ts.trades:
                 total_trades += 1
+                append_orphaned(object_type="trade",
+                                name=t.name,
+                                this_ts_id=t.ts_id,
+                                this_bt_id=t.bt_id)
                 this = (t.ts_id, t.open_dt)
                 if this in unique:
                     duplicates.append(this)
@@ -322,7 +376,17 @@ def review_trades(symbol: str = "ES",
                     unique.add(this)
                     unique_trades += 1
                 if check_multi:
-                    if not t.closed_intraday():
+                    # First flag as unclosed if no close_dt set
+                    if t.close_dt is None:
+                        this = {"issue_type": "unclosed_trade",
+                                "ts_id": t.ts_id,
+                                "open_dt": t.open_dt,
+                                "close_dt": t.close_dt}
+                        log.warning("Unclosed trade found in storage: "
+                                    f"{this}")
+                        unclosed_trades.append(this)
+                    # Then check for multiday trades
+                    elif not t.closed_intraday():
                         this = {"ts_id": t.ts_id,
                                 "open_dt": t.open_dt,
                                 "close_dt": t.close_dt}
@@ -330,7 +394,9 @@ def review_trades(symbol: str = "ES",
                                     f"storage: {this}")
                         multidays.append(this)
                 # Check autoclosed trades for integrity
-                if "autoclosed" in t.tags and t.close_time != "15:55:00":
+                if ("autoclosed" in t.tags
+                        and t.close_dt is not None
+                        and t.close_time != "15:55:00"):
                     # Calculate expected event start time (5 min after close)
                     close_dt_obj = dt_as_dt(t.close_dt)
                     expected_event_start = close_dt_obj + timedelta(
@@ -359,6 +425,16 @@ def review_trades(symbol: str = "ES",
         if len(multidays) > 0:
             status = "ERRORS"
             issues.append(f"{len(multidays)} invalid multiday trades found")
+        if len(unclosed_trades) > 0:
+            status = "ERRORS"
+            issues.append(f"{len(unclosed_trades)} unclosed_trade errors "
+                          "found")
+        if len(orphaned_test_objects) > 0:
+            status = "ERRORS"
+            issues.append(
+                f"{len(orphaned_test_objects)} orphaned_test_objects "
+                "errors found"
+            )
         if len(autoclosed_issues) > 0:
             status = "ERRORS"
             total_autoclosed_bad = sum(autoclosed_issues.values())
@@ -374,6 +450,9 @@ def review_trades(symbol: str = "ES",
                      "unique_trades": unique_trades,
                      "duplicate_trades": len(duplicates),
                      "invalid_multiday_trades": len(multidays),
+                     "unclosed_trade_errors": len(unclosed_trades),
+                     "orphaned_test_objects_errors": len(
+                         orphaned_test_objects),
                      "autoclosed_integrity_issues": len(autoclosed_issues),
                      "total_autoclosed_bad_trades": sum(
                          autoclosed_issues.values()) if autoclosed_issues
@@ -382,6 +461,8 @@ def review_trades(symbol: str = "ES",
         if list_issues:
             integrity["duplicates"] = duplicates
             integrity["multidays"] = multidays
+            integrity["unclosed_trades"] = unclosed_trades
+            integrity["orphaned_test_objects"] = orphaned_test_objects
             integrity["autoclosed_issues"] = autoclosed_issues
         time_full.stop()
         print(time_full.summary())
@@ -397,6 +478,9 @@ def review_trades(symbol: str = "ES",
         if not list_issues:
             blob["integrity"]["duplicates"] = duplicates
             blob["integrity"]["multidays"] = multidays
+            blob["integrity"]["unclosed_trades"] = unclosed_trades
+            blob["integrity"]["orphaned_test_objects"] = (
+                orphaned_test_objects)
             blob["integrity"]["autoclosed_issues"] = autoclosed_issues
         with open(filename, "w") as f:
             f.write(json.dumps(blob))
