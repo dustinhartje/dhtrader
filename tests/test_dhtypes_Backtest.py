@@ -7,6 +7,7 @@ from dhtrader import (
     get_backtests_by_field, get_trades_by_field, get_tradeseries_by_field,
     store_backtests, store_trades, store_tradeseries, Symbol, Trade,
     TradeSeries)
+from dhtrader.dhtypes import delete_tradeseries
 
 
 def create_trade(open_dt="2025-01-02 12:00:00",
@@ -850,10 +851,25 @@ def test_delete_backtests():
     retrieved2 = get_backtests_by_field(field="name", value=test_name_2)
     assert len(retrieved1) == 1
     assert len(retrieved2) == 1
-    # Delete using the list-based delete_backtests function
-    delete_backtests([bt1, bt2])
+    # Delete all backtests, tradeseries, and trades created in this test
+    delete_backtests_by_field(field="bt_id",
+                              value=test_name_1,
+                              include_tradeseries=True,
+                              include_trades=True)
+    delete_backtests_by_field(field="bt_id",
+                              value=test_name_2,
+                              include_tradeseries=True,
+                              include_trades=True)
     # Confirm they were deleted
     stored1 = get_backtests_by_field(field="name", value=test_name_1)
     stored2 = get_backtests_by_field(field="name", value=test_name_2)
+    assert len(stored1) == 0
+    assert len(stored2) == 0
+    stored1 = get_tradeseries_by_field(field="bt_id", value=test_name_1)
+    stored2 = get_tradeseries_by_field(field="bt_id", value=test_name_2)
+    assert len(stored1) == 0
+    assert len(stored2) == 0
+    stored1 = get_trades_by_field(field="bt_id", value=test_name_1)
+    stored2 = get_trades_by_field(field="bt_id", value=test_name_2)
     assert len(stored1) == 0
     assert len(stored2) == 0
