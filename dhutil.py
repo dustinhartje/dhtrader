@@ -407,6 +407,13 @@ def compare_candles_vs_csv(filepath,
 
     Primarily used to confirm calculated higher timeframes against data
     provider equivalents to sanity check the calculation process.
+
+    There is substantial overlap in the integrity checks performed by this
+    function with dhstore.review_candles(check_integrity=True) validations.
+    Both are worth running as this function can only cover timeframes for which
+    we have source CSVs available, while review_candles covers all timeframes
+    from a slightly different perspective.  They are complimentary despite
+    some redundancy.
     """
     if expect_missing_from_storage is None:
         expect_missing_from_storage = []

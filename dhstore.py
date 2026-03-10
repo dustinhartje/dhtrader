@@ -1425,6 +1425,12 @@ def review_candles(timeframe: str,
 
     Options to further check completeness/integrity of candle data and
     provide remediation.
+
+    There is substantial overlap in the integrity checks performed by this
+    function with dhutil.compare_candles_vs_csv() validations.  Both are worth
+    running as this reviews from a different perspective and covers higher
+    timeframes for which we may not have CSVs available to validate against.
+    They are complementary despite some redundancy.
     """
     if isinstance(symbol, str):
         symbol = get_symbol_by_ticker(ticker=symbol)
