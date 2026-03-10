@@ -666,52 +666,6 @@ def test_TradeSeries_historical():
                                         include_first_min=True)
     assert actual_results == expected_results
 
-
-@pytest.mark.storage
-def test_delete_tradeseries():
-    """Verify delete_tradeseries() using TradeSeries list.
-
-    Storage Usage: delete_tradeseries.
-    """
-    # Create and store test trade series (with different names to get unique
-    # ts_ids)
-    ts1 = create_tradeseries(name="DELETEME-TEST-LIST-1")
-    ts2 = create_tradeseries(name="DELETEME-TEST-LIST-2")
-    ts1.add_trade(create_trade(open_dt="2025-01-05 12:00:00",
-                               close_dt="2025-01-05 13:00:00"))
-    ts2.add_trade(create_trade(open_dt="2025-01-05 14:00:00",
-                               close_dt="2025-01-05 15:00:00"))
-    # Clear storage of test data (clear both names and both ts_ids)
-    delete_tradeseries_by_field(symbol="ES", field="name",
-                                value="DELETEME-TEST-LIST-1")
-    delete_tradeseries_by_field(symbol="ES", field="name",
-                                value="DELETEME-TEST-LIST-2")
-    stored = get_tradeseries_by_field(field="name",
-                                      value="DELETEME-TEST-LIST-1")
-    assert len(stored) == 0
-    stored = get_tradeseries_by_field(field="name",
-                                      value="DELETEME-TEST-LIST-2")
-    assert len(stored) == 0
-    # Store the test trade series
-    store_tradeseries([ts1, ts2], include_trades=True)
-    # Confirm they are stored (check each series separately)
-    retrieved1 = get_tradeseries_by_field(field="name",
-                                          value="DELETEME-TEST-LIST-1")
-    retrieved2 = get_tradeseries_by_field(field="name",
-                                          value="DELETEME-TEST-LIST-2")
-    assert len(retrieved1) == 1
-    assert len(retrieved2) == 1
-    assert all(isinstance(ts, TradeSeries)
-               for ts in retrieved1 + retrieved2)
-    # Delete using the list-based delete_tradeseries function
-    delete_tradeseries([ts1, ts2])
-    # Confirm they were deleted
-    stored1 = get_tradeseries_by_field(field="name",
-                                       value="DELETEME-TEST-LIST-1")
-    stored2 = get_tradeseries_by_field(field="name",
-                                       value="DELETEME-TEST-LIST-2")
-    assert len(stored1) == 0
-    assert len(stored2) == 0
     # SET1 LONG TRADES NO REFINING ######################################
     # Rebuild testdata/set1 long TradeSeries
     ts = Rebuilder().rebuild_tradeseries(
@@ -755,3 +709,65 @@ def test_delete_tradeseries():
                                         contract_fee=3.04,
                                         include_first_min=True)
     assert actual_results == expected_results
+
+
+@pytest.mark.storage
+def test_delete_tradeseries():
+    """Verify delete_tradeseries() using TradeSeries list.
+
+    Storage Usage: delete_tradeseries.
+    """
+    # Create and store test trade series (with different names to get unique
+    # ts_ids)
+    test_name_1 = "DELETEME-TEST-LIST-1"
+    test_name_2 = "DELETEME-TEST-LIST-2"
+    ts1 = create_tradeseries(name=test_name_1)
+    ts2 = create_tradeseries(name=test_name_2)
+    ts1.add_trade(create_trade(open_dt="2025-01-05 12:00:00",
+                               close_dt="2025-01-05 13:00:00"))
+    ts2.add_trade(create_trade(open_dt="2025-01-05 14:00:00",
+                               close_dt="2025-01-05 15:00:00"))
+    # Clear storage of test data (clear both names and both ts_ids)
+    delete_tradeseries_by_field(symbol="ES", field="name",
+                                value=test_name_1,
+                                include_trades=True)
+    delete_tradeseries_by_field(symbol="ES", field="name",
+                                value=test_name_2,
+                                include_trades=True)
+    stored = get_tradeseries_by_field(field="name",
+                                      value=test_name_1)
+    assert len(stored) == 0
+    stored = get_tradeseries_by_field(field="name",
+                                      value=test_name_2)
+    assert len(stored) == 0
+    # Store the test trade series
+    store_tradeseries([ts1, ts2], include_trades=True)
+    # Confirm they are stored (check each series separately)
+    retrieved1 = get_tradeseries_by_field(field="name",
+                                          value=test_name_1)
+    retrieved2 = get_tradeseries_by_field(field="name",
+                                          value=test_name_2)
+    assert len(retrieved1) == 1
+    assert len(retrieved2) == 1
+    assert all(isinstance(ts, TradeSeries)
+               for ts in retrieved1 + retrieved2)
+    # Delete using the list-based method
+    delete_tradeseries([ts1, ts2])
+    # Also delete trades by ts_id to clean up
+    delete_trades_by_field(symbol="ES", field="ts_id",
+                           value=ts1.ts_id)
+    delete_trades_by_field(symbol="ES", field="ts_id",
+                           value=ts2.ts_id)
+    # Confirm all objects were deleted
+    stored1 = get_tradeseries_by_field(field="name",
+                                       value=test_name_1)
+    stored2 = get_tradeseries_by_field(field="name",
+                                       value=test_name_2)
+    assert len(stored1) == 0
+    assert len(stored2) == 0
+    stored1 = get_trades_by_field(field="name",
+                                  value=test_name_1)
+    stored2 = get_trades_by_field(field="name",
+                                  value=test_name_2)
+    assert len(stored1) == 0
+    assert len(stored2) == 0

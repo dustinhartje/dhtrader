@@ -851,18 +851,18 @@ def test_delete_backtests():
     retrieved2 = get_backtests_by_field(field="name", value=test_name_2)
     assert len(retrieved1) == 1
     assert len(retrieved2) == 1
-    # Delete all backtests, tradeseries, and trades created in this test
-    delete_backtests_by_field(field="bt_id",
-                              value=test_name_1,
-                              symbol="ES",
-                              include_tradeseries=True,
-                              include_trades=True)
-    delete_backtests_by_field(field="bt_id",
-                              value=test_name_2,
-                              symbol="ES",
-                              include_tradeseries=True,
-                              include_trades=True)
-    # Confirm they were deleted
+    # Delete all backtests using list based method
+    delete_backtests([bt1, bt2])
+    # Also delete child objects to clean up
+    delete_tradeseries_by_field(field="bt_id",
+                                value=test_name_1,
+                                symbol="ES",
+                                include_trades=True)
+    delete_tradeseries_by_field(field="bt_id",
+                                value=test_name_2,
+                                symbol="ES",
+                                include_trades=True)
+    # Confirm all objects were deleted
     stored1 = get_backtests_by_field(field="name", value=test_name_1)
     stored2 = get_backtests_by_field(field="name", value=test_name_2)
     assert len(stored1) == 0
