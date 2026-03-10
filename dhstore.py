@@ -225,6 +225,7 @@ def review_trades(symbol: str = "ES",
                   include_epochs: bool = False,
                   check_integrity: bool = False,
                   multi_ok: list = None,
+                  orphan_ok: list = None,
                   list_issues: bool = False,
                   out_path: str = None,
                   out_file: str = "backtests_integrity_results.json",
@@ -245,6 +246,8 @@ def review_trades(symbol: str = "ES",
     """
     if multi_ok is None:
         multi_ok = []
+    if orphan_ok is None:
+        orphan_ok = []
     review = dhm.review_trades(symbol=symbol,
                                collection=collection,
                                bt_id=bt_id,
@@ -291,18 +294,29 @@ def review_trades(symbol: str = "ES",
             check = str(value)
             return "DELETEME" in check or "TEST" in check
 
-        def append_orphaned(object_type, name, this_ts_id, this_bt_id):
+        def append_orphaned(object_type, name, this_ts_id, this_bt_id, ignore):
             """Detect and flag any orphaned test objects."""
-            if (contains_test_marker(name)
-                    or contains_test_marker(this_ts_id)
-                    or contains_test_marker(this_bt_id)):
-                orphaned_test_objects.append({
-                    "issue_type": "orphaned_test_objects",
-                    "object_type": object_type,
-                    "name": name,
-                    "ts_id": this_ts_id,
-                    "bt_id": this_bt_id,
-                })
+            # Toss any None fields, they just add complexity and won't match
+            check_against = [
+                s for s in [name, this_ts_id, this_bt_id] if s is not None
+                ]
+            # Do nothing if any fields match an ignore string
+            for i in ignore:
+                for s in check_against:
+                    if i in s:
+                        return False
+            # Check remaining fields for test markers, flagging orphan if found
+            for s in check_against:
+                if contains_test_marker(s):
+                    orphaned_test_objects.append({
+                        "issue_type": "orphaned_test_objects",
+                        "object_type": object_type,
+                        "name": name,
+                        "ts_id": this_ts_id,
+                        "bt_id": this_bt_id,
+                        })
+                return True
+            return False
 
         # Check backtests for orphaned test objects
         if bt_id is None:
@@ -314,7 +328,8 @@ def review_trades(symbol: str = "ES",
             append_orphaned(object_type="backtest",
                             name=b.get("name"),
                             this_ts_id=None,
-                            this_bt_id=b.get("bt_id"))
+                            this_bt_id=b.get("bt_id"),
+                            ignore=orphan_ok)
 
         # Cache all events for autoclosed trade integrity checking
         log_say("Caching all events for autoclosed integrity checks")
@@ -354,7 +369,8 @@ def review_trades(symbol: str = "ES",
             append_orphaned(object_type="tradeseries",
                             name=ts.name,
                             this_ts_id=ts.ts_id,
-                            this_bt_id=ts.bt_id)
+                            this_bt_id=ts.bt_id,
+                            ignore=orphan_ok)
             # Determine if this ts_id allows multiday trades
             check_multi = True
             for allowed in multi_ok:
@@ -367,7 +383,8 @@ def review_trades(symbol: str = "ES",
                 append_orphaned(object_type="trade",
                                 name=t.name,
                                 this_ts_id=t.ts_id,
-                                this_bt_id=t.bt_id)
+                                this_bt_id=t.bt_id,
+                                ignore=orphan_ok)
                 this = (t.ts_id, t.open_dt)
                 if this in unique:
                     duplicates.append(this)

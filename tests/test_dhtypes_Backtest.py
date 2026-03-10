@@ -142,6 +142,28 @@ def clear_storage_by_name(name: str):
     assert len(s_tr) == 0
 
 
+@pytest.fixture
+def cleanup_backtest_storage():
+    """Register Backtest test names for pre- and post-test cleanup.
+
+    The returned helper records each supplied name, immediately clears any
+    matching Backtests, TradeSeries, and Trades before the test continues,
+    then clears the full registered set again during fixture teardown.
+    """
+    names = set()
+
+    def register(*new_names):
+        for name in new_names:
+            names.add(name)
+        for name in sorted(names):
+            clear_storage_by_name(name)
+
+    yield register
+
+    for name in sorted(names):
+        clear_storage_by_name(name)
+
+
 def test_Backtest_create_and_verify_pretty():
     """Verify Backtest.pretty() output line count."""
     bt = create_backtest()
@@ -182,12 +204,13 @@ def test_Backtest_load_charts():
 
 @pytest.mark.slow
 @pytest.mark.storage
-def test_Backtest_restrict_dates():
+def test_Backtest_restrict_dates(cleanup_backtest_storage):
     """Verify restrict_dates adjusts candle ranges.
 
     Storage Usage: Chart autoload=True loads candles.
     """
     test_name = "DELETEME-RESTRICTTest"
+    cleanup_backtest_storage(test_name)
     bt = create_backtest(name=test_name,
                          start_dt="2025-01-01 18:00:00",
                          end_dt="2025-01-31 16:59:00",
@@ -482,12 +505,10 @@ def test_Backtest_restrict_dates():
                                  value=bt.bt_id)
     assert len(trades) == 0
 
-    # Clear and confirm storage has no objects with this name currently
-    clear_storage_by_name(name=test_name)
-
 
 @pytest.mark.storage
-def test_Backtest_add_and_remove_tradeseries_and_trades():
+def test_Backtest_add_and_remove_tradeseries_and_trades(
+        cleanup_backtest_storage):
     """Verify Backtest updating TradeSeries and storing/deletion.
 
     Storage Usage: store_backtests, store_tradeseries, store_trades.
@@ -497,6 +518,7 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
     ts1_ts_id = "".join([test_name, "1_a1_b2_c3_p0"])
     ts2_name = "".join([test_name, "2"])
     ts2_ts_id = "".join([test_name, "2_a1_b2_c3_p0"])
+    cleanup_backtest_storage(test_name, ts1_name, ts2_name)
     bt = create_backtest(name=test_name)
     assert isinstance(bt, Backtest)
     assert len(bt.tradeseries) == 0
@@ -728,18 +750,20 @@ def test_Backtest_add_and_remove_tradeseries_and_trades():
 
 
 @pytest.mark.storage
-def test_Backtest_store_retrieve_load_tradeseries_and_delete():
+def test_Backtest_store_retrieve_load_tradeseries_and_delete(
+        cleanup_backtest_storage):
     """Verify full round-trip storage of Backtest+TradeSeries+Trades.
 
     Storage Usage: store_backtests, store_tradeseries, store_trades,
     get_* methods, delete_from_storage, load_tradeseries.
     """
     test_name = "DELETEME-STORELOADTest"
+    cleanup_backtest_storage(test_name)
     # Create and link Backtest, TradeSeries, and Trade objects
-    tr = create_trade()
-    ts = create_tradeseries()
+    tr = create_trade(name=test_name)
+    ts = create_tradeseries(name=test_name)
     ts.add_trade(tr)
-    bt = create_backtest()
+    bt = create_backtest(name=test_name)
     bt.update_tradeseries(ts)
 
     # Clear and confirm storage has no objects with this name currently
@@ -811,13 +835,17 @@ def test_Backtest_store_retrieve_load_tradeseries_and_delete():
 
 
 @pytest.mark.storage
-def test_delete_backtests():
+def test_delete_backtests(cleanup_backtest_storage):
     """Verify delete_backtests() using Backtest list.
 
     Storage Usage: delete_backtests.
     """
     test_name_1 = "DELETEME-TEST-LIST-1"
     test_name_2 = "DELETEME-TEST-LIST-2"
+    ts_name_1 = "".join([test_name_1, "-ts"])
+    ts_name_2 = "".join([test_name_2, "-ts"])
+    cleanup_backtest_storage(test_name_1, test_name_2,
+                             ts_name_1, ts_name_2)
     # Clear storage of test data
     delete_backtests_by_field(symbol="ES", field="name", value=test_name_1)
     delete_backtests_by_field(symbol="ES", field="name", value=test_name_2)
@@ -829,10 +857,10 @@ def test_delete_backtests():
     # to ensure unique bt_ids)
     bt1 = create_backtest(name=test_name_1)
     bt2 = create_backtest(name=test_name_2)
-    ts1 = create_tradeseries(name="".join([test_name_1, "-ts"]),
+    ts1 = create_tradeseries(name=ts_name_1,
                              start_dt="2025-01-05 10:00:00",
                              end_dt="2025-01-05 14:00:00")
-    ts2 = create_tradeseries(name="".join([test_name_2, "-ts"]),
+    ts2 = create_tradeseries(name=ts_name_2,
                              start_dt="2025-01-05 15:00:00",
                              end_dt="2025-01-05 19:00:00")
     # Add trades to trade series

@@ -114,6 +114,38 @@ def create_tradeseries(start_dt="2025-01-01 00:00:00",
     return r
 
 
+def clear_tradeseries_storage_by_name(name: str):
+    """Delete stored TradeSeries and Trades with the given test name."""
+    delete_tradeseries_by_field(symbol="ES", field="name", value=name)
+    stored_ts = get_tradeseries_by_field(field="name", value=name)
+    assert len(stored_ts) == 0
+    delete_trades_by_field(symbol="ES", field="name", value=name)
+    stored_tr = get_trades_by_field(field="name", value=name)
+    assert len(stored_tr) == 0
+
+
+@pytest.fixture
+def cleanup_tradeseries_storage():
+    """Register TradeSeries test names for pre- and post-test cleanup.
+
+    The returned helper records each supplied name, immediately clears any
+    matching TradeSeries and Trades before the test continues, then clears
+    the full registered set again during fixture teardown.
+    """
+    names = set()
+
+    def register(*new_names):
+        for name in new_names:
+            names.add(name)
+        for name in sorted(names):
+            clear_tradeseries_storage_by_name(name)
+
+    yield register
+
+    for name in sorted(names):
+        clear_tradeseries_storage_by_name(name)
+
+
 def test_TradeSeries_create_and_verify_pretty():
     """Verify TradeSeries.pretty() output line count."""
     ts = create_tradeseries()
@@ -558,17 +590,21 @@ def test_TradeSeries_drawdown_impact():
 
 
 @pytest.mark.storage
-def test_TradeSeries_store_retrieve_and_delete():
+def test_TradeSeries_store_retrieve_and_delete(cleanup_tradeseries_storage):
     """Verify TradeSeries storage, retrieval, and deletion including trades.
 
     Storage Usage: store_tradeseries, get/delete methods.
     """
+    test_name = "DELETEME-TEST"
+    cleanup_tradeseries_storage(test_name)
     # Create a TradeSeries with 2 Trade objects to test with
-    ts = create_tradeseries(name="DELETEME-TEST")
+    ts = create_tradeseries(name=test_name)
     ts.add_trade(create_trade(open_dt="2025-01-05 12:00:00",
-                              close_dt="2025-01-05 13:00:00"))
+                              close_dt="2025-01-05 13:00:00",
+                              name=test_name))
     ts.add_trade(create_trade(open_dt="2025-01-06 09:35:00",
-                              close_dt="2025-01-06 09:40:00"))
+                              close_dt="2025-01-06 09:40:00",
+                              name=test_name))
     # Clear and confirm storage has no objects with this name currently
     delete_tradeseries_by_field(symbol="ES", field="name",
                                 value="DELETEME-TEST")
@@ -712,7 +748,7 @@ def test_TradeSeries_historical():
 
 
 @pytest.mark.storage
-def test_delete_tradeseries():
+def test_delete_tradeseries(cleanup_tradeseries_storage):
     """Verify delete_tradeseries() using TradeSeries list.
 
     Storage Usage: delete_tradeseries.
@@ -721,12 +757,15 @@ def test_delete_tradeseries():
     # ts_ids)
     test_name_1 = "DELETEME-TEST-LIST-1"
     test_name_2 = "DELETEME-TEST-LIST-2"
+    cleanup_tradeseries_storage(test_name_1, test_name_2)
     ts1 = create_tradeseries(name=test_name_1)
     ts2 = create_tradeseries(name=test_name_2)
     ts1.add_trade(create_trade(open_dt="2025-01-05 12:00:00",
-                               close_dt="2025-01-05 13:00:00"))
+                               close_dt="2025-01-05 13:00:00",
+                               name=test_name_1))
     ts2.add_trade(create_trade(open_dt="2025-01-05 14:00:00",
-                               close_dt="2025-01-05 15:00:00"))
+                               close_dt="2025-01-05 15:00:00",
+                               name=test_name_2))
     # Clear storage of test data (clear both names and both ts_ids)
     delete_tradeseries_by_field(symbol="ES", field="name",
                                 value=test_name_1,

@@ -92,6 +92,35 @@ def add_1m_candle(trade, dt, c_open, c_high, c_low, c_close):
                                ))
 
 
+def clear_trade_storage_by_name(name: str):
+    """Delete all stored trades with the given test name."""
+    delete_trades_by_field(symbol="ES", field="name", value=name)
+    stored = get_trades_by_field(field="name", value=name)
+    assert len(stored) == 0
+
+
+@pytest.fixture
+def cleanup_trade_storage():
+    """Register Trade test names for pre- and post-test cleanup.
+
+    The returned helper records each supplied name, immediately clears any
+    matching Trades before the test continues, then clears the full
+    registered set again during fixture teardown.
+    """
+    names = set()
+
+    def register(*new_names):
+        for name in new_names:
+            names.add(name)
+        for name in sorted(names):
+            clear_trade_storage_by_name(name)
+
+    yield register
+
+    for name in sorted(names):
+        clear_trade_storage_by_name(name)
+
+
 def test_Trade_confirm_observed_results():
     """Validate Trade calculations against live Apex account results.
 
@@ -1110,12 +1139,13 @@ def test_Trade_closed_intraday():
 
 
 @pytest.mark.storage
-def test_Trade_store_retrieve_delete():
+def test_Trade_store_retrieve_delete(cleanup_trade_storage):
     """Verify Trade storage, retrieval, and deletion.
 
     Storage Usage: store_trades, get_trades_by_field,
     delete_trades_by_field.
     """
+    cleanup_trade_storage("DELETEME-TEST")
     # First make sure there are no DELETEME trades in storage currently
     delete_trades_by_field(symbol="ES", field="name",
                            value="DELETEME-TEST")
@@ -1138,11 +1168,12 @@ def test_Trade_store_retrieve_delete():
 
 
 @pytest.mark.storage
-def test_delete_trades():
+def test_delete_trades(cleanup_trade_storage):
     """Verify delete_trades() using Trade list.
 
     Storage Usage: delete_trades.
     """
+    cleanup_trade_storage("DELETEME-TEST-LIST")
     # First make sure there are no DELETEME trades in storage currently
     delete_trades_by_field(symbol="ES", field="name",
                            value="DELETEME-TEST-LIST")
