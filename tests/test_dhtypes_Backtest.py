@@ -854,10 +854,12 @@ def test_delete_backtests():
     # Delete all backtests, tradeseries, and trades created in this test
     delete_backtests_by_field(field="bt_id",
                               value=test_name_1,
+                              symbol="ES",
                               include_tradeseries=True,
                               include_trades=True)
     delete_backtests_by_field(field="bt_id",
                               value=test_name_2,
+                              symbol="ES",
                               include_tradeseries=True,
                               include_trades=True)
     # Confirm they were deleted

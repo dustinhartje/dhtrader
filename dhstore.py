@@ -1376,7 +1376,7 @@ def review_candles(timeframe: str,
             dt_actual.append(dt_as_str(c.c_datetime))
         start_dt = dt_from_epoch(start_epoch)
         end_dt = dt_from_epoch(end_epoch)
-        log_say(f"Fetching all events from storage for {symbol} in the "
+        log_say(f"Fetching all events from storage for {symbol.ticker} in the "
                 "target datetime range")
         all_events = get_events(start_epoch=start_epoch,
                                 end_epoch=end_epoch,
