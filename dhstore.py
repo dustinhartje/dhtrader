@@ -14,7 +14,7 @@ import json
 import progressbar
 from collections import Counter, defaultdict
 from datetime import datetime as dt
-from datetime import timedelta
+from datetime import date, timedelta
 from copy import deepcopy
 import logging
 from pathlib import Path
@@ -24,7 +24,7 @@ from .dhtypes import (
 from .dhcommon import (
     dt_as_str, dt_as_dt, dt_from_epoch, dt_to_epoch, valid_timeframe,
     this_candle_start, summarize_candles, log_say, sort_dict,
-    rangify_candle_times, expected_candle_datetimes,
+    rangify_candle_times, expected_candle_datetimes, MARKET_ERAS,
     ProgBar, OperationTimer)
 from . import dhmongo as dhm
 
@@ -1369,29 +1369,8 @@ def review_candles(timeframe: str,
                               end_epoch=end_epoch,
                               )
 
-        # Perform a basic check on the times list vs expected for the timeframe
-        log_say("Summarizing retrieved candles")
-        breakdown = summarize_candles(timeframe=timeframe,
-                                      symbol=symbol,
-                                      candles=candles,)
-        status = "OK"
-        err_msg = ""
-        summary_data = breakdown["summary_data"]
-        summary_expected = breakdown["summary_expected"]
-        if summary_expected is not None:
-            for k, v in summary_expected.items():
-                if summary_data[k] != v:
-                    status = "ERROR"
-                    if err_msg != "":
-                        err_msg += " || "
-                    err_msg += f"{k} summary data does not match expected: "
-                    err_msg += f"ACTUAL {summary_data[k]} != EXPECTED {v}"
-        else:
-            err_msg = f"Expected data not defined for timeframe: {timeframe}"
-
-        # Perform a detailed analysis of actual vs expected timestamps
-        log_say("Performing detailed analysis of actual vs expected "
-                "candle datetimes")
+        # Build expected candle datetimes first so summarize_candles can
+        # derive expected minutes/hours/times dynamically (era-aware)
         dt_actual = []
         for c in candles:
             dt_actual.append(dt_as_str(c.c_datetime))
@@ -1413,8 +1392,80 @@ def review_candles(timeframe: str,
                                                 events=all_events,
                                                 show_progress=show_progress,
                                                 )
-        log_say("Finished calculating expected datetimes, starting "
-                "comparison of actual (stored) vs expected candles")
+
+        # Perform a per-era summary check on times vs expected
+        log_say("Summarizing retrieved candles per market era")
+        era_summaries = []
+        status = "OK"
+        err_msg = ""
+        actual_start_date = start_dt.date()
+        actual_end_date = end_dt.date()
+        for i, era in enumerate(MARKET_ERAS):
+            era_start = era["start_date"]
+            if i + 1 < len(MARKET_ERAS):
+                era_end = (MARKET_ERAS[i + 1]["start_date"]
+                           - timedelta(days=1))
+            else:
+                era_end = actual_end_date
+            slice_start = max(era_start, actual_start_date)
+            slice_end = min(era_end, actual_end_date)
+            if slice_start > slice_end:
+                continue
+            era_candles = [
+                c for c in candles
+                if (slice_start
+                    <= dt_as_dt(c.c_datetime).date()
+                    <= slice_end)
+            ]
+            if not era_candles:
+                continue
+            era_expected_dts = [
+                d for d in dt_expected
+                if (slice_start
+                    <= dt_as_dt(d).date()
+                    <= slice_end)
+            ]
+            era_breakdown = summarize_candles(
+                timeframe=timeframe,
+                symbol=symbol,
+                candles=era_candles,
+                expected_dts=era_expected_dts,
+            )
+            era_name = era["name"]
+            era_sd = era_breakdown["summary_data"]
+            era_se = era_breakdown["summary_expected"]
+            era_errors = []
+            if era_se is not None:
+                for k, v in era_se.items():
+                    if era_sd[k] != v:
+                        era_errors.append(
+                            f"{k} ACTUAL {era_sd[k]} "
+                            f"!= EXPECTED {v}"
+                        )
+            else:
+                era_errors.append(
+                    "Expected data not defined for "
+                    f"timeframe: {timeframe}"
+                )
+            era_summaries.append({
+                "era_name": era_name,
+                "summary_data": era_sd,
+                "summary_expected": era_se,
+                "errors": era_errors,
+            })
+            if era_errors:
+                status = "ERROR"
+                era_errs_str = " || ".join(era_errors)
+                if err_msg:
+                    err_msg += " || "
+                err_msg += f"[{era_name}] {era_errs_str}"
+        summary_data = era_summaries
+        summary_expected = None
+
+        # Perform a detailed analysis of actual vs expected timestamps
+        log_say("Performing detailed analysis of actual vs expected "
+                "candle datetimes")
+        log_say("Comparing actual (stored) vs expected candles")
 
         # Convert expected to strings for comparison and review
         dt_expected_str = []
@@ -1504,7 +1555,6 @@ def review_candles(timeframe: str,
         log_say("Skipping integrity checks and gap analysis because "
                 "check_integrity=False")
         integrity_data = None
-        breakdown = None
         summary_data = None
         summary_expected = None
         gap_analysis = None
