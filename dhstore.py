@@ -265,17 +265,30 @@ def review_trades(symbol: str = "ES",
         time_full = OperationTimer(
             name="backtests_integrity check full run timer")
 
-        # Get all TradeSeries in storage to loop through
+        # Get all TradeSeries in storage to check for orphaned test objects
         if bt_id is None and ts_id is None:
             all_ts = get_all_tradeseries()
-        elif ts_id is None:
+        elif bt_id is not None and ts_id is None:
             all_ts = get_tradeseries_by_field(field="bt_id",
                                               value=bt_id,
                                               include_trades=False)
-        elif bt_id is None:
+        elif bt_id is None and ts_id is not None:
             all_ts = get_tradeseries_by_field(field="ts_id",
                                               value=ts_id,
                                               include_trades=False)
+        else:
+            raise ValueError("Integrity check supports bt_id or ts_id, not "
+                             f"both!  We got ts_id={ts_id} bt_id={bt_id}")
+
+        # Get Trades directly from storage for integrity checks
+        if bt_id is None and ts_id is None:
+            all_trades = get_all_trades()
+        elif bt_id is not None and ts_id is None:
+            all_trades = get_trades_by_field(field="bt_id",
+                                             value=bt_id)
+        elif bt_id is None and ts_id is not None:
+            all_trades = get_trades_by_field(field="ts_id",
+                                             value=ts_id)
         else:
             raise ValueError("Integrity check supports bt_id or ts_id, not "
                              f"both!  We got ts_id={ts_id} bt_id={bt_id}")
@@ -339,7 +352,7 @@ def review_trades(symbol: str = "ES",
         log_say(f"Cached {len(event_start_times)} unique event "
                 f"start times")
 
-        # Start a progress bar
+        # Start a progress bar for TradeSeries orphan checks
         bar_total = len(all_ts)
         bar_eta = progressbar.ETA(format_not_started='--:--:--',
                                   format_finished='Time: %(elapsed)8s',
@@ -358,79 +371,99 @@ def review_trades(symbol: str = "ES",
                 widgets=widgets,
                 max_value=bar_total).start()
 
-        # Loop through all TradeSeries, checking for duplicates and multidays
+        # Loop through all TradeSeries, checking orphaned test objects only
         for i, x in enumerate(all_ts):
-            log.info("Checking stored Backtests and child objects integrity "
+            log.info("Checking stored TradeSeries integrity "
                      f"for ts_id={x.ts_id}")
             bar.update(i)
-            unique = set()
-            ts = deepcopy(x)
-            ts.load_trades()
             append_orphaned(object_type="tradeseries",
-                            name=ts.name,
-                            this_ts_id=ts.ts_id,
-                            this_bt_id=ts.bt_id,
+                            name=x.name,
+                            this_ts_id=x.ts_id,
+                            this_bt_id=x.bt_id,
                             ignore=orphan_ok)
+
+        bar.finish()
+
+        # Start a progress bar for Trade integrity checks
+        bar_total = len(all_trades)
+        bar_label = (f"%(value)d of {bar_total} Trades checked in "
+                     "%(elapsed)s ")
+        widgets = [progressbar.Percentage(),
+                   progressbar.Bar(),
+                   progressbar.FormatLabel(bar_label),
+                   bar_eta,
+                   ]
+        bar = progressbar.ProgressBar(
+                widgets=widgets,
+                max_value=bar_total).start()
+
+        # Loop through Trades for orphan, duplicate, multiday, and
+        # autoclosed-event integrity checks
+        unique = set()
+        for i, t in enumerate(all_trades):
+            bar.update(i)
+            total_trades += 1
+            append_orphaned(object_type="trade",
+                            name=t.name,
+                            this_ts_id=t.ts_id,
+                            this_bt_id=t.bt_id,
+                            ignore=orphan_ok)
+
+            this = (t.ts_id, t.open_dt)
+            if this in unique:
+                duplicates.append(this)
+                log.warning(f"Duplicate Trades found in storage: {this}")
+            else:
+                unique.add(this)
+                unique_trades += 1
+
             # Determine if this ts_id allows multiday trades
             check_multi = True
             for allowed in multi_ok:
-                if allowed in ts.ts_id:
+                if allowed in t.ts_id:
                     check_multi = False
                     break
-            # Check for duplicate Trades w/matching ts_id and open_dt values
-            for t in ts.trades:
-                total_trades += 1
-                append_orphaned(object_type="trade",
-                                name=t.name,
-                                this_ts_id=t.ts_id,
-                                this_bt_id=t.bt_id,
-                                ignore=orphan_ok)
-                this = (t.ts_id, t.open_dt)
-                if this in unique:
-                    duplicates.append(this)
-                    log.warning(f"Duplicate Trades found in storage: {this}")
-                else:
-                    unique.add(this)
-                    unique_trades += 1
-                if check_multi:
-                    # First flag as unclosed if no close_dt set
-                    if t.close_dt is None:
-                        this = {"issue_type": "unclosed_trade",
-                                "ts_id": t.ts_id,
-                                "open_dt": t.open_dt,
-                                "close_dt": t.close_dt}
-                        log.warning("Unclosed trade found in storage: "
-                                    f"{this}")
-                        unclosed_trades.append(this)
-                    # Then check for multiday trades
-                    elif not t.closed_intraday():
-                        this = {"ts_id": t.ts_id,
-                                "open_dt": t.open_dt,
-                                "close_dt": t.close_dt}
-                        log.warning("Unapproved multiday trade found in "
-                                    f"storage: {this}")
-                        multidays.append(this)
-                # Check autoclosed trades for integrity
-                if ("autoclosed" in t.tags
-                        and t.close_dt is not None
-                        and t.close_time != "15:55:00"):
-                    # Calculate expected event start time (5 min after close)
-                    close_dt_obj = dt_as_dt(t.close_dt)
-                    expected_event_start = close_dt_obj + timedelta(
-                        minutes=5)
-                    expected_start_str = dt_as_str(
-                        expected_event_start)
-                    # Check if expected event start time exists in cached
-                    # events
-                    if expected_start_str not in event_start_times:
-                        # No matching event found, record integrity issue
-                        if t.close_dt not in autoclosed_issues:
-                            autoclosed_issues[t.close_dt] = 0
-                        autoclosed_issues[t.close_dt] += 1
-                        log.warning(
-                            f"Autoclosed trade integrity issue: "
-                            f"close_dt={t.close_dt}, expected event at "
-                            f"{expected_start_str} not found")
+
+            if check_multi:
+                # First flag as unclosed if no close_dt set
+                if t.close_dt is None:
+                    this = {"issue_type": "unclosed_trade",
+                            "ts_id": t.ts_id,
+                            "open_dt": t.open_dt,
+                            "close_dt": t.close_dt}
+                    log.warning("Unclosed trade found in storage: "
+                                f"{this}")
+                    unclosed_trades.append(this)
+                # Then check for multiday trades
+                elif not t.closed_intraday():
+                    this = {"ts_id": t.ts_id,
+                            "open_dt": t.open_dt,
+                            "close_dt": t.close_dt}
+                    log.warning("Unapproved multiday trade found in "
+                                f"storage: {this}")
+                    multidays.append(this)
+
+            # Check autoclosed trades for integrity
+            if ("autoclosed" in t.tags
+                    and t.close_dt is not None
+                    and t.close_time != "15:55:00"):
+                # Calculate expected event start time (5 min after close)
+                close_dt_obj = dt_as_dt(t.close_dt)
+                expected_event_start = close_dt_obj + timedelta(
+                    minutes=5)
+                expected_start_str = dt_as_str(
+                    expected_event_start)
+                # Check if expected event start time exists in cached
+                # events
+                if expected_start_str not in event_start_times:
+                    # No matching event found, record integrity issue
+                    if t.close_dt not in autoclosed_issues:
+                        autoclosed_issues[t.close_dt] = 0
+                    autoclosed_issues[t.close_dt] += 1
+                    log.warning(
+                        f"Autoclosed trade integrity issue: "
+                        f"close_dt={t.close_dt}, expected event at "
+                        f"{expected_start_str} not found")
         bar.finish()
 
         # Output findings
@@ -1687,7 +1720,8 @@ def review_candles(timeframe: str,
             status = "ERROR"
             if err_msg != "":
                 err_msg += " || "
-            err_msg += f"{unexpected_candles_count} unexpected in STORED "
+            err_msg += (f"{unexpected_candles_count} unexpected candles "
+                        "in STORED")
         integrity_data = {"status": status, "err_msg": err_msg}
     else:
         log_say("Skipping integrity checks and gap analysis because "
