@@ -1478,9 +1478,9 @@ def review_candles(timeframe: str,
 
         # Build expected candle datetimes first so summarize_candles can
         # derive expected minutes/hours/times dynamically (era-aware)
-        dt_actual = []
+        dt_stored = []
         for c in candles:
-            dt_actual.append(dt_as_str(c.c_datetime))
+            dt_stored.append(dt_as_str(c.c_datetime))
         start_dt = dt_from_epoch(start_epoch)
         end_dt = dt_from_epoch(end_epoch)
         log_say(f"Fetching all events from storage for {symbol.ticker} in the "
@@ -1505,19 +1505,21 @@ def review_candles(timeframe: str,
         era_summaries = []
         status = "OK"
         err_msg = ""
-        actual_start_date = start_dt.date()
-        actual_end_date = end_dt.date()
+
+        stored_start_date = start_dt.date()
+        stored_end_date = end_dt.date()
         for i, era in enumerate(MARKET_ERAS):
             era_start = era["start_date"]
             if i + 1 < len(MARKET_ERAS):
                 era_end = (MARKET_ERAS[i + 1]["start_date"]
                            - timedelta(days=1))
             else:
-                era_end = actual_end_date
-            slice_start = max(era_start, actual_start_date)
-            slice_end = min(era_end, actual_end_date)
+                era_end = stored_end_date
+            slice_start = max(era_start, stored_start_date)
+            slice_end = min(era_end, stored_end_date)
             if slice_start > slice_end:
                 continue
+            # Filter candles and expected datetimes to the current era
             era_candles = [
                 c for c in candles
                 if (slice_start
@@ -1532,6 +1534,7 @@ def review_candles(timeframe: str,
                     <= dt_as_dt(d).date()
                     <= slice_end)
             ]
+            # Summarize the era's candles to get counts and lists
             era_breakdown = summarize_candles(
                 timeframe=timeframe,
                 symbol=symbol,
@@ -1543,23 +1546,51 @@ def review_candles(timeframe: str,
             era_se = era_breakdown["summary_expected"]
             era_errors = []
             if era_se is not None:
+                # Compare stored vs expected for each key in summary_data
                 for k, v in era_se.items():
                     if era_sd[k] != v:
-                        era_errors.append(
-                            f"{k} ACTUAL {era_sd[k]} "
-                            f"!= EXPECTED {v}"
-                        )
+                        stored_vals = era_sd[k]
+                        expected_vals = v
+                        # For list-type fields, compute set diffs and show
+                        # both missing from STORED and unexpected in STORED
+                        if (
+                            isinstance(stored_vals, list)
+                            and isinstance(expected_vals, list)
+                        ):
+                            missing_from_stored = sorted(
+                                set(expected_vals) - set(stored_vals)
+                            )
+                            unexpected_in_stored = sorted(
+                                set(stored_vals) - set(expected_vals)
+                            )
+                            era_errors.append(
+                                f"{k}: missing from STORED="
+                                f"{len(missing_from_stored)} "
+                                f"{missing_from_stored}; "
+                                f"unexpected in STORED="
+                                f"{len(unexpected_in_stored)} "
+                                f"{unexpected_in_stored}"
+                            )
+                        else:
+                            # For non-list fields, show stored vs expected
+                            era_errors.append(
+                                f"{k}: STORED={stored_vals} "
+                                f"EXPECTED={expected_vals}"
+                            )
             else:
+                # No expected data defined for this timeframe
                 era_errors.append(
                     "Expected data not defined for "
                     f"timeframe: {timeframe}"
                 )
+            # Store era summary with summary data and any errors found
             era_summaries.append({
                 "era_name": era_name,
                 "summary_data": era_sd,
                 "summary_expected": era_se,
                 "errors": era_errors,
             })
+            # Accumulate errors into the overall err_msg for reporting
             if era_errors:
                 status = "ERROR"
                 era_errs_str = " || ".join(era_errors)
@@ -1569,29 +1600,29 @@ def review_candles(timeframe: str,
         summary_data = era_summaries
         summary_expected = None
 
-        # Perform a detailed analysis of actual vs expected timestamps
-        log_say("Performing detailed analysis of actual vs expected "
+        # Perform a detailed analysis of stored vs expected timestamps
+        log_say("Performing detailed analysis of stored vs expected "
                 "candle datetimes")
-        log_say("Comparing actual (stored) vs expected candles")
+        log_say("Comparing stored vs expected candles")
 
         # Convert expected to strings for comparison and review
         dt_expected_str = []
         for d in dt_expected:
             dt_expected_str.append(dt_as_str(d))
         # Ensure we don't have any timestamp duplications
-        set_actual = set(dt_actual)
+        set_stored = set(dt_stored)
         set_expected = set(dt_expected_str)
-        if len(dt_actual) != len(set_actual):
-            counters = Counter(dt_actual)
+        if len(dt_stored) != len(set_stored):
+            counters = Counter(dt_stored)
             dupes = []
             for k, v in counters.items():
                 if v > 1:
                     dupes.append({k: v})
-            raise Exception(f"len(dt_actual) {len(dt_actual)} != "
-                            f"len(set(actual) {len(set_actual)}.  Likely "
+            raise Exception(f"len(dt_stored) {len(dt_stored)} != "
+                            f"len(set(stored) {len(set_stored)}.  Likely "
                             "there are duplicates in stored candle data "
                             "which will corrupt analysis results.  Duplicates "
-                            f"found in dt_actual:\n\n{dupes}"
+                            f"found in dt_stored:\n\n{dupes}"
                             )
         if len(dt_expected_str) != len(set_expected):
             counters = Counter(dt_expected_str)
@@ -1606,12 +1637,12 @@ def review_candles(timeframe: str,
                             f"found in dt_expected:\n\n{dupes}"
                             )
 
-        # Check for differences between actual and expected candle sets
+        # Check for differences between stored and expected candle sets
         # and parse results into a few helpful views
-        missing_from_actual = sorted(set_expected - set_actual)
-        missing_candles_count = len(missing_from_actual)
+        missing_from_stored = sorted(set_expected - set_stored)
+        missing_candles_count = len(missing_from_stored)
         missing_candles_by_date = defaultdict(list)
-        for c in missing_from_actual:
+        for c in missing_from_stored:
             k = c.split(' ')[0]
             v = c.split(' ')[1]
             missing_candles_by_date[k].append(v)
@@ -1620,30 +1651,30 @@ def review_candles(timeframe: str,
         for k, v in missing_candles_by_date.items():
             missing_count_by_date[k] = len(v)
         missing_candles_by_hour = defaultdict(list)
-        for c in missing_from_actual:
+        for c in missing_from_stored:
             k = c.split(' ')[1].split(':')[0]
             missing_candles_by_hour[k].append(c)
         missing_candles_by_hour = sort_dict(dict(missing_candles_by_hour))
         missing_count_by_hour = {}
         for k, v in missing_candles_by_hour.items():
             missing_count_by_hour[k] = len(v)
-        unexpected_in_actual = sorted(set_actual - set_expected)
-        unexpected_candles_count = len(unexpected_in_actual)
+        unexpected_in_stored = sorted(set_stored - set_expected)
+        unexpected_candles_count = len(unexpected_in_stored)
         # Log individual candle issues at DEBUG level
-        for c in missing_from_actual:
+        for c in missing_from_stored:
             log.debug(f"{symbol} {timeframe} MISSING: {c}")
-        for c in unexpected_in_actual:
+        for c in unexpected_in_stored:
             log.debug(f"{symbol} {timeframe} UNEXPECTED: {c}")
         # Create human digestible ranges
-        missing_ranges = rangify_candle_times(times=missing_from_actual,
+        missing_ranges = rangify_candle_times(times=missing_from_stored,
                                               timeframe=timeframe)
-        unexpected_ranges = rangify_candle_times(times=unexpected_in_actual,
+        unexpected_ranges = rangify_candle_times(times=unexpected_in_stored,
                                                  timeframe=timeframe,
                                                  )
         gap_analysis = {"missing_candles_count": missing_candles_count,
                         "unexpected_candles_count": unexpected_candles_count,
-                        "missing_candles": missing_from_actual,
-                        "unexpected_candles": unexpected_in_actual,
+                        "missing_candles": missing_from_stored,
+                        "unexpected_candles": unexpected_in_stored,
                         "missing_candles_ranges": missing_ranges,
                         "unexpected_candles_ranges": unexpected_ranges,
                         }
@@ -1651,12 +1682,12 @@ def review_candles(timeframe: str,
             status = "ERROR"
             if err_msg != "":
                 err_msg += " || "
-            err_msg += f"{missing_candles_count} expected candles missing"
+            err_msg += f"{missing_candles_count} missing from STORED "
         if unexpected_candles_count > 0:
             status = "ERROR"
             if err_msg != "":
-                err_msg += "\n"
-            err_msg += f"{unexpected_candles_count} unexpected candles found"
+                err_msg += " || "
+            err_msg += f"{unexpected_candles_count} unexpected in STORED "
         integrity_data = {"status": status, "err_msg": err_msg}
     else:
         log_say("Skipping integrity checks and gap analysis because "
