@@ -779,7 +779,9 @@ def hide_Indicator_storage_and_retrieval():
 # #############################################################################
 
 def test_IndicatorDataPoint_create_and_verify_pretty():
-    """Verify IndicatorDataPoint creation and pretty() output."""
+    """Verify IndicatorDataPoint creation, attributes, epoch, and pretty."""
+    from dhtrader import dt_to_epoch
+    # Creation and basic attributes
     dp = IndicatorDataPoint(
         dt="2025-01-15 10:30:00",
         value=5123.75,
@@ -789,33 +791,21 @@ def test_IndicatorDataPoint_create_and_verify_pretty():
     assert dp.dt == "2025-01-15 10:30:00"
     assert dp.value == 5123.75
     assert dp.ind_id == "ES_eth_15m_EMA_close_l9_s2"
+    # Epoch is auto-calculated when not provided
     assert isinstance(dp.epoch, int)
-    p = dp.pretty()
-    assert isinstance(p, str)
-    assert len(p.splitlines()) == 6
-
-
-def test_IndicatorDataPoint_epoch_auto_calculated():
-    """Verify IndicatorDataPoint calculates epoch when not provided."""
-    from dhtrader import dt_to_epoch
-    dp = IndicatorDataPoint(
-        dt="2025-01-15 10:30:00",
-        value=100.0,
-        ind_id="test_ind",
-    )
-    expected = dt_to_epoch("2025-01-15 10:30:00")
-    assert dp.epoch == expected
-
-
-def test_IndicatorDataPoint_epoch_explicit():
-    """Verify IndicatorDataPoint uses explicit epoch when provided."""
-    dp = IndicatorDataPoint(
+    assert dp.epoch == dt_to_epoch("2025-01-15 10:30:00")
+    # Explicit epoch overrides auto-calculation
+    dp_explicit = IndicatorDataPoint(
         dt="2025-01-15 10:30:00",
         value=100.0,
         ind_id="test_ind",
         epoch=9999,
     )
-    assert dp.epoch == 9999
+    assert dp_explicit.epoch == 9999
+    # pretty() returns indented JSON string with expected line count
+    p = dp.pretty()
+    assert isinstance(p, str)
+    assert len(p.splitlines()) == 6
 
 
 def test_IndicatorDataPoint_to_clean_dict():
@@ -833,8 +823,8 @@ def test_IndicatorDataPoint_to_clean_dict():
     assert "epoch" in d
 
 
-def test_IndicatorDataPoint_equality_equal():
-    """Verify IndicatorDataPoint __eq__ returns True for identical points."""
+def test_IndicatorDataPoint_eq_ne():
+    """Verify IndicatorDataPoint __eq__ and __ne__ compare by field values."""
     dp1 = IndicatorDataPoint(
         dt="2025-01-15 10:30:00",
         value=5000.0,
@@ -845,50 +835,27 @@ def test_IndicatorDataPoint_equality_equal():
         value=5000.0,
         ind_id="test_ind",
     )
+    # Identical datapoints are equal
     assert dp1 == dp2
     assert not (dp1 != dp2)
-
-
-def test_IndicatorDataPoint_equality_different_value():
-    """Verify IndicatorDataPoint __eq__ returns False for different values."""
-    dp1 = IndicatorDataPoint(
-        dt="2025-01-15 10:30:00",
-        value=5000.0,
-        ind_id="test_ind",
-    )
-    dp2 = IndicatorDataPoint(
+    # Different value is not equal
+    dp_diff_val = IndicatorDataPoint(
         dt="2025-01-15 10:30:00",
         value=5001.0,
         ind_id="test_ind",
     )
-    assert dp1 != dp2
-    assert not (dp1 == dp2)
-
-
-def test_IndicatorDataPoint_equality_different_dt():
-    """Verify IndicatorDataPoint __eq__ returns False for different dt."""
-    dp1 = IndicatorDataPoint(
-        dt="2025-01-15 10:30:00",
-        value=5000.0,
-        ind_id="test_ind",
-    )
-    dp2 = IndicatorDataPoint(
+    assert dp1 != dp_diff_val
+    assert not (dp1 == dp_diff_val)
+    # Different dt is not equal
+    dp_diff_dt = IndicatorDataPoint(
         dt="2025-01-15 11:00:00",
         value=5000.0,
         ind_id="test_ind",
     )
-    assert dp1 != dp2
-
-
-def test_IndicatorDataPoint_equality_not_equal_to_empty_list():
-    """Verify IndicatorDataPoint __eq__ returns False when compared to list."""
-    dp = IndicatorDataPoint(
-        dt="2025-01-15 10:30:00",
-        value=5000.0,
-        ind_id="test_ind",
-    )
-    assert not (dp == [])
-    assert dp != []
+    assert dp1 != dp_diff_dt
+    # Comparison to an empty list returns False (not equal)
+    assert not (dp1 == [])
+    assert dp1 != []
 
 
 def test_IndicatorDataPoint_str_and_repr():

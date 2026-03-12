@@ -13,35 +13,24 @@ from dhtrader.dhmongo import (
 from dhtrader.dhcommon import dt_to_epoch
 
 
-# #############################################################################
-# start_progbar / update_progbar / finish_progbar
-# These helper functions do not require MongoDB connections.
-# #############################################################################
-
-def test_start_progbar_returns_none_when_not_shown():
-    """Verify start_progbar returns None when show_progress is False."""
+def test_start_progbar():
+    """Verify start_progbar returns None when progress display is disabled."""
+    # Returns None when show_progress is False
     result = start_progbar(show_progress=False, total=10, desc="test")
     assert result is None
+    # Returns None when total is 0
+    result2 = start_progbar(show_progress=True, total=0, desc="test")
+    assert result2 is None
 
 
-def test_start_progbar_returns_none_when_total_zero():
-    """Verify start_progbar returns None when total is 0."""
-    result = start_progbar(show_progress=True, total=0, desc="test")
-    assert result is None
-
-
-def test_update_progbar_with_none_does_not_raise():
-    """Verify update_progbar handles None pbar without raising."""
+def test_update_and_finish_progbar_with_none():
+    """Verify update_progbar and finish_progbar handle None pbar gracefully."""
     update_progbar(pbar=None, index=1, total=10)
-
-
-def test_finish_progbar_with_none_does_not_raise():
-    """Verify finish_progbar handles None pbar without raising."""
     finish_progbar(pbar=None)
 
 
 # #############################################################################
-# MongoDB-dependent functions (require @pytest.mark.storage)
+# Storage-dependent tests
 # #############################################################################
 
 @pytest.mark.storage

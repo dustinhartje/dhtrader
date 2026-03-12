@@ -35,101 +35,87 @@ def test_Candle_create_and_verify_pretty():
 
 def test_Candle_calculated_attributes(candle):
     """Verify Candle computed attributes are correct on creation."""
+    # Size, body, and wick calculations
     assert candle.c_size == abs(candle.c_high - candle.c_low)
     assert candle.c_body_size == abs(candle.c_open - candle.c_close)
     upper = candle.c_high - max(candle.c_open, candle.c_close)
     assert candle.c_upper_wick_size == upper
     lower = min(candle.c_open, candle.c_close) - candle.c_low
     assert candle.c_lower_wick_size == lower
+    # Bullish when close > open
     assert candle.c_direction == "bullish"
+    # Bearish when close < open
+    bearish = Candle(c_datetime="2025-01-02 12:00:00",
+                     c_timeframe="1m",
+                     c_open=5005,
+                     c_high=5007.75,
+                     c_low=4995.5,
+                     c_close=5002,
+                     c_volume=1501,
+                     c_symbol="ES",
+                     )
+    assert bearish.c_direction == "bearish"
+    # Unchanged when close == open
+    unchanged = Candle(c_datetime="2025-01-02 12:00:00",
+                       c_timeframe="1m",
+                       c_open=5002,
+                       c_high=5007.75,
+                       c_low=4995.5,
+                       c_close=5002,
+                       c_volume=1501,
+                       c_symbol="ES",
+                       )
+    assert unchanged.c_direction == "unchanged"
+    # Zero-size candle has None percentages
+    zero = Candle(c_datetime="2025-01-02 12:00:00",
+                  c_timeframe="1m",
+                  c_open=5000,
+                  c_high=5000,
+                  c_low=5000,
+                  c_close=5000,
+                  c_volume=0,
+                  c_symbol="ES",
+                  )
+    assert zero.c_body_perc is None
+    assert zero.c_upper_wick_perc is None
+    assert zero.c_lower_wick_perc is None
+    # Date, time, epoch, and end_datetime are set correctly
+    assert candle.c_date == "2025-01-02"
+    assert candle.c_time == "12:00:00"
+    assert isinstance(candle.c_epoch, int)
+    assert candle.c_end_datetime == "2025-01-02 12:01:00"
 
 
-def test_Candle_direction_bearish():
-    """Verify Candle.c_direction is bearish when close < open."""
-    c = Candle(c_datetime="2025-01-02 12:00:00",
-               c_timeframe="1m",
-               c_open=5005,
-               c_high=5007.75,
-               c_low=4995.5,
-               c_close=5002,
-               c_volume=1501,
-               c_symbol="ES",
-               )
-    assert c.c_direction == "bearish"
-
-
-def test_Candle_direction_unchanged():
-    """Verify Candle.c_direction is unchanged when open equals close."""
-    c = Candle(c_datetime="2025-01-02 12:00:00",
-               c_timeframe="1m",
-               c_open=5002,
-               c_high=5007.75,
-               c_low=4995.5,
-               c_close=5002,
-               c_volume=1501,
-               c_symbol="ES",
-               )
-    assert c.c_direction == "unchanged"
-
-
-def test_Candle_zero_size_percs_are_none():
-    """Verify Candle body/wick percentages are None when candle size is 0."""
-    c = Candle(c_datetime="2025-01-02 12:00:00",
-               c_timeframe="1m",
-               c_open=5000,
-               c_high=5000,
-               c_low=5000,
-               c_close=5000,
-               c_volume=0,
-               c_symbol="ES",
-               )
-    assert c.c_body_perc is None
-    assert c.c_upper_wick_perc is None
-    assert c.c_lower_wick_perc is None
-
-
-def test_Candle_contains_price_true(candle):
-    """Verify contains_price returns True for price within high/low range."""
+def test_Candle_contains_price(candle):
+    """Verify contains_price returns True within range, False outside."""
+    # Prices within and at high/low boundaries are True
     assert candle.contains_price(5000)
     assert candle.contains_price(candle.c_low)
     assert candle.contains_price(candle.c_high)
     assert candle.contains_price(5003)
-
-
-def test_Candle_contains_price_false(candle):
-    """Verify contains_price returns False for price outside high/low range."""
+    # Prices outside high/low boundaries are False
     assert not candle.contains_price(candle.c_high + 0.01)
     assert not candle.contains_price(candle.c_low - 0.01)
     assert not candle.contains_price(0)
     assert not candle.contains_price(9999)
 
 
-def test_Candle_contains_datetime_true(candle):
-    """Verify contains_datetime returns True for dt inside candle window."""
-    # c_datetime is 2025-01-02 12:00:00, window is (open, end_datetime)
+def test_Candle_contains_datetime(candle):
+    """Verify contains_datetime uses exclusive start/end boundaries."""
+    # A datetime strictly inside the candle window returns True
+    # (c_datetime is 2025-01-02 12:00:00, window is open before end)
     assert candle.contains_datetime("2025-01-02 12:00:30")
-
-
-def test_Candle_contains_datetime_false_at_start(candle):
-    """Verify contains_datetime returns False at candle start time (exclusive).
-    """
+    # At candle start is False (exclusive lower bound)
     assert not candle.contains_datetime("2025-01-02 12:00:00")
-
-
-def test_Candle_contains_datetime_false_at_end(candle):
-    """Verify contains_datetime returns False at candle end time (exclusive).
-    """
-    # For 1m candle starting at 12:00:00, end is 12:01:00
+    # At candle end (12:01:00 for 1m) is False (exclusive upper bound)
     assert not candle.contains_datetime("2025-01-02 12:01:00")
-
-
-def test_Candle_contains_datetime_false_before(candle):
-    """Verify contains_datetime returns False for dt before candle start."""
+    # Before candle start is False
     assert not candle.contains_datetime("2025-01-02 11:59:00")
 
 
-def test_Candle_equality_equal(candle):
-    """Verify Candle __eq__ returns True for identical candles."""
+def test_Candle_eq_ne(candle):
+    """Verify Candle __eq__ and __ne__ compare candles by field values."""
+    # Identical candle is equal
     other = Candle(c_datetime="2025-01-02 12:00:00",
                    c_timeframe="1m",
                    c_open=5000,
@@ -140,34 +126,29 @@ def test_Candle_equality_equal(candle):
                    c_symbol="ES",
                    )
     assert candle == other
-
-
-def test_Candle_equality_not_equal_price(candle):
-    """Verify Candle __eq__ returns False when prices differ."""
-    other = Candle(c_datetime="2025-01-02 12:00:00",
-                   c_timeframe="1m",
-                   c_open=5001,
-                   c_high=5007.75,
-                   c_low=4995.5,
-                   c_close=5002,
-                   c_volume=1501,
-                   c_symbol="ES",
-                   )
-    assert candle != other
-
-
-def test_Candle_equality_not_equal_datetime(candle):
-    """Verify Candle __eq__ returns False when datetimes differ."""
-    other = Candle(c_datetime="2025-01-02 12:01:00",
-                   c_timeframe="1m",
-                   c_open=5000,
-                   c_high=5007.75,
-                   c_low=4995.5,
-                   c_close=5002,
-                   c_volume=1501,
-                   c_symbol="ES",
-                   )
-    assert candle != other
+    assert not (candle != other)
+    # Different open price is not equal
+    diff_price = Candle(c_datetime="2025-01-02 12:00:00",
+                        c_timeframe="1m",
+                        c_open=5001,
+                        c_high=5007.75,
+                        c_low=4995.5,
+                        c_close=5002,
+                        c_volume=1501,
+                        c_symbol="ES",
+                        )
+    assert candle != diff_price
+    # Different datetime is not equal
+    diff_dt = Candle(c_datetime="2025-01-02 12:01:00",
+                     c_timeframe="1m",
+                     c_open=5000,
+                     c_high=5007.75,
+                     c_low=4995.5,
+                     c_close=5002,
+                     c_volume=1501,
+                     c_symbol="ES",
+                     )
+    assert candle != diff_dt
 
 
 def test_Candle_to_clean_dict(candle):
@@ -201,19 +182,3 @@ def test_Candle_str_repr(candle):
     assert len(str(candle)) > 0
     assert isinstance(repr(candle), str)
     assert len(repr(candle)) > 0
-
-
-def test_Candle_c_date_and_c_time(candle):
-    """Verify Candle.c_date and c_time are set correctly."""
-    assert candle.c_date == "2025-01-02"
-    assert candle.c_time == "12:00:00"
-
-
-def test_Candle_c_epoch_is_int(candle):
-    """Verify Candle.c_epoch is set as an integer."""
-    assert isinstance(candle.c_epoch, int)
-
-
-def test_Candle_c_end_datetime_1m(candle):
-    """Verify Candle.c_end_datetime is 1 minute after start for 1m candle."""
-    assert candle.c_end_datetime == "2025-01-02 12:01:00"

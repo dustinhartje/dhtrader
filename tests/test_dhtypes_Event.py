@@ -30,21 +30,18 @@ def test_Event_create_and_verify_pretty():
     assert len(out_event.pretty().splitlines()) == 12
 
 
-def test_Event_contains_datetime_inside(event):
-    """Verify contains_datetime returns True for dt within the event range."""
+def test_Event_contains_datetime(event):
+    """Verify contains_datetime uses inclusive start/end boundaries."""
+    # Datetime inside the range returns True
     assert event.contains_datetime("2025-01-02 14:00:00")
+    # At start boundary is True (inclusive)
     assert event.contains_datetime("2025-01-02 12:00:00")
+    # At end boundary is True (inclusive)
     assert event.contains_datetime("2025-01-02 18:00:00")
-
-
-def test_Event_contains_datetime_before(event):
-    """Verify contains_datetime returns False for dt before event start."""
+    # Just before start is False
     assert not event.contains_datetime("2025-01-02 11:59:59")
     assert not event.contains_datetime("2025-01-01 00:00:00")
-
-
-def test_Event_contains_datetime_after(event):
-    """Verify contains_datetime returns False for dt after event end."""
+    # Just after end is False
     assert not event.contains_datetime("2025-01-02 18:00:01")
     assert not event.contains_datetime("2025-01-03 00:00:00")
 
@@ -69,17 +66,13 @@ def test_Event_str_and_repr(event):
     assert str(event) == repr(event)
 
 
-def test_Event_epochs_are_set(event):
-    """Verify Event start_epoch and end_epoch are set as integers."""
-    assert isinstance(event.start_epoch, int)
-    assert isinstance(event.end_epoch, int)
-    assert event.start_epoch < event.end_epoch
-
-
-def test_Event_attributes_stored(event):
-    """Verify Event stores all provided attributes correctly."""
+def test_Event_init(event):
+    """Verify Event stores all attributes and computes epoch values."""
     assert event.start_dt == "2025-01-02 12:00:00"
     assert event.end_dt == "2025-01-02 18:00:00"
     assert event.symbol.ticker == "ES"
     assert event.category == "Closed"
     assert event.notes == "Test Holiday"
+    assert isinstance(event.start_epoch, int)
+    assert isinstance(event.end_epoch, int)
+    assert event.start_epoch < event.end_epoch
