@@ -886,6 +886,58 @@ def test_Backtest_store_retrieve_load_tradeseries_and_delete(
 
 
 @pytest.mark.storage
+def test_Backtest_prefer_stored(cleanup_backtest_storage):
+    """Verify prefer_stored=True calls config_from_storage() without error.
+
+    When prefer_stored=True, Backtest.__init__ calls config_from_storage().
+    The base Backtest.config_from_storage() is a placeholder that returns
+    False without loading from storage; subclass overrides may implement
+    real loading.  This test confirms the prefer_stored flag is correctly
+    set and that config_from_storage() is called without error whether or
+    not a stored version of the bt_id exists.
+
+    Storage Usage: store_backtests, get_backtests_by_field.
+    """
+    test_name = "DELETEME-PSTest"
+    no_store_name = "DELETEME-PSNoneTest"
+    cleanup_backtest_storage(test_name, no_store_name)
+    # Create and store a Backtest so a stored version of bt_id exists
+    bt = create_backtest(name=test_name, prefer_stored=False)
+    store_backtests([bt])
+    stored = get_backtests_by_field(field="name", value=test_name)
+    assert len(stored) == 1
+    # prefer_stored=True when bt_id exists in storage:
+    # config_from_storage() is called; the base class returns False and
+    # does not re-configure from storage, but must not raise an error
+    bt_prefer = Backtest(
+        start_dt=bt.start_dt,
+        end_dt=bt.end_dt,
+        timeframe=bt.timeframe,
+        trading_hours=bt.trading_hours,
+        symbol="ES",
+        name=test_name,
+        parameters=bt.parameters,
+        class_name=bt.class_name,
+        prefer_stored=True,
+    )
+    assert bt_prefer.prefer_stored is True
+    # prefer_stored=True when bt_id does NOT exist in storage:
+    # config_from_storage() should still return False without raising
+    bt_none = Backtest(
+        start_dt="2025-01-01 00:00:00",
+        end_dt="2025-02-01 00:00:00",
+        timeframe="e1h",
+        trading_hours="eth",
+        symbol="ES",
+        name=no_store_name,
+        parameters={"a": 1, "b": "two"},
+        class_name="BacktestTestDeleteme",
+        prefer_stored=True,
+    )
+    assert bt_none.prefer_stored is True
+
+
+@pytest.mark.storage
 def test_delete_backtests(cleanup_backtest_storage):
     """Verify delete_backtests() using Backtest list.
 
