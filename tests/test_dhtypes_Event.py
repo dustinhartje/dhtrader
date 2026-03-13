@@ -18,7 +18,8 @@ def event():
 
 
 def test_Event_create_and_verify_common_methods():
-    """Test Event __str__, __repr__, to_clean_dict, to_json, and pretty.
+    """Test Event __init__ values, __str__, __repr__, to_clean_dict,
+    to_json, and pretty.
 
     Event does not define __eq__, __ne__, or brief.
     """
@@ -30,6 +31,16 @@ def test_Event_create_and_verify_common_methods():
                   notes="Test Holiday",
                   )
     assert isinstance(event, Event)
+    # __init__
+    assert event.start_dt == "2025-01-02 12:00:00"
+    assert event.end_dt == "2025-01-02 18:00:00"
+    assert event.symbol.ticker == "ES"
+    assert event.category == "Closed"
+    assert event.tags == ["holiday"]
+    assert event.notes == "Test Holiday"
+    assert isinstance(event.start_epoch, int)
+    assert isinstance(event.end_epoch, int)
+    assert event.start_epoch < event.end_epoch
     # __str__
     assert isinstance(str(event), str)
     assert len(str(event)) > 0
@@ -71,15 +82,3 @@ def test_Event_contains_datetime(event):
     # Just after end is False
     assert not event.contains_datetime("2025-01-02 18:00:01")
     assert not event.contains_datetime("2025-01-03 00:00:00")
-
-
-def test_Event_init(event):
-    """Verify Event stores all attributes and computes epoch values."""
-    assert event.start_dt == "2025-01-02 12:00:00"
-    assert event.end_dt == "2025-01-02 18:00:00"
-    assert event.symbol.ticker == "ES"
-    assert event.category == "Closed"
-    assert event.notes == "Test Holiday"
-    assert isinstance(event.start_epoch, int)
-    assert isinstance(event.end_epoch, int)
-    assert event.start_epoch < event.end_epoch

@@ -147,8 +147,8 @@ def cleanup_tradeseries_storage():
 
 
 def test_TradeSeries_create_and_verify_common_methods():
-    """Test TradeSeries __eq__, __ne__, __str__, __repr__, to_clean_dict,
-    to_json, and pretty.
+    """Test TradeSeries __init__ values, __eq__, __ne__, __str__, __repr__,
+    to_clean_dict, to_json, and pretty.
 
     TradeSeries does not define brief.
     """
@@ -157,6 +157,19 @@ def test_TradeSeries_create_and_verify_common_methods():
     diff = create_tradeseries(name="DIFFERENT")
     test_trade = create_trade()
     assert isinstance(ts, TradeSeries)
+    # __init__
+    assert ts.start_dt == "2025-01-01 00:00:00"
+    assert ts.end_dt == "2025-02-01 00:00:00"
+    assert ts.timeframe == "5m"
+    assert ts.trading_hours == "rth"
+    assert ts.symbol.ticker == "ES"
+    assert ts.name == "DELETEME"
+    assert ts.params_str == "a1_b2_c3_p0"
+    assert "DELETEME" in ts.ts_id
+    assert "a1_b2_c3_p0" in ts.ts_id
+    assert ts.bt_id is None
+    assert ts.trades == []
+    assert ts.tags == []
     # __eq__
     assert ts == ts2
     assert not (ts == diff)

@@ -781,28 +781,25 @@ def hide_Indicator_storage_and_retrieval():
 # #############################################################################
 
 def test_IndicatorDataPoint_create_and_verify_common_methods():
-    """Test IndicatorDataPoint __eq__, __ne__, __str__, __repr__,
-    to_clean_dict, to_json, and pretty.
+    """Test IndicatorDataPoint __init__ values, __eq__, __ne__, __str__,
+    __repr__, to_clean_dict, to_json, and pretty.
 
-    Also verifies creation attributes and epoch calculation as these
-    were already present in the original create_and_verify_pretty.
     IndicatorDataPoint does not define brief.
     """
     from dhtrader import dt_to_epoch
-    # Creation and basic attributes (beyond scope, kept from original)
     dp = IndicatorDataPoint(
         dt="2025-01-15 10:30:00",
         value=5123.75,
         ind_id="ES_eth_15m_EMA_close_l9_s2",
     )
     assert isinstance(dp, IndicatorDataPoint)
+    # __init__
     assert dp.dt == "2025-01-15 10:30:00"
     assert dp.value == 5123.75
     assert dp.ind_id == "ES_eth_15m_EMA_close_l9_s2"
-    # Epoch is auto-calculated when not provided (beyond scope, kept)
     assert isinstance(dp.epoch, int)
     assert dp.epoch == dt_to_epoch("2025-01-15 10:30:00")
-    # Explicit epoch overrides auto-calculation (beyond scope, kept)
+    # Explicit epoch overrides auto-calculation
     dp_explicit = IndicatorDataPoint(
         dt="2025-01-15 10:30:00",
         value=100.0,
@@ -877,8 +874,8 @@ def _make_indicator_chart():
 
 
 def test_Indicator_create_and_verify_common_methods():
-    """Test Indicator __eq__, __ne__, __str__, __repr__, to_clean_dict,
-    to_json, and pretty.
+    """Test Indicator __init__ values, __eq__, __ne__, __str__, __repr__,
+    to_clean_dict, to_json, and pretty.
 
     Indicator does not define brief.
     """
@@ -920,6 +917,25 @@ def test_Indicator_create_and_verify_common_methods():
                      candle_chart=chart,
                      )
     assert isinstance(ind, Indicator)
+    # __init__
+    assert ind.name == "DELETEME"
+    assert ind.description == "Test indicator"
+    assert ind.timeframe == "1m"
+    assert ind.trading_hours == "eth"
+    assert ind.symbol.ticker == "ES"
+    assert ind.calc_version == "1.0.0"
+    assert ind.calc_details == "test"
+    assert ind.start_dt == "2025-01-02 12:00:00"
+    assert ind.end_dt == "2025-01-02 12:10:00"
+    assert ind.datapoints == []
+    assert ind.parameters == {}
+    assert "ES" in ind.ind_id
+    assert "eth" in ind.ind_id
+    assert "1m" in ind.ind_id
+    assert "DELETEME" in ind.ind_id
+    assert ind.class_name == "Indicator"
+    assert ind.autoload_chart is False
+    assert ind.candle_chart == chart
     # __eq__
     assert ind == ind2
     assert not (ind == diff)
@@ -953,8 +969,8 @@ def test_Indicator_create_and_verify_common_methods():
 
 
 def test_IndicatorSMA_create_and_verify_common_methods():
-    """Test IndicatorSMA __eq__, __ne__, __str__, __repr__, to_clean_dict,
-    to_json, and pretty.
+    """Test IndicatorSMA __init__ values, __eq__, __ne__, __str__, __repr__,
+    to_clean_dict, to_json, and pretty.
 
     IndicatorSMA inherits common methods from Indicator and does not
     define brief.
@@ -999,6 +1015,25 @@ def test_IndicatorSMA_create_and_verify_common_methods():
                         parameters=diff_params,
                         )
     assert isinstance(sma, IndicatorSMA)
+    # __init__
+    assert sma.name == "SMA"
+    assert sma.description == "Test SMA"
+    assert sma.timeframe == "1m"
+    assert sma.trading_hours == "eth"
+    assert sma.symbol.ticker == "ES"
+    assert sma.calc_version == "1.0.0"
+    assert sma.calc_details == "test"
+    assert sma.start_dt == "2025-01-02 12:00:00"
+    assert sma.end_dt == "2025-01-02 12:10:00"
+    assert sma.datapoints == []
+    assert sma.parameters == params
+    assert sma.length == 3
+    assert sma.method == "close"
+    assert "close" in sma.ind_id
+    assert "l3" in sma.ind_id
+    assert sma.class_name == "IndicatorSMA"
+    assert sma.autoload_chart is False
+    assert sma.candle_chart == chart
     # __eq__
     assert sma == sma2
     assert not (sma == diff)
@@ -1030,8 +1065,8 @@ def test_IndicatorSMA_create_and_verify_common_methods():
 
 
 def test_IndicatorEMA_create_and_verify_common_methods():
-    """Test IndicatorEMA __eq__, __ne__, __str__, __repr__, to_clean_dict,
-    to_json, and pretty.
+    """Test IndicatorEMA __init__ values, __eq__, __ne__, __str__, __repr__,
+    to_clean_dict, to_json, and pretty.
 
     IndicatorEMA inherits common methods from Indicator and does not
     define brief.
@@ -1076,6 +1111,27 @@ def test_IndicatorEMA_create_and_verify_common_methods():
                         parameters=diff_params,
                         )
     assert isinstance(ema, IndicatorEMA)
+    # __init__
+    assert ema.name == "EMA"
+    assert ema.description == "Test EMA"
+    assert ema.timeframe == "1m"
+    assert ema.trading_hours == "eth"
+    assert ema.symbol.ticker == "ES"
+    assert ema.calc_version == "1.0.0"
+    assert ema.calc_details == "test"
+    assert ema.start_dt == "2025-01-02 12:00:00"
+    assert ema.end_dt == "2025-01-02 12:10:00"
+    assert ema.datapoints == []
+    assert ema.parameters == params
+    assert ema.length == 3
+    assert ema.method == "close"
+    assert ema.smoothing == 2
+    assert "close" in ema.ind_id
+    assert "l3" in ema.ind_id
+    assert "s2" in ema.ind_id
+    assert ema.class_name == "IndicatorEMA"
+    assert ema.autoload_chart is False
+    assert ema.candle_chart == chart
     # __eq__
     assert ema == ema2
     assert not (ema == diff)

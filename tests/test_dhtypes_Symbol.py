@@ -1683,16 +1683,22 @@ def test_Symbol_set_times(symbol):
 
 
 def test_Symbol_create_and_verify_common_methods(symbol):
-    """Test Symbol __eq__, __ne__, __str__, __repr__, to_clean_dict,
-    to_json, and pretty.
+    """Test Symbol __init__ values, __eq__, __ne__, __str__, __repr__,
+    to_clean_dict, to_json, and pretty.
 
     Symbol does not define brief.
     """
     sym = symbol
+    assert isinstance(sym, Symbol)
     sym2 = Symbol(ticker="ES", name="ES",
                   leverage_ratio=50, tick_size=0.25)
     diff = Symbol(ticker="ES", name="ES",
                   leverage_ratio=50, tick_size=0.5)
+    # __init__
+    assert sym.ticker == "ES"
+    assert sym.name == "ES"
+    assert sym.leverage_ratio == 50.0
+    assert sym.tick_size == 0.25
     # __eq__
     assert sym == sym2
     assert not (sym == diff)

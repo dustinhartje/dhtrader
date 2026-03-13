@@ -565,12 +565,43 @@ def test_Trade_confirm_observed_results():
 
 
 def test_Trade_create_and_verify_common_methods():
-    """Test Trade __eq__, __ne__, __str__, __repr__, to_clean_dict,
-    to_json, pretty, and brief.
+    """Test Trade __init__ values, __eq__, __ne__, __str__, __repr__,
+    to_clean_dict, to_json, pretty, and brief.
     """
     from copy import deepcopy
     trade = create_trade()
     assert isinstance(trade, Trade)
+    # __init__
+    assert trade.open_dt == "2025-01-02 12:00:00"
+    assert trade.close_dt is None
+    assert isinstance(trade.created_dt, str)
+    assert trade.direction == "long"
+    assert trade.timeframe == "5m"
+    assert trade.trading_hours == "rth"
+    assert trade.entry_price == 5000
+    assert trade.high_price == 5000
+    assert trade.low_price == 5000
+    assert trade.exit_price is None
+    assert trade.stop_ticks == 500
+    assert trade.prof_ticks == 500
+    assert trade.stop_target == 4875.0
+    assert trade.prof_target == 5125.0
+    assert trade.offset_ticks == 0
+    assert trade.symbol.ticker == "ES"
+    assert trade.is_open is True
+    assert trade.profitable is None
+    assert trade.name == "DELETEME"
+    assert trade.version == "1.0.0"
+    assert trade.ts_id is None
+    assert trade.bt_id is None
+    assert trade.tags == []
+    assert trade.flipper == 1
+    assert isinstance(trade.open_epoch, int)
+    assert trade.open_date == "2025-01-02"
+    assert trade.open_time == "12:00:00"
+    assert trade.close_date is None
+    assert trade.close_time is None
+    assert trade.first_min_open is True
     # Use deepcopy to get an identical trade (created_dt is in __eq__)
     trade2 = deepcopy(trade)
     diff = create_trade(open_dt="2025-01-02 13:00:00")

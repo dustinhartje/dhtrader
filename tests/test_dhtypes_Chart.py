@@ -6,8 +6,8 @@ from dhtrader import (
 
 
 def test_Chart_create_and_verify_common_methods():
-    """Test Chart __eq__, __ne__, __str__, __repr__, to_clean_dict,
-    to_json, and pretty.
+    """Test Chart __init__ values, __eq__, __ne__, __str__, __repr__,
+    to_clean_dict, to_json, and pretty.
 
     Chart does not define brief.
     """
@@ -28,6 +28,15 @@ def test_Chart_create_and_verify_common_methods():
                   autoload=False,
                   )
     assert isinstance(chart, Chart)
+    # __init__
+    assert chart.c_timeframe == "1m"
+    assert chart.c_trading_hours == "rth"
+    assert chart.c_symbol.ticker == "ES"
+    assert chart.c_start == "2025-01-02 12:00:00"
+    assert chart.c_end == "2025-01-02 12:10:00"
+    assert chart.c_candles == []
+    assert chart.autoload is False
+    assert chart.show_progress is False
     chart.add_candle(out_candle)
     chart2 = Chart(c_timeframe="1m",
                    c_trading_hours="rth",

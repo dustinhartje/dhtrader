@@ -20,8 +20,8 @@ def candle():
 
 
 def test_Candle_create_and_verify_common_methods():
-    """Test Candle __eq__, __ne__, __str__, __repr__, to_clean_dict,
-    to_json, pretty, and brief.
+    """Test Candle __init__ values, __eq__, __ne__, __str__, __repr__,
+    to_clean_dict, to_json, pretty, and brief.
     """
     candle = Candle(c_datetime="2025-01-02 12:00:00",
                     c_timeframe="1m",
@@ -33,6 +33,28 @@ def test_Candle_create_and_verify_common_methods():
                     c_symbol="ES",
                     )
     assert isinstance(candle, Candle)
+    # __init__
+    assert candle.c_datetime == "2025-01-02 12:00:00"
+    assert candle.c_timeframe == "1m"
+    assert candle.c_open == 5000.0
+    assert candle.c_high == 5007.75
+    assert candle.c_low == 4995.5
+    assert candle.c_close == 5002.0
+    assert candle.c_volume == 1501
+    assert candle.c_symbol.ticker == "ES"
+    assert candle.c_tags == []
+    assert isinstance(candle.c_epoch, int)
+    assert candle.c_date == "2025-01-02"
+    assert candle.c_time == "12:00:00"
+    assert candle.c_end_datetime == "2025-01-02 12:01:00"
+    assert candle.c_size == 12.25
+    assert candle.c_body_size == 2.0
+    assert candle.c_upper_wick_size == 5.75
+    assert candle.c_lower_wick_size == 4.5
+    assert isinstance(candle.c_body_perc, float)
+    assert isinstance(candle.c_upper_wick_perc, float)
+    assert isinstance(candle.c_lower_wick_perc, float)
+    assert candle.c_direction == "bullish"
     other = Candle(c_datetime="2025-01-02 12:00:00",
                    c_timeframe="1m",
                    c_open=5000,

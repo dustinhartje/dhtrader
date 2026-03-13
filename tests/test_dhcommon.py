@@ -68,12 +68,21 @@ def test_OperationTimer_update_elapsed():
 
 
 def test_OperationTimer_create_and_verify_common_methods():
-    """Test OperationTimer __str__, __repr__, to_clean_dict, to_json,
-    and pretty.
+    """Test OperationTimer __init__ values, __str__, __repr__, to_clean_dict,
+    to_json, and pretty.
 
     OperationTimer does not define __eq__, __ne__, or brief.
     """
     t = OperationTimer(name="test_common")
+    assert isinstance(t, OperationTimer)
+    # __init__
+    assert t.name == "test_common"
+    assert t.start_dt is not None
+    assert isinstance(t.start_dt, datetime)
+    assert t.end_dt is None
+    assert t.elapsed_dt is None
+    assert t.elapsed_str == ""
+    assert t.auto_start is True
     t.stop()
     # __str__
     assert isinstance(str(t), str)

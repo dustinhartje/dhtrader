@@ -166,8 +166,8 @@ def cleanup_backtest_storage():
 
 
 def test_Backtest_create_and_verify_common_methods():
-    """Test Backtest __eq__, __ne__, __str__, __repr__, to_clean_dict,
-    to_json, and pretty.
+    """Test Backtest __init__ values, __eq__, __ne__, __str__, __repr__,
+    to_clean_dict, to_json, and pretty.
 
     Backtest does not define brief.
     """
@@ -175,6 +175,20 @@ def test_Backtest_create_and_verify_common_methods():
     bt2 = create_backtest()
     diff = create_backtest(name="DIFFERENT")
     assert isinstance(bt, Backtest)
+    # __init__
+    assert bt.start_dt == "2025-01-01 00:00:00"
+    assert bt.end_dt == "2025-02-01 00:00:00"
+    assert bt.timeframe == "e1h"
+    assert bt.trading_hours == "eth"
+    assert bt.symbol.ticker == "ES"
+    assert bt.name == "DELETEME"
+    assert bt.parameters == {"a": 1, "b": "two"}
+    assert bt.bt_id == "DELETEME"
+    assert bt.class_name == "BacktestTestDeleteme"
+    assert bt.chart_tf is None
+    assert bt.chart_1m is None
+    assert bt.tradeseries == []
+    assert bt.autoload_charts is False
     # __eq__
     assert bt == bt2
     assert not (bt == diff)
