@@ -112,6 +112,8 @@ def create_backtest(start_dt="2025-01-01 00:00:00",
         assert r.bt_id == bt_id
     assert isinstance(r.class_name, str)
     assert r.class_name == class_name
+    assert r.autoload_charts == autoload_charts
+    assert r.prefer_stored == prefer_stored
     if chart_tf is None and autoload_charts is False:
         assert r.chart_tf is None
     else:
