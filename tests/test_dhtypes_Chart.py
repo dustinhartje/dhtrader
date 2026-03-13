@@ -37,6 +37,23 @@ def test_Chart_create_and_verify_common_methods():
     assert chart.c_candles == []
     assert chart.autoload is False
     assert chart.show_progress is False
+    assert chart.candles_count == 0
+    assert chart.earliest_candle is None
+    assert chart.latest_candle is None
+    expected_attrs = {
+        "autoload", "c_candles", "c_end", "c_start", "c_symbol",
+        "c_timeframe", "c_trading_hours", "candles_count",
+        "earliest_candle", "latest_candle", "show_progress",
+    }
+    actual_attrs = set(vars(chart).keys())
+    added = actual_attrs - expected_attrs
+    removed = expected_attrs - actual_attrs
+    assert actual_attrs == expected_attrs, (
+        "Chart attributes changed. Update this test's "
+        "__init__ section. "
+        f"New attrs needing assertions: {sorted(added)}. "
+        f"Removed attrs: {sorted(removed)}."
+    )
     chart.add_candle(out_candle)
     chart2 = Chart(c_timeframe="1m",
                    c_trading_hours="rth",

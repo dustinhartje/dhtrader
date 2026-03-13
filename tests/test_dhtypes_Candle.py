@@ -56,6 +56,23 @@ def test_Candle_create_and_verify_common_methods():
     assert isinstance(candle.c_lower_wick_perc, float)
     assert candle.c_direction == "bullish"
     assert candle.name == "None"
+    expected_attrs = {
+        "c_body_perc", "c_body_size", "c_close", "c_date",
+        "c_datetime", "c_direction", "c_end_datetime", "c_epoch",
+        "c_high", "c_low", "c_lower_wick_perc", "c_lower_wick_size",
+        "c_open", "c_size", "c_symbol", "c_tags", "c_time",
+        "c_timeframe", "c_upper_wick_perc", "c_upper_wick_size",
+        "c_volume", "name",
+    }
+    actual_attrs = set(vars(candle).keys())
+    added = actual_attrs - expected_attrs
+    removed = expected_attrs - actual_attrs
+    assert actual_attrs == expected_attrs, (
+        "Candle attributes changed. Update this test's "
+        "__init__ section. "
+        f"New attrs needing assertions: {sorted(added)}. "
+        f"Removed attrs: {sorted(removed)}."
+    )
     other = Candle(c_datetime="2025-01-02 12:00:00",
                    c_timeframe="1m",
                    c_open=5000,

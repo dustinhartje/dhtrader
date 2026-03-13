@@ -83,6 +83,19 @@ def test_OperationTimer_create_and_verify_common_methods():
     assert t.elapsed_dt is None
     assert t.elapsed_str == ""
     assert t.auto_start is True
+    expected_attrs = {
+        "auto_start", "elapsed_dt", "elapsed_str",
+        "end_dt", "name", "start_dt",
+    }
+    actual_attrs = set(vars(t).keys())
+    added = actual_attrs - expected_attrs
+    removed = expected_attrs - actual_attrs
+    assert actual_attrs == expected_attrs, (
+        "OperationTimer attributes changed. Update this "
+        "test's __init__ section. "
+        f"New attrs needing assertions: {sorted(added)}. "
+        f"Removed attrs: {sorted(removed)}."
+    )
     t.stop()
     # __str__
     assert isinstance(str(t), str)

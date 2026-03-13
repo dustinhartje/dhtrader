@@ -42,6 +42,19 @@ def test_Event_create_and_verify_common_methods():
     assert isinstance(event.end_epoch, int)
     assert event.start_epoch < event.end_epoch
     assert event.name == "None"
+    expected_attrs = {
+        "category", "end_dt", "end_epoch", "name", "notes",
+        "start_dt", "start_epoch", "symbol", "tags",
+    }
+    actual_attrs = set(vars(event).keys())
+    added = actual_attrs - expected_attrs
+    removed = expected_attrs - actual_attrs
+    assert actual_attrs == expected_attrs, (
+        "Event attributes changed. Update this test's "
+        "__init__ section. "
+        f"New attrs needing assertions: {sorted(added)}. "
+        f"Removed attrs: {sorted(removed)}."
+    )
     # __str__
     assert isinstance(str(event), str)
     assert len(str(event)) > 0

@@ -807,6 +807,16 @@ def test_IndicatorDataPoint_create_and_verify_common_methods():
         epoch=9999,
     )
     assert dp_explicit.epoch == 9999
+    expected_attrs = {"dt", "epoch", "ind_id", "value"}
+    actual_attrs = set(vars(dp).keys())
+    added = actual_attrs - expected_attrs
+    removed = expected_attrs - actual_attrs
+    assert actual_attrs == expected_attrs, (
+        "IndicatorDataPoint attributes changed. Update "
+        "this test's __init__ section. "
+        f"New attrs needing assertions: {sorted(added)}. "
+        f"Removed attrs: {sorted(removed)}."
+    )
     dp2 = IndicatorDataPoint(
         dt="2025-01-15 10:30:00",
         value=5123.75,
@@ -936,6 +946,22 @@ def test_Indicator_create_and_verify_common_methods():
     assert ind.class_name == "Indicator"
     assert ind.autoload_chart is False
     assert ind.candle_chart == chart
+    expected_attrs = {
+        "autoload_chart", "calc_details", "calc_version",
+        "candle_chart", "class_name", "datapoints",
+        "description", "end_dt", "ind_id", "name",
+        "parameters", "start_dt", "symbol", "timeframe",
+        "trading_hours",
+    }
+    actual_attrs = set(vars(ind).keys())
+    added = actual_attrs - expected_attrs
+    removed = expected_attrs - actual_attrs
+    assert actual_attrs == expected_attrs, (
+        "Indicator attributes changed. Update this test's "
+        "__init__ section. "
+        f"New attrs needing assertions: {sorted(added)}. "
+        f"Removed attrs: {sorted(removed)}."
+    )
     # __eq__
     assert ind == ind2
     assert not (ind == diff)
@@ -1034,6 +1060,22 @@ def test_IndicatorSMA_create_and_verify_common_methods():
     assert sma.class_name == "IndicatorSMA"
     assert sma.autoload_chart is False
     assert sma.candle_chart == chart
+    expected_attrs = {
+        "autoload_chart", "calc_details", "calc_version",
+        "candle_chart", "class_name", "datapoints",
+        "description", "end_dt", "ind_id", "length",
+        "method", "name", "parameters", "start_dt",
+        "symbol", "timeframe", "trading_hours",
+    }
+    actual_attrs = set(vars(sma).keys())
+    added = actual_attrs - expected_attrs
+    removed = expected_attrs - actual_attrs
+    assert actual_attrs == expected_attrs, (
+        "IndicatorSMA attributes changed. Update this "
+        "test's __init__ section. "
+        f"New attrs needing assertions: {sorted(added)}. "
+        f"Removed attrs: {sorted(removed)}."
+    )
     # __eq__
     assert sma == sma2
     assert not (sma == diff)
@@ -1132,6 +1174,22 @@ def test_IndicatorEMA_create_and_verify_common_methods():
     assert ema.class_name == "IndicatorEMA"
     assert ema.autoload_chart is False
     assert ema.candle_chart == chart
+    expected_attrs = {
+        "autoload_chart", "calc_details", "calc_version",
+        "candle_chart", "class_name", "datapoints",
+        "description", "end_dt", "ind_id", "length",
+        "method", "name", "parameters", "smoothing",
+        "start_dt", "symbol", "timeframe", "trading_hours",
+    }
+    actual_attrs = set(vars(ema).keys())
+    added = actual_attrs - expected_attrs
+    removed = expected_attrs - actual_attrs
+    assert actual_attrs == expected_attrs, (
+        "IndicatorEMA attributes changed. Update this "
+        "test's __init__ section. "
+        f"New attrs needing assertions: {sorted(added)}. "
+        f"Removed attrs: {sorted(removed)}."
+    )
     # __eq__
     assert ema == ema2
     assert not (ema == diff)

@@ -170,6 +170,20 @@ def test_TradeSeries_create_and_verify_common_methods():
     assert ts.bt_id is None
     assert ts.trades == []
     assert ts.tags == []
+    expected_attrs = {
+        "bt_id", "end_dt", "name", "params_str", "start_dt",
+        "symbol", "tags", "timeframe", "trades", "trading_hours",
+        "ts_id",
+    }
+    actual_attrs = set(vars(ts).keys())
+    added = actual_attrs - expected_attrs
+    removed = expected_attrs - actual_attrs
+    assert actual_attrs == expected_attrs, (
+        "TradeSeries attributes changed. Update this test's "
+        "__init__ section. "
+        f"New attrs needing assertions: {sorted(added)}. "
+        f"Removed attrs: {sorted(removed)}."
+    )
     # __eq__
     assert ts == ts2
     assert not (ts == diff)

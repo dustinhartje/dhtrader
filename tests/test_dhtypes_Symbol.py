@@ -1699,6 +1699,34 @@ def test_Symbol_create_and_verify_common_methods(symbol):
     assert sym.name == "ES"
     assert sym.leverage_ratio == 50.0
     assert sym.tick_size == 0.25
+    assert sym.eth_open_time == dt.time(18, 0)
+    assert sym.eth_close_time == dt.time(16, 59)
+    assert sym.rth_open_time == dt.time(9, 30)
+    assert sym.rth_close_time == dt.time(16, 0)
+    assert sym.eth_week_open == {
+        "day_of_week": 6, "time": dt.time(18, 0)}
+    assert sym.eth_week_close == {
+        "day_of_week": 4, "time": dt.time(16, 59)}
+    assert sym.rth_week_open == {
+        "day_of_week": 0, "time": dt.time(9, 30)}
+    assert sym.rth_week_close == {
+        "day_of_week": 4, "time": dt.time(16, 0)}
+    assert sym._closed_hours_cache == {}
+    expected_attrs = {
+        "_closed_hours_cache", "eth_close_time", "eth_open_time",
+        "eth_week_close", "eth_week_open", "leverage_ratio", "name",
+        "rth_close_time", "rth_open_time", "rth_week_close",
+        "rth_week_open", "tick_size", "ticker",
+    }
+    actual_attrs = set(vars(sym).keys())
+    added = actual_attrs - expected_attrs
+    removed = expected_attrs - actual_attrs
+    assert actual_attrs == expected_attrs, (
+        "Symbol attributes changed. Update this test's "
+        "__init__ section. "
+        f"New attrs needing assertions: {sorted(added)}. "
+        f"Removed attrs: {sorted(removed)}."
+    )
     # __eq__
     assert sym == sym2
     assert not (sym == diff)

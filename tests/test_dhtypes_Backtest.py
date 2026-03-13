@@ -194,6 +194,21 @@ def test_Backtest_create_and_verify_common_methods():
     assert bt.tradeseries == []
     assert bt.autoload_charts is False
     assert bt.prefer_stored is False
+    expected_attrs = {
+        "autoload_charts", "bt_id", "chart_1m", "chart_tf",
+        "class_name", "end_dt", "name", "parameters",
+        "prefer_stored", "start_dt", "symbol", "timeframe",
+        "tradeseries", "trading_hours",
+    }
+    actual_attrs = set(vars(bt).keys())
+    added = actual_attrs - expected_attrs
+    removed = expected_attrs - actual_attrs
+    assert actual_attrs == expected_attrs, (
+        "Backtest attributes changed. Update this test's "
+        "__init__ section. "
+        f"New attrs needing assertions: {sorted(added)}. "
+        f"Removed attrs: {sorted(removed)}."
+    )
     # __eq__
     assert bt == bt2
     assert not (bt == diff)

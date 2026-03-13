@@ -602,6 +602,25 @@ def test_Trade_create_and_verify_common_methods():
     assert trade.close_date is None
     assert trade.close_time is None
     assert trade.first_min_open is True
+    expected_attrs = {
+        "bt_id", "close_date", "close_dt", "close_time",
+        "created_dt", "direction", "entry_price", "exit_price",
+        "first_min_open", "flipper", "high_price", "is_open",
+        "low_price", "name", "offset_ticks", "open_date",
+        "open_dt", "open_epoch", "open_time", "prof_target",
+        "prof_ticks", "profitable", "stop_target", "stop_ticks",
+        "symbol", "tags", "timeframe", "trading_hours",
+        "ts_id", "version",
+    }
+    actual_attrs = set(vars(trade).keys())
+    added = actual_attrs - expected_attrs
+    removed = expected_attrs - actual_attrs
+    assert actual_attrs == expected_attrs, (
+        "Trade attributes changed. Update this test's "
+        "__init__ section. "
+        f"New attrs needing assertions: {sorted(added)}. "
+        f"Removed attrs: {sorted(removed)}."
+    )
     # Use deepcopy to get an identical trade (created_dt is in __eq__)
     trade2 = deepcopy(trade)
     diff = create_trade(open_dt="2025-01-02 13:00:00")
