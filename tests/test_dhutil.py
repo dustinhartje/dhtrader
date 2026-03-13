@@ -185,7 +185,7 @@ def test_generate_zero_volume_candle():
     assert result.c_timeframe == "1m"
     assert result.c_symbol.ticker == "ES"
 
-    # Returns None when storage has no prior candle
+    # Returns None when neither prior NOR next candle exists in storage
     with patch('dhtrader.dhutil.get_candles', return_value=[]):
         result_none = generate_zero_volume_candle(
             c_datetime=target_dt,
@@ -193,6 +193,36 @@ def test_generate_zero_volume_candle():
             symbol="ES",
         )
     assert result_none is None
+
+    # Falls back to next candle's open when no prior candle exists
+    next_candle = Candle(
+        c_datetime="2025-03-01 18:02:00",
+        c_timeframe="1m",
+        c_open=5001.00,
+        c_high=5002.00,
+        c_low=5000.00,
+        c_close=5001.50,
+        c_volume=75,
+        c_symbol="ES",
+    )
+    # target_dt has no prior (17:59 absent) but a next candle (18:02)
+    target_no_prior = "2025-03-01 18:01:00"
+    with patch('dhtrader.dhutil.get_candles') as mock_get:
+        # First call (prior) returns empty; second call (next) returns one
+        mock_get.side_effect = [[], [next_candle]]
+        result_next = generate_zero_volume_candle(
+            c_datetime=target_no_prior,
+            timeframe="1m",
+            symbol="ES",
+        )
+    assert isinstance(result_next, Candle)
+    assert result_next.c_datetime == target_no_prior
+    assert result_next.c_volume == 0
+    # All OHLC values are set to the next candle's open
+    assert result_next.c_open == next_candle.c_open
+    assert result_next.c_high == next_candle.c_open
+    assert result_next.c_low == next_candle.c_open
+    assert result_next.c_close == next_candle.c_open
 
     # Returns None when storage returns multiple candles (ambiguous)
     prior_candle2 = Candle(
@@ -337,8 +367,9 @@ def test_remediate_candle_gaps(cleanup_2099_candles):
     window (never RTH).  Gap classification is driven by the average
     volume of adjacent candles:
 
-      18:01 - UNCLEAR: all neighbors within 5 min have vol=600 (avg=600)
-      18:06 - OBVIOUS: mixed neighbors avg ~467 < 500, ETH, has pre+post
+      18:00 - UNCLEAR: no prior candle; all 5 post-neighbors vol=600
+              (avg=600 >= 500).  Filled using next candle's open.
+      18:06 - OBVIOUS: mixed neighbors avg ~486 < 500, ETH, has pre+post
       18:08 - OBVIOUS: mixed neighbors avg=440 < 500, ETH, has pre+post
 
     Runs with dry_run=True first to confirm detection without storing,
@@ -373,7 +404,7 @@ def test_remediate_candle_gaps(cleanup_2099_candles):
         start_dt=TEST_2099_START,
         end_dt=TEST_2099_END,
     )
-    # 2 obvious gaps (18:06, 18:08), 1 unclear gap (18:01)
+    # 2 obvious gaps (18:06, 18:08), 1 unclear gap (18:00)
     assert len(result_dry["fixed_obvious"]) == 2
     assert len(result_dry["fixed_unclear"]) == 1
     assert len(result_dry["skipped"]) == 0
@@ -412,17 +443,17 @@ def test_remediate_candle_gaps(cleanup_2099_candles):
     )
     assert len(stored_final) == 10
 
-    # Verify each zero-volume candle has correct OHLC (prior close) and vol=0
+    # Verify each zero-volume candle has correct OHLC and vol=0
     stored_by_dt = {c.c_datetime: c for c in stored_final}
 
-    # 18:01 unclear gap: prior candle is 18:00 (close=5500.50)
-    assert "2099-01-06 18:01:00" in stored_by_dt
-    c_01 = stored_by_dt["2099-01-06 18:01:00"]
-    assert c_01.c_volume == 0
-    assert c_01.c_open == 5500.50
-    assert c_01.c_high == 5500.50
-    assert c_01.c_low == 5500.50
-    assert c_01.c_close == 5500.50
+    # 18:00 unclear gap: no prior candle; falls back to next (18:01 open)
+    assert "2099-01-06 18:00:00" in stored_by_dt
+    c_00 = stored_by_dt["2099-01-06 18:00:00"]
+    assert c_00.c_volume == 0
+    assert c_00.c_open == 5500.50
+    assert c_00.c_high == 5500.50
+    assert c_00.c_low == 5500.50
+    assert c_00.c_close == 5500.50
 
     # 18:06 obvious gap: prior candle is 18:05 (close=5502.50)
     assert "2099-01-06 18:06:00" in stored_by_dt

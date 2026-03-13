@@ -24,6 +24,10 @@ def generate_zero_volume_candle(c_datetime,
 
     Primarily used to fill gaps in 1m candle storage where data providers
     sometimes omit candles with zero trading volume.
+
+    When a prior candle exists its close price is used for all OHLC values.
+    When no prior candle exists (e.g. the gap is at the very start of
+    stored data) the next candle's open price is used as a fallback.
     """
     if symbol != "ES":
         raise ValueError("Only symbol: 'ES' is currently supported")
@@ -36,21 +40,37 @@ def generate_zero_volume_candle(c_datetime,
                                end_epoch=prior_epoch,
                                timeframe=timeframe,
                                symbol=symbol)
-    # Ensure we got back exactly one Candle and use it's closing value
     if len(prior_candle) == 1 and isinstance(prior_candle[0], Candle):
+        # Normal case: anchor OHLC to the prior candle's close.
+        # isinstance guard is intentional: get_candles() can occasionally
+        # return non-Candle objects during error conditions.
         v = prior_candle[0].c_close
-        result = Candle(c_datetime=c_datetime,
-                        c_timeframe=timeframe,
-                        c_open=v,
-                        c_high=v,
-                        c_low=v,
-                        c_close=v,
-                        c_volume=0,
-                        c_symbol=symbol,
-                        )
+    elif len(prior_candle) == 0:
+        # No prior candle found; fall back to the next candle's open so
+        # that gaps at the very beginning of stored data can still be
+        # filled with a reasonable zero-volume placeholder.
+        next_epoch = dt_to_epoch(dt_as_dt(c_datetime) + delta)
+        next_candle = get_candles(start_epoch=next_epoch,
+                                  end_epoch=next_epoch,
+                                  timeframe=timeframe,
+                                  symbol=symbol)
+        if len(next_candle) == 1 and isinstance(next_candle[0], Candle):
+            v = next_candle[0].c_open
+        else:
+            return None
     else:
-        result = None
+        # Multiple prior candles returned — ambiguous, cannot fill safely
+        return None
 
+    result = Candle(c_datetime=c_datetime,
+                    c_timeframe=timeframe,
+                    c_open=v,
+                    c_high=v,
+                    c_low=v,
+                    c_close=v,
+                    c_volume=0,
+                    c_symbol=symbol,
+                    )
     return result
 
 
