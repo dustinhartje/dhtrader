@@ -73,6 +73,7 @@ def create_backtest(start_dt="2025-01-01 00:00:00",
                     chart_tf=None,
                     chart_1m=None,
                     autoload_charts=False,
+                    prefer_stored=False,
                     tradeseries=None,
                     ):
     """Create a Backtest and validate its attributes and defaults."""
@@ -88,6 +89,7 @@ def create_backtest(start_dt="2025-01-01 00:00:00",
                  chart_tf=chart_tf,
                  chart_1m=chart_1m,
                  autoload_charts=autoload_charts,
+                 prefer_stored=prefer_stored,
                  tradeseries=tradeseries,
                  )
     assert isinstance(r.start_dt, str)
@@ -189,6 +191,7 @@ def test_Backtest_create_and_verify_common_methods():
     assert bt.chart_1m is None
     assert bt.tradeseries == []
     assert bt.autoload_charts is False
+    assert bt.prefer_stored is False
     # __eq__
     assert bt == bt2
     assert not (bt == diff)
