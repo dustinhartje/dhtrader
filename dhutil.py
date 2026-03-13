@@ -350,7 +350,7 @@ def read_candles_from_csv(start_dt,
                           filepath: str,
                           symbol: str = 'ES',
                           timeframe: str = '1m',
-                          c_name: str = "None",
+                          name: str = "None",
                           ):
     """Read lines from a CSV file and return them as a list of Candle objects.
 
@@ -374,7 +374,7 @@ def read_candles_from_csv(start_dt,
                            c_low=r[3],
                            c_close=r[4],
                            c_volume=r[5],
-                           c_name=c_name,
+                           name=name,
                            )
                 candles.append(c)
 
@@ -386,7 +386,7 @@ def store_candles_from_csv(filepath: str,
                            end_dt,
                            timeframe: str = "1m",
                            symbol: str = "ES",
-                           c_name: str = "None",
+                           name: str = "None",
                            ):
     """Loads 1m candles from a CSV file into central storage.
 
@@ -397,7 +397,7 @@ def store_candles_from_csv(filepath: str,
                                     filepath=filepath,
                                     symbol=symbol,
                                     timeframe=timeframe,
-                                    c_name=c_name,
+                                    name=name,
                                     )
     print(f"{len(candles)} candles found, storing them")
     for c in candles:

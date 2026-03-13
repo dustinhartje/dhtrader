@@ -53,7 +53,7 @@ def _delete_2099_candles():
     delete_candles_by_field(
         symbol=TEST_2099_SYMBOL,
         timeframe=TEST_2099_TIMEFRAME,
-        field="c_name",
+        field="name",
         value=_TEST_CANDLE_NAME,
     )
 
@@ -261,7 +261,7 @@ def test_store_candles_from_csv_and_compare(cleanup_2099_candles):
         end_dt=TEST_2099_END,
         timeframe=TEST_2099_TIMEFRAME,
         symbol=TEST_2099_SYMBOL,
-        c_name=_TEST_CANDLE_NAME,
+        name=_TEST_CANDLE_NAME,
     )
     # Confirm all 10 candles were persisted
     stored = get_candles(
@@ -353,7 +353,7 @@ def test_remediate_candle_gaps(cleanup_2099_candles):
         end_dt=TEST_2099_END,
         timeframe=TEST_2099_TIMEFRAME,
         symbol=TEST_2099_SYMBOL,
-        c_name=_TEST_CANDLE_NAME,
+        name=_TEST_CANDLE_NAME,
     )
     stored = get_candles(
         start_epoch=dt_to_epoch(TEST_2099_START),

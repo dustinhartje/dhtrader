@@ -1409,7 +1409,7 @@ def store_candle(candle):
                      c_epoch=candle.c_epoch,
                      c_date=candle.c_date,
                      c_time=candle.c_time,
-                     c_name=candle.c_name,
+                     name=candle.name,
                      )
 
 
@@ -1457,7 +1457,7 @@ def get_candles(start_epoch: int,
                               c_volume=r["c_volume"],
                               c_symbol=r["c_symbol"],
                               c_epoch=r["c_epoch"],
-                              c_name=r.get("c_name", "None"),
+                              name=r.get("name", "None"),
                               ))
         update_progbar(pbar, i, total)
     finish_progbar(pbar)
@@ -1790,11 +1790,11 @@ def delete_candles_by_field(symbol: str,
                             ):
     """Delete candles from central storage with 'field' matching 'value'.
 
-    Typically used to delete by c_name or other identifying fields.
+    Typically used to delete by name or other identifying fields.
 
-    Example to delete all candles with c_name=="DELETEME":
+    Example to delete all candles with name=="DELETEME":
     delete_candles_by_field(symbol="ES", timeframe="1m",
-                            field="c_name", value="DELETEME")
+                            field="name", value="DELETEME")
     """
     return dhm.delete_candles_by_field(symbol=symbol,
                                        timeframe=timeframe,

@@ -80,7 +80,7 @@ def test_Chart_create_and_verify_common_methods():
     assert parsed["c_symbol"] == "ES"
     # pretty
     assert len(chart.pretty().splitlines()) == 15
-    assert len(chart.pretty(suppress_candles=False).splitlines()) == 37
+    assert len(chart.pretty(suppress_candles=False).splitlines()) == 38
 
 
 @pytest.mark.storage

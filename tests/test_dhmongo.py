@@ -74,7 +74,7 @@ def cleanup_dhmongo_storage():
         delete_candles_by_field(
             symbol=_TEST_EVENT_SYMBOL,
             timeframe="1m",
-            field="c_name",
+            field="name",
             value=_TEST_DELETEME_NAME,
         )
         delete_events_by_field(
@@ -140,9 +140,9 @@ def test_review_database_returns_dict():
 def test_store_and_get_candle_roundtrip(cleanup_dhmongo_storage):
     """Verify store_candle and get_candles work as a roundtrip.
 
-    Uses a far-future sentinel datetime and c_name="DELETEME_DHMONGO_TESTS"
+    Uses a far-future sentinel datetime and name="DELETEME_DHMONGO_TESTS"
     so the test record is unambiguously identifiable.  Cleanup is driven
-    by the c_name field via delete_candles_by_field.
+    by the name field via delete_candles_by_field.
 
     Storage Usage: store_candle writes, get_candles reads,
     delete_candles_by_field cleans up.
@@ -165,7 +165,7 @@ def test_store_and_get_candle_roundtrip(cleanup_dhmongo_storage):
         c_epoch=test_epoch,
         c_date=test_dt[:10],
         c_time=test_dt[11:19],
-        c_name=_TEST_DELETEME_NAME,
+        name=_TEST_DELETEME_NAME,
     )
 
     # Retrieve the candle
@@ -184,13 +184,13 @@ def test_store_and_get_candle_roundtrip(cleanup_dhmongo_storage):
     assert doc["c_close"] == 9005.0
     assert doc["c_volume"] == 100
     assert doc["c_symbol"] == test_symbol
-    assert doc["c_name"] == _TEST_DELETEME_NAME
+    assert doc["name"] == _TEST_DELETEME_NAME
 
-    # Cleanup by c_name field
+    # Cleanup by name field
     delete_candles_by_field(
         symbol=test_symbol,
         timeframe=test_tf,
-        field="c_name",
+        field="name",
         value=_TEST_DELETEME_NAME,
     )
 

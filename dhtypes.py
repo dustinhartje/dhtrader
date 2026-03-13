@@ -1211,7 +1211,7 @@ class Candle():
                  c_epoch: int = None,
                  c_date: str = None,
                  c_time: str = None,
-                 c_name: str = "None",
+                 name: str = "None",
                  ):
         # Precalculate datetime for calculating other attributes efficiently
         c_datetime_dt = dt_as_dt(c_datetime)
@@ -1241,7 +1241,7 @@ class Candle():
         if c_time is None:
             c_time = self.c_datetime[11:19]
         self.c_time = c_time
-        self.c_name = c_name
+        self.name = name
 
         # Calculated attributes
         delta = timeframe_delta(self.c_timeframe)
