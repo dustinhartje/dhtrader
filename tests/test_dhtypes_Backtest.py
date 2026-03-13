@@ -220,7 +220,7 @@ def test_Backtest_create_and_verify_common_methods():
     ts = create_tradeseries()
     tr = create_trade()
     ts.add_trade(tr)
-    bt.update_tradeseries(ts)
+    bt.update_tradeseries(ts, clear_storage=False)
     # With TradeSeries and Trades shown
     assert len(bt.pretty(suppress_tradeseries=False,
                          suppress_trades=False).splitlines()) == 66
