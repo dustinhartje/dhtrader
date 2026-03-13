@@ -10,7 +10,7 @@ from dhtrader import (
     generate_zero_volume_candle,
     compare_candles_vs_csv,
     store_candles_from_csv,
-    delete_candles_by_name,
+    delete_candles_by_field,
     get_candles,
     remediate_candle_gaps,
 )
@@ -50,10 +50,11 @@ def _delete_2099_candles():
     Name-based deletion ensures only test candles are removed,
     regardless of datetime range.
     """
-    delete_candles_by_name(
+    delete_candles_by_field(
         symbol=TEST_2099_SYMBOL,
         timeframe=TEST_2099_TIMEFRAME,
-        name=_TEST_CANDLE_NAME,
+        field="c_name",
+        value=_TEST_CANDLE_NAME,
     )
 
 

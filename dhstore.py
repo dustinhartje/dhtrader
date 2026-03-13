@@ -1783,15 +1783,24 @@ def delete_candles(timeframe: str,
                                   )
 
 
-def delete_candles_by_name(symbol: str,
-                           timeframe: str,
-                           name: str,
-                           ):
-    """Delete candles from central storage with a matching c_name field."""
-    return dhm.delete_candles_by_name(symbol=symbol,
-                                      timeframe=timeframe,
-                                      name=name,
-                                      )
+def delete_candles_by_field(symbol: str,
+                            timeframe: str,
+                            field: str,
+                            value,
+                            ):
+    """Delete candles from central storage with 'field' matching 'value'.
+
+    Typically used to delete by c_name or other identifying fields.
+
+    Example to delete all candles with c_name=="DELETEME":
+    delete_candles_by_field(symbol="ES", timeframe="1m",
+                            field="c_name", value="DELETEME")
+    """
+    return dhm.delete_candles_by_field(symbol=symbol,
+                                       timeframe=timeframe,
+                                       field=field,
+                                       value=value,
+                                       )
 
 
 ##############################################################################
@@ -1885,6 +1894,18 @@ def clear_events(symbol: str,
         return "Sorry, Dusty hasn't written code for select timeframes yet"
 
 
-def delete_events_by_name(symbol: str, name: str):
-    """Delete events from central storage for a symbol matching name field."""
-    return dhm.delete_events_by_name(symbol=symbol, name=name)
+def delete_events_by_field(symbol: str,
+                           field: str,
+                           value,
+                           ):
+    """Delete events from central storage with 'field' matching 'value'.
+
+    Typically used to delete by name or category fields.
+
+    Example to delete all events with name=="DELETEME":
+    delete_events_by_field(symbol="ES", field="name", value="DELETEME")
+    """
+    return dhm.delete_events_by_field(symbol=symbol,
+                                      field=field,
+                                      value=value,
+                                      )

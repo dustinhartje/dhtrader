@@ -705,13 +705,21 @@ def delete_candles(timeframe: str,
     return result
 
 
-def delete_candles_by_name(symbol: str,
-                           timeframe: str,
-                           name: str,
-                           ):
-    """Delete all candles from mongo with a matching c_name field."""
+def delete_candles_by_field(symbol: str,
+                            timeframe: str,
+                            field: str,
+                            value,
+                            ):
+    """Delete all candles from mongo with 'field' matching 'value'.
+
+    Typically used to delete by c_name or other identifying fields.
+
+    Example to delete all candles with c_name=="DELETEME":
+    delete_candles_by_field(symbol="ES", timeframe="1m",
+                            field="c_name", value="DELETEME")
+    """
     c = db[f"candles_{symbol}_{timeframe}"]
-    result = c.delete_many({"c_name": name})
+    result = c.delete_many({field: value})
 
     return result
 
@@ -882,11 +890,19 @@ def store_event(start_dt,
     return result
 
 
-def delete_events_by_name(symbol: str, name: str):
-    """Delete all events from mongo for a symbol with a matching name field.
+def delete_events_by_field(symbol: str,
+                           field: str,
+                           value,
+                           ):
+    """Delete all events from mongo for a symbol with 'field' matching 'value'.
+
+    Typically used to delete by name or category fields.
+
+    Example to delete all events with name=="DELETEME":
+    delete_events_by_field(symbol="ES", field="name", value="DELETEME")
     """
     c = db[f"events_{symbol}"]
-    result = c.delete_many({"name": name})
+    result = c.delete_many({field: value})
 
     return result
 

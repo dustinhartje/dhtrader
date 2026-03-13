@@ -4,8 +4,8 @@ from dhtrader.dhmongo import (
     delete_backtests,
     delete_backtests_by_field,
     delete_candles,
-    delete_candles_by_name,
-    delete_events_by_name,
+    delete_candles_by_field,
+    delete_events_by_field,
     delete_indicator,
     delete_trades_by_field,
     delete_tradeseries,
@@ -71,14 +71,16 @@ def cleanup_dhmongo_storage():
             meta_collection="indicators_meta",
             dp_collection="indicators_datapoints",
         )
-        delete_candles_by_name(
+        delete_candles_by_field(
             symbol=_TEST_EVENT_SYMBOL,
             timeframe="1m",
-            name=_TEST_DELETEME_NAME,
+            field="c_name",
+            value=_TEST_DELETEME_NAME,
         )
-        delete_events_by_name(
+        delete_events_by_field(
             symbol=_TEST_EVENT_SYMBOL,
-            name=_TEST_DELETEME_NAME,
+            field="name",
+            value=_TEST_DELETEME_NAME,
         )
 
     _cleanup()
@@ -140,10 +142,10 @@ def test_store_and_get_candle_roundtrip(cleanup_dhmongo_storage):
 
     Uses a far-future sentinel datetime and c_name="DELETEME_DHMONGO_TESTS"
     so the test record is unambiguously identifiable.  Cleanup is driven
-    by the c_name field via delete_candles_by_name.
+    by the c_name field via delete_candles_by_field.
 
     Storage Usage: store_candle writes, get_candles reads,
-    delete_candles_by_name cleans up.
+    delete_candles_by_field cleans up.
     """
     test_dt = _TEST_DT
     test_epoch = dt_to_epoch(test_dt)
@@ -184,11 +186,12 @@ def test_store_and_get_candle_roundtrip(cleanup_dhmongo_storage):
     assert doc["c_symbol"] == test_symbol
     assert doc["c_name"] == _TEST_DELETEME_NAME
 
-    # Cleanup by name
-    delete_candles_by_name(
+    # Cleanup by c_name field
+    delete_candles_by_field(
         symbol=test_symbol,
         timeframe=test_tf,
-        name=_TEST_DELETEME_NAME,
+        field="c_name",
+        value=_TEST_DELETEME_NAME,
     )
 
     # Verify cleanup
@@ -447,10 +450,10 @@ def test_store_and_get_event_roundtrip(cleanup_dhmongo_storage):
     """Verify store_event and get_events work as a roundtrip.
 
     Uses name="DELETEME_DHMONGO_TESTS" for unambiguous identification
-    and cleanup via delete_events_by_name.
+    and cleanup via delete_events_by_field.
 
     Storage Usage: store_event writes, get_events reads,
-    delete_events_by_name cleans up.
+    delete_events_by_field cleans up.
     """
     start_epoch = dt_to_epoch(_TEST_EVENT_DT)
     end_epoch = dt_to_epoch("2099-12-31 23:00:00")
@@ -480,10 +483,11 @@ def test_store_and_get_event_roundtrip(cleanup_dhmongo_storage):
     assert event["name"] == _TEST_DELETEME_NAME
     assert "DELETEME" in event["tags"]
 
-    # Cleanup by name
-    delete_events_by_name(
+    # Cleanup by name field
+    delete_events_by_field(
         symbol=_TEST_EVENT_SYMBOL,
-        name=_TEST_DELETEME_NAME,
+        field="name",
+        value=_TEST_DELETEME_NAME,
     )
 
     # Verify deletion
