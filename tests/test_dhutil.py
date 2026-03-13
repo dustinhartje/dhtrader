@@ -1,16 +1,73 @@
 """Tests for dhutil candle utility functions."""
 import os
+import pytest
+from unittest.mock import patch
 from dhtrader import (
     Candle,
     dt_as_dt,
+    dt_to_epoch,
     read_candles_from_csv,
+    generate_zero_volume_candle,
+    compare_candles_vs_csv,
+    store_candles_from_csv,
+    delete_candles,
+    get_candles,
 )
 
 
-# Path to the test CSV file included in the repo
+# Path to the test CSV files included in the repo
+TESTS_DIR = os.path.dirname(__file__)
 TESTCANDLES_CSV = os.path.join(
-    os.path.dirname(__file__), '..', 'testcandles.csv'
+    TESTS_DIR, 'test_data_read_candles.csv'
 )
+TEST_2099_GOOD_CSV = os.path.join(
+    TESTS_DIR, 'test_data_2099_candles.csv'
+)
+TEST_2099_BAD_CSV = os.path.join(
+    TESTS_DIR, 'test_data_2099_candles_bad.csv'
+)
+
+# Constants for the 2099 storage test window
+# These are in the far future to guarantee zero collision with any
+# real production candle data.
+TEST_2099_START = "2099-01-02 18:00:00"
+TEST_2099_END = "2099-01-02 18:04:00"
+TEST_2099_TIMEFRAME = "1m"
+TEST_2099_SYMBOL = "ES"
+
+
+def _delete_2099_candles():
+    """Delete only candles in the safe 2099 test time window.
+
+    Safety guards prevent this from touching any pre-2099 data.
+    """
+    assert "2099" in TEST_2099_START, (
+        "Safety check: TEST_2099_START must be in 2099"
+    )
+    assert "2099" in TEST_2099_END, (
+        "Safety check: TEST_2099_END must be in 2099"
+    )
+    delete_candles(
+        timeframe=TEST_2099_TIMEFRAME,
+        symbol=TEST_2099_SYMBOL,
+        earliest_dt=TEST_2099_START,
+        latest_dt=TEST_2099_END,
+    )
+
+
+@pytest.fixture
+def cleanup_2099_candles():
+    """Clean the 2099 test window before and after the test.
+
+    Runs a pre-test cleanup to clear any leftover state, yields
+    control to the test, then always runs a post-test cleanup
+    regardless of pass or fail.  The deletion is scoped strictly
+    to TEST_2099_START / TEST_2099_END so it can never touch any
+    candles before 2099.
+    """
+    _delete_2099_candles()
+    yield
+    _delete_2099_candles()
 
 
 def test_read_candles_from_csv():
@@ -84,3 +141,226 @@ def test_read_candles_from_csv():
     # Candles are returned in CSV file order
     assert result_end[0].c_datetime == "2024-01-01 18:00:00"
     assert result_end[-1].c_datetime == "2024-01-01 18:04:00"
+
+
+def test_generate_zero_volume_candle():
+    """Verify generate_zero_volume_candle output for common scenarios.
+
+    Storage calls are mocked so this test does not write or read any
+    real data.
+    """
+    prior_candle = Candle(
+        c_datetime="2025-03-01 18:00:00",
+        c_timeframe="1m",
+        c_open=5000.00,
+        c_high=5001.00,
+        c_low=4999.00,
+        c_close=5000.50,
+        c_volume=100,
+        c_symbol="ES",
+    )
+    target_dt = "2025-03-01 18:01:00"
+
+    # Returns a Candle when exactly one prior candle is found
+    with patch('dhtrader.dhutil.get_candles',
+               return_value=[prior_candle]):
+        result = generate_zero_volume_candle(
+            c_datetime=target_dt,
+            timeframe="1m",
+            symbol="ES",
+        )
+    assert isinstance(result, Candle)
+    assert result.c_datetime == target_dt
+    assert result.c_volume == 0
+    # All OHLC values are set to the prior candle's close
+    assert result.c_open == prior_candle.c_close
+    assert result.c_high == prior_candle.c_close
+    assert result.c_low == prior_candle.c_close
+    assert result.c_close == prior_candle.c_close
+    assert result.c_timeframe == "1m"
+    assert result.c_symbol.ticker == "ES"
+
+    # Returns None when storage has no prior candle
+    with patch('dhtrader.dhutil.get_candles', return_value=[]):
+        result_none = generate_zero_volume_candle(
+            c_datetime=target_dt,
+            timeframe="1m",
+            symbol="ES",
+        )
+    assert result_none is None
+
+    # Returns None when storage returns multiple candles (ambiguous)
+    prior_candle2 = Candle(
+        c_datetime="2025-03-01 17:59:00",
+        c_timeframe="1m",
+        c_open=5001.00,
+        c_high=5002.00,
+        c_low=5000.00,
+        c_close=5001.50,
+        c_volume=50,
+        c_symbol="ES",
+    )
+    with patch('dhtrader.dhutil.get_candles',
+               return_value=[prior_candle, prior_candle2]):
+        result_multi = generate_zero_volume_candle(
+            c_datetime=target_dt,
+            timeframe="1m",
+            symbol="ES",
+        )
+    assert result_multi is None
+
+    # Unsupported symbol raises ValueError
+    with pytest.raises(ValueError,
+                       match="Only symbol: 'ES' is currently supported"):
+        generate_zero_volume_candle(
+            c_datetime=target_dt,
+            timeframe="1m",
+            symbol="NQ",
+        )
+
+    # Unsupported timeframe raises ValueError
+    with pytest.raises(ValueError,
+                       match="timeframe: 5m is not currently supported"):
+        generate_zero_volume_candle(
+            c_datetime=target_dt,
+            timeframe="5m",
+            symbol="ES",
+        )
+
+    # Verify get_candles is called for the correct prior epoch
+    # (one minute before the target datetime)
+    with patch('dhtrader.dhutil.get_candles') as mock_get:
+        mock_get.return_value = [prior_candle]
+        generate_zero_volume_candle(
+            c_datetime=target_dt,
+            timeframe="1m",
+            symbol="ES",
+        )
+    expected_epoch = dt_to_epoch(dt_as_dt("2025-03-01 18:00:00"))
+    mock_get.assert_called_once_with(
+        start_epoch=expected_epoch,
+        end_epoch=expected_epoch,
+        timeframe="1m",
+        symbol="ES",
+    )
+
+
+@pytest.mark.storage
+def test_store_candles_from_csv_and_compare(cleanup_2099_candles):
+    """Store candles from a CSV then verify compare_candles_vs_csv results.
+
+    Uses a 2099 time window to guarantee isolation from all real data.
+    The fixture ensures candles are removed before and after the test.
+    """
+    # Store candles from the good CSV
+    store_candles_from_csv(
+        filepath=TEST_2099_GOOD_CSV,
+        start_dt=TEST_2099_START,
+        end_dt=TEST_2099_END,
+        timeframe=TEST_2099_TIMEFRAME,
+        symbol=TEST_2099_SYMBOL,
+    )
+    # Confirm all 5 candles were persisted
+    stored = get_candles(
+        start_epoch=dt_to_epoch(TEST_2099_START),
+        end_epoch=dt_to_epoch(TEST_2099_END),
+        timeframe=TEST_2099_TIMEFRAME,
+        symbol=TEST_2099_SYMBOL,
+    )
+    assert len(stored) == 5
+    for c in stored:
+        assert c.c_timeframe == TEST_2099_TIMEFRAME
+        assert c.c_symbol.ticker == TEST_2099_SYMBOL
+
+    # compare_candles_vs_csv against the good CSV should report all_equal
+    result = compare_candles_vs_csv(
+        filepath=TEST_2099_GOOD_CSV,
+        timeframe=TEST_2099_TIMEFRAME,
+        symbol=TEST_2099_SYMBOL,
+        start_dt=TEST_2099_START,
+        end_dt=TEST_2099_END,
+    )
+    assert result is not None
+    assert result["all_equal"] is True
+    assert result["counts"]["stored_candles"] == 5
+    assert result["counts"]["csv_candles"] == 5
+    assert result["counts"]["missing_from_storage"] == 0
+    assert result["counts"]["extras_in_storage"] == 0
+    assert result["counts"]["diffs_from_csv"] == 0
+    assert result["counts"]["minor_diffs_from_csv"] == 0
+    assert result["missing_from_storage"] == {}
+    assert result["extras_in_storage"] == {}
+    assert result["differences"] == {}
+
+    # compare_candles_vs_csv against the bad CSV should detect errors:
+    #   candle 18:01 has a large close diff (5501.00 stored vs 5501.75 CSV)
+    #   candle 18:02 has a large volume diff (200 stored vs 20 CSV)
+    #   candle 18:03 is missing from the bad CSV (extra in storage)
+    result_bad = compare_candles_vs_csv(
+        filepath=TEST_2099_BAD_CSV,
+        timeframe=TEST_2099_TIMEFRAME,
+        symbol=TEST_2099_SYMBOL,
+        start_dt=TEST_2099_START,
+        end_dt=TEST_2099_END,
+    )
+    assert result_bad is not None
+    assert result_bad["all_equal"] is False
+    # 18:03 is in storage but not in the bad CSV
+    assert result_bad["counts"]["extras_in_storage"] == 1
+    # close diff on 18:01 and volume diff on 18:02 = 2 diff fields total
+    assert result_bad["counts"]["diffs_from_csv"] == 2
+    # No candles in the bad CSV should be missing from storage
+    assert result_bad["counts"]["missing_from_storage"] == 0
+    # Verify the specific datetimes and that each diff is classified as
+    # a major (not minor) discrepancy
+    bad_diffs = result_bad["differences"]
+    assert "2099-01-02 18:01:00" in bad_diffs
+    close_diff = bad_diffs["2099-01-02 18:01:00"]
+    assert "c_close" in close_diff["diffs"]
+    assert "c_close" not in close_diff["minor_diffs"]
+    assert "2099-01-02 18:02:00" in bad_diffs
+    vol_diff = bad_diffs["2099-01-02 18:02:00"]
+    assert "c_volume" in vol_diff["diffs"]
+    assert "c_volume" not in vol_diff["minor_diffs"]
+
+
+# ---------------------------------------------------------------------------
+# Suggestions for testing remediate_candle_gaps()
+# ---------------------------------------------------------------------------
+# remediate_candle_gaps() is an interactive, storage-mutating function that:
+#   - calls review_candles(check_integrity=True) across the full dataset
+#   - classifies gaps as "obvious" or "unclear"
+#   - may prompt the user, auto-fix, or both depending on arguments
+#   - may store new zero-volume candles via generate_zero_volume_candle()
+#
+# Recommended testing approach (without risking production data):
+#
+# 1. Always use dry_run=True in tests.
+#    With dry_run=True the function simulates every decision but stores
+#    nothing.  Tests can check the returned dict
+#    (fixed_obvious, fixed_unclear, skipped, errored) and verify the
+#    correct gap classification logic without mutating the database.
+#
+# 2. Seed a narrow 2099 time window with a known gap pattern.
+#    For example, store candles at 18:00 and 18:02 (skip 18:01), then
+#    call remediate_candle_gaps(dry_run=True) and assert the gap at
+#    18:01 appears in the correct output bucket.
+#    Clean up all 2099 candles with a fixture, same as the storage
+#    tests above.
+#
+# 3. Test classification logic separately using
+#    generate_zero_volume_candle() with mocked storage (as above).
+#    The gap-classification rules in remediate_candle_gaps are complex
+#    (ETH vs RTH hours, era-specific anomalies, volume heuristics).
+#    These rules could be unit-tested by mocking review_candles() to
+#    return synthetic gap data and asserting classification results.
+#
+# 4. Avoid prompt=True in tests.
+#    Use prompt=False and rely on fix_obvious / fix_unclear flags to
+#    drive deterministic behavior.  Interactive prompts cannot be
+#    exercised safely in an automated test suite.
+#
+# 5. For integration tests that must write data, use a fixture that
+#    guarantees teardown (see cleanup_2099_candles above) and always
+#    constrain start/end to the 2099 window so real data is never at
+#    risk.
