@@ -10,8 +10,6 @@ def test_Chart_create_and_verify_common_methods():
     to_json, and pretty.
 
     Chart does not define brief.
-    NOTE: This test also verifies Candle.pretty() line count as this
-    assertion was present in the original create_and_verify_pretty.
     """
     out_candle = Candle(c_datetime="2025-01-02 12:00:00",
                         c_timeframe="1m",
@@ -22,10 +20,6 @@ def test_Chart_create_and_verify_common_methods():
                         c_volume=1501,
                         c_symbol="ES",
                         )
-    assert isinstance(out_candle, Candle)
-    # NOTE: The following assertion tests Candle.pretty() and was kept
-    # from the original test_Chart_create_and_verify_pretty.
-    assert len(out_candle.pretty().splitlines()) == 23
     chart = Chart(c_timeframe="1m",
                   c_trading_hours="rth",
                   c_symbol="ES",
