@@ -636,10 +636,8 @@ def test_Trade_create_and_verify_common_methods():
     assert len(trade.pretty().splitlines()) == 32
     # brief
     result = trade.brief()
-    assert isinstance(result, str)
-    assert "2025-01-02 12:00:00" in result
-    assert "long" in result
-    assert "5000" in result
+    assert result == ("2025-01-02 12:00:00 - None | Thursday | long | "
+                      "entry=5000 | exit=None | profitable=None")
 
 
 def test_Trade_tick_and_target_calculations_correct():

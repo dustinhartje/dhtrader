@@ -111,11 +111,8 @@ def test_Candle_create_and_verify_common_methods():
     assert len(candle.pretty().splitlines()) == 24
     # brief
     result = candle.brief()
-    assert isinstance(result, str)
-    assert "ES" in result
-    assert "1m" in result
-    assert "2025-01-02 12:00:00" in result
-    assert "5000" in result
+    assert result == ("ES 1m 2025-01-02 12:00:00 | "
+                      "O: 5000.0 H: 5007.75 L: 4995.5 C: 5002.0 V: 1501")
 
 
 def test_Candle_calculated_attributes(candle):
