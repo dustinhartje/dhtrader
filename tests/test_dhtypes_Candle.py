@@ -55,6 +55,7 @@ def test_Candle_create_and_verify_common_methods():
     assert isinstance(candle.c_upper_wick_perc, float)
     assert isinstance(candle.c_lower_wick_perc, float)
     assert candle.c_direction == "bullish"
+    assert candle.c_name == "None"
     other = Candle(c_datetime="2025-01-02 12:00:00",
                    c_timeframe="1m",
                    c_open=5000,
@@ -107,7 +108,7 @@ def test_Candle_create_and_verify_common_methods():
     assert parsed["c_open"] == 5000.0
     # pretty
     assert isinstance(candle.pretty(), str)
-    assert len(candle.pretty().splitlines()) == 23
+    assert len(candle.pretty().splitlines()) == 24
     # brief
     result = candle.brief()
     assert isinstance(result, str)

@@ -41,6 +41,7 @@ def test_Event_create_and_verify_common_methods():
     assert isinstance(event.start_epoch, int)
     assert isinstance(event.end_epoch, int)
     assert event.start_epoch < event.end_epoch
+    assert event.name == "None"
     # __str__
     assert isinstance(str(event), str)
     assert len(str(event)) > 0
@@ -65,7 +66,7 @@ def test_Event_create_and_verify_common_methods():
     assert parsed["category"] == "Closed"
     # pretty
     assert isinstance(event.pretty(), str)
-    assert len(event.pretty().splitlines()) == 12
+    assert len(event.pretty().splitlines()) == 13
 
 
 def test_Event_contains_datetime(event):

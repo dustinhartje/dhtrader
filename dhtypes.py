@@ -1210,7 +1210,8 @@ class Candle():
                  c_tags: list = None,
                  c_epoch: int = None,
                  c_date: str = None,
-                 c_time: str = None
+                 c_time: str = None,
+                 c_name: str = "None",
                  ):
         # Precalculate datetime for calculating other attributes efficiently
         c_datetime_dt = dt_as_dt(c_datetime)
@@ -1240,6 +1241,7 @@ class Candle():
         if c_time is None:
             c_time = self.c_datetime[11:19]
         self.c_time = c_time
+        self.c_name = c_name
 
         # Calculated attributes
         delta = timeframe_delta(self.c_timeframe)
@@ -1555,6 +1557,7 @@ class Event():
                  category: str,
                  tags: list = None,
                  notes: str = "",
+                 name: str = "None",
                  ):
         self.start_dt = dt_as_str(start_dt)
         self.end_dt = dt_as_str(end_dt)
@@ -1569,6 +1572,7 @@ class Event():
         self.notes = notes
         self.start_epoch = dt_to_epoch(self.start_dt)
         self.end_epoch = dt_to_epoch(self.end_dt)
+        self.name = name
 
     def to_json(self):
         """Return a JSON representation with custom types normalized.

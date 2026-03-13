@@ -1409,6 +1409,7 @@ def store_candle(candle):
                      c_epoch=candle.c_epoch,
                      c_date=candle.c_date,
                      c_time=candle.c_time,
+                     c_name=candle.c_name,
                      )
 
 
@@ -1456,6 +1457,7 @@ def get_candles(start_epoch: int,
                               c_volume=r["c_volume"],
                               c_symbol=r["c_symbol"],
                               c_epoch=r["c_epoch"],
+                              c_name=r.get("c_name", "None"),
                               ))
         update_progbar(pbar, i, total)
     finish_progbar(pbar)
@@ -1781,6 +1783,17 @@ def delete_candles(timeframe: str,
                                   )
 
 
+def delete_candles_by_name(symbol: str,
+                           timeframe: str,
+                           name: str,
+                           ):
+    """Delete candles from central storage with a matching c_name field."""
+    return dhm.delete_candles_by_name(symbol=symbol,
+                                      timeframe=timeframe,
+                                      name=name,
+                                      )
+
+
 ##############################################################################
 # Events
 def store_event(event):
@@ -1797,6 +1810,7 @@ def store_event(event):
                              notes=event.notes,
                              start_epoch=event.start_epoch,
                              end_epoch=event.end_epoch,
+                             name=event.name,
                              )
 
     return result
@@ -1851,6 +1865,7 @@ def get_events(symbol="ES",
                             category=r["category"],
                             tags=r["tags"],
                             notes=r["notes"],
+                            name=r.get("name", "None"),
                             ))
         update_progbar(pbar, i, total)
     finish_progbar(pbar)
@@ -1868,3 +1883,8 @@ def clear_events(symbol: str,
         return dhm.clear_collection(f"events_{symbol}")
     else:
         return "Sorry, Dusty hasn't written code for select timeframes yet"
+
+
+def delete_events_by_name(symbol: str, name: str):
+    """Delete events from central storage for a symbol matching name field."""
+    return dhm.delete_events_by_name(symbol=symbol, name=name)

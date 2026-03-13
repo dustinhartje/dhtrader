@@ -4,8 +4,9 @@ from dhtrader.dhmongo import (
     delete_backtests,
     delete_backtests_by_field,
     delete_candles,
+    delete_candles_by_name,
+    delete_events_by_name,
     delete_indicator,
-    delete_one_document,
     delete_trades_by_field,
     delete_tradeseries,
     finish_progbar,
@@ -31,15 +32,8 @@ from dhtrader.dhmongo import (
 from dhtrader.dhcommon import dt_to_epoch
 
 # ---------------------------------------------------------------------------
-# Test collection and sentinel values.
-# These use a DELETEME prefix so they are clearly test-only and can be
-# safely cleaned up via field-based deletes without touching production data.
+# Sentinel values used across all storage tests.
 # ---------------------------------------------------------------------------
-_COLL_TRADES = "trades_DELETEME_dhmongo_tests"
-_COLL_TRADESERIES = "tradeseries_DELETEME_dhmongo_tests"
-_COLL_BACKTESTS = "backtests_DELETEME_dhmongo_tests"
-_COLL_IND_META = "indicators_meta_DELETEME_dhmongo_tests"
-_COLL_IND_DPS = "indicators_dps_DELETEME_dhmongo_tests"
 _TEST_DELETEME_NAME = "DELETEME_DHMONGO_TESTS"
 _TEST_IND_ID = "DELETEME_DHMONGO_IND"
 _TEST_EVENT_SYMBOL = "ES"
@@ -51,10 +45,10 @@ _TEST_EVENT_DT = _TEST_DT
 def cleanup_dhmongo_storage():
     """Clean up DELETEME test records before and after each storage test.
 
-    Deletes all records in the DELETEME test collections for trades,
-    tradeseries, backtests, and indicators, and removes the sentinel
-    test event from events_ES.  Runs both before and after the test so
-    that a stale state from a prior failed run cannot affect results.
+    Uses name-based deletion for all object types so that test records
+    are unambiguously identified and cleaned from production collections.
+    Runs both before and after the test so that stale state from a prior
+    failed run cannot affect results.
     """
 
     def _cleanup():
@@ -62,24 +56,29 @@ def cleanup_dhmongo_storage():
             symbol="ES",
             field="name",
             value=_TEST_DELETEME_NAME,
-            collection=_COLL_TRADES,
+            collection="trades",
         )
         delete_tradeseries(
             ts_ids=[_TEST_DELETEME_NAME],
-            collection=_COLL_TRADESERIES,
+            collection="tradeseries",
         )
         delete_backtests(
             bt_ids=[_TEST_DELETEME_NAME],
-            collection=_COLL_BACKTESTS,
+            collection="backtests",
         )
         delete_indicator(
             ind_id=_TEST_IND_ID,
-            meta_collection=_COLL_IND_META,
-            dp_collection=_COLL_IND_DPS,
+            meta_collection="indicators_meta",
+            dp_collection="indicators_datapoints",
         )
-        delete_one_document(
-            query={"start_dt": _TEST_EVENT_DT},
-            collection=f"events_{_TEST_EVENT_SYMBOL}",
+        delete_candles_by_name(
+            symbol=_TEST_EVENT_SYMBOL,
+            timeframe="1m",
+            name=_TEST_DELETEME_NAME,
+        )
+        delete_events_by_name(
+            symbol=_TEST_EVENT_SYMBOL,
+            name=_TEST_DELETEME_NAME,
         )
 
     _cleanup()
@@ -136,22 +135,22 @@ def test_review_database_returns_dict():
 
 
 @pytest.mark.storage
-def test_store_and_get_candle_roundtrip():
+def test_store_and_get_candle_roundtrip(cleanup_dhmongo_storage):
     """Verify store_candle and get_candles work as a roundtrip.
 
-    Note: Candle objects have no name field; a far-future sentinel
-    datetime (2099-12-31 23:00:00) is used as the unique identifier
-    instead of DELETEME in a name.
+    Uses a far-future sentinel datetime and c_name="DELETEME_DHMONGO_TESTS"
+    so the test record is unambiguously identifiable.  Cleanup is driven
+    by the c_name field via delete_candles_by_name.
 
     Storage Usage: store_candle writes, get_candles reads,
-    delete_candles cleans up.
+    delete_candles_by_name cleans up.
     """
-    test_dt = "2099-12-31 23:00:00"
+    test_dt = _TEST_DT
     test_epoch = dt_to_epoch(test_dt)
     test_symbol = "ES"
     test_tf = "1m"
 
-    # Store a test candle
+    # Store a test candle with DELETEME name
     store_candle(
         c_datetime=test_dt,
         c_timeframe=test_tf,
@@ -164,6 +163,7 @@ def test_store_and_get_candle_roundtrip():
         c_epoch=test_epoch,
         c_date=test_dt[:10],
         c_time=test_dt[11:19],
+        c_name=_TEST_DELETEME_NAME,
     )
 
     # Retrieve the candle
@@ -182,13 +182,13 @@ def test_store_and_get_candle_roundtrip():
     assert doc["c_close"] == 9005.0
     assert doc["c_volume"] == 100
     assert doc["c_symbol"] == test_symbol
+    assert doc["c_name"] == _TEST_DELETEME_NAME
 
-    # Cleanup
-    delete_candles(
-        timeframe=test_tf,
+    # Cleanup by name
+    delete_candles_by_name(
         symbol=test_symbol,
-        earliest_dt=test_dt,
-        latest_dt=test_dt,
+        timeframe=test_tf,
+        name=_TEST_DELETEME_NAME,
     )
 
     # Verify cleanup
@@ -242,13 +242,13 @@ def test_store_and_get_trade_roundtrip(cleanup_dhmongo_storage):
     }
 
     # Store the trade
-    store_trades(trades=[trade_doc], collection=_COLL_TRADES)
+    store_trades(trades=[trade_doc], collection="trades")
 
     # Retrieve by name
     results = get_trades_by_field(
         field="name",
         value=_TEST_DELETEME_NAME,
-        collection=_COLL_TRADES,
+        collection="trades",
     )
     assert len(results) == 1
     doc = results[0]
@@ -263,14 +263,14 @@ def test_store_and_get_trade_roundtrip(cleanup_dhmongo_storage):
         symbol="ES",
         field="name",
         value=_TEST_DELETEME_NAME,
-        collection=_COLL_TRADES,
+        collection="trades",
     )
 
     # Verify deletion
     after = get_trades_by_field(
         field="name",
         value=_TEST_DELETEME_NAME,
-        collection=_COLL_TRADES,
+        collection="trades",
     )
     assert len(after) == 0
 
@@ -292,13 +292,13 @@ def test_store_and_get_tradeseries_roundtrip(cleanup_dhmongo_storage):
     }
 
     # Store the tradeseries
-    store_tradeseries(series=ts_doc, collection=_COLL_TRADESERIES)
+    store_tradeseries(series=ts_doc, collection="tradeseries")
 
     # Retrieve by ts_id
     results = get_tradeseries_by_field(
         field="ts_id",
         value=_TEST_DELETEME_NAME,
-        collection=_COLL_TRADESERIES,
+        collection="tradeseries",
     )
     assert len(results) == 1
     doc = results[0]
@@ -308,14 +308,14 @@ def test_store_and_get_tradeseries_roundtrip(cleanup_dhmongo_storage):
     # Delete by ts_id
     delete_tradeseries(
         ts_ids=[_TEST_DELETEME_NAME],
-        collection=_COLL_TRADESERIES,
+        collection="tradeseries",
     )
 
     # Verify deletion
     after = get_tradeseries_by_field(
         field="ts_id",
         value=_TEST_DELETEME_NAME,
-        collection=_COLL_TRADESERIES,
+        collection="tradeseries",
     )
     assert len(after) == 0
 
@@ -336,13 +336,13 @@ def test_store_and_get_backtest_roundtrip(cleanup_dhmongo_storage):
     }
 
     # Store the backtest
-    store_backtest(backtest=bt_doc, collection=_COLL_BACKTESTS)
+    store_backtest(backtest=bt_doc, collection="backtests")
 
     # Retrieve by bt_id
     results = get_backtests_by_field(
         field="bt_id",
         value=_TEST_DELETEME_NAME,
-        collection=_COLL_BACKTESTS,
+        collection="backtests",
     )
     assert len(results) == 1
     doc = results[0]
@@ -352,14 +352,14 @@ def test_store_and_get_backtest_roundtrip(cleanup_dhmongo_storage):
     # Delete by bt_id
     delete_backtests(
         bt_ids=[_TEST_DELETEME_NAME],
-        collection=_COLL_BACKTESTS,
+        collection="backtests",
     )
 
     # Verify deletion
     after = get_backtests_by_field(
         field="bt_id",
         value=_TEST_DELETEME_NAME,
-        collection=_COLL_BACKTESTS,
+        collection="backtests",
     )
     assert len(after) == 0
 
@@ -390,16 +390,16 @@ def test_store_and_get_indicator_roundtrip(cleanup_dhmongo_storage):
     }
 
     # Store indicator meta and one datapoint
-    store_indicator(indicator=ind_doc, meta_collection=_COLL_IND_META)
+    store_indicator(indicator=ind_doc, meta_collection="indicators_meta")
     store_indicator_datapoints(
         datapoints=[dp_doc],
-        collection=_COLL_IND_DPS,
+        collection="indicators_datapoints",
     )
 
     # Retrieve meta
     meta_results = get_indicator(
         ind_id=_TEST_IND_ID,
-        meta_collection=_COLL_IND_META,
+        meta_collection="indicators_meta",
         autoload_datapoints=False,
     )
     assert len(meta_results) == 1
@@ -409,7 +409,7 @@ def test_store_and_get_indicator_roundtrip(cleanup_dhmongo_storage):
     # Retrieve datapoints
     dp_results = get_indicator_datapoints(
         ind_id=_TEST_IND_ID,
-        dp_collection=_COLL_IND_DPS,
+        dp_collection="indicators_datapoints",
         earliest_dt=dp_dt,
         latest_dt=dp_dt,
     )
@@ -420,14 +420,14 @@ def test_store_and_get_indicator_roundtrip(cleanup_dhmongo_storage):
     # Delete indicator meta and all its datapoints
     delete_indicator(
         ind_id=_TEST_IND_ID,
-        meta_collection=_COLL_IND_META,
-        dp_collection=_COLL_IND_DPS,
+        meta_collection="indicators_meta",
+        dp_collection="indicators_datapoints",
     )
 
     # Verify meta deleted
     after_meta = get_indicator(
         ind_id=_TEST_IND_ID,
-        meta_collection=_COLL_IND_META,
+        meta_collection="indicators_meta",
         autoload_datapoints=False,
     )
     assert len(after_meta) == 0
@@ -435,7 +435,7 @@ def test_store_and_get_indicator_roundtrip(cleanup_dhmongo_storage):
     # Verify datapoints deleted
     after_dps = get_indicator_datapoints(
         ind_id=_TEST_IND_ID,
-        dp_collection=_COLL_IND_DPS,
+        dp_collection="indicators_datapoints",
         earliest_dt=dp_dt,
         latest_dt=dp_dt,
     )
@@ -446,26 +446,26 @@ def test_store_and_get_indicator_roundtrip(cleanup_dhmongo_storage):
 def test_store_and_get_event_roundtrip(cleanup_dhmongo_storage):
     """Verify store_event and get_events work as a roundtrip.
 
-    Note: Event objects have no name field.  DELETEME is included in
-    the category and tags fields for identification instead.  Cleanup
-    uses delete_one_document since dhmongo has no dedicated event delete.
+    Uses name="DELETEME_DHMONGO_TESTS" for unambiguous identification
+    and cleanup via delete_events_by_name.
 
     Storage Usage: store_event writes, get_events reads,
-    delete_one_document cleans up.
+    delete_events_by_name cleans up.
     """
     start_epoch = dt_to_epoch(_TEST_EVENT_DT)
     end_epoch = dt_to_epoch("2099-12-31 23:00:00")
 
-    # Store the event
+    # Store the event with DELETEME name
     store_event(
         start_dt=_TEST_EVENT_DT,
         end_dt="2099-12-31 23:00:00",
         symbol=_TEST_EVENT_SYMBOL,
-        category=_TEST_DELETEME_NAME,
+        category="DELETEME_category",
         tags=["DELETEME"],
         notes="DELETEME test event for dhmongo roundtrip",
         start_epoch=start_epoch,
         end_epoch=end_epoch,
+        name=_TEST_DELETEME_NAME,
     )
 
     # Retrieve the event
@@ -477,13 +477,13 @@ def test_store_and_get_event_roundtrip(cleanup_dhmongo_storage):
     matching = [e for e in results if e["start_dt"] == _TEST_EVENT_DT]
     assert len(matching) == 1
     event = matching[0]
-    assert event["category"] == _TEST_DELETEME_NAME
+    assert event["name"] == _TEST_DELETEME_NAME
     assert "DELETEME" in event["tags"]
 
-    # Cleanup: no dedicated delete_event in dhmongo; use delete_one_document
-    delete_one_document(
-        query={"start_dt": _TEST_EVENT_DT},
-        collection=f"events_{_TEST_EVENT_SYMBOL}",
+    # Cleanup by name
+    delete_events_by_name(
+        symbol=_TEST_EVENT_SYMBOL,
+        name=_TEST_DELETEME_NAME,
     )
 
     # Verify deletion

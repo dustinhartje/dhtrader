@@ -600,6 +600,7 @@ def store_candle(c_datetime,
                  c_epoch: int,
                  c_date: str,
                  c_time: str,
+                 c_name: str = "None",
                  ):
     """Stores a single candle object in mongo.
 
@@ -619,6 +620,7 @@ def store_candle(c_datetime,
                   "c_epoch": c_epoch,
                   "c_date": c_date,
                   "c_time": c_time,
+                  "c_name": c_name,
                   }
     c = db[collection]
     result = c.find_one_and_replace({"c_datetime": c_dt},
@@ -699,6 +701,17 @@ def delete_candles(timeframe: str,
     result = c.delete_many({"$and": [{"c_epoch": {"$gte": start_epoch}},
                                      {"c_epoch": {"$lte": end_epoch}},
                                      ]})
+
+    return result
+
+
+def delete_candles_by_name(symbol: str,
+                           timeframe: str,
+                           name: str,
+                           ):
+    """Delete all candles from mongo with a matching c_name field."""
+    c = db[f"candles_{symbol}_{timeframe}"]
+    result = c.delete_many({"c_name": name})
 
     return result
 
@@ -845,6 +858,7 @@ def store_event(start_dt,
                 notes: str,
                 start_epoch: int,
                 end_epoch: int,
+                name: str = "None",
                 ):
     """Write a single Event() to mongo."""
     event_doc = {"start_dt": dt_as_str(start_dt),
@@ -854,6 +868,7 @@ def store_event(start_dt,
                  "notes": notes,
                  "start_epoch": start_epoch,
                  "end_epoch": end_epoch,
+                 "name": name,
                  }
     collection = f"events_{symbol}"
     c = db[collection]
@@ -863,6 +878,15 @@ def store_event(start_dt,
                                     new=True,
                                     upsert=True,
                                     )
+
+    return result
+
+
+def delete_events_by_name(symbol: str, name: str):
+    """Delete all events from mongo for a symbol with a matching name field.
+    """
+    c = db[f"events_{symbol}"]
+    result = c.delete_many({"name": name})
 
     return result
 
@@ -902,3 +926,79 @@ def get_events(symbol: str,
     result = filtered_by_tag
 
     return result
+
+
+##############################################################################
+# Backfill utilities
+def deleteme_backfill_names_to_candles_and_events():
+    """Backfill the 'c_name'/'name' field on candle and event records.
+
+    Sets 'c_name' to the string "None" for every candle document that
+    is missing the field, and 'name' to the string "None" for every
+    event document missing the field.  This handles data that was stored
+    before the name field was added to Candle and Event.
+
+    After updating, a verification query confirms that every record in
+    each affected collection now has the field set to a string value.
+    Raises RuntimeError if verification fails for any collection.
+
+    Returns a dict summarising the number of records updated per
+    collection.
+    """
+    all_collections = list_collections()
+    candle_collections = [
+        c for c in all_collections if c.startswith("candles_")
+    ]
+    event_collections = [
+        c for c in all_collections if c.startswith("events_")
+    ]
+
+    results = {"candles": {}, "events": {}}
+
+    for coll in candle_collections:
+        c = db[coll]
+        update_result = c.update_many(
+            {"c_name": {"$exists": False}},
+            {"$set": {"c_name": "None"}},
+        )
+        results["candles"][coll] = {
+            "updated": update_result.modified_count,
+        }
+        missing = c.count_documents(
+            {"$or": [
+                {"c_name": {"$exists": False}},
+                {"c_name": {"$not": {"$type": "string"}}},
+            ]},
+        )
+        if missing > 0:
+            raise RuntimeError(
+                f"Backfill verification failed: {missing} candle "
+                f"record(s) in '{coll}' still lack a string c_name "
+                "field after update."
+            )
+        results["candles"][coll]["verified"] = True
+
+    for coll in event_collections:
+        c = db[coll]
+        update_result = c.update_many(
+            {"name": {"$exists": False}},
+            {"$set": {"name": "None"}},
+        )
+        results["events"][coll] = {
+            "updated": update_result.modified_count,
+        }
+        missing = c.count_documents(
+            {"$or": [
+                {"name": {"$exists": False}},
+                {"name": {"$not": {"$type": "string"}}},
+            ]},
+        )
+        if missing > 0:
+            raise RuntimeError(
+                f"Backfill verification failed: {missing} event "
+                f"record(s) in '{coll}' still lack a string name "
+                "field after update."
+            )
+        results["events"][coll]["verified"] = True
+
+    return results

@@ -10,7 +10,7 @@ from dhtrader import (
     generate_zero_volume_candle,
     compare_candles_vs_csv,
     store_candles_from_csv,
-    delete_candles,
+    delete_candles_by_name,
     get_candles,
     remediate_candle_gaps,
 )
@@ -41,34 +41,30 @@ TEST_2099_TIMEFRAME = "1m"
 TEST_2099_SYMBOL = "ES"
 
 
-def _delete_2099_candles():
-    """Delete only candles in the safe 2099 test time window.
+_TEST_CANDLE_NAME = "DELETEME_DHUTIL_TESTS"
 
-    Safety guards prevent this from touching any pre-2099 data.
+
+def _delete_2099_candles():
+    """Delete only candles stored with the DELETEME_DHUTIL_TESTS name.
+
+    Name-based deletion ensures only test candles are removed,
+    regardless of datetime range.
     """
-    assert "2099" in TEST_2099_START, (
-        "Safety check: TEST_2099_START must be in 2099"
-    )
-    assert "2099" in TEST_2099_END, (
-        "Safety check: TEST_2099_END must be in 2099"
-    )
-    delete_candles(
-        timeframe=TEST_2099_TIMEFRAME,
+    delete_candles_by_name(
         symbol=TEST_2099_SYMBOL,
-        earliest_dt=TEST_2099_START,
-        latest_dt=TEST_2099_END,
+        timeframe=TEST_2099_TIMEFRAME,
+        name=_TEST_CANDLE_NAME,
     )
 
 
 @pytest.fixture
 def cleanup_2099_candles():
-    """Clean the 2099 test window before and after the test.
+    """Clean the 2099 test candles before and after the test.
 
     Runs a pre-test cleanup to clear any leftover state, yields
     control to the test, then always runs a post-test cleanup
-    regardless of pass or fail.  The deletion is scoped strictly
-    to TEST_2099_START / TEST_2099_END so it can never touch any
-    candles before 2099.
+    regardless of pass or fail.  Deletion is scoped to
+    _TEST_CANDLE_NAME so it can never touch production candles.
     """
     _delete_2099_candles()
     yield
@@ -264,6 +260,7 @@ def test_store_candles_from_csv_and_compare(cleanup_2099_candles):
         end_dt=TEST_2099_END,
         timeframe=TEST_2099_TIMEFRAME,
         symbol=TEST_2099_SYMBOL,
+        c_name=_TEST_CANDLE_NAME,
     )
     # Confirm all 10 candles were persisted
     stored = get_candles(
@@ -355,6 +352,7 @@ def test_remediate_candle_gaps(cleanup_2099_candles):
         end_dt=TEST_2099_END,
         timeframe=TEST_2099_TIMEFRAME,
         symbol=TEST_2099_SYMBOL,
+        c_name=_TEST_CANDLE_NAME,
     )
     stored = get_candles(
         start_epoch=dt_to_epoch(TEST_2099_START),
