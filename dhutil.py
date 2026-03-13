@@ -60,6 +60,8 @@ def remediate_candle_gaps(timeframe: str = "1m",
                           fix_obvious: bool = False,
                           fix_unclear: bool = False,
                           dry_run=False,
+                          start_dt=None,
+                          end_dt=None,
                           ):
     """Identify candle gaps and offer to fill them with zero volume candles.
 
@@ -75,6 +77,12 @@ def remediate_candle_gaps(timeframe: str = "1m",
 
     dry_run: Run all logic as if remediation is being performed, but only
     print candle storage actions without actually performing them.
+
+    start_dt: Optional datetime to limit remediation to a specific start.
+    If None, all candles from the earliest stored candle are reviewed.
+
+    end_dt: Optional datetime to limit remediation to a specific end.
+    If None, all candles up to the latest stored candle are reviewed.
     """
     if timeframe == "1m":
         delta = timedelta(minutes=1)
@@ -91,6 +99,8 @@ def remediate_candle_gaps(timeframe: str = "1m",
                             symbol=symbol,
                             check_integrity=True,
                             return_detail=True,
+                            start_dt=start_dt,
+                            end_dt=end_dt,
                             )
     print("Review complete, beginning remediation operations")
     missing_candles = review["missing_candles_by_date"]

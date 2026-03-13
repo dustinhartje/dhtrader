@@ -1470,6 +1470,8 @@ def review_candles(timeframe: str,
                    check_integrity: bool = False,
                    show_progress: bool = False,
                    return_detail: bool = False,
+                   start_dt=None,
+                   end_dt=None,
                    ):
     """Provide aggregate summary data about candles in central storage.
 
@@ -1494,8 +1496,14 @@ def review_candles(timeframe: str,
     if overview is None:
         log_say(f"No candles found for the specified timeframe {timeframe}")
         return None
-    start_epoch = dt_to_epoch(overview["earliest_dt"])
-    end_epoch = dt_to_epoch(overview["latest_dt"])
+    if start_dt is not None:
+        start_epoch = dt_to_epoch(start_dt)
+    else:
+        start_epoch = dt_to_epoch(overview["earliest_dt"])
+    if end_dt is not None:
+        end_epoch = dt_to_epoch(end_dt)
+    else:
+        end_epoch = dt_to_epoch(overview["latest_dt"])
     if check_integrity:
         log_say("Starting integrity checks and gap analysis because "
                 "check_integrity=True")
