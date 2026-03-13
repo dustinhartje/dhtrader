@@ -1,5 +1,6 @@
 """Tests for Symbol market hours, serialization, and era detection."""
 import datetime as dt
+import json
 import pytest
 from dhtrader import (
     dt_as_dt, dt_as_str, dt_to_epoch, Event, Symbol)
@@ -1679,3 +1680,48 @@ def test_Symbol_set_times(symbol):
     with pytest.raises(ValueError, match="times have not yet been defined"):
         Symbol(ticker="UNKNOWN", name="Unknown",
                leverage_ratio=1, tick_size=0.01)
+
+
+def test_Symbol_create_and_verify_common_methods(symbol):
+    """Test Symbol __eq__, __ne__, __str__, __repr__, to_clean_dict,
+    to_json, and pretty.
+
+    Symbol does not define brief.
+    """
+    sym = symbol
+    sym2 = Symbol(ticker="ES", name="ES",
+                  leverage_ratio=50, tick_size=0.25)
+    diff = Symbol(ticker="ES", name="ES",
+                  leverage_ratio=50, tick_size=0.5)
+    # __eq__
+    assert sym == sym2
+    assert not (sym == diff)
+    # __ne__
+    assert not (sym != sym2)
+    assert sym != diff
+    # __str__
+    assert isinstance(str(sym), str)
+    assert len(str(sym)) > 0
+    # __repr__
+    assert isinstance(repr(sym), str)
+    assert str(sym) == repr(sym)
+    # to_clean_dict
+    d = sym.to_clean_dict()
+    assert isinstance(d, dict)
+    assert d["ticker"] == "ES"
+    assert d["name"] == "ES"
+    assert d["leverage_ratio"] == 50.0
+    assert d["tick_size"] == 0.25
+    # to_json
+    j = sym.to_json()
+    assert isinstance(j, str)
+    parsed = json.loads(j)
+    assert isinstance(parsed, dict)
+    assert parsed["ticker"] == "ES"
+    assert parsed["leverage_ratio"] == 50.0
+    # pretty
+    p = sym.pretty()
+    assert isinstance(p, str)
+    assert "\n" in p
+    assert '"ticker"' in p
+    assert '"ES"' in p

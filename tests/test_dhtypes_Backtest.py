@@ -1,5 +1,6 @@
 """Tests for Backtest creation, storage, retrieval, and calculation."""
 import datetime
+import json
 import pytest
 from dhtrader import (
     Backtest, Chart, delete_backtests, delete_backtests_by_field,
@@ -164,18 +165,49 @@ def cleanup_backtest_storage():
         clear_storage_by_name(name)
 
 
-def test_Backtest_create_and_verify_pretty():
-    """Verify Backtest.pretty() output line count."""
+def test_Backtest_create_and_verify_common_methods():
+    """Test Backtest __eq__, __ne__, __str__, __repr__, to_clean_dict,
+    to_json, and pretty.
+
+    Backtest does not define brief.
+    """
     bt = create_backtest()
+    bt2 = create_backtest()
+    diff = create_backtest(name="DIFFERENT")
     assert isinstance(bt, Backtest)
-    ts = create_tradeseries()
-    assert isinstance(ts, TradeSeries)
-    tr = create_trade()
-    assert isinstance(tr, Trade)
+    # __eq__
+    assert bt == bt2
+    assert not (bt == diff)
+    # __ne__
+    assert not (bt != bt2)
+    assert bt != diff
+    # __str__
+    assert isinstance(str(bt), str)
+    assert len(str(bt)) > 0
+    # __repr__
+    assert isinstance(repr(bt), str)
+    assert str(bt) == repr(bt)
+    # to_clean_dict
+    d = bt.to_clean_dict()
+    assert isinstance(d, dict)
+    assert d["name"] == "DELETEME"
+    assert d["timeframe"] == "e1h"
+    assert d["symbol"] == "ES"
+    # to_json
+    j = bt.to_json()
+    assert isinstance(j, str)
+    parsed = json.loads(j)
+    assert isinstance(parsed, dict)
+    assert parsed["name"] == "DELETEME"
+    assert parsed["timeframe"] == "e1h"
+    # pretty
+    assert isinstance(bt.pretty(), str)
     assert len(bt.pretty().splitlines()) == 21
+    ts = create_tradeseries()
+    tr = create_trade()
     ts.add_trade(tr)
     bt.update_tradeseries(ts)
-    # With TradeSeries and Trdes shown
+    # With TradeSeries and Trades shown
     assert len(bt.pretty(suppress_tradeseries=False,
                          suppress_trades=False).splitlines()) == 66
 

@@ -1,4 +1,5 @@
 """Tests for Candle creation, validation, and output methods."""
+import json
 import pytest
 from dhtrader import (
     Candle)
@@ -18,19 +19,80 @@ def candle():
                   )
 
 
-def test_Candle_create_and_verify_pretty():
-    """Verify Candle.pretty() output line count."""
-    out_candle = Candle(c_datetime="2025-01-02 12:00:00",
-                        c_timeframe="1m",
-                        c_open=5000,
-                        c_high=5007.75,
-                        c_low=4995.5,
-                        c_close=5002,
-                        c_volume=1501,
-                        c_symbol="ES",
-                        )
-    assert isinstance(out_candle, Candle)
-    assert len(out_candle.pretty().splitlines()) == 23
+def test_Candle_create_and_verify_common_methods():
+    """Test Candle __eq__, __ne__, __str__, __repr__, to_clean_dict,
+    to_json, pretty, and brief.
+    """
+    candle = Candle(c_datetime="2025-01-02 12:00:00",
+                    c_timeframe="1m",
+                    c_open=5000,
+                    c_high=5007.75,
+                    c_low=4995.5,
+                    c_close=5002,
+                    c_volume=1501,
+                    c_symbol="ES",
+                    )
+    assert isinstance(candle, Candle)
+    other = Candle(c_datetime="2025-01-02 12:00:00",
+                   c_timeframe="1m",
+                   c_open=5000,
+                   c_high=5007.75,
+                   c_low=4995.5,
+                   c_close=5002,
+                   c_volume=1501,
+                   c_symbol="ES",
+                   )
+    diff = Candle(c_datetime="2025-01-02 12:00:00",
+                  c_timeframe="1m",
+                  c_open=5001,
+                  c_high=5007.75,
+                  c_low=4995.5,
+                  c_close=5002,
+                  c_volume=1501,
+                  c_symbol="ES",
+                  )
+    # __eq__
+    assert candle == other
+    assert not (candle == diff)
+    # __ne__
+    assert not (candle != other)
+    assert candle != diff
+    # __str__
+    assert isinstance(str(candle), str)
+    assert len(str(candle)) > 0
+    # __repr__
+    assert isinstance(repr(candle), str)
+    assert len(repr(candle)) > 0
+    assert str(candle) == repr(candle)
+    # to_clean_dict
+    d = candle.to_clean_dict()
+    assert isinstance(d, dict)
+    assert "c_datetime" in d
+    assert "c_open" in d
+    assert "c_high" in d
+    assert "c_low" in d
+    assert "c_close" in d
+    assert "c_volume" in d
+    assert d["c_datetime"] == "2025-01-02 12:00:00"
+    assert d["c_open"] == 5000.0
+    assert d["c_symbol"] == "ES"
+    # to_json
+    j = candle.to_json()
+    assert isinstance(j, str)
+    parsed = json.loads(j)
+    assert isinstance(parsed, dict)
+    assert parsed["c_datetime"] == "2025-01-02 12:00:00"
+    assert parsed["c_open"] == 5000.0
+    # pretty
+    assert isinstance(candle.pretty(), str)
+    assert len(candle.pretty().splitlines()) == 23
+    # brief
+    result = candle.brief()
+    assert isinstance(result, str)
+    assert "ES" in result
+    assert "1m" in result
+    assert "2025-01-02 12:00:00" in result
+    assert "5000" in result
 
 
 def test_Candle_calculated_attributes(candle):
@@ -111,74 +173,3 @@ def test_Candle_contains_datetime(candle):
     assert not candle.contains_datetime("2025-01-02 12:01:00")
     # Before candle start is False
     assert not candle.contains_datetime("2025-01-02 11:59:00")
-
-
-def test_Candle_eq_ne(candle):
-    """Verify Candle __eq__ and __ne__ compare candles by field values."""
-    # Identical candle is equal
-    other = Candle(c_datetime="2025-01-02 12:00:00",
-                   c_timeframe="1m",
-                   c_open=5000,
-                   c_high=5007.75,
-                   c_low=4995.5,
-                   c_close=5002,
-                   c_volume=1501,
-                   c_symbol="ES",
-                   )
-    assert candle == other
-    assert not (candle != other)
-    # Different open price is not equal
-    diff_price = Candle(c_datetime="2025-01-02 12:00:00",
-                        c_timeframe="1m",
-                        c_open=5001,
-                        c_high=5007.75,
-                        c_low=4995.5,
-                        c_close=5002,
-                        c_volume=1501,
-                        c_symbol="ES",
-                        )
-    assert candle != diff_price
-    # Different datetime is not equal
-    diff_dt = Candle(c_datetime="2025-01-02 12:01:00",
-                     c_timeframe="1m",
-                     c_open=5000,
-                     c_high=5007.75,
-                     c_low=4995.5,
-                     c_close=5002,
-                     c_volume=1501,
-                     c_symbol="ES",
-                     )
-    assert candle != diff_dt
-
-
-def test_Candle_to_clean_dict(candle):
-    """Verify Candle.to_clean_dict returns a dict with expected keys."""
-    d = candle.to_clean_dict()
-    assert isinstance(d, dict)
-    assert "c_datetime" in d
-    assert "c_open" in d
-    assert "c_high" in d
-    assert "c_low" in d
-    assert "c_close" in d
-    assert "c_volume" in d
-    assert d["c_datetime"] == "2025-01-02 12:00:00"
-    assert d["c_open"] == 5000.0
-    assert d["c_symbol"] == "ES"
-
-
-def test_Candle_brief(candle):
-    """Verify Candle.brief returns a single-line summary string."""
-    result = candle.brief()
-    assert isinstance(result, str)
-    assert "ES" in result
-    assert "1m" in result
-    assert "2025-01-02 12:00:00" in result
-    assert "5000" in result
-
-
-def test_Candle_str_repr(candle):
-    """Verify Candle __str__ and __repr__ return non-empty strings."""
-    assert isinstance(str(candle), str)
-    assert len(str(candle)) > 0
-    assert isinstance(repr(candle), str)
-    assert len(repr(candle)) > 0

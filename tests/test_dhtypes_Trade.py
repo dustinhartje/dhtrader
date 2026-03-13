@@ -564,11 +564,51 @@ def test_Trade_confirm_observed_results():
     # assert draw["drawdown_trail_increase"] == 51.25
 
 
-def test_Trade_create_and_verify_pretty():
-    """Verify Trade.pretty() output line count."""
+def test_Trade_create_and_verify_common_methods():
+    """Test Trade __eq__, __ne__, __str__, __repr__, to_clean_dict,
+    to_json, pretty, and brief.
+    """
+    from copy import deepcopy
     trade = create_trade()
     assert isinstance(trade, Trade)
+    # Use deepcopy to get an identical trade (created_dt is in __eq__)
+    trade2 = deepcopy(trade)
+    diff = create_trade(open_dt="2025-01-02 13:00:00")
+    # __eq__
+    assert trade == trade2
+    assert not (trade == diff)
+    # __ne__
+    assert not (trade != trade2)
+    assert trade != diff
+    # __str__
+    assert isinstance(str(trade), str)
+    assert len(str(trade)) > 0
+    # __repr__
+    assert isinstance(repr(trade), str)
+    assert str(trade) == repr(trade)
+    # to_clean_dict
+    d = trade.to_clean_dict()
+    assert isinstance(d, dict)
+    assert d["open_dt"] == "2025-01-02 12:00:00"
+    assert d["direction"] == "long"
+    assert d["entry_price"] == 5000
+    assert d["symbol"] == "ES"
+    # to_json
+    j = trade.to_json()
+    assert isinstance(j, str)
+    parsed = json.loads(j)
+    assert isinstance(parsed, dict)
+    assert parsed["open_dt"] == "2025-01-02 12:00:00"
+    assert parsed["direction"] == "long"
+    # pretty
+    assert isinstance(trade.pretty(), str)
     assert len(trade.pretty().splitlines()) == 32
+    # brief
+    result = trade.brief()
+    assert isinstance(result, str)
+    assert "2025-01-02 12:00:00" in result
+    assert "long" in result
+    assert "5000" in result
 
 
 def test_Trade_tick_and_target_calculations_correct():

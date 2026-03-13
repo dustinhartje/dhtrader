@@ -146,11 +146,44 @@ def cleanup_tradeseries_storage():
         clear_tradeseries_storage_by_name(name)
 
 
-def test_TradeSeries_create_and_verify_pretty():
-    """Verify TradeSeries.pretty() output line count."""
+def test_TradeSeries_create_and_verify_common_methods():
+    """Test TradeSeries __eq__, __ne__, __str__, __repr__, to_clean_dict,
+    to_json, and pretty.
+
+    TradeSeries does not define brief.
+    """
     ts = create_tradeseries()
+    ts2 = create_tradeseries()
+    diff = create_tradeseries(name="DIFFERENT")
     test_trade = create_trade()
     assert isinstance(ts, TradeSeries)
+    # __eq__
+    assert ts == ts2
+    assert not (ts == diff)
+    # __ne__
+    assert not (ts != ts2)
+    assert ts != diff
+    # __str__
+    assert isinstance(str(ts), str)
+    assert len(str(ts)) > 0
+    # __repr__
+    assert isinstance(repr(ts), str)
+    assert str(ts) == repr(ts)
+    # to_clean_dict
+    d = ts.to_clean_dict()
+    assert isinstance(d, dict)
+    assert d["name"] == "DELETEME"
+    assert d["timeframe"] == "5m"
+    assert d["symbol"] == "ES"
+    # to_json
+    j = ts.to_json()
+    assert isinstance(j, str)
+    parsed = json.loads(j)
+    assert isinstance(parsed, dict)
+    assert parsed["name"] == "DELETEME"
+    assert parsed["timeframe"] == "5m"
+    # pretty
+    assert isinstance(ts.pretty(), str)
     assert len(ts.pretty().splitlines()) == 15
     ts.add_trade(test_trade)
     # With trades shown

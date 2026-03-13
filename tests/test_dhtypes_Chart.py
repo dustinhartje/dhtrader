@@ -1,11 +1,18 @@
 """Tests for Chart creation, candle loading, and date restriction."""
+import json
 import pytest
 from dhtrader import (
     Candle, Chart)
 
 
-def test_Chart_create_and_verify_pretty():
-    """Verify Chart.pretty() output line count."""
+def test_Chart_create_and_verify_common_methods():
+    """Test Chart __eq__, __ne__, __str__, __repr__, to_clean_dict,
+    to_json, and pretty.
+
+    Chart does not define brief.
+    NOTE: This test also verifies Candle.pretty() line count as this
+    assertion was present in the original create_and_verify_pretty.
+    """
     out_candle = Candle(c_datetime="2025-01-02 12:00:00",
                         c_timeframe="1m",
                         c_open=5000,
@@ -16,18 +23,61 @@ def test_Chart_create_and_verify_pretty():
                         c_symbol="ES",
                         )
     assert isinstance(out_candle, Candle)
+    # NOTE: The following assertion tests Candle.pretty() and was kept
+    # from the original test_Chart_create_and_verify_pretty.
     assert len(out_candle.pretty().splitlines()) == 23
-    out_chart = Chart(c_timeframe="1m",
-                      c_trading_hours="rth",
-                      c_symbol="ES",
-                      c_start="2025-01-02 12:00:00",
-                      c_end="2025-01-02 12:10:00",
-                      autoload=False,
-                      )
-    assert isinstance(out_chart, Chart)
-    out_chart.add_candle(out_candle)
-    assert len(out_chart.pretty().splitlines()) == 15
-    assert len(out_chart.pretty(suppress_candles=False).splitlines()) == 37
+    chart = Chart(c_timeframe="1m",
+                  c_trading_hours="rth",
+                  c_symbol="ES",
+                  c_start="2025-01-02 12:00:00",
+                  c_end="2025-01-02 12:10:00",
+                  autoload=False,
+                  )
+    assert isinstance(chart, Chart)
+    chart.add_candle(out_candle)
+    chart2 = Chart(c_timeframe="1m",
+                   c_trading_hours="rth",
+                   c_symbol="ES",
+                   c_start="2025-01-02 12:00:00",
+                   c_end="2025-01-02 12:10:00",
+                   autoload=False,
+                   )
+    chart2.add_candle(out_candle)
+    diff = Chart(c_timeframe="5m",
+                 c_trading_hours="rth",
+                 c_symbol="ES",
+                 c_start="2025-01-02 12:00:00",
+                 c_end="2025-01-02 12:10:00",
+                 autoload=False,
+                 )
+    # __eq__
+    assert chart == chart2
+    assert not (chart == diff)
+    # __ne__
+    assert not (chart != chart2)
+    assert chart != diff
+    # __str__
+    assert isinstance(str(chart), str)
+    assert len(str(chart)) > 0
+    # __repr__
+    assert isinstance(repr(chart), str)
+    assert str(chart) == repr(chart)
+    # to_clean_dict
+    d = chart.to_clean_dict()
+    assert isinstance(d, dict)
+    assert d["c_timeframe"] == "1m"
+    assert d["c_symbol"] == "ES"
+    assert d["c_start"] == "2025-01-02 12:00:00"
+    # to_json
+    j = chart.to_json()
+    assert isinstance(j, str)
+    parsed = json.loads(j)
+    assert isinstance(parsed, dict)
+    assert parsed["c_timeframe"] == "1m"
+    assert parsed["c_symbol"] == "ES"
+    # pretty
+    assert len(chart.pretty().splitlines()) == 15
+    assert len(chart.pretty(suppress_candles=False).splitlines()) == 37
 
 
 @pytest.mark.storage

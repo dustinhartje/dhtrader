@@ -67,36 +67,41 @@ def test_OperationTimer_update_elapsed():
     assert isinstance(t.elapsed_str, str)
 
 
-def test_OperationTimer_to_json():
-    """Verify OperationTimer.to_json returns valid JSON with expected keys."""
-    t = OperationTimer(name="test_to_json")
+def test_OperationTimer_create_and_verify_common_methods():
+    """Test OperationTimer __str__, __repr__, to_clean_dict, to_json,
+    and pretty.
+
+    OperationTimer does not define __eq__, __ne__, or brief.
+    """
+    t = OperationTimer(name="test_common")
     t.stop()
+    # __str__
+    assert isinstance(str(t), str)
+    assert len(str(t)) > 0
+    # __repr__
+    assert isinstance(repr(t), str)
+    assert str(t) == repr(t)
+    # to_clean_dict
+    d = t.to_clean_dict()
+    assert isinstance(d, dict)
+    assert d["name"] == "test_common"
+    assert "start_dt" in d
+    assert "end_dt" in d
+    assert "elapsed_dt" in d
+    # to_json
     j = t.to_json()
     assert isinstance(j, str)
     parsed = json.loads(j)
-    assert parsed["name"] == "test_to_json"
+    assert isinstance(parsed, dict)
+    assert parsed["name"] == "test_common"
     assert "start_dt" in parsed
     assert "end_dt" in parsed
     assert "elapsed_dt" in parsed
-
-
-def test_OperationTimer_to_clean_dict():
-    """Verify OperationTimer.to_clean_dict returns a dict."""
-    t = OperationTimer(name="test_clean")
-    t.stop()
-    d = t.to_clean_dict()
-    assert isinstance(d, dict)
-    assert d["name"] == "test_clean"
-
-
-def test_OperationTimer_pretty():
-    """Verify OperationTimer.pretty returns formatted JSON string."""
-    t = OperationTimer(name="test_pretty")
-    t.stop()
+    # pretty
     p = t.pretty()
     assert isinstance(p, str)
     assert "\n" in p
-    assert "test_pretty" in p
+    assert "test_common" in p
 
 
 def test_OperationTimer_summary():
@@ -106,13 +111,6 @@ def test_OperationTimer_summary():
     s = t.summary()
     assert isinstance(s, str)
     assert "test_summary" in s
-
-
-def test_OperationTimer_str_repr():
-    """Verify OperationTimer __str__ and __repr__ return strings."""
-    t = OperationTimer(name="test_str")
-    assert isinstance(str(t), str)
-    assert isinstance(repr(t), str)
 
 
 def test_sort_dict():

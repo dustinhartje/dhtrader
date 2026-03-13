@@ -1,6 +1,8 @@
 """Tests for Indicator, IndicatorSMA, and IndicatorEMA calculation."""
+import json
 import pytest
 from dhtrader import (
+    Candle, Chart,
     delete_indicator, get_indicator,
     get_indicator_datapoints, Indicator, IndicatorDataPoint,
     IndicatorEMA, IndicatorSMA, store_indicator)
@@ -778,10 +780,16 @@ def hide_Indicator_storage_and_retrieval():
 # IndicatorDataPoint
 # #############################################################################
 
-def test_IndicatorDataPoint_create_and_verify_pretty():
-    """Verify IndicatorDataPoint creation, attributes, epoch, and pretty."""
+def test_IndicatorDataPoint_create_and_verify_common_methods():
+    """Test IndicatorDataPoint __eq__, __ne__, __str__, __repr__,
+    to_clean_dict, to_json, and pretty.
+
+    Also verifies creation attributes and epoch calculation as these
+    were already present in the original create_and_verify_pretty.
+    IndicatorDataPoint does not define brief.
+    """
     from dhtrader import dt_to_epoch
-    # Creation and basic attributes
+    # Creation and basic attributes (beyond scope, kept from original)
     dp = IndicatorDataPoint(
         dt="2025-01-15 10:30:00",
         value=5123.75,
@@ -791,10 +799,10 @@ def test_IndicatorDataPoint_create_and_verify_pretty():
     assert dp.dt == "2025-01-15 10:30:00"
     assert dp.value == 5123.75
     assert dp.ind_id == "ES_eth_15m_EMA_close_l9_s2"
-    # Epoch is auto-calculated when not provided
+    # Epoch is auto-calculated when not provided (beyond scope, kept)
     assert isinstance(dp.epoch, int)
     assert dp.epoch == dt_to_epoch("2025-01-15 10:30:00")
-    # Explicit epoch overrides auto-calculation
+    # Explicit epoch overrides auto-calculation (beyond scope, kept)
     dp_explicit = IndicatorDataPoint(
         dt="2025-01-15 10:30:00",
         value=100.0,
@@ -802,70 +810,297 @@ def test_IndicatorDataPoint_create_and_verify_pretty():
         epoch=9999,
     )
     assert dp_explicit.epoch == 9999
-    # pretty() returns indented JSON string with expected line count
+    dp2 = IndicatorDataPoint(
+        dt="2025-01-15 10:30:00",
+        value=5123.75,
+        ind_id="ES_eth_15m_EMA_close_l9_s2",
+    )
+    diff = IndicatorDataPoint(
+        dt="2025-01-15 10:30:00",
+        value=5001.0,
+        ind_id="test_ind",
+    )
+    # __eq__
+    assert dp == dp2
+    assert not (dp == diff)
+    assert not (dp == [])
+    # __ne__
+    assert not (dp != dp2)
+    assert dp != diff
+    assert dp != []
+    # __str__
+    assert isinstance(str(dp), str)
+    assert len(str(dp)) > 0
+    # __repr__
+    assert isinstance(repr(dp), str)
+    assert str(dp) == repr(dp)
+    # to_clean_dict
+    d = dp.to_clean_dict()
+    assert isinstance(d, dict)
+    assert d["dt"] == "2025-01-15 10:30:00"
+    assert d["value"] == 5123.75
+    assert d["ind_id"] == "ES_eth_15m_EMA_close_l9_s2"
+    assert "epoch" in d
+    # to_json
+    j = dp.to_json()
+    assert isinstance(j, str)
+    parsed = json.loads(j)
+    assert isinstance(parsed, dict)
+    assert parsed["dt"] == "2025-01-15 10:30:00"
+    assert parsed["value"] == 5123.75
+    # pretty
     p = dp.pretty()
     assert isinstance(p, str)
     assert len(p.splitlines()) == 6
 
 
-def test_IndicatorDataPoint_to_clean_dict():
-    """Verify IndicatorDataPoint.to_clean_dict returns a dict."""
-    dp = IndicatorDataPoint(
-        dt="2025-01-15 10:30:00",
-        value=5000.0,
-        ind_id="test_ind",
-    )
-    d = dp.to_clean_dict()
+def _make_indicator_chart():
+    """Create a minimal non-storage Chart for Indicator tests."""
+    candle = Candle(c_datetime="2025-01-02 12:00:00",
+                    c_timeframe="1m",
+                    c_open=5000,
+                    c_high=5007.75,
+                    c_low=4995.5,
+                    c_close=5002,
+                    c_volume=1501,
+                    c_symbol="ES",
+                    )
+    chart = Chart(c_timeframe="1m",
+                  c_trading_hours="eth",
+                  c_symbol="ES",
+                  c_start="2025-01-02 12:00:00",
+                  c_end="2025-01-02 12:10:00",
+                  autoload=False,
+                  )
+    chart.add_candle(candle)
+    return chart
+
+
+def test_Indicator_create_and_verify_common_methods():
+    """Test Indicator __eq__, __ne__, __str__, __repr__, to_clean_dict,
+    to_json, and pretty.
+
+    Indicator does not define brief.
+    """
+    chart = _make_indicator_chart()
+    ind = Indicator(name="DELETEME",
+                    description="Test indicator",
+                    timeframe="1m",
+                    trading_hours="eth",
+                    symbol="ES",
+                    calc_version="1.0.0",
+                    calc_details="test",
+                    start_dt="2025-01-02 12:00:00",
+                    end_dt="2025-01-02 12:10:00",
+                    autoload_chart=False,
+                    candle_chart=chart,
+                    )
+    ind2 = Indicator(name="DELETEME",
+                     description="Test indicator",
+                     timeframe="1m",
+                     trading_hours="eth",
+                     symbol="ES",
+                     calc_version="1.0.0",
+                     calc_details="test",
+                     start_dt="2025-01-02 12:00:00",
+                     end_dt="2025-01-02 12:10:00",
+                     autoload_chart=False,
+                     candle_chart=chart,
+                     )
+    diff = Indicator(name="DIFFERENT",
+                     description="Different indicator",
+                     timeframe="1m",
+                     trading_hours="eth",
+                     symbol="ES",
+                     calc_version="1.0.0",
+                     calc_details="test",
+                     start_dt="2025-01-02 12:00:00",
+                     end_dt="2025-01-02 12:10:00",
+                     autoload_chart=False,
+                     candle_chart=chart,
+                     )
+    assert isinstance(ind, Indicator)
+    # __eq__
+    assert ind == ind2
+    assert not (ind == diff)
+    # __ne__
+    assert not (ind != ind2)
+    assert ind != diff
+    # __str__
+    assert isinstance(str(ind), str)
+    assert len(str(ind)) > 0
+    # __repr__
+    assert isinstance(repr(ind), str)
+    assert str(ind) == repr(ind)
+    # to_clean_dict
+    d = ind.to_clean_dict()
     assert isinstance(d, dict)
-    assert d["dt"] == "2025-01-15 10:30:00"
-    assert d["value"] == 5000.0
-    assert d["ind_id"] == "test_ind"
-    assert "epoch" in d
+    assert d["name"] == "DELETEME"
+    assert d["timeframe"] == "1m"
+    assert d["trading_hours"] == "eth"
+    # to_json
+    j = ind.to_json()
+    assert isinstance(j, str)
+    parsed = json.loads(j)
+    assert isinstance(parsed, dict)
+    assert parsed["name"] == "DELETEME"
+    assert parsed["timeframe"] == "1m"
+    # pretty
+    p = ind.pretty()
+    assert isinstance(p, str)
+    assert "\n" in p
+    assert "DELETEME" in p
 
 
-def test_IndicatorDataPoint_eq_ne():
-    """Verify IndicatorDataPoint __eq__ and __ne__ compare by field values."""
-    dp1 = IndicatorDataPoint(
-        dt="2025-01-15 10:30:00",
-        value=5000.0,
-        ind_id="test_ind",
-    )
-    dp2 = IndicatorDataPoint(
-        dt="2025-01-15 10:30:00",
-        value=5000.0,
-        ind_id="test_ind",
-    )
-    # Identical datapoints are equal
-    assert dp1 == dp2
-    assert not (dp1 != dp2)
-    # Different value is not equal
-    dp_diff_val = IndicatorDataPoint(
-        dt="2025-01-15 10:30:00",
-        value=5001.0,
-        ind_id="test_ind",
-    )
-    assert dp1 != dp_diff_val
-    assert not (dp1 == dp_diff_val)
-    # Different dt is not equal
-    dp_diff_dt = IndicatorDataPoint(
-        dt="2025-01-15 11:00:00",
-        value=5000.0,
-        ind_id="test_ind",
-    )
-    assert dp1 != dp_diff_dt
-    # Comparison to an empty list returns False (not equal)
-    assert not (dp1 == [])
-    assert dp1 != []
+def test_IndicatorSMA_create_and_verify_common_methods():
+    """Test IndicatorSMA __eq__, __ne__, __str__, __repr__, to_clean_dict,
+    to_json, and pretty.
+
+    IndicatorSMA inherits common methods from Indicator and does not
+    define brief.
+    """
+    chart = _make_indicator_chart()
+    params = {"length": 3, "method": "close"}
+    sma = IndicatorSMA(description="Test SMA",
+                       timeframe="1m",
+                       trading_hours="eth",
+                       symbol="ES",
+                       calc_version="1.0.0",
+                       calc_details="test",
+                       start_dt="2025-01-02 12:00:00",
+                       end_dt="2025-01-02 12:10:00",
+                       autoload_chart=False,
+                       candle_chart=chart,
+                       parameters=params,
+                       )
+    sma2 = IndicatorSMA(description="Test SMA",
+                        timeframe="1m",
+                        trading_hours="eth",
+                        symbol="ES",
+                        calc_version="1.0.0",
+                        calc_details="test",
+                        start_dt="2025-01-02 12:00:00",
+                        end_dt="2025-01-02 12:10:00",
+                        autoload_chart=False,
+                        candle_chart=chart,
+                        parameters=params,
+                        )
+    diff_params = {"length": 9, "method": "close"}
+    diff = IndicatorSMA(description="Test SMA",
+                        timeframe="1m",
+                        trading_hours="eth",
+                        symbol="ES",
+                        calc_version="1.0.0",
+                        calc_details="test",
+                        start_dt="2025-01-02 12:00:00",
+                        end_dt="2025-01-02 12:10:00",
+                        autoload_chart=False,
+                        candle_chart=chart,
+                        parameters=diff_params,
+                        )
+    assert isinstance(sma, IndicatorSMA)
+    # __eq__
+    assert sma == sma2
+    assert not (sma == diff)
+    # __ne__
+    assert not (sma != sma2)
+    assert sma != diff
+    # __str__
+    assert isinstance(str(sma), str)
+    assert len(str(sma)) > 0
+    # __repr__
+    assert isinstance(repr(sma), str)
+    assert str(sma) == repr(sma)
+    # to_clean_dict
+    d = sma.to_clean_dict()
+    assert isinstance(d, dict)
+    assert d["name"] == "SMA"
+    assert d["timeframe"] == "1m"
+    # to_json
+    j = sma.to_json()
+    assert isinstance(j, str)
+    parsed = json.loads(j)
+    assert isinstance(parsed, dict)
+    assert parsed["name"] == "SMA"
+    # pretty
+    p = sma.pretty()
+    assert isinstance(p, str)
+    assert "\n" in p
+    assert "SMA" in p
 
 
-def test_IndicatorDataPoint_str_and_repr():
-    """Verify IndicatorDataPoint __str__ and __repr__ return strings."""
-    dp = IndicatorDataPoint(
-        dt="2025-01-15 10:30:00",
-        value=5000.0,
-        ind_id="test_ind",
-    )
-    assert isinstance(str(dp), str)
-    assert len(str(dp)) > 0
-    assert isinstance(repr(dp), str)
-    assert str(dp) == repr(dp)
+def test_IndicatorEMA_create_and_verify_common_methods():
+    """Test IndicatorEMA __eq__, __ne__, __str__, __repr__, to_clean_dict,
+    to_json, and pretty.
+
+    IndicatorEMA inherits common methods from Indicator and does not
+    define brief.
+    """
+    chart = _make_indicator_chart()
+    params = {"length": 3, "method": "close", "smoothing": 2}
+    ema = IndicatorEMA(description="Test EMA",
+                       timeframe="1m",
+                       trading_hours="eth",
+                       symbol="ES",
+                       calc_version="1.0.0",
+                       calc_details="test",
+                       start_dt="2025-01-02 12:00:00",
+                       end_dt="2025-01-02 12:10:00",
+                       autoload_chart=False,
+                       candle_chart=chart,
+                       parameters=params,
+                       )
+    ema2 = IndicatorEMA(description="Test EMA",
+                        timeframe="1m",
+                        trading_hours="eth",
+                        symbol="ES",
+                        calc_version="1.0.0",
+                        calc_details="test",
+                        start_dt="2025-01-02 12:00:00",
+                        end_dt="2025-01-02 12:10:00",
+                        autoload_chart=False,
+                        candle_chart=chart,
+                        parameters=params,
+                        )
+    diff_params = {"length": 9, "method": "close", "smoothing": 2}
+    diff = IndicatorEMA(description="Test EMA",
+                        timeframe="1m",
+                        trading_hours="eth",
+                        symbol="ES",
+                        calc_version="1.0.0",
+                        calc_details="test",
+                        start_dt="2025-01-02 12:00:00",
+                        end_dt="2025-01-02 12:10:00",
+                        autoload_chart=False,
+                        candle_chart=chart,
+                        parameters=diff_params,
+                        )
+    assert isinstance(ema, IndicatorEMA)
+    # __eq__
+    assert ema == ema2
+    assert not (ema == diff)
+    # __ne__
+    assert not (ema != ema2)
+    assert ema != diff
+    # __str__
+    assert isinstance(str(ema), str)
+    assert len(str(ema)) > 0
+    # __repr__
+    assert isinstance(repr(ema), str)
+    assert str(ema) == repr(ema)
+    # to_clean_dict
+    d = ema.to_clean_dict()
+    assert isinstance(d, dict)
+    assert d["name"] == "EMA"
+    assert d["timeframe"] == "1m"
+    # to_json
+    j = ema.to_json()
+    assert isinstance(j, str)
+    parsed = json.loads(j)
+    assert isinstance(parsed, dict)
+    assert parsed["name"] == "EMA"
+    # pretty
+    p = ema.pretty()
+    assert isinstance(p, str)
+    assert "\n" in p
+    assert "EMA" in p
