@@ -3,8 +3,9 @@ import json
 import pytest
 from dhtrader import (
     Candle, Chart,
-    delete_indicator, get_indicator,
-    get_indicator_datapoints, Indicator, IndicatorDataPoint,
+    delete_indicator, delete_indicators_by_name,
+    get_indicator, get_indicator_datapoints,
+    get_indicators_by_name, Indicator, IndicatorDataPoint,
     IndicatorEMA, IndicatorSMA, store_indicator)
 
 
@@ -111,6 +112,65 @@ def test_Indicator_storage_spotcheck_ES_eth_5m_EMA_close_l20_s2():
                                )
     ind_stored.load_datapoints()
     shared_assertions_Indicator_spotcheck_ES_eth_5m_EMA_close_l20_s2(
+        ind_stored)
+
+
+# 5m ETH 9
+def shared_assertions_Indicator_spotcheck_ES_eth_5m_EMA_close_l9_s2(i):
+    """Assert ES ETH 5m EMA close l9 s2 datapoint values.
+
+    NOTE: assertion values below need to be verified against TradingView
+    or by running the corresponding calculated spotcheck test locally and
+    printing each get_datapoint result for the datetimes below.
+    """
+    # Sun-Sat - first & last candles, rando in the middle, rando in closed
+    # Sun 1/5/25
+    assert i.get_datapoint(dt="2025-01-05 18:00:00").value == 6048.14
+    assert i.get_datapoint(dt="2025-01-05 20:34:00").value == 6068.51
+    assert i.get_datapoint(dt="2025-01-05 23:59:00").value == 6054.87
+    assert i.get_datapoint(dt="2025-01-05 15:45:00") is None
+    # Mon 1/6/25
+    assert i.get_datapoint(dt="2025-01-06 18:00:00").value == 6091.01
+    assert i.get_datapoint(dt="2025-01-06 10:34:00").value == 6074.16
+    assert i.get_datapoint(dt="2025-01-06 16:59:00").value == 6091.32
+    assert i.get_datapoint(dt="2025-01-06 17:12:00") is None
+    # Tue 1/7/25
+    assert i.get_datapoint(dt="2025-01-07 18:00:00").value == 6067.47
+    assert i.get_datapoint(dt="2025-01-07 12:15:00").value == 6076.89
+    assert i.get_datapoint(dt="2025-01-07 16:59:00").value == 6067.97
+    assert i.get_datapoint(dt="2025-01-07 17:24:00") is None
+
+
+@pytest.mark.storage
+def test_Indicator_calculated_spotcheck_ES_eth_5m_EMA_close_l9_s2():
+    """Test calculated spotcheck for ES ETH 5m EMA close l9 s2.
+
+    Storage Usage: get_indicator, load_underlying_chart.
+    """
+    ind_calced = get_indicator(ind_id="ES_eth_5m_EMA_close_l9_s2",
+                               autoload_datapoints=False,
+                               autoload_chart=True,
+                               )
+    ind_calced.start_dt = "2024-12-29 00:00:00"
+    ind_calced.end_dt = "2025-01-08 00:00:00"
+    ind_calced.load_underlying_chart()
+    ind_calced.calculate()
+    shared_assertions_Indicator_spotcheck_ES_eth_5m_EMA_close_l9_s2(
+        ind_calced)
+
+
+@pytest.mark.storage
+def test_Indicator_storage_spotcheck_ES_eth_5m_EMA_close_l9_s2():
+    """Test storage spotcheck for ES ETH 5m EMA close l9 s2.
+
+    Storage Usage: get_indicator, load_datapoints.
+    """
+    ind_stored = get_indicator(ind_id="ES_eth_5m_EMA_close_l9_s2",
+                               autoload_datapoints=False,
+                               autoload_chart=True,
+                               )
+    ind_stored.load_datapoints()
+    shared_assertions_Indicator_spotcheck_ES_eth_5m_EMA_close_l9_s2(
         ind_stored)
 
 
@@ -510,37 +570,33 @@ def test_Indicator_calculate():
         assert expected[i] == calculated[i]
 
 
-def clear_indicator_storage(ind_id: str):
-    """Delete a stored Indicator and all its datapoints by ind_id."""
-    delete_indicator(ind_id)
-    retrieved = get_indicator(ind_id=ind_id,
-                              autoload_datapoints=False,
-                              autoload_chart=False)
-    assert retrieved is None
-    dps = get_indicator_datapoints(ind_id=ind_id)
-    assert len(dps) == 0
+def clear_indicator_storage_by_name(name: str):
+    """Delete all stored Indicators and datapoints with the given name."""
+    delete_indicators_by_name(name)
+    stored = get_indicators_by_name(name)
+    assert len(stored) == 0
 
 
 @pytest.fixture
 def cleanup_indicator_storage():
-    """Register Indicator ind_ids for pre- and post-test cleanup.
+    """Register Indicator names for pre- and post-test cleanup.
 
-    The returned helper records each supplied ind_id, immediately clears
-    any matching Indicator and datapoints before the test continues, then
-    clears the full registered set again during fixture teardown.
+    The returned helper records each supplied name, immediately clears
+    any matching Indicators and datapoints before the test continues,
+    then clears the full registered set again during fixture teardown.
     """
-    ind_ids = set()
+    names = set()
 
-    def register(*new_ind_ids):
-        for ind_id in new_ind_ids:
-            ind_ids.add(ind_id)
-        for ind_id in sorted(ind_ids):
-            clear_indicator_storage(ind_id)
+    def register(*new_names):
+        for name in new_names:
+            names.add(name)
+        for name in sorted(names):
+            clear_indicator_storage_by_name(name)
 
     yield register
 
-    for ind_id in sorted(ind_ids):
-        clear_indicator_storage(ind_id)
+    for name in sorted(names):
+        clear_indicator_storage_by_name(name)
 
 
 @pytest.mark.storage
@@ -579,14 +635,15 @@ def test_Indicator_get_datapoints():
 def test_Indicator_store_retrieve_delete(cleanup_indicator_storage):
     """Verify Indicator and IndicatorDataPoint storage, retrieval, deletion.
 
-    Storage Usage: store_indicator, get_indicator, delete_indicator,
-                   get_indicator_datapoints.
+    Storage Usage: store_indicator, get_indicator, delete_indicators_by_name,
+                   get_indicator_datapoints, get_indicators_by_name.
     """
+    name = "TestEMA-DELETEME"
     ind_id = "ES_eth_e1h_TestEMA-DELETEME_close_l9_s2"
-    cleanup_indicator_storage(ind_id)
+    cleanup_indicator_storage(name)
 
     # Create and calculate an IndicatorEMA spanning a weekend (edge cases)
-    itest = IndicatorEMA(name="TestEMA-DELETEME",
+    itest = IndicatorEMA(name=name,
                          timeframe="e1h",
                          trading_hours="eth",
                          symbol="ES",
@@ -629,7 +686,9 @@ def test_Indicator_store_retrieve_delete(cleanup_indicator_storage):
     assert len(datapoints) == 23
     assert all(isinstance(dp, IndicatorDataPoint) for dp in datapoints)
     assert datapoints[0].ind_id == ind_id
+    assert datapoints[0].name == name
     assert datapoints[5].ind_id == ind_id
+    assert datapoints[5].name == name
 
     # Verify incremental storage skips existing datapoints - extend date range
     # and re-store; existing 23 should be skipped, new 46 added (2 days added)
@@ -640,12 +699,10 @@ def test_Indicator_store_retrieve_delete(cleanup_indicator_storage):
     assert result["datapoints_stored"] == 46
     assert result["datapoints_skipped"] == 23
 
-    # Delete and confirm Indicator and all IndicatorDataPoints are gone
-    delete_indicator(ind_id)
-    retrieved = get_indicator(ind_id=ind_id,
-                              autoload_datapoints=False,
-                              autoload_chart=False)
-    assert retrieved is None
+    # Delete by name and confirm Indicator and all IndicatorDataPoints gone
+    delete_indicators_by_name(name)
+    stored = get_indicators_by_name(name)
+    assert len(stored) == 0
     dps = get_indicator_datapoints(ind_id=ind_id)
     assert len(dps) == 0
 
@@ -665,12 +722,14 @@ def test_IndicatorDataPoint_create_and_verify_common_methods():
         dt="2099-01-15 10:30:00",
         value=5123.75,
         ind_id="ES_eth_15m_EMA_close_l9_s2",
+        name="DELETEME-test-dp",
     )
     assert isinstance(dp, IndicatorDataPoint)
     # __init__
     assert dp.dt == "2099-01-15 10:30:00"
     assert dp.value == 5123.75
     assert dp.ind_id == "ES_eth_15m_EMA_close_l9_s2"
+    assert dp.name == "DELETEME-test-dp"
     assert isinstance(dp.epoch, int)
     assert dp.epoch == dt_to_epoch("2099-01-15 10:30:00")
     # Explicit epoch overrides auto-calculation
@@ -679,9 +738,10 @@ def test_IndicatorDataPoint_create_and_verify_common_methods():
         value=100.0,
         ind_id="test_ind",
         epoch=9999,
+        name="DELETEME-test-dp-explicit",
     )
     assert dp_explicit.epoch == 9999
-    expected_attrs = {"dt", "epoch", "ind_id", "value"}
+    expected_attrs = {"dt", "epoch", "ind_id", "name", "value"}
     actual_attrs = set(vars(dp).keys())
     added = actual_attrs - expected_attrs
     removed = expected_attrs - actual_attrs
@@ -695,11 +755,13 @@ def test_IndicatorDataPoint_create_and_verify_common_methods():
         dt="2099-01-15 10:30:00",
         value=5123.75,
         ind_id="ES_eth_15m_EMA_close_l9_s2",
+        name="DELETEME-test-dp",
     )
     diff = IndicatorDataPoint(
         dt="2099-01-15 10:30:00",
         value=5001.0,
         ind_id="test_ind",
+        name="DELETEME-test-dp-diff",
     )
     # __eq__
     assert dp == dp2
@@ -721,6 +783,7 @@ def test_IndicatorDataPoint_create_and_verify_common_methods():
     assert d["dt"] == "2099-01-15 10:30:00"
     assert d["value"] == 5123.75
     assert d["ind_id"] == "ES_eth_15m_EMA_close_l9_s2"
+    assert d["name"] == "DELETEME-test-dp"
     assert "epoch" in d
     # to_json
     j = dp.to_json()
@@ -729,10 +792,11 @@ def test_IndicatorDataPoint_create_and_verify_common_methods():
     assert isinstance(parsed, dict)
     assert parsed["dt"] == "2099-01-15 10:30:00"
     assert parsed["value"] == 5123.75
+    assert parsed["name"] == "DELETEME-test-dp"
     # pretty
     p = dp.pretty()
     assert isinstance(p, str)
-    assert len(p.splitlines()) == 6
+    assert len(p.splitlines()) == 7
 
 
 def _make_indicator_chart():

@@ -1883,6 +1883,7 @@ class IndicatorDataPoint():
             self.epoch = dt_to_epoch(dt)
         else:
             self.epoch = epoch
+        self.name = name
 
     def to_json(self):
         """Return a JSON representation with custom types normalized.
@@ -2191,6 +2192,7 @@ class Indicator():
             self.datapoints.append(IndicatorDataPoint(dt=c.c_datetime,
                                                       value=hod,
                                                       ind_id=self.ind_id,
+                                                      name=self.name,
                                                       ))
         self.sort_datapoints()
 
@@ -2330,6 +2332,7 @@ class IndicatorSMA(Indicator):
                 dp = IndicatorDataPoint(dt=dt_as_str(c.c_datetime),
                                         value=round(fmean(values), 2),
                                         ind_id=self.ind_id,
+                                        name=self.name,
                                         )
                 self.datapoints.append(dp)
             counter += 1
@@ -2455,6 +2458,7 @@ class IndicatorEMA(Indicator):
                     dp = IndicatorDataPoint(dt=dt_as_str(c.c_datetime),
                                             value=round(this_ema, 2),
                                             ind_id=self.ind_id,
+                                            name=self.name,
                                             )
                     self.datapoints.append(dp)
                 # Update vars for next candle

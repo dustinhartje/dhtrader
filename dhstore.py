@@ -1146,7 +1146,8 @@ def get_indicator_datapoints(ind_id: str,
         result.append(IndicatorDataPoint(dt=d["dt"],
                                          value=d["value"],
                                          ind_id=d["ind_id"],
-                                         epoch=d["epoch"]
+                                         epoch=d["epoch"],
+                                         name=d.get("name", "nameless"),
                                          ))
         update_progbar(pbar, i, total)
     finish_progbar(pbar)
@@ -1364,6 +1365,29 @@ def delete_indicator(ind_id: str,
                                 meta_collection=meta_collection,
                                 dp_collection=dp_collection,
                                 )
+
+
+def get_indicators_by_name(name: str,
+                           meta_collection: str = COLL_IND_META,
+                           ):
+    """Return a list of ind_ids for all indicators with the given name."""
+    return dhm.get_indicators_by_name(name=name,
+                                      meta_collection=meta_collection,
+                                      )
+
+
+def delete_indicators_by_name(name: str,
+                              meta_collection: str = COLL_IND_META,
+                              dp_collection: str = COLL_IND_DPS,
+                              ):
+    """Delete all indicators and their datapoints with the given name."""
+    ind_ids = get_indicators_by_name(name=name,
+                                     meta_collection=meta_collection)
+    for ind_id in ind_ids:
+        delete_indicator(ind_id=ind_id,
+                         meta_collection=meta_collection,
+                         dp_collection=dp_collection,
+                         )
 
 
 ##############################################################################
