@@ -55,7 +55,7 @@ def test_Candle_create_and_verify_common_methods():
     assert isinstance(candle.c_upper_wick_perc, float)
     assert isinstance(candle.c_lower_wick_perc, float)
     assert candle.c_direction == "bullish"
-    assert candle.name == "None"
+    assert candle.name == "nameless"
     expected_attrs = {
         "c_body_perc", "c_body_size", "c_close", "c_date",
         "c_datetime", "c_direction", "c_end_datetime", "c_epoch",

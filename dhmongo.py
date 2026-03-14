@@ -600,7 +600,7 @@ def store_candle(c_datetime,
                  c_epoch: int,
                  c_date: str,
                  c_time: str,
-                 name: str = "None",
+                 name: str,
                  ):
     """Stores a single candle object in mongo.
 
@@ -866,7 +866,7 @@ def store_event(start_dt,
                 notes: str,
                 start_epoch: int,
                 end_epoch: int,
-                name: str = "None",
+                name: str,
                 ):
     """Write a single Event() to mongo."""
     event_doc = {"start_dt": dt_as_str(start_dt),

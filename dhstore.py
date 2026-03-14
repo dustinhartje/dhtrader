@@ -1448,6 +1448,12 @@ def get_candles(start_epoch: int,
     pbar = start_progbar(show_progress, total,
                          f"{symbol} {timeframe} Candle objects built")
     for i, r in enumerate(result, start=1):
+        ##############################################################
+        #TODO remove this helper once PR is merged and storage updated
+        if "name" not in r:
+            r["name"] = "nameless"
+        ##############################################################
+
         candles.append(Candle(c_datetime=r["c_datetime"],
                               c_timeframe=r["c_timeframe"],
                               c_open=r["c_open"],
@@ -1868,6 +1874,11 @@ def get_events(symbol="ES",
     pbar = start_progbar(show_progress, total,
                          "Event objects built")
     for i, r in enumerate(result, start=1):
+        ##############################################################
+        #TODO remove this helper once PR is merged and storage updated
+        if "name" not in r:
+            r["name"] = "nameless"
+        ##############################################################
         events.append(Event(start_dt=r["start_dt"],
                             end_dt=r["end_dt"],
                             symbol=symbol,

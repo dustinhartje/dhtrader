@@ -41,7 +41,7 @@ def test_Event_create_and_verify_common_methods():
     assert isinstance(event.start_epoch, int)
     assert isinstance(event.end_epoch, int)
     assert event.start_epoch < event.end_epoch
-    assert event.name == "None"
+    assert event.name == "nameless"
     expected_attrs = {
         "category", "end_dt", "end_epoch", "name", "notes",
         "start_dt", "start_epoch", "symbol", "tags",

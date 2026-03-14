@@ -384,11 +384,22 @@ def store_candles_from_csv(filepath: str,
                            end_dt,
                            timeframe: str = "1m",
                            symbol: str = "ES",
+                           name: str = None,
                            ):
     """Loads 1m candles from a CSV file into central storage.
 
     Mostly useful for quick manual gap fill operations via python console.
     """
+    if name is None:
+        name = Candle(c_datetime=start_dt,
+                      c_timeframe=timeframe,
+                      c_symbol=symbol,
+                      c_open=0,
+                      c_high=0,
+                      c_low=0,
+                      c_close=0,
+                      c_volume=0,
+                      ).name
     candles = read_candles_from_csv(start_dt=start_dt,
                                     end_dt=end_dt,
                                     filepath=filepath,
@@ -397,6 +408,7 @@ def store_candles_from_csv(filepath: str,
                                     )
     print(f"{len(candles)} candles found, storing them")
     for c in candles:
+        c.name = name
         store_candle(c)
     print("Done storing, attempting to retrieve them for validation.")
     new_candles = get_candles(start_epoch=dt_to_epoch(start_dt),
