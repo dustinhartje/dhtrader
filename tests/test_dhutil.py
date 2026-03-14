@@ -152,7 +152,7 @@ def test_generate_zero_volume_candle():
     real data.
     """
     prior_candle = Candle(
-        c_datetime="2025-03-01 18:00:00",
+        c_datetime="2099-03-01 18:00:00",
         c_timeframe="1m",
         c_open=5000.00,
         c_high=5001.00,
@@ -161,7 +161,7 @@ def test_generate_zero_volume_candle():
         c_volume=100,
         c_symbol="ES",
     )
-    target_dt = "2025-03-01 18:01:00"
+    target_dt = "2099-03-01 18:01:00"
 
     # Returns a Candle when exactly one prior candle is found
     with patch('dhtrader.dhutil.get_candles',
@@ -193,7 +193,7 @@ def test_generate_zero_volume_candle():
 
     # Returns None when storage returns multiple candles (ambiguous)
     prior_candle2 = Candle(
-        c_datetime="2025-03-01 17:59:00",
+        c_datetime="2099-03-01 17:59:00",
         c_timeframe="1m",
         c_open=5001.00,
         c_high=5002.00,
@@ -238,7 +238,7 @@ def test_generate_zero_volume_candle():
             timeframe="1m",
             symbol="ES",
         )
-    expected_epoch = dt_to_epoch(dt_as_dt("2025-03-01 18:00:00"))
+    expected_epoch = dt_to_epoch(dt_as_dt("2099-03-01 18:00:00"))
     mock_get.assert_called_once_with(
         start_epoch=expected_epoch,
         end_epoch=expected_epoch,

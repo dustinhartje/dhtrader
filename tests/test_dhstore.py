@@ -53,8 +53,8 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
     # Store a control TradeSeries that has compliant Trades
     control_name = f"{bt}_control_pass"
     cleanup_dhstore_storage(control_name)
-    ts_good = TradeSeries(start_dt="2025-01-05 00:00:00",
-                          end_dt="2025-01-06 00:00:00",
+    ts_good = TradeSeries(start_dt="2099-01-05 00:00:00",
+                          end_dt="2099-01-06 00:00:00",
                           timeframe="e1h",
                           trading_hours="eth",
                           symbol="ES",
@@ -63,15 +63,15 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
                           ts_id=control_name,
                           bt_id=bt)
     ts_good.add_trade(Trade(
-        open_dt="2025-01-05 10:03:24", direction="long",
-        close_dt="2025-01-05 10:45:32", timeframe="e1h", trading_hours="eth",
+        open_dt="2099-01-05 10:03:24", direction="long",
+        close_dt="2099-01-05 10:45:32", timeframe="e1h", trading_hours="eth",
         entry_price=5000, exit_price=5001, high_price=5005, low_price=4995,
         prof_target=5001, stop_target=4000,
         name=control_name,
         ts_id=ts_good.ts_id, bt_id=ts_good.bt_id))
     ts_good.add_trade(Trade(
-        open_dt="2025-01-05 11:23:25", direction="long",
-        close_dt="2025-01-05 12:32:15", timeframe="e1h", trading_hours="eth",
+        open_dt="2099-01-05 11:23:25", direction="long",
+        close_dt="2099-01-05 12:32:15", timeframe="e1h", trading_hours="eth",
         entry_price=5000, exit_price=5001, high_price=5005, low_price=4995,
         prof_target=5001, stop_target=4000,
         name=control_name,
@@ -104,8 +104,8 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
     # Store TradeSeries with multiple Trades opening in the same bar
     same_bar_name = f"{bt}_same_bar_fail"
     cleanup_dhstore_storage(same_bar_name)
-    ts_fail = TradeSeries(start_dt="2025-01-05 00:00:00",
-                          end_dt="2025-01-06 00:00:00",
+    ts_fail = TradeSeries(start_dt="2099-01-05 00:00:00",
+                          end_dt="2099-01-06 00:00:00",
                           timeframe="e1h",
                           trading_hours="eth",
                           symbol="ES",
@@ -114,15 +114,15 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
                           ts_id=same_bar_name,
                           bt_id=bt)
     ts_fail.add_trade(Trade(
-        open_dt="2025-01-05 10:03:24", direction="long",
-        close_dt="2025-01-05 10:45:32", timeframe="e1h", trading_hours="eth",
+        open_dt="2099-01-05 10:03:24", direction="long",
+        close_dt="2099-01-05 10:45:32", timeframe="e1h", trading_hours="eth",
         entry_price=5000, exit_price=5001, high_price=5005, low_price=4995,
         prof_target=5001, stop_target=4000,
         name=same_bar_name,
         ts_id=ts_fail.ts_id, bt_id=ts_fail.bt_id))
     ts_fail.add_trade(Trade(
-        open_dt="2025-01-05 10:23:25", direction="long",
-        close_dt="2025-01-05 12:32:15", timeframe="e1h", trading_hours="eth",
+        open_dt="2099-01-05 10:23:25", direction="long",
+        close_dt="2099-01-05 12:32:15", timeframe="e1h", trading_hours="eth",
         entry_price=5000, exit_price=5001, high_price=5005, low_price=4995,
         prof_target=5001, stop_target=4000,
         name=same_bar_name,
@@ -140,11 +140,11 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
         {"issue_type": "Trade timeframe bar overlap",
          "ts_id": same_bar_name,
          "timeframe": "e1h",
-         "trade_open": "2025-01-05 10:23:25",
-         "trade_open_tf": "2025-01-05 10:00:00",
-         "prev_trade_open": "2025-01-05 10:03:24",
-         "prev_trade_close": "2025-01-05 10:45:32",
-         "prev_trade_close_tf": "2025-01-05 10:00:00"}]}
+         "trade_open": "2099-01-05 10:23:25",
+         "trade_open_tf": "2099-01-05 10:00:00",
+         "prev_trade_open": "2099-01-05 10:03:24",
+         "prev_trade_close": "2099-01-05 10:45:32",
+         "prev_trade_close_tf": "2099-01-05 10:00:00"}]}
 
     # Clean from storage and verify gone
     ts_fail.delete_from_storage(include_trades=True)
@@ -157,8 +157,8 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
     # Trade closed in, after running past the original opening bar
     next_bar_name = f"{bt}_next_bar_fail"
     cleanup_dhstore_storage(next_bar_name)
-    ts_fail = TradeSeries(start_dt="2025-01-05 00:00:00",
-                          end_dt="2025-01-06 00:00:00",
+    ts_fail = TradeSeries(start_dt="2099-01-05 00:00:00",
+                          end_dt="2099-01-06 00:00:00",
                           timeframe="e1h",
                           trading_hours="eth",
                           symbol="ES",
@@ -167,15 +167,15 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
                           ts_id=next_bar_name,
                           bt_id=bt)
     ts_fail.add_trade(Trade(
-        open_dt="2025-01-05 10:03:24", direction="long",
-        close_dt="2025-01-05 11:45:32", timeframe="e1h", trading_hours="eth",
+        open_dt="2099-01-05 10:03:24", direction="long",
+        close_dt="2099-01-05 11:45:32", timeframe="e1h", trading_hours="eth",
         entry_price=5000, exit_price=5001, high_price=5005, low_price=4995,
         prof_target=5001, stop_target=4000,
         name=next_bar_name,
         ts_id=ts_fail.ts_id, bt_id=ts_fail.bt_id))
     ts_fail.add_trade(Trade(
-        open_dt="2025-01-05 11:53:18", direction="long",
-        close_dt="2025-01-05 12:32:15", timeframe="e1h", trading_hours="eth",
+        open_dt="2099-01-05 11:53:18", direction="long",
+        close_dt="2099-01-05 12:32:15", timeframe="e1h", trading_hours="eth",
         entry_price=5000, exit_price=5001, high_price=5005, low_price=4995,
         prof_target=5001, stop_target=4000,
         name=next_bar_name,
@@ -192,11 +192,11 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
         {'issue_type': 'Trade timeframe bar overlap',
          'ts_id': next_bar_name,
          'timeframe': 'e1h',
-         'trade_open': '2025-01-05 11:53:18',
-         'trade_open_tf': '2025-01-05 11:00:00',
-         'prev_trade_open': '2025-01-05 10:03:24',
-         'prev_trade_close': '2025-01-05 11:45:32',
-         'prev_trade_close_tf': '2025-01-05 11:00:00'}]}
+         'trade_open': '2099-01-05 11:53:18',
+         'trade_open_tf': '2099-01-05 11:00:00',
+         'prev_trade_open': '2099-01-05 10:03:24',
+         'prev_trade_close': '2099-01-05 11:45:32',
+         'prev_trade_close_tf': '2099-01-05 11:00:00'}]}
     # Clean from storage and verify gone
     ts_fail.delete_from_storage(include_trades=True)
     stored = get_tradeseries_by_field(field="bt_id", value=bt)
@@ -208,8 +208,8 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
     # Store TradeSeries with a Trade that spans multiple days
     multiday_name = f"{bt}_multiday_fail"
     cleanup_dhstore_storage(multiday_name)
-    ts_fail = TradeSeries(start_dt="2025-01-06 00:00:00",
-                          end_dt="2025-01-08 00:00:00",
+    ts_fail = TradeSeries(start_dt="2099-01-06 00:00:00",
+                          end_dt="2099-01-08 00:00:00",
                           timeframe="e1h",
                           trading_hours="eth",
                           symbol="ES",
@@ -218,15 +218,15 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
                           ts_id=multiday_name,
                           bt_id=bt)
     ts_fail.add_trade(Trade(
-        open_dt="2025-01-06 10:03:24", direction="long",
-        close_dt="2025-01-07 11:45:32", timeframe="e1h", trading_hours="eth",
+        open_dt="2099-01-06 10:03:24", direction="long",
+        close_dt="2099-01-07 11:45:32", timeframe="e1h", trading_hours="eth",
         entry_price=5000, exit_price=5001, high_price=5005, low_price=4995,
         prof_target=5001, stop_target=4000,
         name=multiday_name,
         ts_id=ts_fail.ts_id, bt_id=ts_fail.bt_id))
     ts_fail.add_trade(Trade(
-        open_dt="2025-01-07 11:53:18", direction="long",
-        close_dt="2025-01-07 12:32:15", timeframe="e1h", trading_hours="eth",
+        open_dt="2099-01-07 11:53:18", direction="long",
+        close_dt="2099-01-07 12:32:15", timeframe="e1h", trading_hours="eth",
         entry_price=5000, exit_price=5001, high_price=5005, low_price=4995,
         prof_target=5001, stop_target=4000,
         name=multiday_name,
@@ -257,8 +257,8 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
     # Add an unclosed Trade and confirm it is flagged as unclosed_trade
     unclosed_name = f"{bt}_unclosed_fail"
     cleanup_dhstore_storage(unclosed_name)
-    ts_fail = TradeSeries(start_dt="2025-01-06 00:00:00",
-                          end_dt="2025-01-08 00:00:00",
+    ts_fail = TradeSeries(start_dt="2099-01-06 00:00:00",
+                          end_dt="2099-01-08 00:00:00",
                           timeframe="e1h",
                           trading_hours="eth",
                           symbol="ES",
@@ -267,8 +267,8 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
                           ts_id=unclosed_name,
                           bt_id=bt)
     t_unclosed = Trade(
-        open_dt="2025-01-06 10:03:24", direction="long",
-        close_dt="2025-01-06 10:45:32", timeframe="e1h",
+        open_dt="2099-01-06 10:03:24", direction="long",
+        close_dt="2099-01-06 10:45:32", timeframe="e1h",
         trading_hours="eth",
         entry_price=5000, exit_price=5001, high_price=5005, low_price=4995,
         prof_target=5001, stop_target=4000,
@@ -304,8 +304,8 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
     cleanup_dhstore_storage(orphan_backtest_name,
                             orphan_ts_name,
                             orphan_trade_name)
-    bt_orphan = Backtest(start_dt="2025-01-01 00:00:00",
-                         end_dt="2025-01-02 00:00:00",
+    bt_orphan = Backtest(start_dt="2099-01-01 00:00:00",
+                         end_dt="2099-01-02 00:00:00",
                          timeframe="e1h",
                          trading_hours="eth",
                          symbol="ES",
@@ -314,8 +314,8 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
                          bt_id=bt,
                          prefer_stored=False,
                          autoload_charts=False)
-    ts_orphan = TradeSeries(start_dt="2025-01-01 00:00:00",
-                            end_dt="2025-01-01 23:59:59",
+    ts_orphan = TradeSeries(start_dt="2099-01-01 00:00:00",
+                            end_dt="2099-01-01 23:59:59",
                             timeframe="e1h",
                             trading_hours="eth",
                             symbol="ES",
@@ -324,8 +324,8 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
                             ts_id=f"{bt}_TEST_TS",
                             bt_id=bt)
     ts_orphan.add_trade(Trade(
-        open_dt="2025-01-01 10:03:24", direction="long",
-        close_dt="2025-01-01 10:45:32", timeframe="e1h",
+        open_dt="2099-01-01 10:03:24", direction="long",
+        close_dt="2099-01-01 10:45:32", timeframe="e1h",
         trading_hours="eth",
         entry_price=5000, exit_price=5001, high_price=5005, low_price=4995,
         prof_target=5001, stop_target=4000,
@@ -352,8 +352,8 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
     duplicate_name = f"{bt}_duplicate_fail"
     duplicate_trade_name = f"{bt}_duplicate_trade"
     cleanup_dhstore_storage(duplicate_name, duplicate_trade_name)
-    ts_fail = TradeSeries(start_dt="2025-01-06 00:00:00",
-                          end_dt="2025-01-08 00:00:00",
+    ts_fail = TradeSeries(start_dt="2099-01-06 00:00:00",
+                          end_dt="2099-01-08 00:00:00",
                           timeframe="e1h",
                           trading_hours="eth",
                           symbol="ES",
@@ -362,15 +362,15 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
                           ts_id=duplicate_name,
                           bt_id=bt)
     ts_fail.add_trade(Trade(
-        open_dt="2025-01-06 10:03:24", direction="long",
-        close_dt="2025-01-06 11:45:32", timeframe="e1h", trading_hours="eth",
+        open_dt="2099-01-06 10:03:24", direction="long",
+        close_dt="2099-01-06 11:45:32", timeframe="e1h", trading_hours="eth",
         entry_price=5000, exit_price=5001, high_price=5005, low_price=4995,
         prof_target=5001, stop_target=4000,
         name=duplicate_name,
         ts_id=ts_fail.ts_id, bt_id=ts_fail.bt_id))
     ts_fail.add_trade(Trade(
-        open_dt="2025-01-06 10:03:24", direction="long",
-        close_dt="2025-01-06 12:32:15", timeframe="e1h", trading_hours="eth",
+        open_dt="2099-01-06 10:03:24", direction="long",
+        close_dt="2099-01-06 12:32:15", timeframe="e1h", trading_hours="eth",
         entry_price=5000, exit_price=5001, high_price=5005, low_price=4995,
         prof_target=5001, stop_target=4000,
         name=duplicate_name,
@@ -382,16 +382,16 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
     # by design.  Therefor we only see the second Trade in storage
     stored = get_trades_by_field(field="bt_id", value=bt)
     assert len(stored) == 1
-    assert stored[0].open_dt == "2025-01-06 10:03:24"
-    assert stored[0].close_dt == "2025-01-06 12:32:15"
+    assert stored[0].open_dt == "2099-01-06 10:03:24"
+    assert stored[0].close_dt == "2099-01-06 12:32:15"
     # Store the trades
     store_trades([ts_fail.trades[0]])
     stored = get_trades_by_field(field="bt_id", value=bt)
     # Now we should still have only 1 trade, but it's the first not the second
     # this time due to another overwrite
     assert len(stored) == 1
-    assert stored[0].open_dt == "2025-01-06 10:03:24"
-    assert stored[0].close_dt == "2025-01-06 11:45:32"
+    assert stored[0].open_dt == "2099-01-06 10:03:24"
+    assert stored[0].close_dt == "2099-01-06 11:45:32"
     # Change the name attribute to allow it to store itself without replacing
     ts_fail.trades[0].name = duplicate_trade_name
     store_trades([ts_fail.trades[0]])

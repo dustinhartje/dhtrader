@@ -8,8 +8,8 @@ from dhtrader import (
 @pytest.fixture
 def event():
     """Create and return a default ES Closed Event fixture."""
-    return Event(start_dt="2025-01-02 12:00:00",
-                 end_dt="2025-01-02 18:00:00",
+    return Event(start_dt="2099-01-02 12:00:00",
+                 end_dt="2099-01-02 18:00:00",
                  symbol="ES",
                  category="Closed",
                  tags=["holiday"],
@@ -23,8 +23,8 @@ def test_Event_create_and_verify_common_methods():
 
     Event does not define __eq__, __ne__, or brief.
     """
-    event = Event(start_dt="2025-01-02 12:00:00",
-                  end_dt="2025-01-02 18:00:00",
+    event = Event(start_dt="2099-01-02 12:00:00",
+                  end_dt="2099-01-02 18:00:00",
                   symbol="ES",
                   category="Closed",
                   tags=["holiday"],
@@ -32,8 +32,8 @@ def test_Event_create_and_verify_common_methods():
                   )
     assert isinstance(event, Event)
     # __init__
-    assert event.start_dt == "2025-01-02 12:00:00"
-    assert event.end_dt == "2025-01-02 18:00:00"
+    assert event.start_dt == "2099-01-02 12:00:00"
+    assert event.end_dt == "2099-01-02 18:00:00"
     assert event.symbol.ticker == "ES"
     assert event.category == "Closed"
     assert event.tags == ["holiday"]
@@ -64,8 +64,8 @@ def test_Event_create_and_verify_common_methods():
     # to_clean_dict
     d = event.to_clean_dict()
     assert isinstance(d, dict)
-    assert d["start_dt"] == "2025-01-02 12:00:00"
-    assert d["end_dt"] == "2025-01-02 18:00:00"
+    assert d["start_dt"] == "2099-01-02 12:00:00"
+    assert d["end_dt"] == "2099-01-02 18:00:00"
     assert d["symbol"] == "ES"
     assert d["category"] == "Closed"
     assert d["tags"] == ["holiday"]
@@ -75,7 +75,7 @@ def test_Event_create_and_verify_common_methods():
     assert isinstance(j, str)
     parsed = json.loads(j)
     assert isinstance(parsed, dict)
-    assert parsed["start_dt"] == "2025-01-02 12:00:00"
+    assert parsed["start_dt"] == "2099-01-02 12:00:00"
     assert parsed["category"] == "Closed"
     # pretty
     assert isinstance(event.pretty(), str)
@@ -85,14 +85,14 @@ def test_Event_create_and_verify_common_methods():
 def test_Event_contains_datetime(event):
     """Verify contains_datetime uses inclusive start/end boundaries."""
     # Datetime inside the range returns True
-    assert event.contains_datetime("2025-01-02 14:00:00")
+    assert event.contains_datetime("2099-01-02 14:00:00")
     # At start boundary is True (inclusive)
-    assert event.contains_datetime("2025-01-02 12:00:00")
+    assert event.contains_datetime("2099-01-02 12:00:00")
     # At end boundary is True (inclusive)
-    assert event.contains_datetime("2025-01-02 18:00:00")
+    assert event.contains_datetime("2099-01-02 18:00:00")
     # Just before start is False
-    assert not event.contains_datetime("2025-01-02 11:59:59")
+    assert not event.contains_datetime("2099-01-02 11:59:59")
     assert not event.contains_datetime("2025-01-01 00:00:00")
     # Just after end is False
-    assert not event.contains_datetime("2025-01-02 18:00:01")
+    assert not event.contains_datetime("2099-01-02 18:00:01")
     assert not event.contains_datetime("2025-01-03 00:00:00")

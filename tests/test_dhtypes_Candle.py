@@ -8,7 +8,7 @@ from dhtrader import (
 @pytest.fixture
 def candle():
     """Create and return a default ES 1m Candle fixture."""
-    return Candle(c_datetime="2025-01-02 12:00:00",
+    return Candle(c_datetime="2099-01-02 12:00:00",
                   c_timeframe="1m",
                   c_open=5000,
                   c_high=5007.75,
@@ -23,7 +23,7 @@ def test_Candle_create_and_verify_common_methods():
     """Test Candle __init__ values, __eq__, __ne__, __str__, __repr__,
     to_clean_dict, to_json, pretty, and brief.
     """
-    candle = Candle(c_datetime="2025-01-02 12:00:00",
+    candle = Candle(c_datetime="2099-01-02 12:00:00",
                     c_timeframe="1m",
                     c_open=5000,
                     c_high=5007.75,
@@ -34,7 +34,7 @@ def test_Candle_create_and_verify_common_methods():
                     )
     assert isinstance(candle, Candle)
     # __init__
-    assert candle.c_datetime == "2025-01-02 12:00:00"
+    assert candle.c_datetime == "2099-01-02 12:00:00"
     assert candle.c_timeframe == "1m"
     assert candle.c_open == 5000.0
     assert candle.c_high == 5007.75
@@ -44,9 +44,9 @@ def test_Candle_create_and_verify_common_methods():
     assert candle.c_symbol.ticker == "ES"
     assert candle.c_tags == []
     assert isinstance(candle.c_epoch, int)
-    assert candle.c_date == "2025-01-02"
+    assert candle.c_date == "2099-01-02"
     assert candle.c_time == "12:00:00"
-    assert candle.c_end_datetime == "2025-01-02 12:01:00"
+    assert candle.c_end_datetime == "2099-01-02 12:01:00"
     assert candle.c_size == 12.25
     assert candle.c_body_size == 2.0
     assert candle.c_upper_wick_size == 5.75
@@ -73,7 +73,7 @@ def test_Candle_create_and_verify_common_methods():
         f"New attrs needing assertions: {sorted(added)}. "
         f"Removed attrs: {sorted(removed)}."
     )
-    other = Candle(c_datetime="2025-01-02 12:00:00",
+    other = Candle(c_datetime="2099-01-02 12:00:00",
                    c_timeframe="1m",
                    c_open=5000,
                    c_high=5007.75,
@@ -82,7 +82,7 @@ def test_Candle_create_and_verify_common_methods():
                    c_volume=1501,
                    c_symbol="ES",
                    )
-    diff = Candle(c_datetime="2025-01-02 12:00:00",
+    diff = Candle(c_datetime="2099-01-02 12:00:00",
                   c_timeframe="1m",
                   c_open=5001,
                   c_high=5007.75,
@@ -113,7 +113,7 @@ def test_Candle_create_and_verify_common_methods():
     assert "c_low" in d
     assert "c_close" in d
     assert "c_volume" in d
-    assert d["c_datetime"] == "2025-01-02 12:00:00"
+    assert d["c_datetime"] == "2099-01-02 12:00:00"
     assert d["c_open"] == 5000.0
     assert d["c_symbol"] == "ES"
     # to_json
@@ -121,14 +121,14 @@ def test_Candle_create_and_verify_common_methods():
     assert isinstance(j, str)
     parsed = json.loads(j)
     assert isinstance(parsed, dict)
-    assert parsed["c_datetime"] == "2025-01-02 12:00:00"
+    assert parsed["c_datetime"] == "2099-01-02 12:00:00"
     assert parsed["c_open"] == 5000.0
     # pretty
     assert isinstance(candle.pretty(), str)
     assert len(candle.pretty().splitlines()) == 24
     # brief
     result = candle.brief()
-    assert result == ("ES 1m 2025-01-02 12:00:00 | "
+    assert result == ("ES 1m 2099-01-02 12:00:00 | "
                       "O: 5000.0 H: 5007.75 L: 4995.5 C: 5002.0 V: 1501")
 
 
@@ -144,7 +144,7 @@ def test_Candle_calculated_attributes(candle):
     # Bullish when close > open
     assert candle.c_direction == "bullish"
     # Bearish when close < open
-    bearish = Candle(c_datetime="2025-01-02 12:00:00",
+    bearish = Candle(c_datetime="2099-01-02 12:00:00",
                      c_timeframe="1m",
                      c_open=5005,
                      c_high=5007.75,
@@ -155,7 +155,7 @@ def test_Candle_calculated_attributes(candle):
                      )
     assert bearish.c_direction == "bearish"
     # Unchanged when close == open
-    unchanged = Candle(c_datetime="2025-01-02 12:00:00",
+    unchanged = Candle(c_datetime="2099-01-02 12:00:00",
                        c_timeframe="1m",
                        c_open=5002,
                        c_high=5007.75,
@@ -166,7 +166,7 @@ def test_Candle_calculated_attributes(candle):
                        )
     assert unchanged.c_direction == "unchanged"
     # Zero-size candle has None percentages
-    zero = Candle(c_datetime="2025-01-02 12:00:00",
+    zero = Candle(c_datetime="2099-01-02 12:00:00",
                   c_timeframe="1m",
                   c_open=5000,
                   c_high=5000,
@@ -179,10 +179,10 @@ def test_Candle_calculated_attributes(candle):
     assert zero.c_upper_wick_perc is None
     assert zero.c_lower_wick_perc is None
     # Date, time, epoch, and end_datetime are set correctly
-    assert candle.c_date == "2025-01-02"
+    assert candle.c_date == "2099-01-02"
     assert candle.c_time == "12:00:00"
     assert isinstance(candle.c_epoch, int)
-    assert candle.c_end_datetime == "2025-01-02 12:01:00"
+    assert candle.c_end_datetime == "2099-01-02 12:01:00"
 
 
 def test_Candle_contains_price(candle):
@@ -202,11 +202,11 @@ def test_Candle_contains_price(candle):
 def test_Candle_contains_datetime(candle):
     """Verify contains_datetime uses exclusive start/end boundaries."""
     # A datetime strictly inside the candle window returns True
-    # (c_datetime is 2025-01-02 12:00:00, window is open before end)
-    assert candle.contains_datetime("2025-01-02 12:00:30")
+    # (c_datetime is 2099-01-02 12:00:00, window is open before end)
+    assert candle.contains_datetime("2099-01-02 12:00:30")
     # At candle start is False (exclusive lower bound)
-    assert not candle.contains_datetime("2025-01-02 12:00:00")
+    assert not candle.contains_datetime("2099-01-02 12:00:00")
     # At candle end (12:01:00 for 1m) is False (exclusive upper bound)
-    assert not candle.contains_datetime("2025-01-02 12:01:00")
+    assert not candle.contains_datetime("2099-01-02 12:01:00")
     # Before candle start is False
-    assert not candle.contains_datetime("2025-01-02 11:59:00")
+    assert not candle.contains_datetime("2099-01-02 11:59:00")

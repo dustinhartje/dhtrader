@@ -11,7 +11,7 @@ def test_Chart_create_and_verify_common_methods():
 
     Chart does not define brief.
     """
-    out_candle = Candle(c_datetime="2025-01-02 12:00:00",
+    out_candle = Candle(c_datetime="2099-01-02 12:00:00",
                         c_timeframe="1m",
                         c_open=5000,
                         c_high=5007.75,
@@ -23,8 +23,8 @@ def test_Chart_create_and_verify_common_methods():
     chart = Chart(c_timeframe="1m",
                   c_trading_hours="rth",
                   c_symbol="ES",
-                  c_start="2025-01-02 12:00:00",
-                  c_end="2025-01-02 12:10:00",
+                  c_start="2099-01-02 12:00:00",
+                  c_end="2099-01-02 12:10:00",
                   autoload=False,
                   )
     assert isinstance(chart, Chart)
@@ -32,8 +32,8 @@ def test_Chart_create_and_verify_common_methods():
     assert chart.c_timeframe == "1m"
     assert chart.c_trading_hours == "rth"
     assert chart.c_symbol.ticker == "ES"
-    assert chart.c_start == "2025-01-02 12:00:00"
-    assert chart.c_end == "2025-01-02 12:10:00"
+    assert chart.c_start == "2099-01-02 12:00:00"
+    assert chart.c_end == "2099-01-02 12:10:00"
     assert chart.c_candles == []
     assert chart.autoload is False
     assert chart.show_progress is False
@@ -58,16 +58,16 @@ def test_Chart_create_and_verify_common_methods():
     chart2 = Chart(c_timeframe="1m",
                    c_trading_hours="rth",
                    c_symbol="ES",
-                   c_start="2025-01-02 12:00:00",
-                   c_end="2025-01-02 12:10:00",
+                   c_start="2099-01-02 12:00:00",
+                   c_end="2099-01-02 12:10:00",
                    autoload=False,
                    )
     chart2.add_candle(out_candle)
     diff = Chart(c_timeframe="5m",
                  c_trading_hours="rth",
                  c_symbol="ES",
-                 c_start="2025-01-02 12:00:00",
-                 c_end="2025-01-02 12:10:00",
+                 c_start="2099-01-02 12:00:00",
+                 c_end="2099-01-02 12:10:00",
                  autoload=False,
                  )
     # __eq__
@@ -87,7 +87,7 @@ def test_Chart_create_and_verify_common_methods():
     assert isinstance(d, dict)
     assert d["c_timeframe"] == "1m"
     assert d["c_symbol"] == "ES"
-    assert d["c_start"] == "2025-01-02 12:00:00"
+    assert d["c_start"] == "2099-01-02 12:00:00"
     # to_json
     j = chart.to_json()
     assert isinstance(j, str)
