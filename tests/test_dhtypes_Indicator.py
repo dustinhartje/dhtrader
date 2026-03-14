@@ -74,19 +74,19 @@ def shared_assertions_Indicator_spotcheck_ES_eth_5m_EMA_close_l20_s2(i):
     """
     # Sun-Sat - first & last candles, rando in the middle, rando in closed
     # Sun 1/5/25
-    assert i.get_datapoint(dt="2025-01-05 18:00:00").value == 6048.14
-    assert i.get_datapoint(dt="2025-01-05 20:34:00").value == 6068.51
-    assert i.get_datapoint(dt="2025-01-05 23:59:00").value == 6054.87
+    assert i.get_datapoint(dt="2025-01-05 18:00:00").value == 5986.32
+    assert i.get_datapoint(dt="2025-01-05 20:34:00").value == 5985.85
+    assert i.get_datapoint(dt="2025-01-05 23:59:00").value == 5986.45
     assert i.get_datapoint(dt="2025-01-05 15:45:00") is None
     # Mon 1/6/25
-    assert i.get_datapoint(dt="2025-01-06 18:00:00").value == 6091.01
-    assert i.get_datapoint(dt="2025-01-06 10:34:00").value == 6074.16
-    assert i.get_datapoint(dt="2025-01-06 16:59:00").value == 6091.32
+    assert i.get_datapoint(dt="2025-01-06 18:00:00").value == 6025.23
+    assert i.get_datapoint(dt="2025-01-06 10:34:00").value == 6047.43
+    assert i.get_datapoint(dt="2025-01-06 16:59:00").value == 6024.54
     assert i.get_datapoint(dt="2025-01-06 17:12:00") is None
     # Tue 1/7/25
-    assert i.get_datapoint(dt="2025-01-07 18:00:00").value == 6067.47
-    assert i.get_datapoint(dt="2025-01-07 12:15:00").value == 6076.89
-    assert i.get_datapoint(dt="2025-01-07 16:59:00").value == 6067.97
+    assert i.get_datapoint(dt="2025-01-07 18:00:00").value == 5956.17
+    assert i.get_datapoint(dt="2025-01-07 12:15:00").value == 5988.62
+    assert i.get_datapoint(dt="2025-01-07 16:59:00").value == 5956.48
     assert i.get_datapoint(dt="2025-01-07 17:24:00") is None
 
 
@@ -125,19 +125,19 @@ def shared_assertions_Indicator_spotcheck_ES_eth_5m_EMA_close_l9_s2(i):
     """
     # Sun-Sat - first & last candles, rando in the middle, rando in closed
     # Sun 1/5/25
-    assert i.get_datapoint(dt="2025-01-05 18:00:00").value == 6048.14
-    assert i.get_datapoint(dt="2025-01-05 20:34:00").value == 6068.51
-    assert i.get_datapoint(dt="2025-01-05 23:59:00").value == 6054.87
+    assert i.get_datapoint(dt="2025-01-05 18:00:00").value == 5986.39
+    assert i.get_datapoint(dt="2025-01-05 20:34:00").value == 5985.06
+    assert i.get_datapoint(dt="2025-01-05 23:59:00").value == 5987.10
     assert i.get_datapoint(dt="2025-01-05 15:45:00") is None
     # Mon 1/6/25
-    assert i.get_datapoint(dt="2025-01-06 18:00:00").value == 6091.01
-    assert i.get_datapoint(dt="2025-01-06 10:34:00").value == 6074.16
-    assert i.get_datapoint(dt="2025-01-06 16:59:00").value == 6091.32
+    assert i.get_datapoint(dt="2025-01-06 18:00:00").value == 6027.44
+    assert i.get_datapoint(dt="2025-01-06 10:34:00").value == 6053.42
+    assert i.get_datapoint(dt="2025-01-06 16:59:00").value == 6026.37
     assert i.get_datapoint(dt="2025-01-06 17:12:00") is None
     # Tue 1/7/25
-    assert i.get_datapoint(dt="2025-01-07 18:00:00").value == 6067.47
-    assert i.get_datapoint(dt="2025-01-07 12:15:00").value == 6076.89
-    assert i.get_datapoint(dt="2025-01-07 16:59:00").value == 6067.97
+    assert i.get_datapoint(dt="2025-01-07 18:00:00").value == 5954.96
+    assert i.get_datapoint(dt="2025-01-07 12:15:00").value == 5982.14
+    assert i.get_datapoint(dt="2025-01-07 16:59:00").value == 5955.38
     assert i.get_datapoint(dt="2025-01-07 17:24:00") is None
 
 

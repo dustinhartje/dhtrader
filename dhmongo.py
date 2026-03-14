@@ -740,6 +740,7 @@ def get_indicators_by_name(name: str, meta_collection: str):
     result = c.find({"name": name})
     return list(result)
 
+
 def get_indicator_datapoints(ind_id: str,
                              dp_collection: str,
                              earliest_dt: str = None,

@@ -1143,11 +1143,16 @@ def get_indicator_datapoints(ind_id: str,
     pbar = start_progbar(show_progress, total,
                          "IndicatorDataPoint objects built")
     for i, d in enumerate(working, start=1):
+        ##############################################################
+        #TODO remove this helper once PR is merged and storage updated
+        if "name" not in d:
+            d["name"] = "nameless"
+        ##############################################################
         result.append(IndicatorDataPoint(dt=d["dt"],
                                          value=d["value"],
                                          ind_id=d["ind_id"],
                                          epoch=d["epoch"],
-                                         name=d.get("name", "nameless"),
+                                         name=d["name"],
                                          ))
         update_progbar(pbar, i, total)
     finish_progbar(pbar)
