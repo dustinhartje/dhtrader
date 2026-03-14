@@ -8,8 +8,8 @@ from dhtrader import (
     IndicatorEMA, IndicatorSMA, store_indicator)
 
 
-def hide_Indicator_demo_hod_creation_and_calculation():
-    """Demo HOD Indicator creation, calculation, and datapoint checks."""
+def test_Indicator_rth_hod_creation_and_calculation():
+    """Indicator creation, calculation, and RTH/HOD datapoint checks."""
     # Confirm RTH datapoints are calculated
     ind = Indicator(name="DELETEME-hod-demo",
                     description="Code testing use only",
@@ -63,70 +63,29 @@ def hide_Indicator_demo_hod_creation_and_calculation():
         assert ind.get_datapoint(dt="2025-01-22 12:30:00").value == 6135.75
         assert ind.get_datapoint(dt="2025-01-28 11:45:00").value == 6087.25
 
-    # TODO test ETH similarly
-    # TODO test other timeframes mebe?
 
-# ############################## IndicatorEMA() ###############################
-# TODO write anything specific for EMA calculations or other varying attribs
-#      & methods
-
-# ##################### IndicatorEMA() Value Spot Checks ######################
-# NOTE In TV, set chart to the timeframe of the EMA and hover over the bar that
-#      contains the dateime in question.  This is the value it should be
-#      returning.  Setting to lower timeframes shows the higher timeframes in
-#      an unclear way that screwed up my testing initially.
-# TODO consider spreading these out throughout the year or at least however
-#      far back TV lets me go, possibly adding more as time goes on?  I could
-#      add a reminder to add a new random check or 3 each day for each
-#      indicator if I want to be super sure going forward
-# TODO once all have been written and working, copy (or can I loop it?) to
-#      have each of these functions also pull the raw candles and do the full
-#      calculation of the indicator and verify the same values are found as
-#      were stored.  This will help to catch future bugs affecting calculations
-#      which may not get run against historical data and might be missed.
-# #################################### ETH ####################################
-# TODO error cause ideas:
-#      * datapoints loading out of order?  possibly the index is not right
-#      * candles not accurate
-#      * wrong datapoints being returned, would explain why some wrong
-#      * answers are exactly the same on the same day.  could be calcs
-#        are right and it's the fetch that's hitting wrong.  Need to
-#        review candles vs datapoints and check times on everything
-
-
-# TODO 5m ETH 9
-def Indicator_spotcheck_ES_eth_5m_EMA_close_l9_s2():
-    """Placeholder spotcheck for ES ETH 5m EMA close l9 s2."""
-    pass
-
-
-# def test_Indicator_calculated_spotcheck():
-#     ind_calced = get_indicator(ind_id="",
-#                                    autoload_datapoints=False,
-#                                    )
-#     ind_calced.start_dt = ""
-#     ind_calced.end_dt = ""
-#     ind_calced.load_underlying_chart()
-#     ind_calced.calculate()
-#     Indicator_spotcheck_(ind_calced)
-#
-#
-# def test_Indicator_storage_spotcheck_():
-#     ind_stored = get_indicator(ind_id="",
-#                                    autoload_datapoints=False,
-#                                    )
-#     ind_stored.load_datapoints()
-#     Indicator_spotcheck_(ind_stored)
-
-
-# TODO 5m ETH 20
 def Indicator_spotcheck_ES_eth_5m_EMA_close_l20_s2(i):
-    """Placeholder spotcheck for ES ETH 5m EMA close l20 s2."""
-    return True
+    """Assert ES ETH 5m EMA close l20 s2 datapoint values."""
+    # Sun-Sat - first & last candles, rando in the middle, rando in closed
+    # Sun 1/5/25
+    assert i.get_datapoint(dt="2025-01-05 18:00:00").value == 6048.14
+    assert i.get_datapoint(dt="2025-01-05 20:34:00").value == 6068.51
+    assert i.get_datapoint(dt="2025-01-05 23:59:00").value == 6054.87
+    assert i.get_datapoint(dt="2025-01-05 15:45:00") is None
+    # Mon 1/6/25
+    assert i.get_datapoint(dt="2025-01-06 18:00:00").value == 6091.01
+    assert i.get_datapoint(dt="2025-01-06 10:34:00").value == 6074.16
+    assert i.get_datapoint(dt="2025-01-06 16:59:00").value == 6091.32
+    assert i.get_datapoint(dt="2025-01-06 17:12:00") is None
+    # Tue 1/7/25
+    assert i.get_datapoint(dt="2025-01-07 18:00:00").value == 6067.47
+    assert i.get_datapoint(dt="2025-01-07 12:15:00").value == 6076.89
+    assert i.get_datapoint(dt="2025-01-07 16:59:00").value == 6067.97
+    assert i.get_datapoint(dt="2025-01-07 17:24:00") is None
 
 
-def hide_Indicator_calculated_spotcheck_ES_eth_5m_EMA_close_l20_s2():
-    """Hidden calculated spotcheck for ES ETH 5m EMA close l20 s2."""
+def test_Indicator_calculated_spotcheck_ES_eth_5m_EMA_close_l20_s2():
+    """Test calculated spotcheck for ES ETH 5m EMA close l20 s2."""
     ind_calced = get_indicator(ind_id="ES_eth_5m_EMA_close_l20_s2",
                                autoload_datapoints=False,
                                autoload_chart=True,
@@ -138,8 +97,8 @@ def hide_Indicator_calculated_spotcheck_ES_eth_5m_EMA_close_l20_s2():
     Indicator_spotcheck_ES_eth_5m_EMA_close_l20_s2(ind_calced)
 
 
-def hide_Indicator_storage_spotcheck_ES_eth_5m_EMA_close_l20_s2():
-    """Hidden storage spotcheck for ES ETH 5m EMA close l20 s2."""
+def test_Indicator_storage_spotcheck_ES_eth_5m_EMA_close_l20_s2():
+    """Test storage spotcheck for ES ETH 5m EMA close l20 s2."""
     ind_stored = get_indicator(ind_id="ES_eth_5m_EMA_close_l20_s2",
                                autoload_datapoints=False,
                                autoload_chart=True,
@@ -464,152 +423,13 @@ def test_Indicator_storage_spotcheck_ES_eth_e1h_EMA_close_l20_s2():
     ind_stored.load_datapoints()
     Indicator_spotcheck_ES_eth_e1h_EMA_close_l20_s2(ind_stored)
 
-# #################################### RTH ####################################
-# TODO 5m RTH 9
 
+@pytest.mark.storage
+def test_Indicator_calculate():
+    """Test for Indicator creation and basic calculation results.
 
-def hide_Indicator_spotcheck_ES_rth_5m_EMA_close_l9_s2():
-    """Hidden spotcheck for ES RTH 5m EMA close l9 s2."""
-    ind = get_indicator(ind_id="ES_rth_5m_EMA_close_l9_s2",
-                        autoload_datapoints=True,
-                        autoload_chart=True,
-                        )
-    print(ind)
-    # print("\n")
-    # print(ind.pretty())
-    # Sun-Sat - first & last candles, rando in the middle, rando closed before,
-    #           rando closed after
-    # First and last candle of a different week
-    # TODO first and last candle of a month
-    # TODO Last candle before & after a holiday
-
-
-# TODO 5m RTH 20
-def hide_Indicator_spotcheck_ES_rth_5m_EMA_close_l20_s2():
-    """Hidden spotcheck for ES RTH 5m EMA close l20 s2."""
-    ind = get_indicator(ind_id="ES_rth_5m_EMA_close_l20_s2",
-                        autoload_datapoints=True,
-                        autoload_chart=True,
-                        )
-    print(ind)
-    # print("\n")
-    # print(ind.pretty())
-    # Sun-Sat - first & last candles, rando in the middle, rando closed before,
-    #           rando closed after
-    # First and last candle of a different week
-    # TODO first and last candle of a month
-    # TODO Last candle before & after a holiday
-
-# TODO 15m RTH 9
-
-
-def Indicator_spotcheck_ES_rth_15m_EMA_close_l9_s2(i):
-    """Assert ES RTH 15m EMA close l9 s2 datapoint values."""
-    # TODO values below should be correct based on TV, enable and run this
-    #      once RTH calculations have been fixed and results wiped/restored
-    #      in mongo
-    # Sun-Sat - first & last candles, rando in the middle,
-    #           rando closed before, rando closed after
-    # Sun 7/14/24
-    assert i.get_datapoint(dt="2024-07-14 05:21:00") is None
-    assert i.get_datapoint(dt="2024-07-14 09:30:00") is None
-    assert i.get_datapoint(dt="2024-07-14 13:47:00") is None
-    assert i.get_datapoint(dt="2024-07-14 15:59:00") is None
-    assert i.get_datapoint(dt="2024-07-14 18:12:00") is None
-    # Mon 7/15/24
-    assert i.get_datapoint(dt="2024-07-15 09:29:00") is None
-    assert i.get_datapoint(dt="2024-07-15 09:30:00").value == 5685.59
-    assert i.get_datapoint(dt="2024-07-15 10:50:00").value == 5695.13
-    assert i.get_datapoint(dt="2024-07-15 15:59:00").value == 5687.14
-    assert i.get_datapoint(dt="2024-07-15 22:01:00") is None
-    # Tue 7/16/24
-    assert i.get_datapoint(dt="2024-07-16 03:57:00") is None
-    assert i.get_datapoint(dt="2024-07-16 09:30:00").value == 5689.51
-    assert i.get_datapoint(dt="2024-07-16 12:41:00").value == 5697.65
-    assert i.get_datapoint(dt="2024-07-16 15:59:00").value == 5710.84
-    assert i.get_datapoint(dt="2024-07-16 16:10:00") is None
-    # Wed 7/17/24
-    assert i.get_datapoint(dt="2024-07-17 06:20:00") is None
-    assert i.get_datapoint(dt="2024-07-17 09:30:00").value == 5701.69
-    assert i.get_datapoint(dt="2024-07-17 13:36:00").value == 5644.69
-    assert i.get_datapoint(dt="2024-07-17 15:59:00").value == 5642.65
-    assert i.get_datapoint(dt="2024-07-17 21:58:00") is None
-    # Thu 7/18/24
-    assert i.get_datapoint(dt="2024-07-18 00:01:00") is None
-    assert i.get_datapoint(dt="2024-07-18 09:30:00").value == 5642.80
-    assert i.get_datapoint(dt="2024-07-18 13:31:00").value == 5609.72
-    assert i.get_datapoint(dt="2024-07-18 15:59:00").value == 5591.28
-    assert i.get_datapoint(dt="2024-07-18 20:30:00") is None
-    # Fri 7/19/24
-    assert i.get_datapoint(dt="2024-07-19 05:11:00") is None
-    assert i.get_datapoint(dt="2024-07-19 09:30:00").value == 5592.17
-    assert i.get_datapoint(dt="2024-07-19 14:15:00").value == 5555.82
-    assert i.get_datapoint(dt="2024-07-19 15:59:00").value == 5555.12
-    assert i.get_datapoint(dt="2024-07-19 17:52:00") is None
-    # Sat 7/20/24
-    assert i.get_datapoint(dt="2024-07-20 08:30:00") is None
-    assert i.get_datapoint(dt="2024-07-20 09:30:00") is None
-    assert i.get_datapoint(dt="2024-07-20 13:05:00") is None
-    assert i.get_datapoint(dt="2024-07-20 23:59:00") is None
-    assert i.get_datapoint(dt="2024-07-20 23:00:00") is None
-#    # TODO why does TV show a 16:00 candle?  check 1m and other
-#    #      timeframes, is this skewing their results?!?
-#
-#    # First and last candle of a different week
-#    # TODO review this, my system got 5774.88 but TV says 5774.90
-#    #      Is there a reason I should care about why this one is 0.02 off
-#    #      while most others are exactly right on?
-#    assert ind.get_datapoint(dt="2024-07-08 09:30:00").value == 5621.76
-#    assert ind.get_datapoint(dt="2024-07-12 15:59:00").value == 5684.92
-#    # TODO first and last candle of a month
-#    # TODO Last candle before & after a holiday
-
-
-def hide_Indicator_calculated_spotcheck_ES_rth_15m_EMA_close_l9_s2():
-    """Hidden calculated spotcheck for ES RTH 15m EMA close l9 s2."""
-    ind_calced = get_indicator(ind_id="ES_rth_15m_EMA_close_l9_s2",
-                               autoload_datapoints=False,
-                               autoload_chart=True,
-                               )
-    ind_calced.start_dt = "2024-07-08 00:00:00"
-    ind_calced.end_dt = "2024-07-21 00:00:00"
-    ind_calced.load_underlying_chart()
-    ind_calced.calculate()
-    Indicator_spotcheck_ES_rth_15m_EMA_close_l9_s2(ind_calced)
-
-
-def hide_Indicator_storage_spotcheck_ES_rth_15m_EMA_close_l9_s2():
-    """Hidden storage spotcheck for ES RTH 15m EMA close l9 s2."""
-    ind_stored = get_indicator(ind_id="ES_rth_15m_EMA_close_l9_s2",
-                               autoload_datapoints=False,
-                               autoload_chart=True,
-                               )
-    ind_stored.load_datapoints()
-    Indicator_spotcheck_ES_rth_15m_EMA_close_l9_s2(ind_stored)
-
-# TODO 15m RTH 20
-
-
-def hide_Indicator_spotcheck_ES_rth_15m_EMA_close_l20_s2():
-    """Hidden placeholder spotcheck for ES RTH 15m EMA close l20 s2."""
-    pass
-
-
-# TODO r1h RTH 9
-def Indicator_spotcheck_ES_rth_r1h_EMA_close_l9_s2(i):
-    """Placeholder spotcheck for ES RTH r1h EMA close l9 s2."""
-    pass
-
-
-# TODO r1h RTH 20
-def Indicator_spotcheck_ES_rth_r1h_EMA_close_l20_s2(i):
-    """Placeholder spotcheck for ES RTH r1h EMA close l20 s2."""
-    pass
-
-
-def hide_Indicator_create_and_calculate():
-    """Hidden test for Indicator creation and calculation."""
-    # TODO break this up into however many functions make sense once converted
+    Storage Usage: load_underlying_chart.
+    """
     # Building 5m9sma for 2025-01-08 9:30am-11:30am
     itest = IndicatorSMA(name="TestSMA-DELETEME",
                          timeframe="5m",
@@ -675,8 +495,12 @@ def hide_Indicator_create_and_calculate():
         assert expected[i] == calculated[i]
 
 
-def hide_Indicator_get_datapoints():
-    """Hidden test for Indicator get_datapoint, next, and prev methods."""
+@pytest.mark.storage
+def test_Indicator_get_datapoints():
+    """Test for Indicator get_datapoint, next, and prev methods.
+
+    Storage Usage: load_underlying_chart.
+    """
     itest = IndicatorEMA(name="TestEMA-DELETEME",
                          timeframe="e1h",
                          trading_hours="eth",
@@ -703,8 +527,13 @@ def hide_Indicator_get_datapoints():
     assert itest.prev_datapoint(dt=dp_dt).value == 5884.5
 
 
-def hide_Indicator_storage_and_retrieval():
-    """Hidden test for Indicator storage, retrieval, and datapoints."""
+@pytest.mark.storage
+def test_Indicator_storage_and_retrieval():
+    """Test for Indicator storage, retrieval, and datapoints.
+
+    Storage Usage: load_underlying_chart, store_indicator, get_indicator,
+                   delete_indicator, get_indicator_datapoints.
+    """
     itest = IndicatorEMA(name="TestEMA-DELETEME",
                          timeframe="e1h",
                          trading_hours="eth",
