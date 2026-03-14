@@ -1874,6 +1874,7 @@ class IndicatorDataPoint():
                  value: float,
                  ind_id: str,
                  epoch: int = None,
+                 name: str = "nameless",
                  ):
         self.dt = dt_as_str(dt)
         self.value = value
