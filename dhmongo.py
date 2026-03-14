@@ -735,10 +735,10 @@ def list_indicators(meta_collection: str):
 
 
 def get_indicators_by_name(name: str, meta_collection: str):
-    """Return a list of ind_ids for all indicators with the given name."""
+    """Return raw meta docs for all indicators with the given name."""
     c = db[meta_collection]
     result = c.find({"name": name})
-    return [doc["ind_id"] for doc in result]
+    return list(result)
 
 def get_indicator_datapoints(ind_id: str,
                              dp_collection: str,

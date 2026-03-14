@@ -1369,11 +1369,44 @@ def delete_indicator(ind_id: str,
 
 def get_indicators_by_name(name: str,
                            meta_collection: str = COLL_IND_META,
+                           autoload_chart: bool = False,
+                           autoload_datapoints: bool = False,
                            ):
-    """Return a list of ind_ids for all indicators with the given name."""
-    return dhm.get_indicators_by_name(name=name,
-                                      meta_collection=meta_collection,
-                                      )
+    """Return a list of Indicator objects for all indicators with the name.
+
+    autoload_chart and autoload_datapoints both default to False for
+    performance.  When enabled they load for the earliest_dt to latest_dt
+    range.
+    """
+    raw_docs = dhm.get_indicators_by_name(name=name,
+                                          meta_collection=meta_collection,
+                                          )
+    result = []
+    for doc in raw_docs:
+        common = dict(description=doc["description"],
+                      timeframe=doc["timeframe"],
+                      trading_hours=doc["trading_hours"],
+                      symbol=doc["symbol"],
+                      calc_version=doc["calc_version"],
+                      calc_details=doc["calc_details"],
+                      ind_id=doc["ind_id"],
+                      autoload_chart=autoload_chart,
+                      name=doc["name"],
+                      parameters=doc["parameters"],
+                      )
+        if doc["class_name"] == "IndicatorSMA":
+            ind = IndicatorSMA(**common)
+        elif doc["class_name"] == "IndicatorEMA":
+            ind = IndicatorEMA(**common)
+        else:
+            raise ValueError(
+                f"Unable to match class_name of {doc['class_name']} "
+                "with a known Indicator() subclass."
+            )
+        if autoload_datapoints:
+            ind.load_datapoints()
+        result.append(ind)
+    return result
 
 
 def delete_indicators_by_name(name: str,
@@ -1381,10 +1414,10 @@ def delete_indicators_by_name(name: str,
                               dp_collection: str = COLL_IND_DPS,
                               ):
     """Delete all indicators and their datapoints with the given name."""
-    ind_ids = get_indicators_by_name(name=name,
-                                     meta_collection=meta_collection)
-    for ind_id in ind_ids:
-        delete_indicator(ind_id=ind_id,
+    indicators = get_indicators_by_name(name=name,
+                                        meta_collection=meta_collection)
+    for ind in indicators:
+        delete_indicator(ind_id=ind.ind_id,
                          meta_collection=meta_collection,
                          dp_collection=dp_collection,
                          )
