@@ -788,20 +788,20 @@ def test_IndicatorDataPoint_create_and_verify_common_methods():
     """
     from dhtrader import dt_to_epoch
     dp = IndicatorDataPoint(
-        dt="2025-01-15 10:30:00",
+        dt="2099-01-15 10:30:00",
         value=5123.75,
         ind_id="ES_eth_15m_EMA_close_l9_s2",
     )
     assert isinstance(dp, IndicatorDataPoint)
     # __init__
-    assert dp.dt == "2025-01-15 10:30:00"
+    assert dp.dt == "2099-01-15 10:30:00"
     assert dp.value == 5123.75
     assert dp.ind_id == "ES_eth_15m_EMA_close_l9_s2"
     assert isinstance(dp.epoch, int)
-    assert dp.epoch == dt_to_epoch("2025-01-15 10:30:00")
+    assert dp.epoch == dt_to_epoch("2099-01-15 10:30:00")
     # Explicit epoch overrides auto-calculation
     dp_explicit = IndicatorDataPoint(
-        dt="2025-01-15 10:30:00",
+        dt="2099-01-15 10:30:00",
         value=100.0,
         ind_id="test_ind",
         epoch=9999,
@@ -818,12 +818,12 @@ def test_IndicatorDataPoint_create_and_verify_common_methods():
         f"Removed attrs: {sorted(removed)}."
     )
     dp2 = IndicatorDataPoint(
-        dt="2025-01-15 10:30:00",
+        dt="2099-01-15 10:30:00",
         value=5123.75,
         ind_id="ES_eth_15m_EMA_close_l9_s2",
     )
     diff = IndicatorDataPoint(
-        dt="2025-01-15 10:30:00",
+        dt="2099-01-15 10:30:00",
         value=5001.0,
         ind_id="test_ind",
     )
@@ -844,7 +844,7 @@ def test_IndicatorDataPoint_create_and_verify_common_methods():
     # to_clean_dict
     d = dp.to_clean_dict()
     assert isinstance(d, dict)
-    assert d["dt"] == "2025-01-15 10:30:00"
+    assert d["dt"] == "2099-01-15 10:30:00"
     assert d["value"] == 5123.75
     assert d["ind_id"] == "ES_eth_15m_EMA_close_l9_s2"
     assert "epoch" in d
@@ -853,7 +853,7 @@ def test_IndicatorDataPoint_create_and_verify_common_methods():
     assert isinstance(j, str)
     parsed = json.loads(j)
     assert isinstance(parsed, dict)
-    assert parsed["dt"] == "2025-01-15 10:30:00"
+    assert parsed["dt"] == "2099-01-15 10:30:00"
     assert parsed["value"] == 5123.75
     # pretty
     p = dp.pretty()
@@ -863,7 +863,7 @@ def test_IndicatorDataPoint_create_and_verify_common_methods():
 
 def _make_indicator_chart():
     """Create a minimal non-storage Chart for Indicator tests."""
-    candle = Candle(c_datetime="2025-01-02 12:00:00",
+    candle = Candle(c_datetime="2099-01-02 12:00:00",
                     c_timeframe="1m",
                     c_open=5000,
                     c_high=5007.75,
@@ -875,8 +875,8 @@ def _make_indicator_chart():
     chart = Chart(c_timeframe="1m",
                   c_trading_hours="eth",
                   c_symbol="ES",
-                  c_start="2025-01-02 12:00:00",
-                  c_end="2025-01-02 12:10:00",
+                  c_start="2099-01-02 12:00:00",
+                  c_end="2099-01-02 12:10:00",
                   autoload=False,
                   )
     chart.add_candle(candle)
@@ -897,8 +897,8 @@ def test_Indicator_create_and_verify_common_methods():
                     symbol="ES",
                     calc_version="1.0.0",
                     calc_details="test",
-                    start_dt="2025-01-02 12:00:00",
-                    end_dt="2025-01-02 12:10:00",
+                    start_dt="2099-01-02 12:00:00",
+                    end_dt="2099-01-02 12:10:00",
                     autoload_chart=False,
                     candle_chart=chart,
                     )
@@ -909,8 +909,8 @@ def test_Indicator_create_and_verify_common_methods():
                      symbol="ES",
                      calc_version="1.0.0",
                      calc_details="test",
-                     start_dt="2025-01-02 12:00:00",
-                     end_dt="2025-01-02 12:10:00",
+                     start_dt="2099-01-02 12:00:00",
+                     end_dt="2099-01-02 12:10:00",
                      autoload_chart=False,
                      candle_chart=chart,
                      )
@@ -921,8 +921,8 @@ def test_Indicator_create_and_verify_common_methods():
                      symbol="ES",
                      calc_version="1.0.0",
                      calc_details="test",
-                     start_dt="2025-01-02 12:00:00",
-                     end_dt="2025-01-02 12:10:00",
+                     start_dt="2099-01-02 12:00:00",
+                     end_dt="2099-01-02 12:10:00",
                      autoload_chart=False,
                      candle_chart=chart,
                      )
@@ -935,8 +935,8 @@ def test_Indicator_create_and_verify_common_methods():
     assert ind.symbol.ticker == "ES"
     assert ind.calc_version == "1.0.0"
     assert ind.calc_details == "test"
-    assert ind.start_dt == "2025-01-02 12:00:00"
-    assert ind.end_dt == "2025-01-02 12:10:00"
+    assert ind.start_dt == "2099-01-02 12:00:00"
+    assert ind.end_dt == "2099-01-02 12:10:00"
     assert ind.datapoints == []
     assert ind.parameters == {}
     assert "ES" in ind.ind_id
@@ -1009,8 +1009,8 @@ def test_IndicatorSMA_create_and_verify_common_methods():
                        symbol="ES",
                        calc_version="1.0.0",
                        calc_details="test",
-                       start_dt="2025-01-02 12:00:00",
-                       end_dt="2025-01-02 12:10:00",
+                       start_dt="2099-01-02 12:00:00",
+                       end_dt="2099-01-02 12:10:00",
                        autoload_chart=False,
                        candle_chart=chart,
                        parameters=params,
@@ -1021,8 +1021,8 @@ def test_IndicatorSMA_create_and_verify_common_methods():
                         symbol="ES",
                         calc_version="1.0.0",
                         calc_details="test",
-                        start_dt="2025-01-02 12:00:00",
-                        end_dt="2025-01-02 12:10:00",
+                        start_dt="2099-01-02 12:00:00",
+                        end_dt="2099-01-02 12:10:00",
                         autoload_chart=False,
                         candle_chart=chart,
                         parameters=params,
@@ -1034,8 +1034,8 @@ def test_IndicatorSMA_create_and_verify_common_methods():
                         symbol="ES",
                         calc_version="1.0.0",
                         calc_details="test",
-                        start_dt="2025-01-02 12:00:00",
-                        end_dt="2025-01-02 12:10:00",
+                        start_dt="2099-01-02 12:00:00",
+                        end_dt="2099-01-02 12:10:00",
                         autoload_chart=False,
                         candle_chart=chart,
                         parameters=diff_params,
@@ -1049,8 +1049,8 @@ def test_IndicatorSMA_create_and_verify_common_methods():
     assert sma.symbol.ticker == "ES"
     assert sma.calc_version == "1.0.0"
     assert sma.calc_details == "test"
-    assert sma.start_dt == "2025-01-02 12:00:00"
-    assert sma.end_dt == "2025-01-02 12:10:00"
+    assert sma.start_dt == "2099-01-02 12:00:00"
+    assert sma.end_dt == "2099-01-02 12:10:00"
     assert sma.datapoints == []
     assert sma.parameters == params
     assert sma.length == 3
@@ -1121,8 +1121,8 @@ def test_IndicatorEMA_create_and_verify_common_methods():
                        symbol="ES",
                        calc_version="1.0.0",
                        calc_details="test",
-                       start_dt="2025-01-02 12:00:00",
-                       end_dt="2025-01-02 12:10:00",
+                       start_dt="2099-01-02 12:00:00",
+                       end_dt="2099-01-02 12:10:00",
                        autoload_chart=False,
                        candle_chart=chart,
                        parameters=params,
@@ -1133,8 +1133,8 @@ def test_IndicatorEMA_create_and_verify_common_methods():
                         symbol="ES",
                         calc_version="1.0.0",
                         calc_details="test",
-                        start_dt="2025-01-02 12:00:00",
-                        end_dt="2025-01-02 12:10:00",
+                        start_dt="2099-01-02 12:00:00",
+                        end_dt="2099-01-02 12:10:00",
                         autoload_chart=False,
                         candle_chart=chart,
                         parameters=params,
@@ -1146,8 +1146,8 @@ def test_IndicatorEMA_create_and_verify_common_methods():
                         symbol="ES",
                         calc_version="1.0.0",
                         calc_details="test",
-                        start_dt="2025-01-02 12:00:00",
-                        end_dt="2025-01-02 12:10:00",
+                        start_dt="2099-01-02 12:00:00",
+                        end_dt="2099-01-02 12:10:00",
                         autoload_chart=False,
                         candle_chart=chart,
                         parameters=diff_params,
@@ -1161,8 +1161,8 @@ def test_IndicatorEMA_create_and_verify_common_methods():
     assert ema.symbol.ticker == "ES"
     assert ema.calc_version == "1.0.0"
     assert ema.calc_details == "test"
-    assert ema.start_dt == "2025-01-02 12:00:00"
-    assert ema.end_dt == "2025-01-02 12:10:00"
+    assert ema.start_dt == "2099-01-02 12:00:00"
+    assert ema.end_dt == "2099-01-02 12:10:00"
     assert ema.datapoints == []
     assert ema.parameters == params
     assert ema.length == 3

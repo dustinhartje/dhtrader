@@ -10,7 +10,7 @@ from dhtrader import (
 from dhtrader.testdata.testdata import Rebuilder
 
 
-def create_trade(open_dt="2025-01-02 12:00:00",
+def create_trade(open_dt="2099-01-02 12:00:00",
                  close_dt=None,
                  direction="long",
                  timeframe="5m",
@@ -54,8 +54,8 @@ def add_1m_candle(trade, dt, c_open, c_high, c_low, c_close):
                                ))
 
 
-def create_tradeseries(start_dt="2025-01-01 00:00:00",
-                       end_dt="2025-02-01 00:00:00",
+def create_tradeseries(start_dt="2099-01-01 00:00:00",
+                       end_dt="2099-02-01 00:00:00",
                        timeframe="5m",
                        trading_hours="rth",
                        symbol="ES",
@@ -158,8 +158,8 @@ def test_TradeSeries_create_and_verify_common_methods():
     test_trade = create_trade()
     assert isinstance(ts, TradeSeries)
     # __init__
-    assert ts.start_dt == "2025-01-01 00:00:00"
-    assert ts.end_dt == "2025-02-01 00:00:00"
+    assert ts.start_dt == "2099-01-01 00:00:00"
+    assert ts.end_dt == "2099-02-01 00:00:00"
     assert ts.timeframe == "5m"
     assert ts.trading_hours == "rth"
     assert ts.symbol.ticker == "ES"
@@ -222,12 +222,12 @@ def test_TradeSeries_add_sort_and_get_trades():
     ts = create_tradeseries()
     assert len(ts.trades) == 0
     # Create and add 2 trades out of order (later trade goes in first)
-    trade1 = create_trade(open_dt="2025-01-05 12:00:00",
-                          close_dt="2025-01-05 13:00:00")
+    trade1 = create_trade(open_dt="2099-01-05 12:00:00",
+                          close_dt="2099-01-05 13:00:00")
     ts.add_trade(trade1)
     assert len(ts.trades) == 1
-    trade2 = create_trade(open_dt="2025-01-04 09:35:00",
-                          close_dt="2025-01-04 09:40:00")
+    trade2 = create_trade(open_dt="2099-01-04 09:35:00",
+                          close_dt="2099-01-04 09:40:00")
     ts.add_trade(trade2)
     assert len(ts.trades) == 2
     # Confirm trades are out of order
@@ -238,9 +238,9 @@ def test_TradeSeries_add_sort_and_get_trades():
     assert ts.trades[0] == trade2
     assert ts.trades[1] == trade1
     # Confirm we can retrieve a trade by open_dt
-    assert ts.get_trade_by_open_dt("2025-01-04 09:35:00") == trade2
+    assert ts.get_trade_by_open_dt("2099-01-04 09:35:00") == trade2
     # Confirm we cannot retrieve a trade by open_dt that does not exist
-    assert ts.get_trade_by_open_dt("2025-01-04 08:35:00") is None
+    assert ts.get_trade_by_open_dt("2099-01-04 08:35:00") is None
 
 
 def test_TradeSeries_balance_impact_and_stats():
@@ -248,18 +248,18 @@ def test_TradeSeries_balance_impact_and_stats():
     # Test a TradeSeries with winning and losing trades that does not liquidate
     ts = create_tradeseries()
     # Trade closes 25pts/$1250 in profit with rr=4
-    t = create_trade(open_dt="2025-01-02 12:30:00",
+    t = create_trade(open_dt="2099-01-02 12:30:00",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4900, prof_target=5025,
                      )
-    add_1m_candle(t, "2025-01-02 12:31:00", 5000, 5200, 5000, 5000)
+    add_1m_candle(t, "2099-01-02 12:31:00", 5000, 5200, 5000, 5000)
     ts.add_trade(t)
     # Trade closes -50pts/-$2500 in loss with rr=1
-    t = create_trade(open_dt="2025-01-02 13:30:00",
+    t = create_trade(open_dt="2099-01-02 13:30:00",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4950, prof_target=5050,
                      )
-    add_1m_candle(t, "2025-01-02 13:31:00", 5000, 5000, 4500, 5000)
+    add_1m_candle(t, "2099-01-02 13:31:00", 5000, 5000, 4500, 5000)
     ts.add_trade(t)
     r = ts.balance_impact(balance_open=3000,
                           contracts=1,
@@ -298,25 +298,25 @@ def test_TradeSeries_balance_impact_and_stats():
     # Test a TradeSeries with all winning trades that does not liquidate
     ts = create_tradeseries()
     # Trade closes 25pts/$1250 in profit with rr=4
-    t = create_trade(open_dt="2025-01-02 12:30:00",
+    t = create_trade(open_dt="2099-01-02 12:30:00",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4900, prof_target=5025,
                      )
-    add_1m_candle(t, "2025-01-02 12:31:00", 5000, 5200, 4970, 5000)
+    add_1m_candle(t, "2099-01-02 12:31:00", 5000, 5200, 4970, 5000)
     ts.add_trade(t)
     # Trade closes 50pts/$2500 in profit with rr=1
-    t = create_trade(open_dt="2025-01-02 13:30:00",
+    t = create_trade(open_dt="2099-01-02 13:30:00",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4950, prof_target=5050,
                      )
-    add_1m_candle(t, "2025-01-02 13:31:00", 5000, 5100, 4970, 5000)
+    add_1m_candle(t, "2099-01-02 13:31:00", 5000, 5100, 4970, 5000)
     ts.add_trade(t)
     # Trade closes 82pts/$4100 in profit with rr=0.61
-    t = create_trade(open_dt="2025-01-02 14:30:00",
+    t = create_trade(open_dt="2099-01-02 14:30:00",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4950, prof_target=5082,
                      )
-    add_1m_candle(t, "2025-01-02 14:31:00", 5000, 5100, 5000, 5000)
+    add_1m_candle(t, "2099-01-02 14:31:00", 5000, 5100, 5000, 5000)
     ts.add_trade(t)
     # Gains $7850 before fees and -$9.30 in fees per contract (4)
     # Works out to $31400 gain with -$37.20 in fees
@@ -356,25 +356,25 @@ def test_TradeSeries_balance_impact_and_stats():
     # after setting two sequential new highs
     ts = create_tradeseries()
     # Trade closes -8pts/-$400 in loss with rr=0.008
-    t = create_trade(open_dt="2025-01-02 12:30:00",
+    t = create_trade(open_dt="2099-01-02 12:30:00",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4992, prof_target=6000,
                      )
-    add_1m_candle(t, "2025-01-02 12:31:00", 5000, 5010, 4900, 5000)
+    add_1m_candle(t, "2099-01-02 12:31:00", 5000, 5010, 4900, 5000)
     ts.add_trade(t)
     # Trade closes -20pts/-$1000 in loss with rr=0.02
-    t = create_trade(open_dt="2025-01-02 13:30:00",
+    t = create_trade(open_dt="2099-01-02 13:30:00",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4980, prof_target=6000,
                      )
-    add_1m_candle(t, "2025-01-02 13:35:00", 5000, 5100, 4900, 5000)
+    add_1m_candle(t, "2099-01-02 13:35:00", 5000, 5100, 4900, 5000)
     ts.add_trade(t)
     # Trade closes -25pts/-$1250 in loss with rr=0.0125
-    t = create_trade(open_dt="2025-01-02 14:30:00",
+    t = create_trade(open_dt="2099-01-02 14:30:00",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4975, prof_target=6000,
                      )
-    add_1m_candle(t, "2025-01-02 15:51:00", 5000, 5000, 4900, 5000)
+    add_1m_candle(t, "2099-01-02 15:51:00", 5000, 5000, 4900, 5000)
     ts.add_trade(t)
     # Loses -$2650 before fees and -$9.30 in fees per contract (2)
     # Works out to -$5300 loss with -$18.60 in fees
@@ -412,9 +412,9 @@ def test_TradeSeries_balance_impact_and_stats():
 
     # Change a few things up just to cover bases a bit more
     # NOTE - Changes are not consistent with all other Trade attributes
-    ts.end_dt = "2025-01-08 17:00:00"
-    ts.trades[2].open_dt = "2025-01-07 12:31:00"
-    ts.trades[2].close_dt = "2025-01-07 14:30:00"
+    ts.end_dt = "2099-01-08 17:00:00"
+    ts.trades[2].open_dt = "2099-01-07 12:31:00"
+    ts.trades[2].close_dt = "2099-01-07 14:30:00"
     ts.trades[0].stop_ticks = 1000
     ts.trades[1].stop_ticks = 1000
     ts.trades[2].stop_ticks = 1000
@@ -443,12 +443,12 @@ def test_TradeSeries_balance_impact_and_stats():
     assert s["trade_ticks"] == expected_trade_ticks
     # Confirm weekly_stats() also
     print(ts.weekly_stats())
-    assert ts.weekly_stats() == {'2024-12-29': {'total_trades': 2,
+    assert ts.weekly_stats() == {'2098-12-28': {'total_trades': 2,
                                                 'profitable_trades': 1,
                                                 'losing_trades': 1,
                                                 'gl_in_ticks': 288,
                                                 'success_rate': 50.0},
-                                 '2025-01-05': {'total_trades': 1,
+                                 '2099-01-04': {'total_trades': 1,
                                                 'profitable_trades': 0,
                                                 'losing_trades': 1,
                                                 'gl_in_ticks': -100,
@@ -460,53 +460,53 @@ def test_TradeSeries_non_target_closes_stats_and_effective_risk_reward_calc():
     """Verify effective_risk_reward when trades close at non-target prices."""
     ts = create_tradeseries()
     # Long trade closing at partial profit +23pt at end of day
-    t = create_trade(open_dt="2025-01-02 12:30:00", direction="long",
+    t = create_trade(open_dt="2099-01-02 12:30:00", direction="long",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4900, prof_target=5100,
                      )
-    t.close(price=5023, dt="2025-01-02 15:55:00")
+    t.close(price=5023, dt="2099-01-02 15:55:00")
     ts.add_trade(t)
     # Short trade closing at partial profit +91.75pt at end of day
-    t = create_trade(open_dt="2025-01-03 12:30:00", direction="short",
+    t = create_trade(open_dt="2099-01-03 12:30:00", direction="short",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=5100, prof_target=4900,
                      )
-    t.close(price=4908.25, dt="2025-01-03 15:55:00")
+    t.close(price=4908.25, dt="2099-01-03 15:55:00")
     ts.add_trade(t)
     # Long trade closing at partial loss -4.5pt at end of day
-    t = create_trade(open_dt="2025-01-04 12:30:00", direction="long",
+    t = create_trade(open_dt="2099-01-04 12:30:00", direction="long",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4900, prof_target=5050,
                      )
-    t.close(price=4995.5, dt="2025-01-04 15:55:00")
+    t.close(price=4995.5, dt="2099-01-04 15:55:00")
     ts.add_trade(t)
     # Short trade closing at partial loss -45pt at end of day
-    t = create_trade(open_dt="2025-01-05 12:30:00", direction="short",
+    t = create_trade(open_dt="2099-01-05 12:30:00", direction="short",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=5100, prof_target=4950,
                      )
-    t.close(price=5045, dt="2025-01-05 15:55:00")
+    t.close(price=5045, dt="2099-01-05 15:55:00")
     ts.add_trade(t)
     # Long trade closing at profit target +50pt
-    t = create_trade(open_dt="2025-01-06 12:30:00", direction="long",
+    t = create_trade(open_dt="2099-01-06 12:30:00", direction="long",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4900, prof_target=5050,
                      )
-    t.close(price=5050, dt="2025-01-06 12:55:00")
+    t.close(price=5050, dt="2099-01-06 12:55:00")
     ts.add_trade(t)
     # Short trade closing at stop target -75pt
-    t = create_trade(open_dt="2025-01-07 12:30:00", direction="short",
+    t = create_trade(open_dt="2099-01-07 12:30:00", direction="short",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=5075, prof_target=4950,
                      )
-    t.close(price=5075, dt="2025-01-07 12:55:00")
+    t.close(price=5075, dt="2099-01-07 12:55:00")
     ts.add_trade(t)
     # Long trade closing exactly break even at end of day
-    t = create_trade(open_dt="2025-01-08 12:30:00", direction="long",
+    t = create_trade(open_dt="2099-01-08 12:30:00", direction="long",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4900, prof_target=5050,
                      )
-    t.close(price=5000, dt="2025-01-08 15:55:00")
+    t.close(price=5000, dt="2099-01-08 15:55:00")
     ts.add_trade(t)
 
     s = ts.stats()
@@ -534,17 +534,17 @@ def test_TradeSeries_drawdown_impact():
     """Verify TradeSeries.drawdown_impact() calculations."""
     # Test a TradeSeries with winning and losing trades that does not liquidate
     ts = create_tradeseries()
-    t = create_trade(open_dt="2025-01-02 12:30:00",
+    t = create_trade(open_dt="2099-01-02 12:30:00",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4900, prof_target=5025,
                      )
-    add_1m_candle(t, "2025-01-02 12:31:00", 5000, 5200, 5000, 5000)
+    add_1m_candle(t, "2099-01-02 12:31:00", 5000, 5200, 5000, 5000)
     ts.add_trade(t)
-    t = create_trade(open_dt="2025-01-02 13:30:00",
+    t = create_trade(open_dt="2099-01-02 13:30:00",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4950, prof_target=5050,
                      )
-    add_1m_candle(t, "2025-01-02 13:31:00", 5000, 5000, 4500, 5000)
+    add_1m_candle(t, "2099-01-02 13:31:00", 5000, 5000, 4500, 5000)
     ts.add_trade(t)
     r = ts.drawdown_impact(drawdown_open=3000,
                            drawdown_limit=6500,
@@ -558,23 +558,23 @@ def test_TradeSeries_drawdown_impact():
     assert r["liquidated"] is False
     # Test a TradeSeries with all winning trades that does not liquidate
     ts = create_tradeseries()
-    t = create_trade(open_dt="2025-01-02 12:30:00",
+    t = create_trade(open_dt="2099-01-02 12:30:00",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4900, prof_target=5005,
                      )
-    add_1m_candle(t, "2025-01-02 12:31:00", 5000, 5200, 4995, 5000)
+    add_1m_candle(t, "2099-01-02 12:31:00", 5000, 5200, 4995, 5000)
     ts.add_trade(t)
-    t = create_trade(open_dt="2025-01-02 13:30:00",
+    t = create_trade(open_dt="2099-01-02 13:30:00",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4950, prof_target=5003,
                      )
-    add_1m_candle(t, "2025-01-02 13:31:00", 5000, 5100, 5000, 5000)
+    add_1m_candle(t, "2099-01-02 13:31:00", 5000, 5100, 5000, 5000)
     ts.add_trade(t)
-    t = create_trade(open_dt="2025-01-02 14:30:00",
+    t = create_trade(open_dt="2099-01-02 14:30:00",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4950, prof_target=5007,
                      )
-    add_1m_candle(t, "2025-01-02 14:31:00", 5000, 5100, 5000, 5000)
+    add_1m_candle(t, "2099-01-02 14:31:00", 5000, 5100, 5000, 5000)
     ts.add_trade(t)
     r = ts.drawdown_impact(drawdown_open=5000,
                            drawdown_limit=6500,
@@ -589,23 +589,23 @@ def test_TradeSeries_drawdown_impact():
     # Test a TradeSeries with all losing trades that does liquidate
     # after setting two sequential new highs
     ts = create_tradeseries()
-    t = create_trade(open_dt="2025-01-02 12:30:00",
+    t = create_trade(open_dt="2099-01-02 12:30:00",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4992, prof_target=6000,
                      )
-    add_1m_candle(t, "2025-01-02 12:31:00", 5000, 5002, 4900, 5000)
+    add_1m_candle(t, "2099-01-02 12:31:00", 5000, 5002, 4900, 5000)
     ts.add_trade(t)
-    t = create_trade(open_dt="2025-01-02 13:30:00",
+    t = create_trade(open_dt="2099-01-02 13:30:00",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4980, prof_target=6000,
                      )
-    add_1m_candle(t, "2025-01-02 12:31:00", 5000, 5020, 4900, 5000)
+    add_1m_candle(t, "2099-01-02 12:31:00", 5000, 5020, 4900, 5000)
     ts.add_trade(t)
-    t = create_trade(open_dt="2025-01-02 14:30:00",
+    t = create_trade(open_dt="2099-01-02 14:30:00",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4950, prof_target=6000,
                      )
-    add_1m_candle(t, "2025-01-02 12:31:00", 5000, 5000, 4900, 5000)
+    add_1m_candle(t, "2099-01-02 12:31:00", 5000, 5000, 4900, 5000)
     ts.add_trade(t)
     r = ts.drawdown_impact(drawdown_open=5000,
                            drawdown_limit=6500,
@@ -619,23 +619,23 @@ def test_TradeSeries_drawdown_impact():
     assert r["liquidated"] is True
     # TradeSeries pushes 1 trade past drawdown_limit triggering trail effect
     ts = create_tradeseries()
-    t = create_trade(open_dt="2025-01-02 12:30:00",
+    t = create_trade(open_dt="2099-01-02 12:30:00",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4000, prof_target=5005,
                      )
-    add_1m_candle(t, "2025-01-02 12:31:00", 5000, 5100, 5000, 5000)
+    add_1m_candle(t, "2099-01-02 12:31:00", 5000, 5100, 5000, 5000)
     ts.add_trade(t)
-    t = create_trade(open_dt="2025-01-02 13:30:00",
+    t = create_trade(open_dt="2099-01-02 13:30:00",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4000, prof_target=5005,
                      )
-    add_1m_candle(t, "2025-01-02 12:31:00", 5000, 5100, 5000, 5000)
+    add_1m_candle(t, "2099-01-02 12:31:00", 5000, 5100, 5000, 5000)
     ts.add_trade(t)
-    t = create_trade(open_dt="2025-01-02 14:30:00",
+    t = create_trade(open_dt="2099-01-02 14:30:00",
                      stop_ticks=None, prof_ticks=None,
                      stop_target=4000, prof_target=5005,
                      )
-    add_1m_candle(t, "2025-01-02 12:31:00", 5000, 5100, 5000, 5000)
+    add_1m_candle(t, "2099-01-02 12:31:00", 5000, 5100, 5000, 5000)
     ts.add_trade(t)
     r = ts.drawdown_impact(drawdown_open=5800,
                            drawdown_limit=6500,
@@ -659,11 +659,11 @@ def test_TradeSeries_store_retrieve_and_delete(cleanup_tradeseries_storage):
     cleanup_tradeseries_storage(test_name)
     # Create a TradeSeries with 2 Trade objects to test with
     ts = create_tradeseries(name=test_name)
-    ts.add_trade(create_trade(open_dt="2025-01-05 12:00:00",
-                              close_dt="2025-01-05 13:00:00",
+    ts.add_trade(create_trade(open_dt="2099-01-05 12:00:00",
+                              close_dt="2099-01-05 13:00:00",
                               name=test_name))
-    ts.add_trade(create_trade(open_dt="2025-01-06 09:35:00",
-                              close_dt="2025-01-06 09:40:00",
+    ts.add_trade(create_trade(open_dt="2099-01-06 09:35:00",
+                              close_dt="2099-01-06 09:40:00",
                               name=test_name))
     # Clear and confirm storage has no objects with this name currently
     delete_tradeseries_by_field(symbol="ES", field="name",
@@ -820,11 +820,11 @@ def test_delete_tradeseries(cleanup_tradeseries_storage):
     cleanup_tradeseries_storage(test_name_1, test_name_2)
     ts1 = create_tradeseries(name=test_name_1)
     ts2 = create_tradeseries(name=test_name_2)
-    ts1.add_trade(create_trade(open_dt="2025-01-05 12:00:00",
-                               close_dt="2025-01-05 13:00:00",
+    ts1.add_trade(create_trade(open_dt="2099-01-05 12:00:00",
+                               close_dt="2099-01-05 13:00:00",
                                name=test_name_1))
-    ts2.add_trade(create_trade(open_dt="2025-01-05 14:00:00",
-                               close_dt="2025-01-05 15:00:00",
+    ts2.add_trade(create_trade(open_dt="2099-01-05 14:00:00",
+                               close_dt="2099-01-05 15:00:00",
                                name=test_name_2))
     # Clear storage of test data (clear both names and both ts_ids)
     delete_tradeseries_by_field(symbol="ES", field="name",

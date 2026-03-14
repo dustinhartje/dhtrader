@@ -1258,7 +1258,7 @@ def test_Symbol_get_era(symbol):
     ]
 
     assert "2021-06_thru_present" == sym.get_era("2021-09-15 12:00:00")["name"]
-    assert "2021-06_thru_present" == sym.get_era("2024-06-15 12:00:00")["name"]
+    assert "2099_thru_future" == sym.get_era("2099-06-15 12:00:00")["name"]
     assert "2021-06_thru_present" == sym.get_era("2025-12-31 12:00:00")["name"]
 
     # Test with datetime objects (not just strings)
@@ -1274,8 +1274,8 @@ def test_Symbol_get_era(symbol):
     era = sym.get_era(dt.datetime(2021, 3, 1))
     assert era["name"] == "2021-01_thru_2021-06"
 
-    era = sym.get_era(dt.datetime(2024, 5, 1))
-    assert era["name"] == "2021-06_thru_present"
+    era = sym.get_era(dt.datetime(2099, 5, 1))
+    assert era["name"] == "2099_thru_future"
 
     # Test error for date before any era
     with pytest.raises(ValueError, match="No market era defined"):
@@ -1367,21 +1367,21 @@ def test_Symbol_get_closed_hours_for_era(symbol):
     assert closed[0][1]["close"] == dt.time(17, 0, 0)
 
     # Test 2021-06_thru_present era (NO 16:15-16:30 closure)
-    closed = sym.get_closed_hours_for_era("2024-06-15 12:00:00", "eth")
+    closed = sym.get_closed_hours_for_era("2099-06-15 12:00:00", "eth")
     assert len(closed[0]) == 1
     assert closed[0][0]["close"] == dt.time(17, 0, 0)
 
     # Verify RTH closed consistently across all eras at 16:00
     closed2008 = sym.get_closed_hours_for_era(
         "2010-06-15 12:00:00", "rth")
-    closed2024 = sym.get_closed_hours_for_era(
-        "2024-06-15 12:00:00", "rth")
+    closed2099 = sym.get_closed_hours_for_era(
+        "2099-06-15 12:00:00", "rth")
     assert closed2008[0][1]["close"] == dt.time(16, 0, 0)
-    assert closed2024[0][1]["close"] == dt.time(16, 0, 0)
+    assert closed2099[0][1]["close"] == dt.time(16, 0, 0)
 
     # Test caching - call twice and verify same object returned
-    closed1 = sym.get_closed_hours_for_era("2024-06-15 12:00:00", "eth")
-    closed2 = sym.get_closed_hours_for_era("2024-06-20 12:00:00", "eth")
+    closed1 = sym.get_closed_hours_for_era("2099-06-15 12:00:00", "eth")
+    closed2 = sym.get_closed_hours_for_era("2099-06-20 12:00:00", "eth")
     assert closed1 is closed2  # Should be same cached object
 
     # Different era should return different object
@@ -1390,7 +1390,7 @@ def test_Symbol_get_closed_hours_for_era(symbol):
 
     # Test error for invalid trading_hours
     with pytest.raises(ValueError, match="trading_hours.*not defined"):
-        sym.get_closed_hours_for_era("2024-06-15 12:00:00", "invalid")
+        sym.get_closed_hours_for_era("2099-06-15 12:00:00", "invalid")
 
 
 def test_Symbol_market_is_open_historical_eras(symbol):
@@ -1445,7 +1445,7 @@ def test_Symbol_market_is_open_historical_eras(symbol):
                               check_closed_events=False)
 
     # Test 2021-06_thru_present era (NO 16:15-16:30 closure)
-    date = "2024-03-13"
+    date = "2099-03-13"
     assert not sym.market_is_open(trading_hours="rth",
                                   target_dt=f"{date} 16:00:00",
                                   check_closed_events=False)
