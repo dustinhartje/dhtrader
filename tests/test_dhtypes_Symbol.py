@@ -1258,7 +1258,7 @@ def test_Symbol_get_era(symbol):
     ]
 
     assert "2021-06_thru_present" == sym.get_era("2021-09-15 12:00:00")["name"]
-    assert "2099_thru_future" == sym.get_era("2099-06-15 12:00:00")["name"]
+    assert "2099_test_era" == sym.get_era("2099-06-15 12:00:00")["name"]
     assert "2021-06_thru_present" == sym.get_era("2025-12-31 12:00:00")["name"]
 
     # Test with datetime objects (not just strings)
@@ -1275,7 +1275,7 @@ def test_Symbol_get_era(symbol):
     assert era["name"] == "2021-01_thru_2021-06"
 
     era = sym.get_era(dt.datetime(2099, 5, 1))
-    assert era["name"] == "2099_thru_future"
+    assert era["name"] == "2099_test_era"
 
     # Test error for date before any era
     with pytest.raises(ValueError, match="No market era defined"):

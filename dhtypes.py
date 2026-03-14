@@ -352,7 +352,7 @@ MARKET_ERAS = [
         }
     },
     {
-        "name": "2099_thru_future",
+        "name": "2099_test_era",
         "start_date": dt.date(2099, 1, 1),
         "times": {
             "eth_open": dt.time(18, 0, 0),
@@ -1249,7 +1249,7 @@ class Candle():
                  c_epoch: int = None,
                  c_date: str = None,
                  c_time: str = None,
-                 name: str = "None",
+                 name: str = "nameless",
                  ):
         # Precalculate datetime for calculating other attributes efficiently
         c_datetime_dt = dt_as_dt(c_datetime)
@@ -1595,7 +1595,7 @@ class Event():
                  category: str,
                  tags: list = None,
                  notes: str = "",
-                 name: str = "None",
+                 name: str = "nameless",
                  ):
         self.start_dt = dt_as_str(start_dt)
         self.end_dt = dt_as_str(end_dt)
@@ -2516,7 +2516,7 @@ class Trade():
                  symbol="ES",
                  is_open: bool = True,
                  profitable: bool = None,
-                 name: str = None,
+                 name: str = "nameless",
                  version: str = "1.0.0",
                  ts_id: str = None,
                  bt_id: str = None,
@@ -3053,7 +3053,7 @@ class TradeSeries():
                  timeframe: str,
                  trading_hours: str,
                  symbol="ES",
-                 name: str = "",
+                 name: str = "nameless",
                  params_str: str = "",
                  ts_id: str = None,
                  bt_id: str = None,

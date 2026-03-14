@@ -177,7 +177,7 @@ def test_Backtest_create_and_verify_common_methods():
     """
     bt = create_backtest()
     bt2 = create_backtest()
-    diff = create_backtest(name="DIFFERENT")
+    diff = create_backtest(name="DELETEME_DIFFERENT")
     assert isinstance(bt, Backtest)
     # __init__
     assert bt.start_dt == "2099-01-01 00:00:00"
@@ -273,8 +273,13 @@ def test_Backtest_load_charts():
 def test_Backtest_restrict_dates(cleanup_backtest_storage):
     """Verify restrict_dates adjusts candle ranges.
 
+    NOTE - this test requires loading substantial candle and chart data
+           from storage, so it does not use 2099 dates like other tests as
+           there is no underlying data available to load from the future.
+
     Storage Usage: Chart autoload=True loads candles.
     """
+
     test_name = "DELETEME-RESTRICTTest"
     cleanup_backtest_storage(test_name)
     bt = create_backtest(name=test_name,

@@ -92,7 +92,7 @@ def test_Event_contains_datetime(event):
     assert event.contains_datetime("2099-01-02 18:00:00")
     # Just before start is False
     assert not event.contains_datetime("2099-01-02 11:59:59")
-    assert not event.contains_datetime("2025-01-01 00:00:00")
+    assert not event.contains_datetime("2099-01-01 13:00:00")
     # Just after end is False
     assert not event.contains_datetime("2099-01-02 18:00:01")
-    assert not event.contains_datetime("2025-01-03 00:00:00")
+    assert not event.contains_datetime("2099-01-03 13:00:00")

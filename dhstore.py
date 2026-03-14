@@ -1457,7 +1457,7 @@ def get_candles(start_epoch: int,
                               c_volume=r["c_volume"],
                               c_symbol=r["c_symbol"],
                               c_epoch=r["c_epoch"],
-                              name=r.get("name", "None"),
+                              name=r["name"],
                               ))
         update_progbar(pbar, i, total)
     finish_progbar(pbar)
@@ -1874,7 +1874,7 @@ def get_events(symbol="ES",
                             category=r["category"],
                             tags=r["tags"],
                             notes=r["notes"],
-                            name=r.get("name", "None"),
+                            name=r["name"],
                             ))
         update_progbar(pbar, i, total)
     finish_progbar(pbar)
