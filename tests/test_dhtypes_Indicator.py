@@ -64,8 +64,13 @@ def test_Indicator_rth_hod_creation_and_calculation():
         assert ind.get_datapoint(dt="2025-01-28 11:45:00").value == 6087.25
 
 
-def Indicator_spotcheck_ES_eth_5m_EMA_close_l20_s2(i):
-    """Assert ES ETH 5m EMA close l20 s2 datapoint values."""
+def shared_assertions_Indicator_spotcheck_ES_eth_5m_EMA_close_l20_s2(i):
+    """Assert ES ETH 5m EMA close l20 s2 datapoint values.
+
+    NOTE: assertion values below need to be verified against TradingView
+    or by running the corresponding calculated spotcheck test locally and
+    printing each get_datapoint result for the datetimes below.
+    """
     # Sun-Sat - first & last candles, rando in the middle, rando in closed
     # Sun 1/5/25
     assert i.get_datapoint(dt="2025-01-05 18:00:00").value == 6048.14
@@ -90,11 +95,12 @@ def test_Indicator_calculated_spotcheck_ES_eth_5m_EMA_close_l20_s2():
                                autoload_datapoints=False,
                                autoload_chart=True,
                                )
-    ind_calced.start_dt = "2025-01-01 00:00:00"
-    ind_calced.end_dt = "2025-01-02 00:00:00"
+    ind_calced.start_dt = "2024-12-29 00:00:00"
+    ind_calced.end_dt = "2025-01-08 00:00:00"
     ind_calced.load_underlying_chart()
     ind_calced.calculate()
-    Indicator_spotcheck_ES_eth_5m_EMA_close_l20_s2(ind_calced)
+    shared_assertions_Indicator_spotcheck_ES_eth_5m_EMA_close_l20_s2(
+        ind_calced)
 
 
 def test_Indicator_storage_spotcheck_ES_eth_5m_EMA_close_l20_s2():
@@ -104,11 +110,12 @@ def test_Indicator_storage_spotcheck_ES_eth_5m_EMA_close_l20_s2():
                                autoload_chart=True,
                                )
     ind_stored.load_datapoints()
-    Indicator_spotcheck_ES_eth_5m_EMA_close_l20_s2(ind_stored)
+    shared_assertions_Indicator_spotcheck_ES_eth_5m_EMA_close_l20_s2(
+        ind_stored)
 
 
 # 15m ETH 9
-def Indicator_spotcheck_ES_eth_15m_EMA_close_l9_s2(i):
+def shared_assertions_Indicator_spotcheck_ES_eth_15m_EMA_close_l9_s2(i):
     """Assert ES ETH 15m EMA close l9 s2 datapoint values."""
     # Sun-Sat - first & last candles, rando in the middle, rando in closed
     # Sun 2/9/25
@@ -168,7 +175,8 @@ def test_Indicator_calculated_spotcheck_ES_eth_15m_EMA_close_l9_s2():
     ind_calced.end_dt = "2025-02-16 00:00:00"
     ind_calced.load_underlying_chart()
     ind_calced.calculate()
-    Indicator_spotcheck_ES_eth_15m_EMA_close_l9_s2(ind_calced)
+    shared_assertions_Indicator_spotcheck_ES_eth_15m_EMA_close_l9_s2(
+        ind_calced)
 
 
 @pytest.mark.slow
@@ -183,11 +191,12 @@ def test_Indicator_storage_spotcheck_ES_eth_15m_EMA_close_l9_s2():
                                autoload_chart=True,
                                )
     ind_stored.load_datapoints()
-    Indicator_spotcheck_ES_eth_15m_EMA_close_l9_s2(ind_stored)
+    shared_assertions_Indicator_spotcheck_ES_eth_15m_EMA_close_l9_s2(
+        ind_stored)
 
 
 # 15m ETH 20
-def Indicator_spotcheck_ES_eth_15m_EMA_close_l20_s2(i):
+def shared_assertions_Indicator_spotcheck_ES_eth_15m_EMA_close_l20_s2(i):
     """Assert ES ETH 15m EMA close l20 s2 datapoint values."""
     # Sun 12/8/24
     assert i.get_datapoint(dt="2024-12-08 18:00:00").value == 6096.55
@@ -246,7 +255,8 @@ def test_Indicator_calculated_spotcheck_ES_eth_15m_EMA_close_l20_s2():
     ind_calced.end_dt = "2024-12-15 00:00:00"
     ind_calced.load_underlying_chart()
     ind_calced.calculate()
-    Indicator_spotcheck_ES_eth_15m_EMA_close_l20_s2(ind_calced)
+    shared_assertions_Indicator_spotcheck_ES_eth_15m_EMA_close_l20_s2(
+        ind_calced)
 
 
 @pytest.mark.slow
@@ -261,11 +271,12 @@ def test_Indicator_storage_spotcheck_ES_eth_15m_EMA_close_l20_s2():
                                autoload_chart=True,
                                )
     ind_stored.load_datapoints()
-    Indicator_spotcheck_ES_eth_15m_EMA_close_l20_s2(ind_stored)
+    shared_assertions_Indicator_spotcheck_ES_eth_15m_EMA_close_l20_s2(
+        ind_stored)
 
 
 # e1h ETH 9
-def Indicator_spotcheck_ES_eth_e1h_EMA_close_l9_s2(i):
+def shared_assertions_Indicator_spotcheck_ES_eth_e1h_EMA_close_l9_s2(i):
     """Assert ES ETH e1h EMA close l9 s2 datapoint values."""
     # Sun-Sat - first & last candles, rando in the middle, rando in closed
     # Sun 11/10/24
@@ -324,7 +335,8 @@ def test_Indicator_calculated_spotcheck_ES_eth_e1h_EMA_close_l9_s2():
     ind_calced.end_dt = "2024-11-17 00:00:00"
     ind_calced.load_underlying_chart()
     ind_calced.calculate()
-    Indicator_spotcheck_ES_eth_e1h_EMA_close_l9_s2(ind_calced)
+    shared_assertions_Indicator_spotcheck_ES_eth_e1h_EMA_close_l9_s2(
+        ind_calced)
 
 
 @pytest.mark.storage
@@ -338,11 +350,12 @@ def test_Indicator_storage_spotcheck_ES_eth_e1h_EMA_close_l9_s2():
                                autoload_chart=True,
                                )
     ind_stored.load_datapoints()
-    Indicator_spotcheck_ES_eth_e1h_EMA_close_l9_s2(ind_stored)
+    shared_assertions_Indicator_spotcheck_ES_eth_e1h_EMA_close_l9_s2(
+        ind_stored)
 
 
 # e1h ETH 20
-def Indicator_spotcheck_ES_eth_e1h_EMA_close_l20_s2(i):
+def shared_assertions_Indicator_spotcheck_ES_eth_e1h_EMA_close_l20_s2(i):
     """Assert ES ETH e1h EMA close l20 s2 datapoint values."""
     # Sun-Sat - first & last candles, rando in the middle, rando in closed
     # Sun 10/13/24
@@ -407,7 +420,8 @@ def test_Indicator_calculated_spotcheck_ES_eth_e1h_EMA_close_l20_s2():
     ind_calced.end_dt = "2024-10-20 00:00:00"
     ind_calced.load_underlying_chart()
     ind_calced.calculate()
-    Indicator_spotcheck_ES_eth_e1h_EMA_close_l20_s2(ind_calced)
+    shared_assertions_Indicator_spotcheck_ES_eth_e1h_EMA_close_l20_s2(
+        ind_calced)
 
 
 @pytest.mark.storage
@@ -421,7 +435,8 @@ def test_Indicator_storage_spotcheck_ES_eth_e1h_EMA_close_l20_s2():
                                autoload_chart=True,
                                )
     ind_stored.load_datapoints()
-    Indicator_spotcheck_ES_eth_e1h_EMA_close_l20_s2(ind_stored)
+    shared_assertions_Indicator_spotcheck_ES_eth_e1h_EMA_close_l20_s2(
+        ind_stored)
 
 
 @pytest.mark.storage
@@ -495,6 +510,39 @@ def test_Indicator_calculate():
         assert expected[i] == calculated[i]
 
 
+def clear_indicator_storage(ind_id: str):
+    """Delete a stored Indicator and all its datapoints by ind_id."""
+    delete_indicator(ind_id)
+    retrieved = get_indicator(ind_id=ind_id,
+                              autoload_datapoints=False,
+                              autoload_chart=False)
+    assert retrieved is None
+    dps = get_indicator_datapoints(ind_id=ind_id)
+    assert len(dps) == 0
+
+
+@pytest.fixture
+def cleanup_indicator_storage():
+    """Register Indicator ind_ids for pre- and post-test cleanup.
+
+    The returned helper records each supplied ind_id, immediately clears
+    any matching Indicator and datapoints before the test continues, then
+    clears the full registered set again during fixture teardown.
+    """
+    ind_ids = set()
+
+    def register(*new_ind_ids):
+        for ind_id in new_ind_ids:
+            ind_ids.add(ind_id)
+        for ind_id in sorted(ind_ids):
+            clear_indicator_storage(ind_id)
+
+    yield register
+
+    for ind_id in sorted(ind_ids):
+        clear_indicator_storage(ind_id)
+
+
 @pytest.mark.storage
 def test_Indicator_get_datapoints():
     """Test for Indicator get_datapoint, next, and prev methods.
@@ -528,12 +576,16 @@ def test_Indicator_get_datapoints():
 
 
 @pytest.mark.storage
-def test_Indicator_storage_and_retrieval():
-    """Test for Indicator storage, retrieval, and datapoints.
+def test_Indicator_store_retrieve_delete(cleanup_indicator_storage):
+    """Verify Indicator and IndicatorDataPoint storage, retrieval, deletion.
 
-    Storage Usage: load_underlying_chart, store_indicator, get_indicator,
-                   delete_indicator, get_indicator_datapoints.
+    Storage Usage: store_indicator, get_indicator, delete_indicator,
+                   get_indicator_datapoints.
     """
+    ind_id = "ES_eth_e1h_TestEMA-DELETEME_close_l9_s2"
+    cleanup_indicator_storage(ind_id)
+
+    # Create and calculate an IndicatorEMA spanning a weekend (edge cases)
     itest = IndicatorEMA(name="TestEMA-DELETEME",
                          timeframe="e1h",
                          trading_hours="eth",
@@ -549,44 +601,38 @@ def test_Indicator_storage_and_retrieval():
                          )
     itest.load_underlying_chart()
     itest.calculate()
-    # Confirm indicator is not already stored by first deleting it in case a
-    # prior test run failed early
-    delete_indicator(itest.ind_id)
-    # Then attempting retrieval
-    retrieve = get_indicator(ind_id=itest.ind_id,
-                             autoload_datapoints=False,
-                             autoload_chart=False)
-    assert retrieve is None
 
-    # Store it
+    # Confirm Indicator is not in storage before we begin
+    retrieved = get_indicator(ind_id=ind_id,
+                              autoload_datapoints=False,
+                              autoload_chart=False)
+    assert retrieved is None
+
+    # Store Indicator and its IndicatorDataPoints
     result = store_indicator(itest, store_datapoints=True)
+    # Confirm storage result references the correct Indicator
+    assert result["indicator"]["ind_id"] == ind_id
 
-    # Confirm storage returned something that looks vaguely like an Indicator
-    r_id = result["indicator"]["ind_id"]
-    assert r_id == 'ES_eth_e1h_TestEMA-DELETEME_close_l9_s2'
+    # Verify Indicator retrieval - dates must be set as they don't get stored
+    retrieved = get_indicator(ind_id=ind_id,
+                              autoload_datapoints=True,
+                              autoload_chart=True)
+    retrieved.start_dt = "2025-01-08 00:00:00"
+    retrieved.end_dt = "2025-01-12 20:00:00"
+    retrieved.load_underlying_chart()
+    assert retrieved == itest
+    assert isinstance(retrieved, IndicatorEMA)
+    assert retrieved.ind_id == ind_id
 
-    # Confirm we can retrieve it from storage now
-    # Dates must be set as they don't get stored
-    retrieve = get_indicator(ind_id=itest.ind_id,
-                             autoload_datapoints=True,
-                             autoload_chart=True)
-    retrieve.start_dt = "2025-01-08 00:00:00"
-    retrieve.end_dt = "2025-01-12 20:00:00"
-    retrieve.load_underlying_chart()
-    assert retrieve == itest
-    assert isinstance(retrieve, IndicatorEMA)
-    assert retrieve.ind_id == itest.ind_id
-
-    # Test datapoint retrieval
-    datapoints = get_indicator_datapoints(
-            ind_id=itest.ind_id)
+    # Verify IndicatorDataPoint retrieval
+    datapoints = get_indicator_datapoints(ind_id=ind_id)
     assert len(datapoints) == 23
-    assert datapoints[5].ind_id == itest.ind_id
+    assert all(isinstance(dp, IndicatorDataPoint) for dp in datapoints)
+    assert datapoints[0].ind_id == ind_id
+    assert datapoints[5].ind_id == ind_id
 
-    # Updating TestEMA-DELETEME to add another day then storing again
-    # This confirms only new datapoints get stored, existing should get
-    # skipped which dramatically improves perodic update performance.
-    # We should see 23 datapoints skipped and 46 stored on this operation
+    # Verify incremental storage skips existing datapoints - extend date range
+    # and re-store; existing 23 should be skipped, new 46 added (2 days added)
     itest.end_dt = "2025-01-14 20:00:00"
     itest.load_underlying_chart()
     itest.calculate()
@@ -594,14 +640,13 @@ def test_Indicator_storage_and_retrieval():
     assert result["datapoints_stored"] == 46
     assert result["datapoints_skipped"] == 23
 
-    # Removing test object from storage
-    delete_indicator(itest.ind_id)
-    # And confirm it's gone
-    retrieve = get_indicator(ind_id=itest.ind_id,
-                             autoload_datapoints=False,
-                             autoload_chart=False)
-    assert retrieve is None
-    dps = get_indicator_datapoints(ind_id=itest.ind_id)
+    # Delete and confirm Indicator and all IndicatorDataPoints are gone
+    delete_indicator(ind_id)
+    retrieved = get_indicator(ind_id=ind_id,
+                              autoload_datapoints=False,
+                              autoload_chart=False)
+    assert retrieved is None
+    dps = get_indicator_datapoints(ind_id=ind_id)
     assert len(dps) == 0
 
 
