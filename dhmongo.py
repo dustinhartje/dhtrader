@@ -954,7 +954,7 @@ def get_events(symbol: str,
 ##############################################################################
 # Backfill utilities
 def deleteme_backfill_names_to_candles_and_events():
-    """Backfill the 'name' field on candle and event records.
+    """Temp function to backfill the 'name' field on stored objects.
 
     Sets 'name' to the string "None" for every candle document that
     is missing the field, and 'name' to the string "None" for every
@@ -968,6 +968,10 @@ def deleteme_backfill_names_to_candles_and_events():
     Returns a dict summarising the number of records updated per
     collection.
     """
+    #TODO This function should be removed after it has been run against all
+    # databases and all objects confirmed to have a valid 'name' field.  I
+    # should also run a weekly refresh and further backtest backfills, then
+    # check again in case I missed something in the creation process.
     all_collections = list_collections()
     candle_collections = [
         c for c in all_collections if c.startswith("candles_")
