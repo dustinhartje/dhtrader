@@ -19,7 +19,7 @@ from dhtrader import (
 # Path to the test CSV files included in the repo
 TESTS_DIR = os.path.dirname(__file__)
 TESTCANDLES_CSV = os.path.join(
-    TESTS_DIR, 'test_data_read_candles.csv'
+    TESTS_DIR, 'test_data_read_2099_candles.csv'
 )
 TEST_2099_GOOD_CSV = os.path.join(
     TESTS_DIR, 'test_data_2099_candles.csv'
@@ -76,8 +76,8 @@ def test_read_candles_from_csv():
     """Verify read_candles_from_csv reads and filters CSV candles correctly."""
     # Returns a list of Candle objects when dates span all rows
     result = read_candles_from_csv(
-        start_dt="2024-01-01 00:00:00",
-        end_dt="2024-12-31 23:59:59",
+        start_dt="2099-01-01 00:00:00",
+        end_dt="2099-12-31 23:59:59",
         filepath=TESTCANDLES_CSV,
     )
     assert isinstance(result, list)
@@ -88,38 +88,38 @@ def test_read_candles_from_csv():
     assert len(result) == 10
     # start_dt filter excludes earlier candles
     result_start = read_candles_from_csv(
-        start_dt="2024-02-01 00:00:00",
-        end_dt="2024-12-31 23:59:59",
+        start_dt="2099-02-01 00:00:00",
+        end_dt="2099-12-31 23:59:59",
         filepath=TESTCANDLES_CSV,
     )
     assert len(result_start) == 5
     for c in result_start:
-        assert dt_as_dt(c.c_datetime) >= dt_as_dt("2024-02-01 00:00:00")
+        assert dt_as_dt(c.c_datetime) >= dt_as_dt("2099-02-01 00:00:00")
     # end_dt filter excludes later candles
     result_end = read_candles_from_csv(
-        start_dt="2024-01-01 00:00:00",
-        end_dt="2024-01-31 23:59:59",
+        start_dt="2099-01-01 00:00:00",
+        end_dt="2099-01-31 23:59:59",
         filepath=TESTCANDLES_CSV,
     )
     assert len(result_end) == 5
     for c in result_end:
-        assert dt_as_dt(c.c_datetime) <= dt_as_dt("2024-01-31 23:59:59")
+        assert dt_as_dt(c.c_datetime) <= dt_as_dt("2099-01-31 23:59:59")
     # Out-of-range dates return an empty list
     result_empty = read_candles_from_csv(
-        start_dt="2025-01-01 00:00:00",
-        end_dt="2025-12-31 23:59:59",
+        start_dt="2100-01-01 00:00:00",
+        end_dt="2100-12-31 23:59:59",
         filepath=TESTCANDLES_CSV,
     )
     assert result_empty == []
     # Candle attributes match values from the CSV source file
     result_one = read_candles_from_csv(
-        start_dt="2024-01-01 18:00:00",
-        end_dt="2024-01-01 18:00:00",
+        start_dt="2099-01-01 18:00:00",
+        end_dt="2099-01-01 18:00:00",
         filepath=TESTCANDLES_CSV,
     )
     assert len(result_one) == 1
     c = result_one[0]
-    assert c.c_datetime == "2024-01-01 18:00:00"
+    assert c.c_datetime == "2099-01-01 18:00:00"
     assert c.c_open == 4818.00
     assert c.c_high == 4819.50
     assert c.c_low == 4815.75
@@ -133,16 +133,16 @@ def test_read_candles_from_csv():
         assert candle.c_symbol.ticker == "ES"
     # Custom timeframe is applied when provided
     result_tf = read_candles_from_csv(
-        start_dt="2024-01-01 00:00:00",
-        end_dt="2024-12-31 23:59:59",
+        start_dt="2099-01-01 00:00:00",
+        end_dt="2099-12-31 23:59:59",
         filepath=TESTCANDLES_CSV,
         timeframe="5m",
     )
     for candle in result_tf:
         assert candle.c_timeframe == "5m"
     # Candles are returned in CSV file order
-    assert result_end[0].c_datetime == "2024-01-01 18:00:00"
-    assert result_end[-1].c_datetime == "2024-01-01 18:04:00"
+    assert result_end[0].c_datetime == "2099-01-01 18:00:00"
+    assert result_end[-1].c_datetime == "2099-01-01 18:04:00"
 
 
 def test_generate_zero_volume_candle():
