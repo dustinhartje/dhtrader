@@ -253,6 +253,9 @@ def test_store_candles_from_csv_and_compare(cleanup_2099_candles):
 
     Uses a 2099 time window to guarantee isolation from all real data.
     The fixture ensures candles are removed before and after the test.
+
+    Storage Usage: store_candles_from_csv, get_candles,
+    compare_candles_vs_csv.
     """
     # Store candles from the good CSV
     store_candles_from_csv(
@@ -345,6 +348,9 @@ def test_remediate_candle_gaps(cleanup_2099_candles):
     then dry_run=False to confirm the zero-volume fix candles are stored.
     All auto-fix arguments are True and prompt=False to avoid any
     interactive input.
+
+    Storage Usage: store_candles_from_csv, get_candles,
+    remediate_candle_gaps.
     """
     # Store the 7 gap candles into the 2099 test window
     store_candles_from_csv(

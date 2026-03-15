@@ -9,8 +9,12 @@ from dhtrader import (
     IndicatorEMA, IndicatorSMA, store_indicator)
 
 
+@pytest.mark.storage
 def test_Indicator_rth_hod_creation_and_calculation():
-    """Indicator creation, calculation, and RTH/HOD datapoint checks."""
+    """Indicator creation, calculation, and RTH/HOD datapoint checks.
+
+    Storage Usage: load_underlying_chart.
+    """
     # Confirm RTH datapoints are calculated
     ind = Indicator(name="DELETEME-hod-demo",
                     description="Code testing use only",
@@ -90,8 +94,12 @@ def shared_assertions_Indicator_spotcheck_ES_eth_5m_EMA_close_l20_s2(i):
     assert i.get_datapoint(dt="2025-01-07 17:24:00") is None
 
 
+@pytest.mark.storage
 def test_Indicator_calculated_spotcheck_ES_eth_5m_EMA_close_l20_s2():
-    """Test calculated spotcheck for ES ETH 5m EMA close l20 s2."""
+    """Test calculated spotcheck for ES ETH 5m EMA close l20 s2.
+
+    Storage Usage: get_indicator, load_underlying_chart.
+    """
     ind_calced = get_indicator(ind_id="ES_eth_5m_EMA_close_l20_s2",
                                autoload_datapoints=False,
                                autoload_chart=True,
@@ -104,8 +112,12 @@ def test_Indicator_calculated_spotcheck_ES_eth_5m_EMA_close_l20_s2():
         ind_calced)
 
 
+@pytest.mark.storage
 def test_Indicator_storage_spotcheck_ES_eth_5m_EMA_close_l20_s2():
-    """Test storage spotcheck for ES ETH 5m EMA close l20 s2."""
+    """Test storage spotcheck for ES ETH 5m EMA close l20 s2.
+
+    Storage Usage: get_indicator, load_datapoints.
+    """
     ind_stored = get_indicator(ind_id="ES_eth_5m_EMA_close_l20_s2",
                                autoload_datapoints=False,
                                autoload_chart=True,

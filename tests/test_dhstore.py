@@ -47,6 +47,10 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
         cleanup_dhstore_storage):
     """Verify storage integrity checks fail for invalid Backtests, TradeSeries,
     and Trades.
+
+    Storage Usage: store_tradeseries, store_backtests, store_trades,
+    get_tradeseries_by_field, get_trades_by_field, review_tradeseries,
+    review_trades.
     """
     bt = "DELETEME_DHSTORE_TESTS"
 
@@ -298,9 +302,9 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
     ts_fail.delete_from_storage(include_trades=True)
 
     # Confirm orphaned_test_objects catches all supported object types
-    orphan_backtest_name = "TEST_orphan_backtest"
-    orphan_ts_name = "TEST_orphan_tradeseries"
-    orphan_trade_name = "TEST_orphan_trade"
+    orphan_backtest_name = "DELETEME_orphan_backtest"
+    orphan_ts_name = "DELETEME_orphan_tradeseries"
+    orphan_trade_name = "DELETEME_orphan_trade"
     cleanup_dhstore_storage(orphan_backtest_name,
                             orphan_ts_name,
                             orphan_trade_name)
