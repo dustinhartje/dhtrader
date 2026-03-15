@@ -23,7 +23,9 @@ from dhtrader import (
 )
 from dhtrader.dhcommon import (
     dict_of_weeks,
+    EVENT_CATEGORIES,
     start_of_week_date,
+    TIMEFRAMES,
     valid_event_category,
 )
 
@@ -182,10 +184,7 @@ def test_diff_dicts():
 
 def test_valid_timeframe():
     """Verify valid_timeframe accepts valid and rejects invalid timeframes."""
-    valid_tfs = [
-        '1m', '5m', '15m', 'r1h', 'e1h',
-        'r1d', 'e1d', 'r1w', 'e1w', 'r1mo', 'e1mo',
-    ]
+    valid_tfs = TIMEFRAMES
     for tf in valid_tfs:
         assert valid_timeframe(tf) is True
     # Invalid raises ValueError by default (exit=True)
@@ -229,7 +228,7 @@ def test_check_tf_th_compatibility():
 
 def test_valid_event_category():
     """Verify valid_event_category accepts valid and rejects invalid values."""
-    valid_cats = ['Closed', 'Data', 'Unplanned', 'LowVolume', 'Rollover']
+    valid_cats = EVENT_CATEGORIES
     for cat in valid_cats:
         assert valid_event_category(cat) is True
     with pytest.raises(ValueError):
@@ -307,6 +306,8 @@ def test_dt_to_epoch():
     assert dt_to_epoch(None) is None
     result = dt_to_epoch("2099-01-01 00:00:00")
     assert isinstance(result, int)
+    expected_epoch = int(datetime(2099, 1, 1, 0, 0, 0).timestamp())
+    assert result == expected_epoch
 
 
 def test_dt_from_epoch():

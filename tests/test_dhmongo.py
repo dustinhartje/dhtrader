@@ -211,7 +211,7 @@ def test_get_candles_empty_range():
     Storage Usage: get_candles queries MongoDB.
     """
     # Use an epoch far in the future where no data should exist
-    far_epoch = dt_to_epoch("2099-01-01 00:00:00")
+    far_epoch = dt_to_epoch("2098-01-01 00:00:00")
     results = get_candles(
         start_epoch=far_epoch,
         end_epoch=far_epoch,
