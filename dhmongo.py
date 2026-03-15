@@ -1007,6 +1007,7 @@ def deleteme_backfill_names_to_candles_and_events():
             {"$or": [
                 {"name": {"$exists": False}},
                 {"name": None},
+                {"name": "None"},
             ]},
             {"$set": {"name": "nameless"}},
         )
@@ -1017,6 +1018,7 @@ def deleteme_backfill_names_to_candles_and_events():
             {"$or": [
                 {"name": {"$exists": False}},
                 {"name": {"$not": {"$type": "string"}}},
+                {"name": "None"},
             ]},
         )
         if missing > 0:
