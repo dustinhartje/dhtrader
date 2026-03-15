@@ -12,8 +12,10 @@ REF: https://github.com/mongodb-university/atlas_starter_python/blob
      /master/atlas-starter.py
 """
 
+import json
 import os
 import sys
+import tempfile
 import pymongo
 from pymongo import ReplaceOne
 from pymongo.errors import BulkWriteError
@@ -600,6 +602,7 @@ def store_candle(c_datetime,
                  c_epoch: int,
                  c_date: str,
                  c_time: str,
+                 name: str,
                  ):
     """Stores a single candle object in mongo.
 
@@ -619,6 +622,7 @@ def store_candle(c_datetime,
                   "c_epoch": c_epoch,
                   "c_date": c_date,
                   "c_time": c_time,
+                  "name": name,
                   }
     c = db[collection]
     result = c.find_one_and_replace({"c_datetime": c_dt},
@@ -703,6 +707,25 @@ def delete_candles(timeframe: str,
     return result
 
 
+def delete_candles_by_field(symbol: str,
+                            timeframe: str,
+                            field: str,
+                            value,
+                            ):
+    """Delete all candles from mongo with 'field' matching 'value'.
+
+    Typically used to delete by name or other identifying fields.
+
+    Example to delete all candles with name=="DELETEME":
+    delete_candles_by_field(symbol="ES", timeframe="1m",
+                            field="name", value="DELETEME")
+    """
+    c = db[f"candles_{symbol}_{timeframe}"]
+    result = c.delete_many({field: value})
+
+    return result
+
+
 ##############################################################################
 # Indicators
 def list_indicators(meta_collection: str):
@@ -710,6 +733,13 @@ def list_indicators(meta_collection: str):
     c = db[meta_collection]
     result = c.find()
 
+    return list(result)
+
+
+def get_indicators_by_name(name: str, meta_collection: str):
+    """Return raw meta docs for all indicators with the given name."""
+    c = db[meta_collection]
+    result = c.find({"name": name})
     return list(result)
 
 
@@ -845,6 +875,7 @@ def store_event(start_dt,
                 notes: str,
                 start_epoch: int,
                 end_epoch: int,
+                name: str,
                 ):
     """Write a single Event() to mongo."""
     event_doc = {"start_dt": dt_as_str(start_dt),
@@ -854,6 +885,7 @@ def store_event(start_dt,
                  "notes": notes,
                  "start_epoch": start_epoch,
                  "end_epoch": end_epoch,
+                 "name": name,
                  }
     collection = f"events_{symbol}"
     c = db[collection]
@@ -863,6 +895,23 @@ def store_event(start_dt,
                                     new=True,
                                     upsert=True,
                                     )
+
+    return result
+
+
+def delete_events_by_field(symbol: str,
+                           field: str,
+                           value,
+                           ):
+    """Delete all events from mongo for a symbol with 'field' matching 'value'.
+
+    Typically used to delete by name or category fields.
+
+    Example to delete all events with name=="DELETEME":
+    delete_events_by_field(symbol="ES", field="name", value="DELETEME")
+    """
+    c = db[f"events_{symbol}"]
+    result = c.delete_many({field: value})
 
     return result
 
@@ -902,3 +951,104 @@ def get_events(symbol: str,
     result = filtered_by_tag
 
     return result
+
+
+##############################################################################
+# Backfill utilities
+def deleteme_backfill_names_to_candles_and_events():
+    """Temp function to backfill the 'name' field on stored objects.
+
+    Sets 'name' to "nameless" for every document in all known
+    collections that is missing the field or has it set to None/null.
+    This handles data that was stored before the name field was added
+    to each object type.
+
+    After updating, gathers all distinct name values across every
+    collection, writes them as a sorted JSON list to a file, and
+    prints the filename.  If fewer than 20 unique names are found they
+    are also printed to the console.
+
+    A verification query confirms that every record in each affected
+    collection now has the field set to a string value.
+    Raises RuntimeError if verification fails for any collection.
+
+    Returns a dict summarising the number of records updated per
+    collection.
+    """
+    #TODO This function should be removed after it has been run against
+    # all databases and all objects confirmed to have a valid 'name'
+    # field.  I should also run a weekly refresh and further backtest
+    # backfills, then check again in case I missed something in the
+    # creation process.
+
+    # Only process known application collections.  Any other collections
+    # present in the database (system, test, or future types) are
+    # intentionally excluded.
+    known_static = {
+        "backtests",
+        "indicators_datapoints",
+        "indicators_meta",
+        "trades",
+        "tradeseries",
+    }
+    all_existing = set(list_collections())
+    target_collections = sorted(
+        c for c in all_existing
+        if c.startswith("candles_")
+        or c.startswith("events_")
+        or c in known_static
+    )
+
+    results = {}
+    all_names = set()
+
+    for coll in target_collections:
+        c = db[coll]
+        update_result = c.update_many(
+            {"$or": [
+                {"name": {"$exists": False}},
+                {"name": None},
+                {"name": "None"},
+            ]},
+            {"$set": {"name": "nameless"}},
+        )
+        results[coll] = {
+            "updated": update_result.modified_count,
+        }
+        missing = c.count_documents(
+            {"$or": [
+                {"name": {"$exists": False}},
+                {"name": {"$not": {"$type": "string"}}},
+                {"name": "None"},
+            ]},
+        )
+        if missing > 0:
+            raise RuntimeError(
+                f"Backfill verification failed: {missing} record(s) "
+                f"in '{coll}' still lack a string name field after "
+                "update."
+            )
+        results[coll]["verified"] = True
+
+        # Collect all name values from this collection
+        for name in c.distinct("name"):
+            if name is not None:
+                all_names.add(name)
+
+    # Write sorted unique names to a JSON file for review
+    sorted_names = sorted(all_names)
+    timestamp = dt.now().strftime("%Y%m%d_%H%M%S")
+    outfile = os.path.join(
+        tempfile.gettempdir(),
+        f"dhtrader_names_review_{timestamp}.json",
+    )
+    with open(outfile, "w") as f:
+        json.dump(sorted_names, f, indent=2)
+
+    print(f"Unique names written to: {outfile}")
+    if len(sorted_names) < 20:
+        print("Unique names:")
+        for name in sorted_names:
+            print(f"  {name}")
+
+    return results

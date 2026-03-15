@@ -350,6 +350,44 @@ MARKET_ERAS = [
                 6: [{"close": "00:00:00", "open": "23:59:59"}]
             }
         }
+    },
+    {
+        "name": "2099_test_era",
+        "start_date": dt.date(2099, 1, 1),
+        "times": {
+            "eth_open": dt.time(18, 0, 0),
+            "eth_close": dt.time(16, 59, 0),
+            "rth_open": dt.time(9, 30, 0),
+            "rth_close": dt.time(16, 0, 0),
+        },
+        "closed_hours": {
+            "eth": {
+                # Nearly 24/5 trading with extended RTH
+                # Daily close: 17:00-17:59:59
+                0: [{"close": "17:00:00", "open": "17:59:59"}],
+                1: [{"close": "17:00:00", "open": "17:59:59"}],
+                2: [{"close": "17:00:00", "open": "17:59:59"}],
+                3: [{"close": "17:00:00", "open": "17:59:59"}],
+                4: [{"close": "17:00:00", "open": "23:59:59"}],
+                5: [{"close": "00:00:00", "open": "23:59:59"}],
+                6: [{"close": "00:00:00", "open": "17:59:59"}]
+            },
+            "rth": {
+                # RTH closes at 16:00
+                0: [{"close": "00:00:00", "open": "09:30:00"},
+                    {"close": "16:00:00", "open": "23:59:59"}],
+                1: [{"close": "00:00:00", "open": "09:30:00"},
+                    {"close": "16:00:00", "open": "23:59:59"}],
+                2: [{"close": "00:00:00", "open": "09:30:00"},
+                    {"close": "16:00:00", "open": "23:59:59"}],
+                3: [{"close": "00:00:00", "open": "09:30:00"},
+                    {"close": "16:00:00", "open": "23:59:59"}],
+                4: [{"close": "00:00:00", "open": "09:30:00"},
+                    {"close": "16:00:00", "open": "23:59:59"}],
+                5: [{"close": "00:00:00", "open": "23:59:59"}],
+                6: [{"close": "00:00:00", "open": "23:59:59"}]
+            }
+        }
     }
 ]
 
@@ -1210,7 +1248,8 @@ class Candle():
                  c_tags: list = None,
                  c_epoch: int = None,
                  c_date: str = None,
-                 c_time: str = None
+                 c_time: str = None,
+                 name: str = "nameless",
                  ):
         # Precalculate datetime for calculating other attributes efficiently
         c_datetime_dt = dt_as_dt(c_datetime)
@@ -1240,6 +1279,7 @@ class Candle():
         if c_time is None:
             c_time = self.c_datetime[11:19]
         self.c_time = c_time
+        self.name = name
 
         # Calculated attributes
         delta = timeframe_delta(self.c_timeframe)
@@ -1555,6 +1595,7 @@ class Event():
                  category: str,
                  tags: list = None,
                  notes: str = "",
+                 name: str = "nameless",
                  ):
         self.start_dt = dt_as_str(start_dt)
         self.end_dt = dt_as_str(end_dt)
@@ -1569,6 +1610,7 @@ class Event():
         self.notes = notes
         self.start_epoch = dt_to_epoch(self.start_dt)
         self.end_epoch = dt_to_epoch(self.end_dt)
+        self.name = name
 
     def to_json(self):
         """Return a JSON representation with custom types normalized.
@@ -1832,6 +1874,7 @@ class IndicatorDataPoint():
                  value: float,
                  ind_id: str,
                  epoch: int = None,
+                 name: str = "nameless",
                  ):
         self.dt = dt_as_str(dt)
         self.value = value
@@ -1840,6 +1883,7 @@ class IndicatorDataPoint():
             self.epoch = dt_to_epoch(dt)
         else:
             self.epoch = epoch
+        self.name = name
 
     def to_json(self):
         """Return a JSON representation with custom types normalized.
@@ -2148,6 +2192,7 @@ class Indicator():
             self.datapoints.append(IndicatorDataPoint(dt=c.c_datetime,
                                                       value=hod,
                                                       ind_id=self.ind_id,
+                                                      name=self.name,
                                                       ))
         self.sort_datapoints()
 
@@ -2287,6 +2332,7 @@ class IndicatorSMA(Indicator):
                 dp = IndicatorDataPoint(dt=dt_as_str(c.c_datetime),
                                         value=round(fmean(values), 2),
                                         ind_id=self.ind_id,
+                                        name=self.name,
                                         )
                 self.datapoints.append(dp)
             counter += 1
@@ -2412,6 +2458,7 @@ class IndicatorEMA(Indicator):
                     dp = IndicatorDataPoint(dt=dt_as_str(c.c_datetime),
                                             value=round(this_ema, 2),
                                             ind_id=self.ind_id,
+                                            name=self.name,
                                             )
                     self.datapoints.append(dp)
                 # Update vars for next candle
@@ -2474,7 +2521,7 @@ class Trade():
                  symbol="ES",
                  is_open: bool = True,
                  profitable: bool = None,
-                 name: str = None,
+                 name: str = "nameless",
                  version: str = "1.0.0",
                  ts_id: str = None,
                  bt_id: str = None,
@@ -3011,7 +3058,7 @@ class TradeSeries():
                  timeframe: str,
                  trading_hours: str,
                  symbol="ES",
-                 name: str = "",
+                 name: str = "nameless",
                  params_str: str = "",
                  ts_id: str = None,
                  bt_id: str = None,

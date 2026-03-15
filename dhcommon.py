@@ -72,8 +72,8 @@ def log_say(msg, level="info"):
         log.debug(msg)
     if level == "info":
         log.info(msg)
-    if level == "warn":
-        log.warn(msg)
+    if level in ["warn", "warning"]:
+        log.warning(msg)
     if level == "error":
         log.error(msg)
     if level == "critical":

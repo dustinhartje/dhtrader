@@ -1,5 +1,6 @@
 """Tests for Backtest creation, storage, retrieval, and calculation."""
 import datetime
+import json
 import pytest
 from dhtrader import (
     Backtest, Chart, delete_backtests, delete_backtests_by_field,
@@ -10,7 +11,7 @@ from dhtrader import (
 from dhtrader.dhtypes import delete_tradeseries
 
 
-def create_trade(open_dt="2025-01-02 12:00:00",
+def create_trade(open_dt="2099-01-02 12:00:00",
                  direction="long",
                  timeframe="5m",
                  trading_hours="rth",
@@ -35,8 +36,8 @@ def create_trade(open_dt="2025-01-02 12:00:00",
                  )
 
 
-def create_tradeseries(start_dt="2025-01-01 00:00:00",
-                       end_dt="2025-02-01 00:00:00",
+def create_tradeseries(start_dt="2099-01-01 00:00:00",
+                       end_dt="2099-02-01 00:00:00",
                        timeframe="5m",
                        trading_hours="rth",
                        symbol="ES",
@@ -60,8 +61,8 @@ def create_tradeseries(start_dt="2025-01-01 00:00:00",
                        )
 
 
-def create_backtest(start_dt="2025-01-01 00:00:00",
-                    end_dt="2025-02-01 00:00:00",
+def create_backtest(start_dt="2099-01-01 00:00:00",
+                    end_dt="2099-02-01 00:00:00",
                     timeframe="e1h",
                     trading_hours="eth",
                     symbol="ES",
@@ -72,6 +73,7 @@ def create_backtest(start_dt="2025-01-01 00:00:00",
                     chart_tf=None,
                     chart_1m=None,
                     autoload_charts=False,
+                    prefer_stored=False,
                     tradeseries=None,
                     ):
     """Create a Backtest and validate its attributes and defaults."""
@@ -87,6 +89,7 @@ def create_backtest(start_dt="2025-01-01 00:00:00",
                  chart_tf=chart_tf,
                  chart_1m=chart_1m,
                  autoload_charts=autoload_charts,
+                 prefer_stored=prefer_stored,
                  tradeseries=tradeseries,
                  )
     assert isinstance(r.start_dt, str)
@@ -109,6 +112,8 @@ def create_backtest(start_dt="2025-01-01 00:00:00",
         assert r.bt_id == bt_id
     assert isinstance(r.class_name, str)
     assert r.class_name == class_name
+    assert r.autoload_charts == autoload_charts
+    assert r.prefer_stored == prefer_stored
     if chart_tf is None and autoload_charts is False:
         assert r.chart_tf is None
     else:
@@ -164,18 +169,79 @@ def cleanup_backtest_storage():
         clear_storage_by_name(name)
 
 
-def test_Backtest_create_and_verify_pretty():
-    """Verify Backtest.pretty() output line count."""
+def test_Backtest_create_and_verify_common_methods():
+    """Test Backtest __init__ values, __eq__, __ne__, __str__, __repr__,
+    to_clean_dict, to_json, and pretty.
+
+    Backtest does not define brief.
+    """
     bt = create_backtest()
+    bt2 = create_backtest()
+    diff = create_backtest(name="DELETEME_DIFFERENT")
     assert isinstance(bt, Backtest)
-    ts = create_tradeseries()
-    assert isinstance(ts, TradeSeries)
-    tr = create_trade()
-    assert isinstance(tr, Trade)
+    # __init__
+    assert bt.start_dt == "2099-01-01 00:00:00"
+    assert bt.end_dt == "2099-02-01 00:00:00"
+    assert bt.timeframe == "e1h"
+    assert bt.trading_hours == "eth"
+    assert bt.symbol.ticker == "ES"
+    assert bt.name == "DELETEME"
+    assert bt.parameters == {"a": 1, "b": "two"}
+    assert bt.bt_id == "DELETEME"
+    assert bt.class_name == "BacktestTestDeleteme"
+    assert bt.chart_tf is None
+    assert bt.chart_1m is None
+    assert bt.tradeseries == []
+    assert bt.autoload_charts is False
+    assert bt.prefer_stored is False
+    expected_attrs = {
+        "autoload_charts", "bt_id", "chart_1m", "chart_tf",
+        "class_name", "end_dt", "name", "parameters",
+        "prefer_stored", "start_dt", "symbol", "timeframe",
+        "tradeseries", "trading_hours",
+    }
+    actual_attrs = set(vars(bt).keys())
+    added = actual_attrs - expected_attrs
+    removed = expected_attrs - actual_attrs
+    assert actual_attrs == expected_attrs, (
+        "Backtest attributes changed. Update this test's "
+        "__init__ section. "
+        f"New attrs needing assertions: {sorted(added)}. "
+        f"Removed attrs: {sorted(removed)}."
+    )
+    # __eq__
+    assert bt == bt2
+    assert not (bt == diff)
+    # __ne__
+    assert not (bt != bt2)
+    assert bt != diff
+    # __str__
+    assert isinstance(str(bt), str)
+    assert len(str(bt)) > 0
+    # __repr__
+    assert isinstance(repr(bt), str)
+    assert str(bt) == repr(bt)
+    # to_clean_dict
+    d = bt.to_clean_dict()
+    assert isinstance(d, dict)
+    assert d["name"] == "DELETEME"
+    assert d["timeframe"] == "e1h"
+    assert d["symbol"] == "ES"
+    # to_json
+    j = bt.to_json()
+    assert isinstance(j, str)
+    parsed = json.loads(j)
+    assert isinstance(parsed, dict)
+    assert parsed["name"] == "DELETEME"
+    assert parsed["timeframe"] == "e1h"
+    # pretty
+    assert isinstance(bt.pretty(), str)
     assert len(bt.pretty().splitlines()) == 21
+    ts = create_tradeseries()
+    tr = create_trade()
     ts.add_trade(tr)
-    bt.update_tradeseries(ts)
-    # With TradeSeries and Trdes shown
+    bt.update_tradeseries(ts, clear_storage=False)
+    # With TradeSeries and Trades shown
     assert len(bt.pretty(suppress_tradeseries=False,
                          suppress_trades=False).splitlines()) == 66
 
@@ -207,8 +273,13 @@ def test_Backtest_load_charts():
 def test_Backtest_restrict_dates(cleanup_backtest_storage):
     """Verify restrict_dates adjusts candle ranges.
 
+    NOTE - this test requires loading substantial candle and chart data
+           from storage, so it does not use 2099 dates like other tests as
+           there is no underlying data available to load from the future.
+
     Storage Usage: Chart autoload=True loads candles.
     """
+
     test_name = "DELETEME-RESTRICTTest"
     cleanup_backtest_storage(test_name)
     bt = create_backtest(name=test_name,
@@ -523,15 +594,15 @@ def test_Backtest_add_and_remove_tradeseries_and_trades(
     assert isinstance(bt, Backtest)
     assert len(bt.tradeseries) == 0
     ts1 = create_tradeseries(name=ts1_name,
-                             start_dt="2025-01-05 10:00:00",
-                             end_dt="2025-01-05 14:00:00",
+                             start_dt="2099-01-05 10:00:00",
+                             end_dt="2099-01-05 14:00:00",
                              )
     assert isinstance(ts1, TradeSeries)
     assert len(ts1.trades) == 0
     # TradeSeries should not have a bt_id yet
     assert ts1.bt_id is None
     # Create and add 2 Trades
-    for dt in ["2025-01-05 12:00:00", "2025-01-05 13:00:00"]:
+    for dt in ["2099-01-05 12:00:00", "2099-01-05 13:00:00"]:
         tr = create_trade(open_dt=dt, name=test_name)
         assert isinstance(tr, Trade)
         # Trade should not have a ts_id or bt_id yet
@@ -553,10 +624,10 @@ def test_Backtest_add_and_remove_tradeseries_and_trades(
         assert tr.bt_id == bt.bt_id
     # Create and add a second TradeSeries
     ts2 = create_tradeseries(name=ts2_name,
-                             start_dt="2025-01-06 13:00:00",
-                             end_dt="2025-01-06 16:00:00",
+                             start_dt="2099-01-06 13:00:00",
+                             end_dt="2099-01-06 16:00:00",
                              )
-    for dt in ["2025-01-06 14:00:00", "2025-01-06 15:00:00"]:
+    for dt in ["2099-01-06 14:00:00", "2099-01-06 15:00:00"]:
         tr = create_trade(open_dt=dt, name=test_name)
         ts2.add_trade(tr)
     bt.update_tradeseries(ts2)
@@ -564,17 +635,17 @@ def test_Backtest_add_and_remove_tradeseries_and_trades(
     # Confirm both TradeSeries and Trades attached as expected
     assert len(bt.tradeseries) == 2
     assert bt.tradeseries[0].ts_id == ts1_ts_id
-    assert bt.tradeseries[0].start_dt == "2025-01-05 10:00:00"
-    assert bt.tradeseries[0].end_dt == "2025-01-05 14:00:00"
+    assert bt.tradeseries[0].start_dt == "2099-01-05 10:00:00"
+    assert bt.tradeseries[0].end_dt == "2099-01-05 14:00:00"
     assert bt.tradeseries[1].ts_id == ts2.ts_id
-    assert bt.tradeseries[1].start_dt == "2025-01-06 13:00:00"
-    assert bt.tradeseries[1].end_dt == "2025-01-06 16:00:00"
+    assert bt.tradeseries[1].start_dt == "2099-01-06 13:00:00"
+    assert bt.tradeseries[1].end_dt == "2099-01-06 16:00:00"
     assert len(bt.tradeseries[0].trades) == 2
-    assert bt.tradeseries[0].trades[0].open_dt == "2025-01-05 12:00:00"
-    assert bt.tradeseries[0].trades[1].open_dt == "2025-01-05 13:00:00"
+    assert bt.tradeseries[0].trades[0].open_dt == "2099-01-05 12:00:00"
+    assert bt.tradeseries[0].trades[1].open_dt == "2099-01-05 13:00:00"
     assert len(bt.tradeseries[1].trades) == 2
-    assert bt.tradeseries[1].trades[0].open_dt == "2025-01-06 14:00:00"
-    assert bt.tradeseries[1].trades[1].open_dt == "2025-01-06 15:00:00"
+    assert bt.tradeseries[1].trades[0].open_dt == "2099-01-06 14:00:00"
+    assert bt.tradeseries[1].trades[1].open_dt == "2099-01-06 15:00:00"
     # Clear and confirm storage has no objects with these name currently
     # in case previous tests failed and left orphans
     delete_backtests_by_field(symbol="ES", field="name", value=test_name)
@@ -595,10 +666,10 @@ def test_Backtest_add_and_remove_tradeseries_and_trades(
         store_tradeseries([ts], include_trades=True)
 
     # Modify and replace the 1st tradeseries, including storage update
-    ts1.start_dt = "2025-01-05 08:30:00"
-    ts1.end_dt = "2025-01-05 16:30:00"
-    ts1.trades[0].open_dt = "2025-01-05 11:30:00"
-    ts1.trades[1].open_dt = "2025-01-05 12:30:00"
+    ts1.start_dt = "2099-01-05 08:30:00"
+    ts1.end_dt = "2099-01-05 16:30:00"
+    ts1.trades[0].open_dt = "2099-01-05 11:30:00"
+    ts1.trades[1].open_dt = "2099-01-05 12:30:00"
     bt.update_tradeseries(ts1)
     # Confirm previous tradeseries no longer in storage since it was modified
     # but not yet stored again.  Only the second (unmodified) TradeSeries
@@ -609,17 +680,17 @@ def test_Backtest_add_and_remove_tradeseries_and_trades(
     # Confirm backtest updated and no dupes
     assert len(bt.tradeseries) == 2
     assert bt.tradeseries[0].ts_id == ts1_ts_id
-    assert bt.tradeseries[0].start_dt == "2025-01-05 08:30:00"
-    assert bt.tradeseries[0].end_dt == "2025-01-05 16:30:00"
+    assert bt.tradeseries[0].start_dt == "2099-01-05 08:30:00"
+    assert bt.tradeseries[0].end_dt == "2099-01-05 16:30:00"
     assert len(bt.tradeseries[0].trades) == 2
-    assert bt.tradeseries[0].trades[0].open_dt == "2025-01-05 11:30:00"
-    assert bt.tradeseries[0].trades[1].open_dt == "2025-01-05 12:30:00"
+    assert bt.tradeseries[0].trades[0].open_dt == "2099-01-05 11:30:00"
+    assert bt.tradeseries[0].trades[1].open_dt == "2099-01-05 12:30:00"
     assert bt.tradeseries[1].ts_id == ts2_ts_id
-    assert bt.tradeseries[1].start_dt == "2025-01-06 13:00:00"
-    assert bt.tradeseries[1].end_dt == "2025-01-06 16:00:00"
+    assert bt.tradeseries[1].start_dt == "2099-01-06 13:00:00"
+    assert bt.tradeseries[1].end_dt == "2099-01-06 16:00:00"
     assert len(bt.tradeseries[1].trades) == 2
-    assert bt.tradeseries[1].trades[0].open_dt == "2025-01-06 14:00:00"
-    assert bt.tradeseries[1].trades[1].open_dt == "2025-01-06 15:00:00"
+    assert bt.tradeseries[1].trades[0].open_dt == "2099-01-06 14:00:00"
+    assert bt.tradeseries[1].trades[1].open_dt == "2099-01-06 15:00:00"
     # Store the backtest again, which should replace itself, it's TradeSeries,
     # and their Trades without duplication occurring
     store_backtests([bt])
@@ -641,11 +712,11 @@ def test_Backtest_add_and_remove_tradeseries_and_trades(
     assert len(s_ts2) == 1
     # Confirm expected start_dt and end_dt for each TradeSeries
     # ts1 should have been modified in storage after update
-    assert s_ts1[0].start_dt == "2025-01-05 08:30:00"
-    assert s_ts1[0].end_dt == "2025-01-05 16:30:00"
+    assert s_ts1[0].start_dt == "2099-01-05 08:30:00"
+    assert s_ts1[0].end_dt == "2099-01-05 16:30:00"
     # ts2 should retain the original values in storage as it was not updated
-    assert s_ts2[0].start_dt == "2025-01-06 13:00:00"
-    assert s_ts2[0].end_dt == "2025-01-06 16:00:00"
+    assert s_ts2[0].start_dt == "2099-01-06 13:00:00"
+    assert s_ts2[0].end_dt == "2099-01-06 16:00:00"
     # Confirm exactly 4 trades in storage by name and bt_id
     s_tr = get_trades_by_field(field="name", value=test_name)
     assert len(s_tr) == 4
@@ -658,16 +729,16 @@ def test_Backtest_add_and_remove_tradeseries_and_trades(
     assert len(s_tr2) == 2
     # Confirm Trade open_dt values as expected in storage, with ts1 updated
     # and ts2 retaining original unmodified values
-    assert s_tr1[0].open_dt == "2025-01-05 11:30:00"
-    assert s_tr1[1].open_dt == "2025-01-05 12:30:00"
-    assert s_tr2[0].open_dt == "2025-01-06 14:00:00"
-    assert s_tr2[1].open_dt == "2025-01-06 15:00:00"
+    assert s_tr1[0].open_dt == "2099-01-05 11:30:00"
+    assert s_tr1[1].open_dt == "2099-01-05 12:30:00"
+    assert s_tr2[0].open_dt == "2099-01-06 14:00:00"
+    assert s_tr2[1].open_dt == "2099-01-06 15:00:00"
 
     # Modify and replace the 2nd tradeseries, without storage update
-    ts2.start_dt = "2025-01-06 09:30:00"
-    ts2.end_dt = "2025-01-06 18:30:00"
-    ts2.trades[0].open_dt = "2025-01-06 14:30:00"
-    ts2.trades[1].open_dt = "2025-01-06 15:30:00"
+    ts2.start_dt = "2099-01-06 09:30:00"
+    ts2.end_dt = "2099-01-06 18:30:00"
+    ts2.trades[0].open_dt = "2099-01-06 14:30:00"
+    ts2.trades[1].open_dt = "2099-01-06 15:30:00"
     bt.update_tradeseries(ts2, clear_storage=False)
     # Confirm backtest updated and no duplication happened in TradeSeries or
     # Trades
@@ -677,17 +748,17 @@ def test_Backtest_add_and_remove_tradeseries_and_trades(
     # alphabetically by ts_id
     assert len(bt.tradeseries) == 2
     assert bt.tradeseries[0].ts_id == ts1_ts_id
-    assert bt.tradeseries[0].start_dt == "2025-01-05 08:30:00"
-    assert bt.tradeseries[0].end_dt == "2025-01-05 16:30:00"
+    assert bt.tradeseries[0].start_dt == "2099-01-05 08:30:00"
+    assert bt.tradeseries[0].end_dt == "2099-01-05 16:30:00"
     assert bt.tradeseries[1].ts_id == ts2_ts_id
-    assert bt.tradeseries[1].start_dt == "2025-01-06 09:30:00"
-    assert bt.tradeseries[1].end_dt == "2025-01-06 18:30:00"
+    assert bt.tradeseries[1].start_dt == "2099-01-06 09:30:00"
+    assert bt.tradeseries[1].end_dt == "2099-01-06 18:30:00"
     assert len(bt.tradeseries[0].trades) == 2
-    assert bt.tradeseries[0].trades[0].open_dt == "2025-01-05 11:30:00"
-    assert bt.tradeseries[0].trades[1].open_dt == "2025-01-05 12:30:00"
+    assert bt.tradeseries[0].trades[0].open_dt == "2099-01-05 11:30:00"
+    assert bt.tradeseries[0].trades[1].open_dt == "2099-01-05 12:30:00"
     assert len(bt.tradeseries[1].trades) == 2
-    assert bt.tradeseries[1].trades[0].open_dt == "2025-01-06 14:30:00"
-    assert bt.tradeseries[1].trades[1].open_dt == "2025-01-06 15:30:00"
+    assert bt.tradeseries[1].trades[0].open_dt == "2099-01-06 14:30:00"
+    assert bt.tradeseries[1].trades[1].open_dt == "2099-01-06 15:30:00"
     # Confirm storage not updated, including Trades, and no dupes
     # All of the below should remain the same as before we modified TS #2
     # Get TradeSeries by bt_id from storage
@@ -702,11 +773,11 @@ def test_Backtest_add_and_remove_tradeseries_and_trades(
     assert len(s_ts2) == 1
     # Confirm expected start_dt and end_dt for each TradeSeries
     # ts1 should have been modified in storage after update
-    assert s_ts1[0].start_dt == "2025-01-05 08:30:00"
-    assert s_ts1[0].end_dt == "2025-01-05 16:30:00"
+    assert s_ts1[0].start_dt == "2099-01-05 08:30:00"
+    assert s_ts1[0].end_dt == "2099-01-05 16:30:00"
     # ts2 should retain the original values in storage as it was not updated
-    assert s_ts2[0].start_dt == "2025-01-06 13:00:00"
-    assert s_ts2[0].end_dt == "2025-01-06 16:00:00"
+    assert s_ts2[0].start_dt == "2099-01-06 13:00:00"
+    assert s_ts2[0].end_dt == "2099-01-06 16:00:00"
     # Confirm exactly 4 trades in storage by name and bt_id
     s_tr = get_trades_by_field(field="name", value=test_name)
     assert len(s_tr) == 4
@@ -719,10 +790,10 @@ def test_Backtest_add_and_remove_tradeseries_and_trades(
     assert len(s_tr2) == 2
     # Confirm Trade open_dt values as expected in storage, with ts1 updated
     # and ts2 retaining original unmodified values
-    assert s_tr1[0].open_dt == "2025-01-05 11:30:00"
-    assert s_tr1[1].open_dt == "2025-01-05 12:30:00"
-    assert s_tr2[0].open_dt == "2025-01-06 14:00:00"
-    assert s_tr2[1].open_dt == "2025-01-06 15:00:00"
+    assert s_tr1[0].open_dt == "2099-01-05 11:30:00"
+    assert s_tr1[1].open_dt == "2099-01-05 12:30:00"
+    assert s_tr2[0].open_dt == "2099-01-06 14:00:00"
+    assert s_tr2[1].open_dt == "2099-01-06 15:00:00"
 
     # Confirm remove_tradeseries() works directly on backtest, removing
     # TradeSeries and Trades from storage by default
@@ -835,6 +906,58 @@ def test_Backtest_store_retrieve_load_tradeseries_and_delete(
 
 
 @pytest.mark.storage
+def test_Backtest_prefer_stored(cleanup_backtest_storage):
+    """Verify prefer_stored=True calls config_from_storage() without error.
+
+    When prefer_stored=True, Backtest.__init__ calls config_from_storage().
+    The base Backtest.config_from_storage() is a placeholder that returns
+    False without loading from storage; subclass overrides may implement
+    real loading.  This test confirms the prefer_stored flag is correctly
+    set and that config_from_storage() is called without error whether or
+    not a stored version of the bt_id exists.
+
+    Storage Usage: store_backtests, get_backtests_by_field.
+    """
+    test_name = "DELETEME-PSTest"
+    no_store_name = "DELETEME-PSNoneTest"
+    cleanup_backtest_storage(test_name, no_store_name)
+    # Create and store a Backtest so a stored version of bt_id exists
+    bt = create_backtest(name=test_name, prefer_stored=False)
+    store_backtests([bt])
+    stored = get_backtests_by_field(field="name", value=test_name)
+    assert len(stored) == 1
+    # prefer_stored=True when bt_id exists in storage:
+    # config_from_storage() is called; the base class returns False and
+    # does not re-configure from storage, but must not raise an error
+    bt_prefer = Backtest(
+        start_dt=bt.start_dt,
+        end_dt=bt.end_dt,
+        timeframe=bt.timeframe,
+        trading_hours=bt.trading_hours,
+        symbol="ES",
+        name=test_name,
+        parameters=bt.parameters,
+        class_name=bt.class_name,
+        prefer_stored=True,
+    )
+    assert bt_prefer.prefer_stored is True
+    # prefer_stored=True when bt_id does NOT exist in storage:
+    # config_from_storage() should still return False without raising
+    bt_none = Backtest(
+        start_dt="2099-01-01 00:00:00",
+        end_dt="2099-02-01 00:00:00",
+        timeframe="e1h",
+        trading_hours="eth",
+        symbol="ES",
+        name=no_store_name,
+        parameters={"a": 1, "b": "two"},
+        class_name="BacktestTestDeleteme",
+        prefer_stored=True,
+    )
+    assert bt_none.prefer_stored is True
+
+
+@pytest.mark.storage
 def test_delete_backtests(cleanup_backtest_storage):
     """Verify delete_backtests() using Backtest list.
 
@@ -858,15 +981,15 @@ def test_delete_backtests(cleanup_backtest_storage):
     bt1 = create_backtest(name=test_name_1)
     bt2 = create_backtest(name=test_name_2)
     ts1 = create_tradeseries(name=ts_name_1,
-                             start_dt="2025-01-05 10:00:00",
-                             end_dt="2025-01-05 14:00:00")
+                             start_dt="2099-01-05 10:00:00",
+                             end_dt="2099-01-05 14:00:00")
     ts2 = create_tradeseries(name=ts_name_2,
-                             start_dt="2025-01-05 15:00:00",
-                             end_dt="2025-01-05 19:00:00")
+                             start_dt="2099-01-05 15:00:00",
+                             end_dt="2099-01-05 19:00:00")
     # Add trades to trade series
-    for dt in ["2025-01-05 10:00:00", "2025-01-05 11:00:00"]:
+    for dt in ["2099-01-05 10:00:00", "2099-01-05 11:00:00"]:
         ts1.add_trade(create_trade(open_dt=dt, name=test_name_1))
-    for dt in ["2025-01-05 15:00:00", "2025-01-05 16:00:00"]:
+    for dt in ["2099-01-05 15:00:00", "2099-01-05 16:00:00"]:
         ts2.add_trade(create_trade(open_dt=dt, name=test_name_2))
     # Add trade series to backtests
     bt1.update_tradeseries(ts1)

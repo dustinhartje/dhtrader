@@ -10,7 +10,7 @@ from dhtrader import (
 from dhtrader.testdata.testdata import Rebuilder
 
 
-def create_trade(open_dt="2025-01-02 12:00:00",
+def create_trade(open_dt="2099-01-08 12:00:00",
                  direction="long",
                  timeframe="5m",
                  trading_hours="rth",
@@ -502,17 +502,17 @@ def test_Trade_confirm_observed_results():
     # assert draw["drawdown_trail_increase"] == 45.35
 
     # Long 2 contracts surpasses drawdown_limit
-    t = create_trade(open_dt="2025-03-14 14:36:49",
+    t = create_trade(open_dt="2099-03-14 14:36:49",
                      direction="long",
                      entry_price=5625.75,
                      )
-    add_1m_candle(t, "2025-03-14 14:36:00", 5625, 5627, 5623.75, 5625)
-    add_1m_candle(t, "2025-03-14 14:37:00", 5625, 5627.75, 5625, 5626.75)
-    add_1m_candle(t, "2025-03-14 14:38:00", 5626.75, 5631.25, 5626.75, 5630.50)
-    add_1m_candle(t, "2025-03-14 14:39:00", 5630.75, 5632.75, 5629.75, 5632.50)
-    add_1m_candle(t, "2025-03-14 14:40:00", 5632.75, 5633.75, 5632, 5632.25)
-    add_1m_candle(t, "2025-03-14 14:41:00", 5632.50, 5632.75, 5626.75, 5629)
-    t.close(price=5631.50, dt="2025-03-14 14:41:21")
+    add_1m_candle(t, "2099-03-14 14:36:00", 5625, 5627, 5623.75, 5625)
+    add_1m_candle(t, "2099-03-14 14:37:00", 5625, 5627.75, 5625, 5626.75)
+    add_1m_candle(t, "2099-03-14 14:38:00", 5626.75, 5631.25, 5626.75, 5630.50)
+    add_1m_candle(t, "2099-03-14 14:39:00", 5630.75, 5632.75, 5629.75, 5632.50)
+    add_1m_candle(t, "2099-03-14 14:40:00", 5632.75, 5633.75, 5632, 5632.25)
+    add_1m_candle(t, "2099-03-14 14:41:00", 5632.50, 5632.75, 5626.75, 5629)
+    t.close(price=5631.50, dt="2099-03-14 14:41:21")
     assert t.high_price == 5633.75
     assert t.low_price == 5623.75
     assert t.exit_price == 5631.50
@@ -535,13 +535,13 @@ def test_Trade_confirm_observed_results():
     # assert draw["drawdown_trail_increase"] == 407.95
 
     # Short 3 contracts surpasses drawdown_limit
-    t = create_trade(open_dt="2025-03-14 14:51:28",
+    t = create_trade(open_dt="2099-03-14 14:51:28",
                      direction="short",
                      entry_price=5629.50,
                      )
-    add_1m_candle(t, "2025-03-14 14:51:00", 5633.25, 5633.25, 5628, 5628.75)
-    add_1m_candle(t, "2025-03-14 14:52:00", 5629, 5630.75, 5627.50, 5630.25)
-    t.close(price=5628.75, dt="2025-03-14 14:52:22")
+    add_1m_candle(t, "2099-03-14 14:51:00", 5633.25, 5633.25, 5628, 5628.75)
+    add_1m_candle(t, "2099-03-14 14:52:00", 5629, 5630.75, 5627.50, 5630.25)
+    t.close(price=5628.75, dt="2099-03-14 14:52:22")
     assert t.high_price == 5633.25
     assert t.low_price == 5627.50
     assert t.exit_price == 5628.75
@@ -564,11 +564,99 @@ def test_Trade_confirm_observed_results():
     # assert draw["drawdown_trail_increase"] == 51.25
 
 
-def test_Trade_create_and_verify_pretty():
-    """Verify Trade.pretty() output line count."""
+def test_Trade_create_and_verify_common_methods():
+    """Test Trade __init__ values, __eq__, __ne__, __str__, __repr__,
+    to_clean_dict, to_json, pretty, and brief.
+    """
+    from copy import deepcopy
     trade = create_trade()
     assert isinstance(trade, Trade)
+    # __init__
+    assert trade.open_dt == "2099-01-08 12:00:00"
+    assert trade.close_dt is None
+    assert isinstance(trade.created_dt, str)
+    assert trade.direction == "long"
+    assert trade.timeframe == "5m"
+    assert trade.trading_hours == "rth"
+    assert trade.entry_price == 5000
+    assert trade.high_price == 5000
+    assert trade.low_price == 5000
+    assert trade.exit_price is None
+    assert trade.stop_ticks == 500
+    assert trade.prof_ticks == 500
+    assert trade.stop_target == 4875.0
+    assert trade.prof_target == 5125.0
+    assert trade.offset_ticks == 0
+    assert trade.symbol.ticker == "ES"
+    assert trade.is_open is True
+    assert trade.profitable is None
+    assert trade.name == "DELETEME"
+    assert trade.version == "1.0.0"
+    assert trade.ts_id is None
+    assert trade.bt_id is None
+    assert trade.tags == []
+    assert trade.flipper == 1
+    assert isinstance(trade.open_epoch, int)
+    assert trade.open_date == "2099-01-08"
+    assert trade.open_time == "12:00:00"
+    assert trade.close_date is None
+    assert trade.close_time is None
+    assert trade.first_min_open is True
+    expected_attrs = {
+        "bt_id", "close_date", "close_dt", "close_time",
+        "created_dt", "direction", "entry_price", "exit_price",
+        "first_min_open", "flipper", "high_price", "is_open",
+        "low_price", "name", "offset_ticks", "open_date",
+        "open_dt", "open_epoch", "open_time", "prof_target",
+        "prof_ticks", "profitable", "stop_target", "stop_ticks",
+        "symbol", "tags", "timeframe", "trading_hours",
+        "ts_id", "version",
+    }
+    actual_attrs = set(vars(trade).keys())
+    added = actual_attrs - expected_attrs
+    removed = expected_attrs - actual_attrs
+    assert actual_attrs == expected_attrs, (
+        "Trade attributes changed. Update this test's "
+        "__init__ section. "
+        f"New attrs needing assertions: {sorted(added)}. "
+        f"Removed attrs: {sorted(removed)}."
+    )
+    # Use deepcopy to get an identical trade (created_dt is in __eq__)
+    trade2 = deepcopy(trade)
+    diff = create_trade(open_dt="2099-01-08 13:00:00")
+    # __eq__
+    assert trade == trade2
+    assert not (trade == diff)
+    # __ne__
+    assert not (trade != trade2)
+    assert trade != diff
+    # __str__
+    assert isinstance(str(trade), str)
+    assert len(str(trade)) > 0
+    # __repr__
+    assert isinstance(repr(trade), str)
+    assert str(trade) == repr(trade)
+    # to_clean_dict
+    d = trade.to_clean_dict()
+    assert isinstance(d, dict)
+    assert d["open_dt"] == "2099-01-08 12:00:00"
+    assert d["direction"] == "long"
+    assert d["entry_price"] == 5000
+    assert d["symbol"] == "ES"
+    # to_json
+    j = trade.to_json()
+    assert isinstance(j, str)
+    parsed = json.loads(j)
+    assert isinstance(parsed, dict)
+    assert parsed["open_dt"] == "2099-01-08 12:00:00"
+    assert parsed["direction"] == "long"
+    # pretty
+    assert isinstance(trade.pretty(), str)
     assert len(trade.pretty().splitlines()) == 32
+    # brief
+    result = trade.brief()
+    assert result == ("2099-01-08 12:00:00 - None | Thursday | long | "
+                      "entry=5000 | exit=None | profitable=None")
 
 
 def test_Trade_tick_and_target_calculations_correct():
@@ -696,32 +784,32 @@ def test_Trade_gain_loss():
     """Verify Trade.gain_loss() calculation."""
     # Closing long trade at a gain
     t = create_trade()
-    t.close(price=5005, dt="2025-01-02 12:45:00")
+    t.close(price=5005, dt="2099-01-08 12:45:00")
     assert t.gain_loss(contracts=1) == 250
     # Closing long trade at a loss
     t = create_trade()
-    t.close(price=4800, dt="2025-01-02 12:45:00")
+    t.close(price=4800, dt="2099-01-08 12:45:00")
     assert t.gain_loss(contracts=2) == -20000
     # Closing short trade at a gain
     t = create_trade(direction="short")
-    t.close(price=4950, dt="2025-01-02 12:45:00")
+    t.close(price=4950, dt="2099-01-08 12:45:00")
     assert t.gain_loss(contracts=3) == 7500
     # Closing short trade at a loss
     t = create_trade(direction="short")
-    t.close(price=5025, dt="2025-01-02 12:45:00")
+    t.close(price=5025, dt="2099-01-08 12:45:00")
     assert t.gain_loss(contracts=5) == -6250
 
 
 def test_Trade_duration():
     """Verify Trade.duration() calculation."""
-    t = create_trade(open_dt="2025-01-02 12:45:00")
-    t.close(price=5005, dt="2025-01-02 12:45:00")
+    t = create_trade(open_dt="2099-01-08 12:45:00")
+    t.close(price=5005, dt="2099-01-08 12:45:00")
     assert t.duration() == 0
-    t.close(price=5005, dt="2025-01-02 12:46:00")
+    t.close(price=5005, dt="2099-01-08 12:46:00")
     assert t.duration() == 60
-    t.close(price=5005, dt="2025-01-03 12:46:00")
+    t.close(price=5005, dt="2099-01-09 12:46:00")
     assert t.duration() == 86460
-    t.close(price=5005, dt="2025-01-02 12:44:00")
+    t.close(price=5005, dt="2099-01-08 12:44:00")
     assert t.duration() == -60
 
 
@@ -730,9 +818,9 @@ def test_Trade_creation_long_close_at_profit():
     # Create a trade (create_trade() covers creation assertions)
     t = create_trade(direction="long")
     # Update drawdown_impact
-    add_1m_candle(t, "2025-03-14 14:52:00", 5003, 5003, 5003, 5003)
+    add_1m_candle(t, "2099-03-14 14:52:00", 5003, 5003, 5003, 5003)
     # Closing long trade at a gain
-    t.close(price=5005, dt="2025-01-02 12:45:00")
+    t.close(price=5005, dt="2099-01-08 12:45:00")
     bal = t.balance_impact(100000, 1, 50, 3.10)
     draw = t.drawdown_impact(3000, 6500, 1, 50, 3.10)
 
@@ -750,9 +838,9 @@ def test_Trade_creation_long_close_at_loss():
     # Create a trade (create_trade() covers creation assertions)
     t = create_trade(direction="long")
     # Update drawdown_impact
-    add_1m_candle(t, "2025-03-14 14:52:00", 5009, 5009, 5009, 5009)
+    add_1m_candle(t, "2099-03-14 14:52:00", 5009, 5009, 5009, 5009)
     # Closing long trade at a loss
-    t.close(price=4995, dt="2025-01-02 12:45:00")
+    t.close(price=4995, dt="2099-01-08 12:45:00")
     # Confirm exit price, gain_loss, and drawdown calculate correctly
     bal = t.balance_impact(100000, 1, 50, 3.10)
     draw = t.drawdown_impact(1000, 6500, 1, 50, 3.10)
@@ -773,9 +861,9 @@ def test_Trade_creation_short_close_at_profit():
                      prof_target=4995,
                      prof_ticks=20,
                      )
-    add_1m_candle(t, "2025-03-14 14:52:00", 4998, 4998, 4998, 4998)
+    add_1m_candle(t, "2099-03-14 14:52:00", 4998, 4998, 4998, 4998)
     # Closing long trade at a profit
-    t.close(price=4995, dt="2025-01-02 12:45:00")
+    t.close(price=4995, dt="2099-01-08 12:45:00")
     bal = t.balance_impact(100000, 1, 50, 3.10)
     draw = t.drawdown_impact(1000, 6500, 1, 50, 3.10)
     # Confirm exit price, gain_loss, and drawdown calculate correctly
@@ -797,7 +885,7 @@ def test_Trade_creation_short_close_at_loss():
                      prof_ticks=20,
                      )
     # Closing long trade at a loss
-    t.close(price=5005, dt="2025-01-02 12:45:00")
+    t.close(price=5005, dt="2099-01-08 12:45:00")
     # Confirm exit price, gain_loss, and drawdown calculate correctly
     bal = t.balance_impact(100000, 1, 50, 3.10)
     draw = t.drawdown_impact(1000, 6500, 1, 50, 3.10)
@@ -813,7 +901,7 @@ def test_Trade_candle_update_returns_correct_values():
     """Verify candle_update returns correct closed status in various scenarios.
     """
     # Should not return closed until some target is met (500 ticks default)
-    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2099-01-08 12:01:00", c_timeframe="1m",
                c_open=5000, c_high=5001, c_low=4999, c_close=5000,
                c_volume=100, c_symbol="ES")
     t = create_trade(direction="long")
@@ -821,34 +909,34 @@ def test_Trade_candle_update_returns_correct_values():
     t = create_trade(direction="short")
     assert t.candle_update(c)["closed"] is False
     # Should close at stop target 4875 long / 5125 short exactly
-    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2099-01-08 12:01:00", c_timeframe="1m",
                c_open=5000, c_high=5000, c_low=4875, c_close=5000,
                c_volume=100, c_symbol="ES")
     t = create_trade(direction="long")
     assert t.candle_update(c)["closed"] is True
-    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2099-01-08 12:01:00", c_timeframe="1m",
                c_open=5000, c_high=5125, c_low=5000, c_close=5000,
                c_volume=100, c_symbol="ES")
     t = create_trade(direction="short")
     assert t.candle_update(c)["closed"] is True
     # Should not close at profit target 5125 long / 4875 short exactly
-    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2099-01-08 12:01:00", c_timeframe="1m",
                c_open=5000, c_high=5125, c_low=5000, c_close=5000,
                c_volume=100, c_symbol="ES")
     t = create_trade(direction="long")
     assert t.candle_update(c)["closed"] is False
-    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2099-01-08 12:01:00", c_timeframe="1m",
                c_open=5000, c_high=5000, c_low=4875, c_close=5000,
                c_volume=100, c_symbol="ES")
     t = create_trade(direction="short")
     assert t.candle_update(c)["closed"] is False
     # Should close one tick past profit targets
-    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2099-01-08 12:01:00", c_timeframe="1m",
                c_open=5000, c_high=5125.25, c_low=5000, c_close=5000,
                c_volume=100, c_symbol="ES")
     t = create_trade(direction="long")
     assert t.candle_update(c)["closed"] is True
-    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2099-01-08 12:01:00", c_timeframe="1m",
                c_open=5000, c_high=5000, c_low=4874.75, c_close=5000,
                c_volume=100, c_symbol="ES")
     t = create_trade(direction="short")
@@ -860,7 +948,7 @@ def test_Trade_candle_update_closes_trades_correctly():
     # Check close status and related attribs/methods for all target scenarios
     # Long trade should not close with no target hit
     t = create_trade(direction="long")
-    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2099-01-08 12:01:00", c_timeframe="1m",
                c_open=5000, c_high=5000, c_low=5000, c_close=5000,
                c_volume=100, c_symbol="ES")
     t.candle_update(c)
@@ -872,31 +960,31 @@ def test_Trade_candle_update_closes_trades_correctly():
     assert t.balance_impact(1000, 1, 50, 3.10) is None
     # Long trade closes at prof_target when surpassed
     t = create_trade(direction="long")
-    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2099-01-08 12:01:00", c_timeframe="1m",
                c_open=5000, c_high=5200, c_low=5000, c_close=5000,
                c_volume=100, c_symbol="ES")
     t.candle_update(c)
     assert t.is_open is False
     assert t.profitable is True
-    assert t.close_dt == "2025-01-02 12:01:00"
+    assert t.close_dt == "2099-01-08 12:01:00"
     assert t.exit_price == 5125
     assert t.drawdown_impact(1000, 3000, 1, 50, 3.10) is not None
     assert t.balance_impact(1000, 1, 50, 3.10) is not None
     # Long trade closes at stop_target when surpassed
     t = create_trade(direction="long")
-    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2099-01-08 12:01:00", c_timeframe="1m",
                c_open=5000, c_high=5000, c_low=4800, c_close=5000,
                c_volume=100, c_symbol="ES")
     t.candle_update(c)
     assert t.is_open is False
     assert t.profitable is False
-    assert t.close_dt == "2025-01-02 12:01:00"
+    assert t.close_dt == "2099-01-08 12:01:00"
     assert t.exit_price == 4875
     assert t.drawdown_impact(1000, 3000, 1, 50, 3.10) is not None
     assert t.balance_impact(1000, 1, 50, 3.10) is not None
     # Short trade should not close with no target hit
     t = create_trade(direction="short")
-    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2099-01-08 12:01:00", c_timeframe="1m",
                c_open=5000, c_high=5000, c_low=5000, c_close=5000,
                c_volume=100, c_symbol="ES")
     t.candle_update(c)
@@ -908,37 +996,37 @@ def test_Trade_candle_update_closes_trades_correctly():
     assert t.balance_impact(1000, 1, 50, 3.10) is None
     # Short trade closes at prof_target when surpassed
     t = create_trade(direction="short")
-    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2099-01-08 12:01:00", c_timeframe="1m",
                c_open=5000, c_high=5000, c_low=4800, c_close=5000,
                c_volume=100, c_symbol="ES")
     t.candle_update(c)
     assert t.is_open is False
     assert t.profitable is True
-    assert t.close_dt == "2025-01-02 12:01:00"
+    assert t.close_dt == "2099-01-08 12:01:00"
     assert t.exit_price == 4875
     assert t.drawdown_impact(1000, 3000, 1, 50, 3.10) is not None
     assert t.balance_impact(1000, 1, 50, 3.10) is not None
     # Short trade closes at stop_target when surpassed
     t = create_trade(direction="short")
-    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2099-01-08 12:01:00", c_timeframe="1m",
                c_open=5000, c_high=5200, c_low=5000, c_close=5000,
                c_volume=100, c_symbol="ES")
     t.candle_update(c)
     assert t.is_open is False
     assert t.profitable is False
-    assert t.close_dt == "2025-01-02 12:01:00"
+    assert t.close_dt == "2099-01-08 12:01:00"
     assert t.exit_price == 5125
     assert t.drawdown_impact(1000, 3000, 1, 50, 3.10) is not None
     assert t.balance_impact(1000, 1, 50, 3.10) is not None
     # Long trade does not close during entry minute when 1m bar closes under
     # the profit target.  It should wait for the next bar to confirm profit.
     t = create_trade(direction="long", stop_ticks=20, prof_ticks=20)
-    c = Candle(c_datetime="2025-01-02 12:00:00", c_timeframe="1m",
+    c = Candle(c_datetime="2099-01-08 12:00:00", c_timeframe="1m",
                c_open=5000, c_high=5050, c_low=4999, c_close=5000,
                c_volume=100, c_symbol="ES")
     status = t.candle_update(c)
     assert not status["closed"]
-    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2099-01-08 12:01:00", c_timeframe="1m",
                c_open=5000, c_high=5050, c_low=4999, c_close=5050,
                c_volume=100, c_symbol="ES")
     status = t.candle_update(c)
@@ -946,7 +1034,7 @@ def test_Trade_candle_update_closes_trades_correctly():
     # Long trade does close during entry minute when 1m bar closes over the
     # profit target
     t = create_trade(direction="long", stop_ticks=20, prof_ticks=20)
-    c = Candle(c_datetime="2025-01-02 12:00:00", c_timeframe="1m",
+    c = Candle(c_datetime="2099-01-08 12:00:00", c_timeframe="1m",
                c_open=5000, c_high=5050, c_low=4999, c_close=5050,
                c_volume=100, c_symbol="ES")
     status = t.candle_update(c)
@@ -954,12 +1042,12 @@ def test_Trade_candle_update_closes_trades_correctly():
     # Short trade does not close during entry minute when 1m bar closes over
     # the profit target.  It should wait for the next bar to confirm profit.
     t = create_trade(direction="short", stop_ticks=20, prof_ticks=20)
-    c = Candle(c_datetime="2025-01-02 12:00:00", c_timeframe="1m",
+    c = Candle(c_datetime="2099-01-08 12:00:00", c_timeframe="1m",
                c_open=5000, c_high=5001, c_low=4950, c_close=5000,
                c_volume=100, c_symbol="ES")
     status = t.candle_update(c)
     assert not status["closed"]
-    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2099-01-08 12:01:00", c_timeframe="1m",
                c_open=5000, c_high=5001, c_low=4950, c_close=5050,
                c_volume=100, c_symbol="ES")
     status = t.candle_update(c)
@@ -967,7 +1055,7 @@ def test_Trade_candle_update_closes_trades_correctly():
     # Short trade does close during entry minute when 1m bar closes under the
     # profit target
     t = create_trade(direction="short", stop_ticks=20, prof_ticks=20)
-    c = Candle(c_datetime="2025-01-02 12:00:00", c_timeframe="1m",
+    c = Candle(c_datetime="2099-01-08 12:00:00", c_timeframe="1m",
                c_open=5000, c_high=5001, c_low=4950, c_close=4950,
                c_volume=100, c_symbol="ES")
     status = t.candle_update(c)
@@ -980,7 +1068,7 @@ def test_Trade_sets_high_low_exit_prices_correctly():
     t = create_trade(direction="long")
     assert t.high_price == 5000
     assert t.low_price == 5000
-    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2099-01-08 12:01:00", c_timeframe="1m",
                c_open=5000, c_high=5100, c_low=4900, c_close=5000,
                c_volume=100, c_symbol="ES")
     t.candle_update(c)
@@ -990,7 +1078,7 @@ def test_Trade_sets_high_low_exit_prices_correctly():
     assert t.is_open
     # Long trade sets correctly at profit target when surpassed
     t = create_trade(direction="long")
-    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2099-01-08 12:01:00", c_timeframe="1m",
                c_open=5000, c_high=5200, c_low=4900, c_close=5000,
                c_volume=100, c_symbol="ES")
     t.candle_update(c)
@@ -1000,7 +1088,7 @@ def test_Trade_sets_high_low_exit_prices_correctly():
     assert not t.is_open
     # Long trade sets correctly at stop target when surpassed
     t = create_trade(direction="long")
-    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2099-01-08 12:01:00", c_timeframe="1m",
                c_open=5000, c_high=5100, c_low=4800, c_close=5000,
                c_volume=100, c_symbol="ES")
     t.candle_update(c)
@@ -1010,7 +1098,7 @@ def test_Trade_sets_high_low_exit_prices_correctly():
     assert not t.is_open
     # Short trade sets candle high and low if exit targets are not hit
     t = create_trade(direction="short")
-    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2099-01-08 12:01:00", c_timeframe="1m",
                c_open=5000, c_high=5100, c_low=4900, c_close=5000,
                c_volume=100, c_symbol="ES")
     t.candle_update(c)
@@ -1020,7 +1108,7 @@ def test_Trade_sets_high_low_exit_prices_correctly():
     assert t.is_open
     # Short trade sets correctly at profit target when surpassed
     t = create_trade(direction="short")
-    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2099-01-08 12:01:00", c_timeframe="1m",
                c_open=5000, c_high=5100, c_low=4800, c_close=5000,
                c_volume=100, c_symbol="ES")
     t.candle_update(c)
@@ -1030,7 +1118,7 @@ def test_Trade_sets_high_low_exit_prices_correctly():
     assert not t.is_open
     # Short trade sets correctly at stop target when surpassed
     t = create_trade(direction="short")
-    c = Candle(c_datetime="2025-01-02 12:01:00", c_timeframe="1m",
+    c = Candle(c_datetime="2099-01-08 12:01:00", c_timeframe="1m",
                c_open=5000, c_high=5200, c_low=4900, c_close=5000,
                c_volume=100, c_symbol="ES")
     t.candle_update(c)
@@ -1042,99 +1130,99 @@ def test_Trade_sets_high_low_exit_prices_correctly():
 
 def test_Trade_parent_bar_secs():
     """Verify Trade.parent_bar_secs() for various timeframes."""
-    t = create_trade(open_dt="2025-01-02 11:52:44", timeframe="1m")
+    t = create_trade(open_dt="2099-01-08 11:52:44", timeframe="1m")
     assert t.parent_bar_secs() == 44
-    t = create_trade(open_dt="2025-01-02 11:52:44", timeframe="5m")
+    t = create_trade(open_dt="2099-01-08 11:52:44", timeframe="5m")
     assert t.parent_bar_secs() == 164
-    t = create_trade(open_dt="2025-01-02 11:52:44", timeframe="15m")
+    t = create_trade(open_dt="2099-01-08 11:52:44", timeframe="15m")
     assert t.parent_bar_secs() == 464
-    t = create_trade(open_dt="2025-01-02 11:52:44", timeframe="e1h")
+    t = create_trade(open_dt="2099-01-08 11:52:44", timeframe="e1h")
     assert t.parent_bar_secs() == 3164
-    t = create_trade(open_dt="2025-01-02 11:52:44", timeframe="r1h")
+    t = create_trade(open_dt="2099-01-08 11:52:44", timeframe="r1h")
     assert t.parent_bar_secs() == 1364
 
 
 def test_Trade_closed_intraday():
     """Verify Trade.closed_intraday() for rth and eth scenarios."""
     # RTH trade closes same day before rth close
-    t = create_trade(open_dt="2025-01-05 12:00:00",
+    t = create_trade(open_dt="2099-01-04 12:00:00",
                      trading_hours="rth")
-    t.close(dt="2025-01-05 12:05:00", price=5000)
+    t.close(dt="2099-01-04 12:05:00", price=5000)
     assert t.closed_intraday() is True
     # RTH trade closes same day after close
-    t = create_trade(open_dt="2025-01-06 12:00:00",
+    t = create_trade(open_dt="2099-01-05 12:00:00",
                      trading_hours="rth")
-    t.close(dt="2025-01-06 20:00:00", price=5000)
+    t.close(dt="2099-01-05 20:00:00", price=5000)
     assert t.closed_intraday() is False
     # RTH trade closes next day early before rth open
-    t = create_trade(open_dt="2025-01-06 12:00:00",
+    t = create_trade(open_dt="2099-01-05 12:00:00",
                      trading_hours="rth")
-    t.close(dt="2025-01-07 04:00:00", price=5000)
+    t.close(dt="2099-01-06 04:00:00", price=5000)
     assert t.closed_intraday() is False
     # RTH trade closes next day after rth open
-    t = create_trade(open_dt="2025-01-06 12:00:00",
+    t = create_trade(open_dt="2099-01-05 12:00:00",
                      trading_hours="rth")
-    t.close(dt="2025-01-07 11:00:00", price=5000)
+    t.close(dt="2099-01-06 11:00:00", price=5000)
     assert t.closed_intraday() is False
     # RTH trade opens midday, closes 1 second before market close
-    t = create_trade(open_dt="2025-01-06 14:00:00",
+    t = create_trade(open_dt="2099-01-05 14:00:00",
                      trading_hours="rth")
-    t.close(dt="2025-01-06 16:59:59", price=5000)
+    t.close(dt="2099-01-05 16:59:59", price=5000)
     assert t.closed_intraday() is False
     # RTH trade opens midday, closes at exact open of next day
-    t = create_trade(open_dt="2025-01-06 14:00:00",
+    t = create_trade(open_dt="2099-01-05 14:00:00",
                      trading_hours="rth")
-    t.close(dt="2025-01-07 09:30:00", price=5000)
+    t.close(dt="2099-01-06 09:30:00", price=5000)
     assert t.closed_intraday() is False
     # RTH trade closes several days later during market hours
-    t = create_trade(open_dt="2025-01-06 12:00:00",
+    t = create_trade(open_dt="2099-01-05 12:00:00",
                      trading_hours="rth")
-    t.close(dt="2025-01-09 14:00:00", price=5000)
+    t.close(dt="2099-01-08 14:00:00", price=5000)
     assert t.closed_intraday() is False
     # ETH trade opens early before rth open, closes midday before close
-    t = create_trade(open_dt="2025-01-06 04:00:00",
+    t = create_trade(open_dt="2099-01-05 04:00:00",
                      trading_hours="eth")
-    t.close(dt="2025-01-06 14:00:00", price=5000)
+    t.close(dt="2099-01-05 14:00:00", price=5000)
     assert t.closed_intraday() is True
     # ETH trade opens early before rth open, closes same day after close
-    t = create_trade(open_dt="2025-01-06 04:00:00",
+    t = create_trade(open_dt="2099-01-05 04:00:00",
                      trading_hours="eth")
-    t.close(dt="2025-01-06 19:00:00", price=5000)
+    t.close(dt="2099-01-05 19:00:00", price=5000)
     assert t.closed_intraday() is False
     # ETH trade opens early before rth open, closes in last minute of day
-    t = create_trade(open_dt="2025-01-06 04:00:00",
+    t = create_trade(open_dt="2099-01-05 04:00:00",
                      trading_hours="eth")
-    t.close(dt="2025-01-06 16:59:00", price=5000)
+    t.close(dt="2099-01-05 16:59:00", price=5000)
     assert t.closed_intraday() is True
     # ETH trade opens early before rth open, closes at exact open of next day
-    t = create_trade(open_dt="2025-01-06 04:00:00",
+    t = create_trade(open_dt="2099-01-05 04:00:00",
                      trading_hours="eth")
-    t.close(dt="2025-01-06 18:00:00", price=5000)
+    t.close(dt="2099-01-05 18:00:00", price=5000)
     assert t.closed_intraday() is False
     # ETH trade opens late after eth open, closes same day before midnight
-    t = create_trade(open_dt="2025-01-06 19:00:00",
+    t = create_trade(open_dt="2099-01-05 19:00:00",
                      trading_hours="eth")
-    t.close(dt="2025-01-06 21:30:00", price=5000)
+    t.close(dt="2099-01-05 21:30:00", price=5000)
     assert t.closed_intraday() is True
     # ETH trade opens late after eth open, closes next morning before rth open
-    t = create_trade(open_dt="2025-01-06 19:00:00",
+    t = create_trade(open_dt="2099-01-05 19:00:00",
                      trading_hours="eth")
-    t.close(dt="2025-01-07 04:00:00", price=5000)
+    t.close(dt="2099-01-06 04:00:00", price=5000)
     assert t.closed_intraday() is True
     # ETH trade opens late after eth open, closes next day after rth open
-    t = create_trade(open_dt="2025-01-06 19:00:00",
+    t = create_trade(open_dt="2099-01-05 19:00:00",
                      trading_hours="eth")
-    t.close(dt="2025-01-07 14:00:00", price=5000)
+    t.close(dt="2099-01-06 14:00:00", price=5000)
     assert t.closed_intraday() is True
     # ETH trade opens late after eth open, closes next day after next open
-    t = create_trade(open_dt="2025-01-06 19:00:00",
+    t = create_trade(open_dt="2099-01-05 19:00:00",
                      trading_hours="eth")
-    t.close(dt="2025-01-07 20:00:00", price=5000)
+    t.close(dt="2099-01-06 20:00:00", price=5000)
     assert t.closed_intraday() is False
     # ETH trade closes several days later
-    t = create_trade(open_dt="2025-01-06 12:00:00",
+    t = create_trade(open_dt="2099-01-05 12:00:00",
                      trading_hours="eth")
-    t.close(dt="2025-01-09 15:25:00", price=5000)
+    t.close(dt="2099-01-08 15:25:00", price=5000)
     assert t.closed_intraday() is False
 
 
@@ -1180,12 +1268,12 @@ def test_delete_trades(cleanup_trade_storage):
     stored = get_trades_by_field(field="name", value="DELETEME-TEST-LIST")
     assert len(stored) == 0
     # Create and store test trades
-    t1 = create_trade(open_dt="2025-01-05 10:00:00",
+    t1 = create_trade(open_dt="2099-01-04 10:00:00",
                       name="DELETEME-TEST-LIST")
-    t2 = create_trade(open_dt="2025-01-05 11:00:00",
+    t2 = create_trade(open_dt="2099-01-04 11:00:00",
                       name="DELETEME-TEST-LIST")
-    t1.close(price=5100, dt="2025-01-05 10:30:00")
-    t2.close(price=5100, dt="2025-01-05 11:30:00")
+    t1.close(price=5100, dt="2099-01-04 10:30:00")
+    t2.close(price=5100, dt="2099-01-04 11:30:00")
     stored = store_trades([t1, t2])
     # Confirm we can retrieve them
     retrieved = get_trades_by_field(field="name",

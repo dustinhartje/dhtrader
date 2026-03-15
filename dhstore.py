@@ -1143,10 +1143,16 @@ def get_indicator_datapoints(ind_id: str,
     pbar = start_progbar(show_progress, total,
                          "IndicatorDataPoint objects built")
     for i, d in enumerate(working, start=1):
+        ##############################################################
+        #TODO remove this helper once PR is merged and storage updated
+        if "name" not in d:
+            d["name"] = "nameless"
+        ##############################################################
         result.append(IndicatorDataPoint(dt=d["dt"],
                                          value=d["value"],
                                          ind_id=d["ind_id"],
-                                         epoch=d["epoch"]
+                                         epoch=d["epoch"],
+                                         name=d["name"],
                                          ))
         update_progbar(pbar, i, total)
     finish_progbar(pbar)
@@ -1366,6 +1372,62 @@ def delete_indicator(ind_id: str,
                                 )
 
 
+def get_indicators_by_name(name: str,
+                           meta_collection: str = COLL_IND_META,
+                           autoload_chart: bool = False,
+                           autoload_datapoints: bool = False,
+                           ):
+    """Return a list of Indicator objects for all indicators with the name.
+
+    autoload_chart and autoload_datapoints both default to False for
+    performance.  When enabled they load for the earliest_dt to latest_dt
+    range.
+    """
+    raw_docs = dhm.get_indicators_by_name(name=name,
+                                          meta_collection=meta_collection,
+                                          )
+    result = []
+    for doc in raw_docs:
+        common = dict(description=doc["description"],
+                      timeframe=doc["timeframe"],
+                      trading_hours=doc["trading_hours"],
+                      symbol=doc["symbol"],
+                      calc_version=doc["calc_version"],
+                      calc_details=doc["calc_details"],
+                      ind_id=doc["ind_id"],
+                      autoload_chart=autoload_chart,
+                      name=doc["name"],
+                      parameters=doc["parameters"],
+                      )
+        if doc["class_name"] == "IndicatorSMA":
+            ind = IndicatorSMA(**common)
+        elif doc["class_name"] == "IndicatorEMA":
+            ind = IndicatorEMA(**common)
+        else:
+            raise ValueError(
+                f"Unable to match class_name of {doc['class_name']} "
+                "with a known Indicator() subclass."
+            )
+        if autoload_datapoints:
+            ind.load_datapoints()
+        result.append(ind)
+    return result
+
+
+def delete_indicators_by_name(name: str,
+                              meta_collection: str = COLL_IND_META,
+                              dp_collection: str = COLL_IND_DPS,
+                              ):
+    """Delete all indicators and their datapoints with the given name."""
+    indicators = get_indicators_by_name(name=name,
+                                        meta_collection=meta_collection)
+    for ind in indicators:
+        delete_indicator(ind_id=ind.ind_id,
+                         meta_collection=meta_collection,
+                         dp_collection=dp_collection,
+                         )
+
+
 ##############################################################################
 # Symbols
 
@@ -1409,6 +1471,7 @@ def store_candle(candle):
                      c_epoch=candle.c_epoch,
                      c_date=candle.c_date,
                      c_time=candle.c_time,
+                     name=candle.name,
                      )
 
 
@@ -1447,6 +1510,12 @@ def get_candles(start_epoch: int,
     pbar = start_progbar(show_progress, total,
                          f"{symbol} {timeframe} Candle objects built")
     for i, r in enumerate(result, start=1):
+        ##############################################################
+        #TODO remove this helper once PR is merged and storage updated
+        if "name" not in r:
+            r["name"] = "nameless"
+        ##############################################################
+
         candles.append(Candle(c_datetime=r["c_datetime"],
                               c_timeframe=r["c_timeframe"],
                               c_open=r["c_open"],
@@ -1456,6 +1525,7 @@ def get_candles(start_epoch: int,
                               c_volume=r["c_volume"],
                               c_symbol=r["c_symbol"],
                               c_epoch=r["c_epoch"],
+                              name=r["name"],
                               ))
         update_progbar(pbar, i, total)
     finish_progbar(pbar)
@@ -1470,6 +1540,8 @@ def review_candles(timeframe: str,
                    check_integrity: bool = False,
                    show_progress: bool = False,
                    return_detail: bool = False,
+                   start_dt=None,
+                   end_dt=None,
                    ):
     """Provide aggregate summary data about candles in central storage.
 
@@ -1494,8 +1566,18 @@ def review_candles(timeframe: str,
     if overview is None:
         log_say(f"No candles found for the specified timeframe {timeframe}")
         return None
-    start_epoch = dt_to_epoch(overview["earliest_dt"])
-    end_epoch = dt_to_epoch(overview["latest_dt"])
+    if start_dt is not None:
+        # Use passed start_dt only if it's newer than earliest in storage
+        start_epoch = max(dt_to_epoch(start_dt),
+                          dt_to_epoch(overview["earliest_dt"]))
+    else:
+        start_epoch = dt_to_epoch(overview["earliest_dt"])
+    if end_dt is not None:
+        # Use passed end_dt only if it's older than latest in storage
+        end_epoch = min(dt_to_epoch(end_dt),
+                        dt_to_epoch(overview["latest_dt"]))
+    else:
+        end_epoch = dt_to_epoch(overview["latest_dt"])
     if check_integrity:
         log_say("Starting integrity checks and gap analysis because "
                 "check_integrity=True")
@@ -1773,6 +1855,26 @@ def delete_candles(timeframe: str,
                                   )
 
 
+def delete_candles_by_field(symbol: str,
+                            timeframe: str,
+                            field: str,
+                            value,
+                            ):
+    """Delete candles from central storage with 'field' matching 'value'.
+
+    Typically used to delete by name or other identifying fields.
+
+    Example to delete all candles with name=="DELETEME":
+    delete_candles_by_field(symbol="ES", timeframe="1m",
+                            field="name", value="DELETEME")
+    """
+    return dhm.delete_candles_by_field(symbol=symbol,
+                                       timeframe=timeframe,
+                                       field=field,
+                                       value=value,
+                                       )
+
+
 ##############################################################################
 # Events
 def store_event(event):
@@ -1789,6 +1891,7 @@ def store_event(event):
                              notes=event.notes,
                              start_epoch=event.start_epoch,
                              end_epoch=event.end_epoch,
+                             name=event.name,
                              )
 
     return result
@@ -1837,12 +1940,18 @@ def get_events(symbol="ES",
     pbar = start_progbar(show_progress, total,
                          "Event objects built")
     for i, r in enumerate(result, start=1):
+        ##############################################################
+        #TODO remove this helper once PR is merged and storage updated
+        if "name" not in r:
+            r["name"] = "nameless"
+        ##############################################################
         events.append(Event(start_dt=r["start_dt"],
                             end_dt=r["end_dt"],
                             symbol=symbol,
                             category=r["category"],
                             tags=r["tags"],
                             notes=r["notes"],
+                            name=r["name"],
                             ))
         update_progbar(pbar, i, total)
     finish_progbar(pbar)
@@ -1860,3 +1969,20 @@ def clear_events(symbol: str,
         return dhm.clear_collection(f"events_{symbol}")
     else:
         return "Sorry, Dusty hasn't written code for select timeframes yet"
+
+
+def delete_events_by_field(symbol: str,
+                           field: str,
+                           value,
+                           ):
+    """Delete events from central storage with 'field' matching 'value'.
+
+    Typically used to delete by name or category fields.
+
+    Example to delete all events with name=="DELETEME":
+    delete_events_by_field(symbol="ES", field="name", value="DELETEME")
+    """
+    return dhm.delete_events_by_field(symbol=symbol,
+                                      field=field,
+                                      value=value,
+                                      )
