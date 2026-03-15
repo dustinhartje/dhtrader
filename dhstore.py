@@ -1567,11 +1567,15 @@ def review_candles(timeframe: str,
         log_say(f"No candles found for the specified timeframe {timeframe}")
         return None
     if start_dt is not None:
-        start_epoch = dt_to_epoch(start_dt)
+        # Use passed start_dt only if it's newer than earliest in storage
+        start_epoch = max(dt_to_epoch(start_dt),
+                          dt_to_epoch(overview["earliest_dt"]))
     else:
         start_epoch = dt_to_epoch(overview["earliest_dt"])
     if end_dt is not None:
-        end_epoch = dt_to_epoch(end_dt)
+        # Use passed end_dt only if it's older than latest in storage
+        end_epoch = min(dt_to_epoch(end_dt),
+                        dt_to_epoch(overview["latest_dt"]))
     else:
         end_epoch = dt_to_epoch(overview["latest_dt"])
     if check_integrity:

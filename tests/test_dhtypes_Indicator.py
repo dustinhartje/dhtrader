@@ -216,8 +216,6 @@ def shared_assertions_Indicator_spotcheck_ES_eth_15m_EMA_close_l9_s2(i):
     # First and last candle of a different week
     assert i.get_datapoint(dt="2025-02-02 18:00:00").value == 6048.14
     assert i.get_datapoint(dt="2025-02-07 16:59:00").value == 6051.03
-    # TODO first and last candle of a month
-    # TODO Last candle before & after a holiday
 
 
 @pytest.mark.slow
@@ -296,8 +294,6 @@ def shared_assertions_Indicator_spotcheck_ES_eth_15m_EMA_close_l20_s2(i):
     # First and last candle of a different week
     assert i.get_datapoint(dt="2024-12-01 18:00:00").value == 6045.34
     assert i.get_datapoint(dt="2024-12-06 16:59:00").value == 6096.39
-    # TODO first and last candle of a month
-    # TODO Last candle before & after a holiday
 
 
 @pytest.mark.slow
@@ -377,8 +373,6 @@ def shared_assertions_Indicator_spotcheck_ES_eth_e1h_EMA_close_l9_s2(i):
     # First and last candle of a different week
     assert i.get_datapoint(dt="2024-11-03 18:00:00").value == 5762.53
     assert i.get_datapoint(dt="2024-11-08 16:59:00").value == 6022.15
-    # TODO first and last candle of a month
-    # TODO Last candle before & after a holiday
 
 
 @pytest.mark.storage
@@ -462,8 +456,6 @@ def shared_assertions_Indicator_spotcheck_ES_eth_e1h_EMA_close_l20_s2(i):
     assert i.get_datapoint(dt="2024-10-06 18:00:00").value in [5774.88,
                                                                5774.89]
     assert i.get_datapoint(dt="2024-10-11 16:59:00").value == 5842.65
-    # TODO first and last candle of a month
-    # TODO Last candle before & after a holiday
 
 
 @pytest.mark.storage
