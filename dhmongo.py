@@ -980,25 +980,23 @@ def deleteme_backfill_names_to_candles_and_events():
     # field.  I should also run a weekly refresh and further backtest
     # backfills, then check again in case I missed something in the
     # creation process.
+    # Only process known application collections.  Any other collections
+    # present in the database (system, test, or future types) are
+    # intentionally excluded.
+    known_static = {
+        "backtests",
+        "indicators_datapoints",
+        "indicators_meta",
+        "trades",
+        "tradeseries",
+    }
     all_existing = set(list_collections())
-
-    # Dynamically collect candle and event collections, plus known
-    # static collections for other object types.
-    dynamic_collections = sorted(
+    target_collections = sorted(
         c for c in all_existing
-        if c.startswith("candles_") or c.startswith("events_")
+        if c.startswith("candles_")
+        or c.startswith("events_")
+        or c in known_static
     )
-    static_collections = [
-        c for c in [
-            "backtests",
-            "indicators_datapoints",
-            "indicators_meta",
-            "trades",
-            "tradeseries",
-        ]
-        if c in all_existing
-    ]
-    target_collections = dynamic_collections + static_collections
 
     results = {}
     all_names = set()
