@@ -268,7 +268,6 @@ def test_Backtest_load_charts():
     assert bt.end_dt == "2025-01-07 16:59:00"
 
 
-@pytest.mark.slow
 @pytest.mark.storage
 def test_Backtest_restrict_dates(cleanup_backtest_storage):
     """Verify restrict_dates adjusts candle ranges.

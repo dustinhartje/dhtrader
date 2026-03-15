@@ -112,6 +112,7 @@ def test_Indicator_calculated_spotcheck_ES_eth_5m_EMA_close_l20_s2():
         ind_calced)
 
 
+@pytest.mark.slow
 @pytest.mark.storage
 def test_Indicator_storage_spotcheck_ES_eth_5m_EMA_close_l20_s2():
     """Test storage spotcheck for ES ETH 5m EMA close l20 s2.
@@ -171,6 +172,7 @@ def test_Indicator_calculated_spotcheck_ES_eth_5m_EMA_close_l9_s2():
         ind_calced)
 
 
+@pytest.mark.slow
 @pytest.mark.storage
 def test_Indicator_storage_spotcheck_ES_eth_5m_EMA_close_l9_s2():
     """Test storage spotcheck for ES ETH 5m EMA close l9 s2.
@@ -230,7 +232,6 @@ def shared_assertions_Indicator_spotcheck_ES_eth_15m_EMA_close_l9_s2(i):
     assert i.get_datapoint(dt="2025-02-07 16:59:00").value == 6051.03
 
 
-@pytest.mark.slow
 @pytest.mark.storage
 def test_Indicator_calculated_spotcheck_ES_eth_15m_EMA_close_l9_s2():
     """Spotcheck calculated EMA values.
@@ -308,7 +309,6 @@ def shared_assertions_Indicator_spotcheck_ES_eth_15m_EMA_close_l20_s2(i):
     assert i.get_datapoint(dt="2024-12-06 16:59:00").value == 6096.39
 
 
-@pytest.mark.slow
 @pytest.mark.storage
 def test_Indicator_calculated_spotcheck_ES_eth_15m_EMA_close_l20_s2():
     """Spotcheck calculated EMA values.

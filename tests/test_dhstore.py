@@ -42,6 +42,7 @@ def cleanup_dhstore_storage():
         clear_storage_by_name(name)
 
 
+@pytest.mark.slow
 @pytest.mark.storage
 def test_Backtest_TradeSeries_and_Trade_integrity_checks(
         cleanup_dhstore_storage):
