@@ -21,6 +21,7 @@ from .dhtypes import (
 from .dhcommon import (
     bot,
     check_tf_th_compatibility,
+    DEFAULT_OBJ_NAME,
     diff_dicts,
     dow_name,
     dt_as_dt,
@@ -102,6 +103,7 @@ __all__ = [
     'check_tf_th_compatibility',
     'clear_events',
     'compare_candles_vs_csv',
+    'DEFAULT_OBJ_NAME',
     'Day',
     'delete_backtests',
     'delete_backtests_by_field',

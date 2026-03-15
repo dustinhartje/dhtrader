@@ -40,6 +40,7 @@ TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', 'r1d', 'e1d', 'r1w', 'e1w',
               'r1mo', 'e1mo']
 TRADING_HOURS = ['rth', 'eth']
 EVENT_CATEGORIES = ['Closed', 'Data', 'Unplanned', 'LowVolume', 'Rollover']
+DEFAULT_OBJ_NAME = "nameless"
 
 DT_STR_FORMAT = "%Y-%m-%d %H:%M:%S"
 DT_STR_CANONICAL_REGEX = re.compile(

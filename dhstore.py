@@ -25,7 +25,7 @@ from .dhcommon import (
     dt_as_str, dt_as_dt, dt_from_epoch, dt_to_epoch, valid_timeframe,
     this_candle_start, summarize_candles, log_say, sort_dict,
     rangify_candle_times, expected_candle_datetimes, MARKET_ERAS,
-    ProgBar, OperationTimer)
+    ProgBar, OperationTimer, DEFAULT_OBJ_NAME)
 from . import dhmongo as dhm
 
 COLL_TRADES = "trades"
@@ -1146,7 +1146,7 @@ def get_indicator_datapoints(ind_id: str,
         ##############################################################
         #TODO remove this helper once PR is merged and storage updated
         if "name" not in d:
-            d["name"] = "nameless"
+            d["name"] = DEFAULT_OBJ_NAME
         ##############################################################
         result.append(IndicatorDataPoint(dt=d["dt"],
                                          value=d["value"],
@@ -1513,7 +1513,7 @@ def get_candles(start_epoch: int,
         ##############################################################
         #TODO remove this helper once PR is merged and storage updated
         if "name" not in r:
-            r["name"] = "nameless"
+            r["name"] = DEFAULT_OBJ_NAME
         ##############################################################
 
         candles.append(Candle(c_datetime=r["c_datetime"],
@@ -1943,7 +1943,7 @@ def get_events(symbol="ES",
         ##############################################################
         #TODO remove this helper once PR is merged and storage updated
         if "name" not in r:
-            r["name"] = "nameless"
+            r["name"] = DEFAULT_OBJ_NAME
         ##############################################################
         events.append(Event(start_dt=r["start_dt"],
                             end_dt=r["end_dt"],

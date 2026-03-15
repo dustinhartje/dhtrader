@@ -2,7 +2,8 @@
 import json
 import pytest
 from dhtrader import (
-    Event)
+    Event,
+    DEFAULT_OBJ_NAME)
 
 
 @pytest.fixture
@@ -41,7 +42,7 @@ def test_Event_create_and_verify_common_methods():
     assert isinstance(event.start_epoch, int)
     assert isinstance(event.end_epoch, int)
     assert event.start_epoch < event.end_epoch
-    assert event.name == "nameless"
+    assert event.name == DEFAULT_OBJ_NAME
     expected_attrs = {
         "category", "end_dt", "end_epoch", "name", "notes",
         "start_dt", "start_epoch", "symbol", "tags",

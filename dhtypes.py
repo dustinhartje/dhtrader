@@ -38,7 +38,7 @@ from .dhcommon import (
     dt_as_dt, dt_as_str, dt_as_time, dt_to_epoch, timeframe_delta,
     valid_timeframe, valid_trading_hours, log_say, this_candle_start,
     check_tf_th_compatibility, start_of_week_date, dict_of_weeks, bot,
-    ProgBar)
+    ProgBar, DEFAULT_OBJ_NAME)
 CANDLE_TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w']
 BEGINNING_OF_TIME = "2008-01-01 00:00:00"
 
@@ -1249,7 +1249,7 @@ class Candle():
                  c_epoch: int = None,
                  c_date: str = None,
                  c_time: str = None,
-                 name: str = "nameless",
+                 name: str = DEFAULT_OBJ_NAME,
                  ):
         # Precalculate datetime for calculating other attributes efficiently
         c_datetime_dt = dt_as_dt(c_datetime)
@@ -1595,7 +1595,7 @@ class Event():
                  category: str,
                  tags: list = None,
                  notes: str = "",
-                 name: str = "nameless",
+                 name: str = DEFAULT_OBJ_NAME,
                  ):
         self.start_dt = dt_as_str(start_dt)
         self.end_dt = dt_as_str(end_dt)
@@ -1874,7 +1874,7 @@ class IndicatorDataPoint():
                  value: float,
                  ind_id: str,
                  epoch: int = None,
-                 name: str = "nameless",
+                 name: str = DEFAULT_OBJ_NAME,
                  ):
         self.dt = dt_as_str(dt)
         self.value = value
@@ -2521,7 +2521,7 @@ class Trade():
                  symbol="ES",
                  is_open: bool = True,
                  profitable: bool = None,
-                 name: str = "nameless",
+                 name: str = DEFAULT_OBJ_NAME,
                  version: str = "1.0.0",
                  ts_id: str = None,
                  bt_id: str = None,
@@ -3058,7 +3058,7 @@ class TradeSeries():
                  timeframe: str,
                  trading_hours: str,
                  symbol="ES",
-                 name: str = "nameless",
+                 name: str = DEFAULT_OBJ_NAME,
                  params_str: str = "",
                  ts_id: str = None,
                  bt_id: str = None,

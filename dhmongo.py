@@ -24,7 +24,7 @@ from dotenv import load_dotenv, find_dotenv
 from datetime import datetime as dt
 from .dhcommon import (
     ProgBar, prompt_yn, valid_timeframe, dt_as_str, dt_from_epoch,
-    dt_to_epoch)
+    dt_to_epoch, DEFAULT_OBJ_NAME)
 
 log = logging.getLogger("dhmongo")
 log.addHandler(logging.NullHandler())
@@ -958,7 +958,7 @@ def get_events(symbol: str,
 def deleteme_backfill_names_to_candles_and_events():
     """Temp function to backfill the 'name' field on stored objects.
 
-    Sets 'name' to "nameless" for every document in all known
+    Sets 'name' to DEFAULT_OBJ_NAME for every document in all known
     collections that is missing the field or has it set to None/null.
     This handles data that was stored before the name field was added
     to each object type.
@@ -1010,7 +1010,7 @@ def deleteme_backfill_names_to_candles_and_events():
                 {"name": None},
                 {"name": "None"},
             ]},
-            {"$set": {"name": "nameless"}},
+            {"$set": {"name": DEFAULT_OBJ_NAME}},
         )
         results[coll] = {
             "updated": update_result.modified_count,

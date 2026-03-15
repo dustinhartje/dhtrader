@@ -13,12 +13,13 @@ from .dhtypes import Candle
 from .dhstore import (
     get_symbol_by_ticker, get_candles, review_candles, store_candle)
 from .dhcommon import (
-    dt_as_dt, dt_as_str, dt_to_epoch, timeframe_delta)
+    dt_as_dt, dt_as_str, dt_to_epoch, timeframe_delta, DEFAULT_OBJ_NAME)
 
 
 def generate_zero_volume_candle(c_datetime,
                                 timeframe: str = "1m",
                                 symbol: str = "ES",
+                                name: str = DEFAULT_OBJ_NAME,
                                 ):
     """Return a zero volume candle with all OHLC values set to prior close.
 
@@ -27,6 +28,9 @@ def generate_zero_volume_candle(c_datetime,
 
     Returns None when no prior candle exists (e.g. a gap at the very
     start of stored data such as the 18:00 market open candle).
+
+        name: Optional candle name to apply to the generated candle.
+            If not passed, default naming is used.
     """
     if symbol != "ES":
         raise ValueError("Only symbol: 'ES' is currently supported")
@@ -56,6 +60,7 @@ def generate_zero_volume_candle(c_datetime,
                     c_close=v,
                     c_volume=0,
                     c_symbol=symbol,
+                    name=name,
                     )
     return result
 
@@ -68,6 +73,7 @@ def remediate_candle_gaps(timeframe: str = "1m",
                           dry_run=False,
                           start_dt=None,
                           end_dt=None,
+                          name: str = DEFAULT_OBJ_NAME,
                           ):
     """Identify candle gaps and offer to fill them with zero volume candles.
 
@@ -89,6 +95,8 @@ def remediate_candle_gaps(timeframe: str = "1m",
 
     end_dt: Optional datetime to limit remediation to a specific end.
     If None, all candles up to the latest stored candle are reviewed.
+
+    name: Optional candle name for generated zero-volume remediation candles.
     """
     if timeframe == "1m":
         delta = timedelta(minutes=1)
@@ -264,6 +272,7 @@ def remediate_candle_gaps(timeframe: str = "1m",
                 z = generate_zero_volume_candle(c_datetime=c["c_dt"],
                                                 timeframe="1m",
                                                 symbol="ES",
+                                                name=name,
                                                 )
                 if z is not None:
                     fixed_obvious.append(c)
@@ -304,6 +313,7 @@ def remediate_candle_gaps(timeframe: str = "1m",
                     z = generate_zero_volume_candle(c_datetime=c["c_dt"],
                                                     timeframe="1m",
                                                     symbol="ES",
+                                                    name=name,
                                                     )
                     if z is not None:
                         if dry_run and fix_unclear:
@@ -384,22 +394,12 @@ def store_candles_from_csv(filepath: str,
                            end_dt,
                            timeframe: str = "1m",
                            symbol: str = "ES",
-                           name: str = None,
+                           name: str = DEFAULT_OBJ_NAME,
                            ):
     """Loads 1m candles from a CSV file into central storage.
 
     Mostly useful for quick manual gap fill operations via python console.
     """
-    if name is None:
-        name = Candle(c_datetime=start_dt,
-                      c_timeframe=timeframe,
-                      c_symbol=symbol,
-                      c_open=0,
-                      c_high=0,
-                      c_low=0,
-                      c_close=0,
-                      c_volume=0,
-                      ).name
     candles = read_candles_from_csv(start_dt=start_dt,
                                     end_dt=end_dt,
                                     filepath=filepath,

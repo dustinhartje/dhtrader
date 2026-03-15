@@ -379,6 +379,7 @@ def test_remediate_candle_gaps(cleanup_2099_candles):
         dry_run=True,
         start_dt=TEST_2099_START,
         end_dt=TEST_2099_END,
+        name=_TEST_CANDLE_NAME,
     )
     # 2 obvious gaps (18:06, 18:08), 0 unclear fixed (18:00 errors)
     assert len(result_dry["fixed_obvious"]) == 2
@@ -404,6 +405,7 @@ def test_remediate_candle_gaps(cleanup_2099_candles):
         dry_run=False,
         start_dt=TEST_2099_START,
         end_dt=TEST_2099_END,
+        name=_TEST_CANDLE_NAME,
     )
     assert len(result_real["fixed_obvious"]) == 2
     assert len(result_real["fixed_unclear"]) == 0

@@ -2,7 +2,8 @@
 import json
 import pytest
 from dhtrader import (
-    Candle)
+    Candle,
+    DEFAULT_OBJ_NAME)
 
 
 @pytest.fixture
@@ -55,7 +56,7 @@ def test_Candle_create_and_verify_common_methods():
     assert isinstance(candle.c_upper_wick_perc, float)
     assert isinstance(candle.c_lower_wick_perc, float)
     assert candle.c_direction == "bullish"
-    assert candle.name == "nameless"
+    assert candle.name == DEFAULT_OBJ_NAME
     expected_attrs = {
         "c_body_perc", "c_body_size", "c_close", "c_date",
         "c_datetime", "c_direction", "c_end_datetime", "c_epoch",
