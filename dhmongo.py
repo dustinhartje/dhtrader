@@ -12,8 +12,10 @@ REF: https://github.com/mongodb-university/atlas_starter_python/blob
      /master/atlas-starter.py
 """
 
+import json
 import os
 import sys
+import tempfile
 import pymongo
 from pymongo import ReplaceOne
 from pymongo.errors import BulkWriteError
@@ -956,39 +958,61 @@ def get_events(symbol: str,
 def deleteme_backfill_names_to_candles_and_events():
     """Temp function to backfill the 'name' field on stored objects.
 
-    Sets 'name' to the string "None" for every candle document that
-    is missing the field, and 'name' to the string "None" for every
-    event document missing the field.  This handles data that was stored
-    before the name field was added to Candle and Event.
+    Sets 'name' to "nameless" for every document in all known
+    collections that is missing the field or has it set to None/null.
+    This handles data that was stored before the name field was added
+    to each object type.
 
-    After updating, a verification query confirms that every record in
-    each affected collection now has the field set to a string value.
+    After updating, gathers all distinct name values across every
+    collection, writes them as a sorted JSON list to a file, and
+    prints the filename.  If fewer than 20 unique names are found they
+    are also printed to the console.
+
+    A verification query confirms that every record in each affected
+    collection now has the field set to a string value.
     Raises RuntimeError if verification fails for any collection.
 
     Returns a dict summarising the number of records updated per
     collection.
     """
-    #TODO This function should be removed after it has been run against all
-    # databases and all objects confirmed to have a valid 'name' field.  I
-    # should also run a weekly refresh and further backtest backfills, then
-    # check again in case I missed something in the creation process.
-    all_collections = list_collections()
-    candle_collections = [
-        c for c in all_collections if c.startswith("candles_")
-    ]
-    event_collections = [
-        c for c in all_collections if c.startswith("events_")
-    ]
+    #TODO This function should be removed after it has been run against
+    # all databases and all objects confirmed to have a valid 'name'
+    # field.  I should also run a weekly refresh and further backtest
+    # backfills, then check again in case I missed something in the
+    # creation process.
+    all_existing = set(list_collections())
 
-    results = {"candles": {}, "events": {}}
+    # Dynamically collect candle and event collections, plus known
+    # static collections for other object types.
+    dynamic_collections = sorted(
+        c for c in all_existing
+        if c.startswith("candles_") or c.startswith("events_")
+    )
+    static_collections = [
+        c for c in [
+            "backtests",
+            "indicators_datapoints",
+            "indicators_meta",
+            "trades",
+            "tradeseries",
+        ]
+        if c in all_existing
+    ]
+    target_collections = dynamic_collections + static_collections
 
-    for coll in candle_collections:
+    results = {}
+    all_names = set()
+
+    for coll in target_collections:
         c = db[coll]
         update_result = c.update_many(
-            {"name": {"$exists": False}},
-            {"$set": {"name": "None"}},
+            {"$or": [
+                {"name": {"$exists": False}},
+                {"name": None},
+            ]},
+            {"$set": {"name": "nameless"}},
         )
-        results["candles"][coll] = {
+        results[coll] = {
             "updated": update_result.modified_count,
         }
         missing = c.count_documents(
@@ -999,33 +1023,31 @@ def deleteme_backfill_names_to_candles_and_events():
         )
         if missing > 0:
             raise RuntimeError(
-                f"Backfill verification failed: {missing} candle "
-                f"record(s) in '{coll}' still lack a string name "
-                "field after update."
+                f"Backfill verification failed: {missing} record(s) "
+                f"in '{coll}' still lack a string name field after "
+                "update."
             )
-        results["candles"][coll]["verified"] = True
+        results[coll]["verified"] = True
 
-    for coll in event_collections:
-        c = db[coll]
-        update_result = c.update_many(
-            {"name": {"$exists": False}},
-            {"$set": {"name": "None"}},
-        )
-        results["events"][coll] = {
-            "updated": update_result.modified_count,
-        }
-        missing = c.count_documents(
-            {"$or": [
-                {"name": {"$exists": False}},
-                {"name": {"$not": {"$type": "string"}}},
-            ]},
-        )
-        if missing > 0:
-            raise RuntimeError(
-                f"Backfill verification failed: {missing} event "
-                f"record(s) in '{coll}' still lack a string name "
-                "field after update."
-            )
-        results["events"][coll]["verified"] = True
+        # Collect all name values from this collection
+        for name in c.distinct("name"):
+            if name is not None:
+                all_names.add(name)
+
+    # Write sorted unique names to a JSON file for review
+    sorted_names = sorted(all_names)
+    timestamp = dt.now().strftime("%Y%m%d_%H%M%S")
+    outfile = os.path.join(
+        tempfile.gettempdir(),
+        f"dhtrader_names_review_{timestamp}.json",
+    )
+    with open(outfile, "w") as f:
+        json.dump(sorted_names, f, indent=2)
+
+    print(f"Unique names written to: {outfile}")
+    if len(sorted_names) < 20:
+        print("Unique names:")
+        for name in sorted_names:
+            print(f"  {name}")
 
     return results
