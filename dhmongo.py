@@ -955,7 +955,7 @@ def get_events(symbol: str,
 
 ##############################################################################
 # Backfill utilities
-def deleteme_backfill_names_to_candles_and_events():
+def deleteme_backfill_names_to_candles_and_events(fix=False):
     """Temp function to backfill the 'name' field on stored objects.
 
     Sets 'name' to DEFAULT_OBJ_NAME for every document in all known
@@ -1001,39 +1001,65 @@ def deleteme_backfill_names_to_candles_and_events():
 
     results = {}
     all_names = set()
+    names_by_collection = {}
+    total_non_compliant = 0
 
+    print("-" * 60)
     for coll in target_collections:
         c = db[coll]
-        update_result = c.update_many(
-            {"$or": [
-                {"name": {"$exists": False}},
-                {"name": None},
-                {"name": "None"},
-            ]},
-            {"$set": {"name": DEFAULT_OBJ_NAME}},
-        )
-        results[coll] = {
-            "updated": update_result.modified_count,
-        }
-        missing = c.count_documents(
-            {"$or": [
-                {"name": {"$exists": False}},
-                {"name": {"$not": {"$type": "string"}}},
-                {"name": "None"},
-            ]},
-        )
-        if missing > 0:
-            raise RuntimeError(
-                f"Backfill verification failed: {missing} record(s) "
-                f"in '{coll}' still lack a string name field after "
-                "update."
+        # run queries to count and print number of records with each
+        # non-compliant value for review
+        count_no_name_field = c.count_documents({"name": {"$exists": False}})
+        count_name_null = c.count_documents({"name": {"$type": "null"}})
+        count_name_none_str = c.count_documents({"name": "None"})
+        count_total = c.count_documents({})
+        count_non_compliant = (count_no_name_field
+                               + count_name_null
+                               + count_name_none_str)
+        total_non_compliant += count_non_compliant
+        print(f"Collection '{coll}': {count_non_compliant}/{count_total} "
+              "records missing compliant 'name' field (no field: "
+              f"{count_no_name_field}, null: {count_name_null}, 'None' "
+              f"string: {count_name_none_str})")
+        if fix:
+            print(f"Updating non-compliant records in '{coll}' to have name='"
+                  f"{DEFAULT_OBJ_NAME}'...")
+            update_result = c.update_many(
+                {"$or": [
+                    {"name": {"$exists": False}},
+                    {"name": None},
+                    {"name": "None"},
+                ]},
+                {"$set": {"name": DEFAULT_OBJ_NAME}},
             )
-        results[coll]["verified"] = True
+            results[coll] = {
+                "updated": update_result.modified_count,
+            }
+            missing = c.count_documents(
+                {"$or": [
+                    {"name": {"$exists": False}},
+                    {"name": {"$not": {"$type": "string"}}},
+                    {"name": "None"},
+                ]},
+            )
+            if missing > 0:
+                raise RuntimeError(
+                    f"Backfill verification failed: {missing} record(s) "
+                    f"in '{coll}' still lack a string name field after "
+                    "update."
+                )
+            results[coll]["verified"] = True
 
         # Collect all name values from this collection
+        names_by_collection[coll] = set()
         for name in c.distinct("name"):
             if name is not None:
                 all_names.add(name)
+                names_by_collection[coll].add(name)
+    if not fix:
+        print("Dry run only, no updates made to collections.  "
+              "Call with fix=True to update records in database.")
+    print("-" * 60)
 
     # Write sorted unique names to a JSON file for review
     sorted_names = sorted(all_names)
@@ -1050,5 +1076,14 @@ def deleteme_backfill_names_to_candles_and_events():
         print("Unique names:")
         for name in sorted_names:
             print(f"  {name}")
+    print("-" * 60)
+    print("Unique names per collection")
+    for k, v in names_by_collection.items():
+        print(k)
+        for n in v:
+            print(f"  {n}")
+    print("-" * 60)
+    print(f"Total non-compliant names found: {total_non_compliant}")
+    print("-" * 60)
 
-    return results
+    return results, names_by_collection
