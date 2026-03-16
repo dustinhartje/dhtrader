@@ -68,7 +68,7 @@ log.addHandler(logging.NullHandler())
 
 def log_say(msg, level="info"):
     """Log messages while also printing to console."""
-    print(msg)
+    print(msg, flush=True)
     if level == "debug":
         log.debug(msg)
     if level == "info":
