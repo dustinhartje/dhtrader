@@ -294,6 +294,7 @@ def check_integrity_no_nameless_objects(ignore=None):
     if ignore is None:
         ignore = MISSING_NAME_IGNORE_COLLECTIONS
     issues_by_collection = {}
+    sample_issues_by_collection = {}
     skipped_collections = []
     total_issues = 0
     query = {"$or": [{"name": None}, {"name": ""}]}
@@ -305,6 +306,19 @@ def check_integrity_no_nameless_objects(ignore=None):
         count = dhm.count_records(collection=coll, query=query)
         if count > 0:
             issues_by_collection[coll] = count
+            docs = dhm.run_query(query=query,
+                                 collection=coll,
+                                 limit=10)
+            sample_issues_by_collection[coll] = [
+                {
+                    "collection": coll,
+                    "_id": str(doc.get("_id")),
+                    "name": doc.get("name"),
+                    "ts_id": doc.get("ts_id"),
+                    "bt_id": doc.get("bt_id"),
+                }
+                for doc in docs
+            ]
             total_issues += count
 
     status = "OK" if total_issues == 0 else "ERRORS"
@@ -312,6 +326,7 @@ def check_integrity_no_nameless_objects(ignore=None):
         "status": status,
         "total_issues": total_issues,
         "issues_by_collection": issues_by_collection,
+        "sample_issues_by_collection": sample_issues_by_collection,
         "skipped_collections": skipped_collections,
     }
 

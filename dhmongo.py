@@ -155,13 +155,23 @@ def get_all_records_by_collection(collection: str,
     return result
 
 
-def run_query(query, collection: str, show_progress: bool = False):
-    """Run a standard mongo query and return the result."""
+def run_query(query,
+              collection: str,
+              show_progress: bool = False,
+              limit: int = 0):
+    """Run a standard mongo query and return the result.
+
+    limit defaults to 0 which returns all matching records.
+    """
     c = db[collection]
     total = c.count_documents(query)
+    if limit > 0 and total > limit:
+        total = limit
     pbar = start_progbar(show_progress, total,
                          f"records fetched from {collection}")
     cursor = c.find(query)
+    if limit > 0:
+        cursor = cursor.limit(limit)
     result = []
     for i, doc in enumerate(cursor, start=1):
         result.append(doc)
