@@ -97,6 +97,226 @@ def get_all_records_by_collection(collection: str,
 
 
 ##############################################################################
+# Cross-collection integrity checks
+
+# Collections to skip when checking for missing name attributes.
+# Populate with collection names that legitimately have no name field.
+MISSING_NAME_IGNORE_COLLECTIONS: list = []
+FUTURE_DATETIMES_IGNORE_COLLECTIONS: list = ['events_ES']
+
+
+def _is_datetime_string(value):
+    """Return True when value can be parsed by dt_as_dt() and is not None."""
+    try:
+        return False if dt_as_dt(value) is None else True
+    except Exception:
+        return False
+
+
+def _is_epoch_int(value):
+    """Return True when value appears to be a Unix epoch second integer."""
+    if not isinstance(value, int):
+        return False
+    # 1980-01-01 through 2200-01-01 captures realistic storage bounds.
+    return 315532800 <= value <= 7258118400
+
+
+def _detect_temporal_fields(collection: str,
+                            sample_limit: int = 20):
+    """Detect datetime-like string fields and epoch-like int fields.
+
+    Samples a small number of records in the collection and inspects field
+    values to identify candidates for temporal integrity checks.
+    """
+    samples = dhm.get_all_records_by_collection(collection=collection,
+                                                limit=sample_limit)
+    dt_string_fields = set()
+    epoch_int_fields = set()
+
+    for doc in samples:
+        for field, value in doc.items():
+            if field == "_id":
+                continue
+            if _is_datetime_string(value):
+                dt_string_fields.add(field)
+            elif _is_epoch_int(value):
+                epoch_int_fields.add(field)
+
+    return {
+        "dt_string_fields": sorted(dt_string_fields),
+        "epoch_int_fields": sorted(epoch_int_fields),
+        "samples_checked": len(samples),
+    }
+
+
+def check_integrity_future_datetimes():
+    """Identify documents with datetime attributes set in the future.
+
+    Dynamically samples each collection to detect fields containing
+    datetime strings (formatted like dt_as_str()) and integer epoch
+    seconds, then checks those fields for values greater than "now".
+    Does not modify any data.
+
+    Returns:
+        dict with keys:
+            status: 'OK' or 'ERRORS'
+            total_issues: count of all future-dated documents found
+            issues_by_collection: dict mapping collection name to a
+                list of dicts, each with keys collection, field,
+                value, name, _id
+            detected_fields_by_collection: per-collection field discovery
+                details from sampled records
+    """
+    now_epoch = dt_to_epoch(dt.now())
+    now_str = dt_as_str(dt_from_epoch(now_epoch))
+    issues_by_collection = {}
+    detected_fields_by_collection = {}
+    total_issues = 0
+
+    for coll in list_mongo_collections():
+        if coll in FUTURE_DATETIMES_IGNORE_COLLECTIONS:
+            continue
+        detected = _detect_temporal_fields(collection=coll)
+        detected_fields_by_collection[coll] = detected
+        found = []
+
+        for epoch_field in detected["epoch_int_fields"]:
+            docs = dhm.run_query(
+                {epoch_field: {"$gt": now_epoch}},
+                collection=coll,
+            )
+            for doc in docs:
+                value = doc.get(epoch_field)
+                if not _is_epoch_int(value):
+                    continue
+                found.append({
+                    "collection": coll,
+                    "field": epoch_field,
+                    "value": value,
+                    "name": doc.get("name"),
+                    "_id": str(doc.get("_id")),
+                })
+
+        for field in detected["dt_string_fields"]:
+            docs = dhm.run_query(
+                {"$and": [
+                    {field: {"$ne": None}},
+                    {field: {"$gt": now_str}},
+                ]},
+                collection=coll,
+            )
+            for doc in docs:
+                value = doc.get(field)
+                if not _is_datetime_string(value):
+                    continue
+                found.append({
+                    "collection": coll,
+                    "field": field,
+                    "value": value,
+                    "name": doc.get("name"),
+                    "_id": str(doc.get("_id")),
+                })
+
+        if found:
+            issues_by_collection[coll] = found
+            total_issues += len(found)
+
+    status = "OK" if total_issues == 0 else "ERRORS"
+    return {
+        "status": status,
+        "total_issues": total_issues,
+        "issues_by_collection": issues_by_collection,
+        "detected_fields_by_collection": detected_fields_by_collection,
+    }
+
+
+def check_integrity_no_test_orphans():
+    """Identify documents with TEST or DELETEME in their name attribute.
+
+    Dynamically checks all collections in MongoDB for documents where
+    the name field contains 'TEST' or 'DELETEME'.  These strings
+    indicate leftover unit test objects that must not persist in any
+    non-test environment.  Does not modify any data.
+
+    Returns:
+        dict with keys:
+            status: 'OK' or 'ERRORS'
+            total_issues: count of all affected documents found
+            issues_by_collection: dict mapping collection name to a
+                list of dicts, each with keys collection, name, _id
+    """
+    issues_by_collection = {}
+    total_issues = 0
+    query = {"name": {"$regex": "TEST|DELETEME"}}
+
+    for coll in list_mongo_collections():
+        docs = dhm.run_query(query, collection=coll)
+        if docs:
+            found = [
+                {
+                    "collection": coll,
+                    "name": doc.get("name"),
+                    "_id": str(doc.get("_id")),
+                }
+                for doc in docs
+            ]
+            issues_by_collection[coll] = found
+            total_issues += len(found)
+
+    status = "OK" if total_issues == 0 else "ERRORS"
+    return {
+        "status": status,
+        "total_issues": total_issues,
+        "issues_by_collection": issues_by_collection,
+    }
+
+
+def check_integrity_no_nameless_objects(ignore=None):
+    """Identify documents missing a non-null, non-empty name attribute.
+
+    Dynamically checks all collections in MongoDB for documents where
+    the name field is absent, null, or an empty string.  Collections
+    in the ignore list are bypassed entirely.  Does not modify any data.
+
+    Args:
+        ignore: List of collection name strings to skip.  Defaults to
+            MISSING_NAME_IGNORE_COLLECTIONS.
+
+    Returns:
+        dict with keys:
+            status: 'OK' or 'ERRORS'
+            total_issues: count of all affected documents found
+            issues_by_collection: dict mapping collection name to the
+                count of documents with a missing/null/empty name
+            skipped_collections: list of collection names that were
+                skipped per the ignore list
+    """
+    if ignore is None:
+        ignore = MISSING_NAME_IGNORE_COLLECTIONS
+    issues_by_collection = {}
+    skipped_collections = []
+    total_issues = 0
+    query = {"$or": [{"name": None}, {"name": ""}]}
+
+    for coll in list_mongo_collections():
+        if coll in ignore:
+            skipped_collections.append(coll)
+            continue
+        count = dhm.count_records(collection=coll, query=query)
+        if count > 0:
+            issues_by_collection[coll] = count
+            total_issues += count
+
+    status = "OK" if total_issues == 0 else "ERRORS"
+    return {
+        "status": status,
+        "total_issues": total_issues,
+        "issues_by_collection": issues_by_collection,
+        "skipped_collections": skipped_collections,
+    }
+
+
+##############################################################################
 # Trades
 def reconstruct_trade(t):
     """Takes a dictionary and builds a Trade() object from it.

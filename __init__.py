@@ -54,6 +54,9 @@ from .dhutil import (
 
 try:
     from .dhstore import (
+        check_integrity_future_datetimes,
+        check_integrity_no_nameless_objects,
+        check_integrity_no_test_orphans,
         clear_events,
         delete_backtests,
         delete_backtests_by_field,
@@ -100,6 +103,9 @@ __all__ = [
     'bot',
     'Candle',
     'Chart',
+    'check_integrity_future_datetimes',
+    'check_integrity_no_nameless_objects',
+    'check_integrity_no_test_orphans',
     'check_tf_th_compatibility',
     'clear_events',
     'compare_candles_vs_csv',
