@@ -362,7 +362,7 @@ def reconstruct_trade(t):
                    symbol=t["symbol"],
                    is_open=t["is_open"],
                    profitable=t["profitable"],
-                   name=t["name"],
+                   name=t.get("name", DEFAULT_OBJ_NAME),
                    version=t["version"],
                    ts_id=t["ts_id"],
                    bt_id=t["bt_id"],
@@ -1749,7 +1749,7 @@ def get_candles(start_epoch: int,
                               c_volume=r["c_volume"],
                               c_symbol=r["c_symbol"],
                               c_epoch=r["c_epoch"],
-                              name=r["name"],
+                              name=r.get("name", DEFAULT_OBJ_NAME)
                               ))
         update_progbar(pbar, i, total)
     finish_progbar(pbar)

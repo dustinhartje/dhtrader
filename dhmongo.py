@@ -329,7 +329,7 @@ def store_trades(trades: list,
         filter_doc = {
             "open_dt": t["open_dt"],
             "direction": t["direction"],
-            #"name": t["name"],
+            "name": t["name"],
             "version": t["version"],
             "symbol": t["symbol"],
             "ts_id": t["ts_id"],
@@ -645,7 +645,7 @@ def store_candle(c_datetime,
                   "c_epoch": c_epoch,
                   "c_date": c_date,
                   "c_time": c_time,
-                  #"name": name,
+                  "name": name,
                   }
     c = db[collection]
     result = c.find_one_and_replace({"c_datetime": c_dt},
