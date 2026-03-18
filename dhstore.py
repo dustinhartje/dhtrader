@@ -459,6 +459,7 @@ def review_trades(symbol: str = "ES",
                   ts_id: str = None,
                   include_epochs: bool = False,
                   check_integrity: bool = False,
+                  show_progress: bool = False,
                   multi_ok: list = None,
                   orphan_ok: list = None,
                   list_issues: bool = False,
@@ -589,54 +590,32 @@ def review_trades(symbol: str = "ES",
 
         # Start a progress bar for TradeSeries orphan checks
         bar_total = len(all_ts)
-        bar_eta = progressbar.ETA(format_not_started='--:--:--',
-                                  format_finished='Time: %(elapsed)8s',
-                                  format='Remaining: %(eta)8s',
-                                  format_zero='Remaining: 00:00:00',
-                                  format_na='Remaining: N/A',
-                                  )
-        bar_label = (f"%(value)d of {bar_total} TradeSeries checked in "
-                     "%(elapsed)s ")
-        widgets = [progressbar.Percentage(),
-                   progressbar.Bar(),
-                   progressbar.FormatLabel(bar_label),
-                   bar_eta,
-                   ]
-        bar = progressbar.ProgressBar(
-                widgets=widgets,
-                max_value=bar_total).start()
+        pbar = start_progbar(show_progress, bar_total,
+                             "TradeSeries checked")
 
         # Loop through all TradeSeries, checking orphaned test objects only
         for i, x in enumerate(all_ts):
             log.info("Checking stored TradeSeries integrity "
                      f"for ts_id={x.ts_id}")
-            bar.update(i)
+            update_progbar(pbar, i, bar_total)
             append_orphaned(object_type="tradeseries",
                             name=x.name,
                             this_ts_id=x.ts_id,
                             this_bt_id=x.bt_id,
                             ignore=orphan_ok)
 
-        bar.finish()
+        finish_progbar(pbar)
 
         # Start a progress bar for Trade integrity checks
         bar_total = len(all_trades)
-        bar_label = (f"%(value)d of {bar_total} Trades checked in "
-                     "%(elapsed)s ")
-        widgets = [progressbar.Percentage(),
-                   progressbar.Bar(),
-                   progressbar.FormatLabel(bar_label),
-                   bar_eta,
-                   ]
-        bar = progressbar.ProgressBar(
-                widgets=widgets,
-                max_value=bar_total).start()
+        pbar = start_progbar(show_progress, bar_total,
+                             "Trades checked")
 
         # Loop through Trades for orphan, duplicate, multiday, and
         # autoclosed-event integrity checks
         unique = set()
         for i, t in enumerate(all_trades):
-            bar.update(i)
+            update_progbar(pbar, i, bar_total)
             total_trades += 1
             append_orphaned(object_type="trade",
                             name=t.name,
@@ -699,7 +678,7 @@ def review_trades(symbol: str = "ES",
                         f"Autoclosed trade integrity issue: "
                         f"close_dt={t.close_dt}, expected event at "
                         f"{expected_start_str} not found")
-        bar.finish()
+        finish_progbar(pbar)
 
         # Output findings
         status = "OK"
