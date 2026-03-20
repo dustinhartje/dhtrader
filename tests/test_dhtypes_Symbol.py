@@ -3,8 +3,7 @@ import datetime as dt
 import json
 import pytest
 from dhtrader import (
-    dt_as_dt, dt_as_str, dt_to_epoch, Event, Symbol)
-from dhtrader.dhtypes import MARKET_ERAS
+    dt_as_dt, dt_as_str, dt_to_epoch, Event, MARKET_ERAS, Symbol)
 
 
 @pytest.fixture

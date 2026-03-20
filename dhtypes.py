@@ -38,7 +38,7 @@ from .dhcommon import (
     dt_as_dt, dt_as_str, dt_as_time, dt_to_epoch, timeframe_delta,
     valid_timeframe, valid_trading_hours, log_say, this_candle_start,
     check_tf_th_compatibility, start_of_week_date, dict_of_weeks, bot,
-    ProgBar, DEFAULT_OBJ_NAME)
+    ProgBar, DEFAULT_OBJ_NAME, MARKET_ERAS)
 CANDLE_TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w']
 BEGINNING_OF_TIME = "2008-01-01 00:00:00"
 
@@ -137,259 +137,6 @@ def _iter_dates(start_date: dt.date,
         yield this_date
         this_date = this_date + timedelta(days=1)
 
-
-# Market Era Definitions
-# Define different historical market structures with start dates and schedules.
-# To add new eras: append a new dict to this list with start_date and schedule.
-# Eras are ordered chronologically; the system finds the era by checking which
-# start_date the target_dt is >= to (uses the latest matching start_date).
-# Based on analysis of ES futures data presence patterns 2008-2026.
-MARKET_ERAS = [
-    {
-        "name": "2008_thru_2012",
-        "start_date": dt.date(2008, 1, 1),
-        "times": {
-            "eth_open": dt.time(18, 0, 0),
-            "eth_close": dt.time(17, 29, 0),
-            "rth_open": dt.time(9, 30, 0),
-            "rth_close": dt.time(16, 0, 0),
-        },
-        "closed_hours": {
-            "eth": {
-                # ETH close period: 17:30-17:59:59 with 15min break at 16:16
-                0: [{"close": "16:16:00", "open": "16:30:00"},
-                    {"close": "17:30:00", "open": "17:59:59"}],
-                1: [{"close": "16:16:00", "open": "16:30:00"},
-                    {"close": "17:30:00", "open": "17:59:59"}],
-                2: [{"close": "16:16:00", "open": "16:30:00"},
-                    {"close": "17:30:00", "open": "17:59:59"}],
-                3: [{"close": "16:16:00", "open": "16:30:00"},
-                    {"close": "17:30:00", "open": "17:59:59"}],
-                4: [{"close": "16:16:00", "open": "23:59:59"}],
-                5: [{"close": "00:00:00", "open": "23:59:59"}],
-                6: [{"close": "00:00:00", "open": "17:59:59"}]
-            },
-            "rth": {
-                # RTH: 9:30-16:00
-                0: [{"close": "00:00:00", "open": "09:30:00"},
-                    {"close": "16:00:00", "open": "23:59:59"}],
-                1: [{"close": "00:00:00", "open": "09:30:00"},
-                    {"close": "16:00:00", "open": "23:59:59"}],
-                2: [{"close": "00:00:00", "open": "09:30:00"},
-                    {"close": "16:00:00", "open": "23:59:59"}],
-                3: [{"close": "00:00:00", "open": "09:30:00"},
-                    {"close": "16:00:00", "open": "23:59:59"}],
-                4: [{"close": "00:00:00", "open": "09:30:00"},
-                    {"close": "16:00:00", "open": "23:59:59"}],
-                5: [{"close": "00:00:00", "open": "23:59:59"}],
-                6: [{"close": "00:00:00", "open": "23:59:59"}]
-            }
-        }
-    },
-    {
-        "name": "2012holidays_thru_2015holidays",
-        "start_date": dt.date(2012, 11, 17),
-        "times": {
-            "eth_open": dt.time(18, 0, 0),
-            "eth_close": dt.time(17, 15, 0),
-            "rth_open": dt.time(9, 30, 0),
-            "rth_close": dt.time(16, 0, 0),
-        },
-        "closed_hours": {
-            "eth": {
-                # ETH close period: 17:16-17:59:59 with 15min break at 16:15
-                0: [{"close": "16:15:00", "open": "16:30:00"},
-                    {"close": "17:16:00", "open": "17:59:59"}],
-                1: [{"close": "16:15:00", "open": "16:30:00"},
-                    {"close": "17:16:00", "open": "17:59:59"}],
-                2: [{"close": "16:15:00", "open": "16:30:00"},
-                    {"close": "17:16:00", "open": "17:59:59"}],
-                3: [{"close": "16:15:00", "open": "16:30:00"},
-                    {"close": "17:16:00", "open": "17:59:59"}],
-                4: [{"close": "16:15:00", "open": "16:30:00"},
-                    {"close": "17:16:00", "open": "23:59:59"}],
-                5: [{"close": "00:00:00", "open": "23:59:59"}],
-                6: [{"close": "00:00:00", "open": "17:59:59"}]
-            },
-            "rth": {
-                # RTH closes at 16:00
-                0: [{"close": "00:00:00", "open": "09:30:00"},
-                    {"close": "16:00:00", "open": "23:59:59"}],
-                1: [{"close": "00:00:00", "open": "09:30:00"},
-                    {"close": "16:00:00", "open": "23:59:59"}],
-                2: [{"close": "00:00:00", "open": "09:30:00"},
-                    {"close": "16:00:00", "open": "23:59:59"}],
-                3: [{"close": "00:00:00", "open": "09:30:00"},
-                    {"close": "16:00:00", "open": "23:59:59"}],
-                4: [{"close": "00:00:00", "open": "09:30:00"},
-                    {"close": "16:00:00", "open": "23:59:59"}],
-                5: [{"close": "00:00:00", "open": "23:59:59"}],
-                6: [{"close": "00:00:00", "open": "23:59:59"}]
-            }
-        }
-    },
-    {
-        "name": "2015holidays_thru_2020",
-        "start_date": dt.date(2015, 9, 19),
-        "times": {
-            "eth_open": dt.time(18, 0, 0),
-            "eth_close": dt.time(16, 59, 0),
-            "rth_open": dt.time(9, 30, 0),
-            "rth_close": dt.time(16, 0, 0),
-        },
-        "closed_hours": {
-            "eth": {
-                # ETH close period: 17:00-17:59:59 with 15min break at 16:15
-                0: [{"close": "16:15:00", "open": "16:30:00"},
-                    {"close": "17:00:00", "open": "17:59:59"}],
-                1: [{"close": "16:15:00", "open": "16:30:00"},
-                    {"close": "17:00:00", "open": "17:59:59"}],
-                2: [{"close": "16:15:00", "open": "16:30:00"},
-                    {"close": "17:00:00", "open": "17:59:59"}],
-                3: [{"close": "16:15:00", "open": "16:30:00"},
-                    {"close": "17:00:00", "open": "17:59:59"}],
-                4: [{"close": "16:15:00", "open": "16:30:00"},
-                    {"close": "17:00:00", "open": "23:59:59"}],
-                5: [{"close": "00:00:00", "open": "23:59:59"}],
-                6: [{"close": "00:00:00", "open": "17:59:59"}]
-            },
-            "rth": {
-                # RTH closes at 16:00
-                0: [{"close": "00:00:00", "open": "09:30:00"},
-                    {"close": "16:00:00", "open": "23:59:59"}],
-                1: [{"close": "00:00:00", "open": "09:30:00"},
-                    {"close": "16:00:00", "open": "23:59:59"}],
-                2: [{"close": "00:00:00", "open": "09:30:00"},
-                    {"close": "16:00:00", "open": "23:59:59"}],
-                3: [{"close": "00:00:00", "open": "09:30:00"},
-                    {"close": "16:00:00", "open": "23:59:59"}],
-                4: [{"close": "00:00:00", "open": "09:30:00"},
-                    {"close": "16:00:00", "open": "23:59:59"}],
-                5: [{"close": "00:00:00", "open": "23:59:59"}],
-                6: [{"close": "00:00:00", "open": "23:59:59"}]
-            }
-        }
-    },
-    {
-        "name": "2021-01_thru_2021-06",
-        "start_date": dt.date(2021, 1, 1),
-        "times": {
-            "eth_open": dt.time(18, 0, 0),
-            "eth_close": dt.time(16, 59, 0),
-            "rth_open": dt.time(9, 30, 0),
-            "rth_close": dt.time(16, 0, 0),
-        },
-        "closed_hours": {
-            "eth": {
-                # Nearly 24/5 trading with extended RTH
-                # Daily close: 16:15-16:29 on weekdays, then 17:00-17:59:59
-                0: [{"close": "16:15:00", "open": "16:30:00"},
-                    {"close": "17:00:00", "open": "17:59:59"}],
-                1: [{"close": "16:15:00", "open": "16:30:00"},
-                    {"close": "17:00:00", "open": "17:59:59"}],
-                2: [{"close": "16:15:00", "open": "16:30:00"},
-                    {"close": "17:00:00", "open": "17:59:59"}],
-                3: [{"close": "16:15:00", "open": "16:30:00"},
-                    {"close": "17:00:00", "open": "17:59:59"}],
-                4: [{"close": "16:15:00", "open": "16:30:00"},
-                    {"close": "17:00:00", "open": "23:59:59"}],
-                5: [{"close": "00:00:00", "open": "23:59:59"}],
-                6: [{"close": "00:00:00", "open": "17:59:59"}]
-            },
-            "rth": {
-                # RTH closes at 16:00
-                0: [{"close": "00:00:00", "open": "09:30:00"},
-                    {"close": "16:00:00", "open": "23:59:59"}],
-                1: [{"close": "00:00:00", "open": "09:30:00"},
-                    {"close": "16:00:00", "open": "23:59:59"}],
-                2: [{"close": "00:00:00", "open": "09:30:00"},
-                    {"close": "16:00:00", "open": "23:59:59"}],
-                3: [{"close": "00:00:00", "open": "09:30:00"},
-                    {"close": "16:00:00", "open": "23:59:59"}],
-                4: [{"close": "00:00:00", "open": "09:30:00"},
-                    {"close": "16:00:00", "open": "23:59:59"}],
-                5: [{"close": "00:00:00", "open": "23:59:59"}],
-                6: [{"close": "00:00:00", "open": "23:59:59"}]
-            }
-        }
-    },
-    {
-        "name": "2021-06_thru_present",
-        "start_date": dt.date(2021, 6, 26),
-        "times": {
-            "eth_open": dt.time(18, 0, 0),
-            "eth_close": dt.time(16, 59, 0),
-            "rth_open": dt.time(9, 30, 0),
-            "rth_close": dt.time(16, 0, 0),
-        },
-        "closed_hours": {
-            "eth": {
-                # Nearly 24/5 trading with extended RTH
-                # Daily close: 17:00-17:59:59 (16:15-16:29 close removed)
-                0: [{"close": "17:00:00", "open": "17:59:59"}],
-                1: [{"close": "17:00:00", "open": "17:59:59"}],
-                2: [{"close": "17:00:00", "open": "17:59:59"}],
-                3: [{"close": "17:00:00", "open": "17:59:59"}],
-                4: [{"close": "17:00:00", "open": "23:59:59"}],
-                5: [{"close": "00:00:00", "open": "23:59:59"}],
-                6: [{"close": "00:00:00", "open": "17:59:59"}]
-            },
-            "rth": {
-                # RTH closes at 16:00
-                0: [{"close": "00:00:00", "open": "09:30:00"},
-                    {"close": "16:00:00", "open": "23:59:59"}],
-                1: [{"close": "00:00:00", "open": "09:30:00"},
-                    {"close": "16:00:00", "open": "23:59:59"}],
-                2: [{"close": "00:00:00", "open": "09:30:00"},
-                    {"close": "16:00:00", "open": "23:59:59"}],
-                3: [{"close": "00:00:00", "open": "09:30:00"},
-                    {"close": "16:00:00", "open": "23:59:59"}],
-                4: [{"close": "00:00:00", "open": "09:30:00"},
-                    {"close": "16:00:00", "open": "23:59:59"}],
-                5: [{"close": "00:00:00", "open": "23:59:59"}],
-                6: [{"close": "00:00:00", "open": "23:59:59"}]
-            }
-        }
-    },
-    {
-        "name": "2099_test_era",
-        "start_date": dt.date(2099, 1, 1),
-        "times": {
-            "eth_open": dt.time(18, 0, 0),
-            "eth_close": dt.time(16, 59, 0),
-            "rth_open": dt.time(9, 30, 0),
-            "rth_close": dt.time(16, 0, 0),
-        },
-        "closed_hours": {
-            "eth": {
-                # Nearly 24/5 trading with extended RTH
-                # Daily close: 17:00-17:59:59
-                0: [{"close": "17:00:00", "open": "17:59:59"}],
-                1: [{"close": "17:00:00", "open": "17:59:59"}],
-                2: [{"close": "17:00:00", "open": "17:59:59"}],
-                3: [{"close": "17:00:00", "open": "17:59:59"}],
-                4: [{"close": "17:00:00", "open": "23:59:59"}],
-                5: [{"close": "00:00:00", "open": "23:59:59"}],
-                6: [{"close": "00:00:00", "open": "17:59:59"}]
-            },
-            "rth": {
-                # RTH closes at 16:00
-                0: [{"close": "00:00:00", "open": "09:30:00"},
-                    {"close": "16:00:00", "open": "23:59:59"}],
-                1: [{"close": "00:00:00", "open": "09:30:00"},
-                    {"close": "16:00:00", "open": "23:59:59"}],
-                2: [{"close": "00:00:00", "open": "09:30:00"},
-                    {"close": "16:00:00", "open": "23:59:59"}],
-                3: [{"close": "00:00:00", "open": "09:30:00"},
-                    {"close": "16:00:00", "open": "23:59:59"}],
-                4: [{"close": "00:00:00", "open": "09:30:00"},
-                    {"close": "16:00:00", "open": "23:59:59"}],
-                5: [{"close": "00:00:00", "open": "23:59:59"}],
-                6: [{"close": "00:00:00", "open": "23:59:59"}]
-            }
-        }
-    }
-]
 
 log = logging.getLogger("dhtypes")
 log.addHandler(logging.NullHandler())
@@ -632,7 +379,6 @@ class Symbol():
                   and closed_hours
         """
         d = dt_as_dt(target_dt).date()
-
         # Find the latest era whose start_date is <= target date
         # MARKET_ERAS must be sorted chronologically
         matching_era = None
@@ -641,7 +387,6 @@ class Symbol():
                 matching_era = era
             else:
                 break
-
         if matching_era is None:
             raise ValueError(
                 f"No market era defined for date {d}. "
