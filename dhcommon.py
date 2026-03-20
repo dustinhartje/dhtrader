@@ -39,6 +39,19 @@ import progressbar
 TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', 'r1d', 'e1d', 'r1w', 'e1w',
               'r1mo', 'e1mo']
 TRADING_HOURS = ['rth', 'eth']
+TF_TH_MAP = {
+    "1m": ["rth", "eth"],
+    "5m": ["rth", "eth"],
+    "15m": ["rth", "eth"],
+    "r1h": ["rth"],
+    "e1h": ["eth"],
+    "r1d": ["rth"],
+    "e1d": ["eth"],
+    "r1w": ["rth"],
+    "e1w": ["eth"],
+    "r1mo": ["rth"],
+    "e1mo": ["eth"]
+    }
 EVENT_CATEGORIES = ['Closed', 'Data', 'Unplanned', 'LowVolume', 'Rollover']
 DEFAULT_OBJ_NAME = "nameless"
 
