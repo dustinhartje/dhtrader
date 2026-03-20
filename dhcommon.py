@@ -319,7 +319,7 @@ def valid_event_category(c, exit=True):
     if c in EVENT_CATEGORIES:
         return True
     else:
-        err_msg = "{c} is not a valid event category in {EVENT_CATEGORIES}"
+        err_msg = f"{c} is not a valid event category in {EVENT_CATEGORIES}"
         if exit:
             raise ValueError(err_msg)
         else:
