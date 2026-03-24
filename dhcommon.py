@@ -79,8 +79,12 @@ log = logging.getLogger("dhcommon")
 log.addHandler(logging.NullHandler())
 
 
-def log_say(msg, level="info"):
+def log_say(msg, level="info", prefix="", suffix=""):
     """Log messages while also printing to console."""
+    if prefix:
+        msg = f"{prefix} {msg}"
+    if suffix:
+        msg = f"{msg} {suffix}"
     print(msg, flush=True)
     if level == "debug":
         log.debug(msg)
