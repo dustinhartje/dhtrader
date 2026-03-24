@@ -13,15 +13,6 @@ import os
 import sys
 import argparse
 
-# Make dhtrader package importable when run as standalone script
-if __name__ == '__main__':
-    # Add git root to path (one directory up from dhtrader)
-    _git_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    if _git_root not in sys.path:
-        sys.path.insert(0, _git_root)
-
-from dhtrader import prompt_yn
-
 
 def get_script_dir(depth=0):
     """Get the directory of the calling script.
@@ -210,6 +201,8 @@ def check_environment_and_prompt(script_dir=None):
     Returns:
         bool: True if user confirms or environment is prod, False if aborted
     """
+    from dhtrader import prompt_yn
+
     if script_dir is None:
         script_dir = get_script_dir(depth=1)
 
@@ -221,23 +214,10 @@ def check_environment_and_prompt(script_dir=None):
 
     print(f"\nWarning: Running in '{current_env}' environment")
 
-    prompt_fn = None
     try:
-        prompt_fn = prompt_yn
-    except Exception:
-        prompt_fn = None
-
-    if prompt_fn is not None:
-        try:
-            response = prompt_fn("Continue with current environment?")
-        except EOFError:
-            response = False
-    else:
-        try:
-            response_str = input("Continue with current environment? (Y/N): ")
-            response = response_str.strip().lower() in ['y', 'yes']
-        except EOFError:
-            response = False
+        response = prompt_yn("Continue with current environment?")
+    except EOFError:
+        response = False
 
     if not response:
         print("Aborted.")

@@ -5,6 +5,7 @@
 scratchpad*
 deleteme*
 ./.venv/
+.vscode/**
 
 # Below is all from the github .gitignore Python template chosen at repo creation
 # -------------------------------------------------------------------------------
