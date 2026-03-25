@@ -3607,15 +3607,16 @@ class Backtest():
         """Sort attached TradeSeries in ascending ts_id order."""
         self.tradeseries.sort(key=lambda t: t.ts_id)
 
-    def load_tradeseries(self):
+    def load_tradeseries(self, include_trades=True):
         """Load and attach all TradeSeries matching this bt_id from storage.
 
         This will replace any currently attached tradeseries.
         """
-        self.tradeseries = get_tradeseries_by_field(field="bt_id",
-                                                    value=self.bt_id,
-                                                    include_trades=True,
-                                                    )
+        self.tradeseries = get_tradeseries_by_field(
+            field="bt_id",
+            value=self.bt_id,
+            include_trades=include_trades,
+            )
         self.sort_tradeseries()
 
     def restrict_dates(self,
