@@ -34,6 +34,7 @@ from copy import deepcopy
 import re
 import logging
 import json
+import sys
 import progressbar
 
 TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', 'r1d', 'e1d', 'r1w', 'e1w',
@@ -194,15 +195,17 @@ class OperationTimer():
 class ProgBar():
     """Wrapper to make progress bars smoother to implement.
 
-    Starts the progress bar automatically on creation unless auto_start is
-    False.
+    Args:
+        total: Total number of items to track progress for.
+        desc: Label string to display alongside the progress count.
+        auto_start: If True, start the progress bar immediately.
     """
-
     def __init__(self,
                  total: int,
-                 desc: str = "TradeSeries calculated",
+                 desc: str = "Things Handled",
                  auto_start: bool = True,
                  ):
+        """Initialize a ProgBar instance and optionally start it."""
         self.total = total
         self.desc = desc
         self.auto_start = auto_start
@@ -210,10 +213,8 @@ class ProgBar():
             self.start()
 
     def start(self):
-        """Build and start the underlying progressbar widget."""
-        bar_label = (
-            f"%(value)d of {self.total} {self.desc} in %(elapsed)s "
-        )
+        """Initialize and display the underlying progressbar widget."""
+        bar_label = f"%(value)d of {self.total} {self.desc} in %(elapsed)s "
         eta_widget = progressbar.ETA(
                 format_not_started='--:--:--',
                 format_finished='Time: %(elapsed)8s',
@@ -226,19 +227,30 @@ class ProgBar():
                    progressbar.FormatLabel(bar_label),
                    eta_widget,
                    ]
-        self.this_bar = progressbar.ProgressBar(widgets=widgets,
-                                                max_value=self.total).start()
+        self.this_bar = progressbar.ProgressBar(
+            widgets=widgets,
+            max_value=self.total,
+            fd=sys.stdout,
+        ).start()
 
     def update(self, val):
-        """Update the progress bar to an absolute value."""
+        """Update the progress bar to an absolute value.
+
+        Args:
+            val: Absolute progress value to display.
+        """
         self.this_bar.update(val)
 
     def increment(self, val=1):
-        """Advance the progress bar by val steps (default 1)."""
+        """Increment the progress bar by val steps.
+
+        Args:
+            val: Number of steps to advance the bar (default 1).
+        """
         self.this_bar.increment(val)
 
     def finish(self):
-        """Mark the progress bar as complete."""
+        """Mark the progress bar as complete and finalize its display."""
         self.this_bar.finish()
 
 
