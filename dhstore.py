@@ -11,7 +11,6 @@ utility layer with no storage dependencies.
 """
 
 import json
-import progressbar
 from collections import Counter, defaultdict
 from datetime import datetime as dt
 from datetime import date, timedelta
@@ -951,22 +950,10 @@ def review_tradeseries(symbol: str = "ES",
                                               include_trades=False)
         print("Loading all Trades into TradeSeries and checking for issues")
         bar_total = len(all_ts)
-        bar_eta = progressbar.ETA(format_not_started='--:--:--',
-                                  format_finished='Time: %(elapsed)8s',
-                                  format='Remaining: %(eta)8s',
-                                  format_zero='Remaining: 00:00:00',
-                                  format_na='Remaining: N/A',
-                                  )
-        bar_label = (f"%(value)d of {bar_total} checked in "
-                     "%(elapsed)s ")
-        widgets = [progressbar.Percentage(),
-                   progressbar.Bar(),
-                   progressbar.FormatLabel(bar_label),
-                   bar_eta,
-                   ]
-        bar = progressbar.ProgressBar(
-                widgets=widgets,
-                max_value=bar_total).start()
+        bar = None
+        if bar_total > 0:
+            bar = ProgBar(total=bar_total,
+                          desc="checked")
         # Loop through all TradeSeries/Trades, noting any issues found
         trade_overlaps = []
         for i, ts in enumerate(all_ts):
@@ -996,10 +983,12 @@ def review_tradeseries(symbol: str = "ES",
                 # Config last vars with current values for next Trade in loop
                 last_trade = t
                 last_close_tf = close_tf
-            bar.update(i)
+            if bar is not None:
+                bar.update(i + 1)
             # Reclaim memory
             ts.trades.clear()
-        bar.finish()
+        if bar is not None:
+            bar.finish()
         # Finalize integrity status
         if len(trade_overlaps) > 0:
             status = "ERRORS"
@@ -1447,12 +1436,7 @@ def store_indicator(indicator,
             progress = 0
             bar_started = False
             bar_total = len(indicator.datapoints)
-            bar_eta = progressbar.ETA(format_not_started='--:--:--',
-                                      format_finished='Time: %(elapsed)8s',
-                                      format='Remaining: %(eta)8s',
-                                      format_zero='Remaining: 00:00:00',
-                                      format_na='Remaining: N/A',
-                                      )
+            bar = None
 
         # To prevent each datapoint from running it's own query, we'll
         # retrieve all potentially relevant stored datapoints to compare
@@ -1496,16 +1480,8 @@ def store_indicator(indicator,
                     if show_progress and not bar_started:
                         # Once we find something new enough to store, start the
                         # progress bar up
-                        bar_label = (f"%(value)d of {bar_total} stored in "
-                                     "%(elapsed)s ")
-                        widgets = [progressbar.Percentage(),
-                                   progressbar.Bar(),
-                                   progressbar.FormatLabel(bar_label),
-                                   bar_eta,
-                                   ]
-                        bar = progressbar.ProgressBar(
-                                widgets=widgets,
-                                max_value=bar_total).start()
+                        bar = ProgBar(total=bar_total,
+                                      desc="stored")
                         bar_started = True
                     s = store_indicator_datapoints([d],
                                                    collection=dp_collection,
@@ -1522,16 +1498,8 @@ def store_indicator(indicator,
                 # If we found a stored datapoint with the same epoch, pass it
                 # to the storage function to compare and store on diffs
                 if show_progress and not bar_started:
-                    bar_label = (f"%(value)d of {bar_total} stored in "
-                                 "%(elapsed)s ")
-                    widgets = [progressbar.Percentage(),
-                               progressbar.Bar(),
-                               progressbar.FormatLabel(bar_label),
-                               bar_eta,
-                               ]
-                    bar = progressbar.ProgressBar(
-                            widgets=widgets,
-                            max_value=bar_total).start()
+                    bar = ProgBar(total=bar_total,
+                                  desc="stored")
                     bar_started = True
                 if d.epoch in checkers.keys():
                     # Compare with stored datapoint

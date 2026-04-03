@@ -80,6 +80,22 @@ log = logging.getLogger("dhcommon")
 log.addHandler(logging.NullHandler())
 
 
+class _ProgBarStreamProxy:
+    """Proxy ProgBar writes to keep everythin on stdout"""
+
+    def __init__(self, stream):
+        self._stream = stream
+
+    def write(self, data):
+        return self._stream.write(data)
+
+    def flush(self):
+        return self._stream.flush()
+
+    def __getattr__(self, name):
+        return getattr(self._stream, name)
+
+
 def log_say(msg, level="info", prefix="", suffix=""):
     """Log messages while also printing to console."""
     if prefix:
@@ -230,7 +246,7 @@ class ProgBar():
         self.this_bar = progressbar.ProgressBar(
             widgets=widgets,
             max_value=self.total,
-            fd=sys.stdout,
+            fd=_ProgBarStreamProxy(sys.stdout),
         ).start()
 
     def update(self, val):
