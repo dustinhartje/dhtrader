@@ -121,6 +121,7 @@ def cleanup_trade_storage():
         clear_trade_storage_by_name(name)
 
 
+@pytest.mark.suppress_stdout
 def test_Trade_confirm_observed_results():
     """Validate Trade calculations against live Apex account results.
 
@@ -564,6 +565,7 @@ def test_Trade_confirm_observed_results():
     # assert draw["drawdown_trail_increase"] == 51.25
 
 
+@pytest.mark.suppress_stdout
 def test_Trade_create_and_verify_common_methods():
     """Test Trade __init__ values, __eq__, __ne__, __str__, __repr__,
     to_clean_dict, to_json, pretty, and brief.
@@ -659,6 +661,7 @@ def test_Trade_create_and_verify_common_methods():
                       "entry=5000 | exit=None | profitable=None")
 
 
+@pytest.mark.suppress_stdout
 def test_Trade_tick_and_target_calculations_correct():
     """Verify stop/profit tick and target calculations for longs/shorts."""
     # LONG Providing both accurately should result in the values as provided
@@ -780,6 +783,7 @@ def test_Trade_tick_and_target_calculations_correct():
                          )
 
 
+@pytest.mark.suppress_stdout
 def test_Trade_gain_loss():
     """Verify Trade.gain_loss() calculation."""
     # Closing long trade at a gain
@@ -800,6 +804,7 @@ def test_Trade_gain_loss():
     assert t.gain_loss(contracts=5) == -6250
 
 
+@pytest.mark.suppress_stdout
 def test_Trade_duration():
     """Verify Trade.duration() calculation."""
     t = create_trade(open_dt="2099-01-08 12:45:00")
@@ -813,6 +818,7 @@ def test_Trade_duration():
     assert t.duration() == -60
 
 
+@pytest.mark.suppress_stdout
 def test_Trade_creation_long_close_at_profit():
     """Verify long trade closed at profit calculates correctly."""
     # Create a trade (create_trade() covers creation assertions)
@@ -833,6 +839,7 @@ def test_Trade_creation_long_close_at_profit():
     assert t.profitable
 
 
+@pytest.mark.suppress_stdout
 def test_Trade_creation_long_close_at_loss():
     """Verify long trade closed at loss calculates correctly."""
     # Create a trade (create_trade() covers creation assertions)
@@ -852,6 +859,7 @@ def test_Trade_creation_long_close_at_loss():
     assert not t.profitable
 
 
+@pytest.mark.suppress_stdout
 def test_Trade_creation_short_close_at_profit():
     """Verify short trade closed at profit calculates correctly."""
     # Create a trade (create_trade() covers creation assertions)
@@ -875,6 +883,7 @@ def test_Trade_creation_short_close_at_profit():
     assert t.profitable
 
 
+@pytest.mark.suppress_stdout
 def test_Trade_creation_short_close_at_loss():
     """Verify short trade closed at loss calculates correctly."""
     # Create a trade (create_trade() covers creation assertions)
@@ -897,6 +906,7 @@ def test_Trade_creation_short_close_at_loss():
     assert not t.profitable
 
 
+@pytest.mark.suppress_stdout
 def test_Trade_candle_update_returns_correct_values():
     """Verify candle_update returns correct closed status in various scenarios.
     """
@@ -943,6 +953,7 @@ def test_Trade_candle_update_returns_correct_values():
     assert t.candle_update(c)["closed"] is True
 
 
+@pytest.mark.suppress_stdout
 def test_Trade_candle_update_closes_trades_correctly():
     """Verify candle_update closes trades correctly at targets."""
     # Check close status and related attribs/methods for all target scenarios
@@ -1062,6 +1073,7 @@ def test_Trade_candle_update_closes_trades_correctly():
     assert status["closed"]
 
 
+@pytest.mark.suppress_stdout
 def test_Trade_sets_high_low_exit_prices_correctly():
     """Verify high/low/exit prices set correctly during trade updates."""
     # Long trade sets candle high and low if exit targets are not hit
@@ -1128,6 +1140,7 @@ def test_Trade_sets_high_low_exit_prices_correctly():
     assert not t.is_open
 
 
+@pytest.mark.suppress_stdout
 def test_Trade_parent_bar_secs():
     """Verify Trade.parent_bar_secs() for various timeframes."""
     t = create_trade(open_dt="2099-01-08 11:52:44", timeframe="1m")
@@ -1142,6 +1155,7 @@ def test_Trade_parent_bar_secs():
     assert t.parent_bar_secs() == 1364
 
 
+@pytest.mark.suppress_stdout
 def test_Trade_closed_intraday():
     """Verify Trade.closed_intraday() for rth and eth scenarios."""
     # RTH trade closes same day before rth close
@@ -1227,6 +1241,7 @@ def test_Trade_closed_intraday():
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_Trade_store_retrieve_delete(cleanup_trade_storage):
     """Verify Trade storage, retrieval, and deletion.
 
@@ -1256,6 +1271,7 @@ def test_Trade_store_retrieve_delete(cleanup_trade_storage):
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_delete_trades(cleanup_trade_storage):
     """Verify delete_trades() using Trade list.
 
@@ -1288,6 +1304,7 @@ def test_delete_trades(cleanup_trade_storage):
 
 
 @pytest.mark.historical
+@pytest.mark.suppress_stdout
 def test_Trade_historical():
     """Test Trade.balance_impact and drawdown_impact against historical data.
     """

@@ -18,6 +18,7 @@ def event():
                  )
 
 
+@pytest.mark.suppress_stdout
 def test_Event_create_and_verify_common_methods():
     """Test Event __init__ values, __str__, __repr__, to_clean_dict,
     to_json, and pretty.
@@ -83,6 +84,7 @@ def test_Event_create_and_verify_common_methods():
     assert len(event.pretty().splitlines()) == 13
 
 
+@pytest.mark.suppress_stdout
 def test_Event_contains_datetime(event):
     """Verify contains_datetime uses inclusive start/end boundaries."""
     # Datetime inside the range returns True

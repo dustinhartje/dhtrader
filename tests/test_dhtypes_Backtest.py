@@ -169,6 +169,7 @@ def cleanup_backtest_storage():
         clear_storage_by_name(name)
 
 
+@pytest.mark.suppress_stdout
 def test_Backtest_create_and_verify_common_methods():
     """Test Backtest __init__ values, __eq__, __ne__, __str__, __repr__,
     to_clean_dict, to_json, and pretty.
@@ -247,6 +248,7 @@ def test_Backtest_create_and_verify_common_methods():
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_Backtest_load_charts():
     """Verify load_charts retrieves candles.
 
@@ -269,6 +271,7 @@ def test_Backtest_load_charts():
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_Backtest_restrict_dates(cleanup_backtest_storage):
     """Verify restrict_dates adjusts candle ranges.
 
@@ -577,6 +580,7 @@ def test_Backtest_restrict_dates(cleanup_backtest_storage):
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_Backtest_add_and_remove_tradeseries_and_trades(
         cleanup_backtest_storage):
     """Verify Backtest updating TradeSeries and storing/deletion.
@@ -820,6 +824,7 @@ def test_Backtest_add_and_remove_tradeseries_and_trades(
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_Backtest_store_retrieve_load_tradeseries_and_delete(
         cleanup_backtest_storage):
     """Verify full round-trip storage of Backtest+TradeSeries+Trades.
@@ -905,6 +910,7 @@ def test_Backtest_store_retrieve_load_tradeseries_and_delete(
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_Backtest_prefer_stored(cleanup_backtest_storage):
     """Verify prefer_stored=True calls config_from_storage() without error.
 
@@ -957,6 +963,7 @@ def test_Backtest_prefer_stored(cleanup_backtest_storage):
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_delete_backtests(cleanup_backtest_storage):
     """Verify delete_backtests() using Backtest list.
 

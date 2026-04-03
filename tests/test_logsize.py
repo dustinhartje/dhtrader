@@ -1,5 +1,6 @@
 """Test that total log file size stays within acceptable limits."""
 import os
+import pytest
 
 
 LOGS_DIR = os.path.join(
@@ -27,6 +28,7 @@ def _check_log_size():
     )
 
 
+@pytest.mark.suppress_stdout
 def test_log_folder_total_size_under_limit():
     """Fail if total size of all files in logs/ exceeds MAX_TOTAL_BYTES."""
     passed, msg = _check_log_size()

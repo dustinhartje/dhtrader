@@ -20,6 +20,7 @@ def candle():
                   )
 
 
+@pytest.mark.suppress_stdout
 def test_Candle_create_and_verify_common_methods():
     """Test Candle __init__ values, __eq__, __ne__, __str__, __repr__,
     to_clean_dict, to_json, pretty, and brief.
@@ -133,6 +134,7 @@ def test_Candle_create_and_verify_common_methods():
                       "O: 5000.0 H: 5007.75 L: 4995.5 C: 5002.0 V: 1501")
 
 
+@pytest.mark.suppress_stdout
 def test_Candle_calculated_attributes(candle):
     """Verify Candle computed attributes are correct on creation."""
     # Size, body, and wick calculations
@@ -186,6 +188,7 @@ def test_Candle_calculated_attributes(candle):
     assert candle.c_end_datetime == "2099-01-02 12:01:00"
 
 
+@pytest.mark.suppress_stdout
 def test_Candle_contains_price(candle):
     """Verify contains_price returns True within range, False outside."""
     # Prices within and at high/low boundaries are True
@@ -200,6 +203,7 @@ def test_Candle_contains_price(candle):
     assert not candle.contains_price(9999)
 
 
+@pytest.mark.suppress_stdout
 def test_Candle_contains_datetime(candle):
     """Verify contains_datetime uses exclusive start/end boundaries."""
     # A datetime strictly inside the candle window returns True

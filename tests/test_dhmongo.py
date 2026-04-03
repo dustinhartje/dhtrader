@@ -88,6 +88,7 @@ def cleanup_dhmongo_storage():
     _cleanup()
 
 
+@pytest.mark.suppress_stdout
 def test_start_progbar():
     """Verify start_progbar returns None when progress display is disabled."""
     # Returns None when show_progress is False
@@ -98,6 +99,7 @@ def test_start_progbar():
     assert result2 is None
 
 
+@pytest.mark.suppress_stdout
 def test_update_and_finish_progbar_with_none():
     """Verify update_progbar and finish_progbar handle None pbar gracefully."""
     update_progbar(pbar=None, index=1, total=10)
@@ -109,6 +111,7 @@ def test_update_and_finish_progbar_with_none():
 # #############################################################################
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_list_collections_returns_list():
     """Verify list_collections returns a list containing events_ES.
 
@@ -120,6 +123,7 @@ def test_list_collections_returns_list():
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_review_database_returns_dict():
     """Verify review_database returns dict with expected keys.
 
@@ -137,6 +141,7 @@ def test_review_database_returns_dict():
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_store_and_get_candle_roundtrip(cleanup_dhmongo_storage):
     """Verify store_candle and get_candles work as a roundtrip.
 
@@ -205,6 +210,7 @@ def test_store_and_get_candle_roundtrip(cleanup_dhmongo_storage):
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_get_candles_empty_range():
     """Verify get_candles returns empty list for out-of-range epochs.
 
@@ -223,6 +229,7 @@ def test_get_candles_empty_range():
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_store_and_get_trade_roundtrip(cleanup_dhmongo_storage):
     """Verify store_trades and get_trades_by_field work as a roundtrip.
 
@@ -279,6 +286,7 @@ def test_store_and_get_trade_roundtrip(cleanup_dhmongo_storage):
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_store_and_get_tradeseries_roundtrip(cleanup_dhmongo_storage):
     """Verify store_tradeseries and get_tradeseries_by_field roundtrip.
 
@@ -324,6 +332,7 @@ def test_store_and_get_tradeseries_roundtrip(cleanup_dhmongo_storage):
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_store_and_get_backtest_roundtrip(cleanup_dhmongo_storage):
     """Verify store_backtest and get_backtests_by_field work as a roundtrip.
 
@@ -368,6 +377,7 @@ def test_store_and_get_backtest_roundtrip(cleanup_dhmongo_storage):
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_store_and_get_indicator_roundtrip(cleanup_dhmongo_storage):
     """Verify indicator meta and datapoint store/get/delete roundtrip.
 
@@ -446,6 +456,7 @@ def test_store_and_get_indicator_roundtrip(cleanup_dhmongo_storage):
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_store_and_get_event_roundtrip(cleanup_dhmongo_storage):
     """Verify store_event and get_events work as a roundtrip.
 

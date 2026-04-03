@@ -10,6 +10,7 @@ from dhtrader import (
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_Indicator_rth_hod_creation_and_calculation():
     """Indicator creation, calculation, and RTH/HOD datapoint checks.
 
@@ -95,6 +96,7 @@ def shared_assertions_Indicator_spotcheck_ES_eth_5m_EMA_close_l20_s2(i):
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_Indicator_calculated_spotcheck_ES_eth_5m_EMA_close_l20_s2():
     """Test calculated spotcheck for ES ETH 5m EMA close l20 s2.
 
@@ -114,6 +116,7 @@ def test_Indicator_calculated_spotcheck_ES_eth_5m_EMA_close_l20_s2():
 
 @pytest.mark.slow
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_Indicator_storage_spotcheck_ES_eth_5m_EMA_close_l20_s2():
     """Test storage spotcheck for ES ETH 5m EMA close l20 s2.
 
@@ -155,6 +158,7 @@ def shared_assertions_Indicator_spotcheck_ES_eth_5m_EMA_close_l9_s2(i):
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_Indicator_calculated_spotcheck_ES_eth_5m_EMA_close_l9_s2():
     """Test calculated spotcheck for ES ETH 5m EMA close l9 s2.
 
@@ -174,6 +178,7 @@ def test_Indicator_calculated_spotcheck_ES_eth_5m_EMA_close_l9_s2():
 
 @pytest.mark.slow
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_Indicator_storage_spotcheck_ES_eth_5m_EMA_close_l9_s2():
     """Test storage spotcheck for ES ETH 5m EMA close l9 s2.
 
@@ -233,6 +238,7 @@ def shared_assertions_Indicator_spotcheck_ES_eth_15m_EMA_close_l9_s2(i):
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_Indicator_calculated_spotcheck_ES_eth_15m_EMA_close_l9_s2():
     """Spotcheck calculated EMA values.
 
@@ -252,6 +258,7 @@ def test_Indicator_calculated_spotcheck_ES_eth_15m_EMA_close_l9_s2():
 
 @pytest.mark.slow
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_Indicator_storage_spotcheck_ES_eth_15m_EMA_close_l9_s2():
     """Spotcheck stored EMA values.
 
@@ -310,6 +317,7 @@ def shared_assertions_Indicator_spotcheck_ES_eth_15m_EMA_close_l20_s2(i):
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_Indicator_calculated_spotcheck_ES_eth_15m_EMA_close_l20_s2():
     """Spotcheck calculated EMA values.
 
@@ -329,6 +337,7 @@ def test_Indicator_calculated_spotcheck_ES_eth_15m_EMA_close_l20_s2():
 
 @pytest.mark.slow
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_Indicator_storage_spotcheck_ES_eth_15m_EMA_close_l20_s2():
     """Spotcheck stored EMA values.
 
@@ -388,6 +397,7 @@ def shared_assertions_Indicator_spotcheck_ES_eth_e1h_EMA_close_l9_s2(i):
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_Indicator_calculated_spotcheck_ES_eth_e1h_EMA_close_l9_s2():
     """Spotcheck calculated EMA values.
 
@@ -406,6 +416,7 @@ def test_Indicator_calculated_spotcheck_ES_eth_e1h_EMA_close_l9_s2():
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_Indicator_storage_spotcheck_ES_eth_e1h_EMA_close_l9_s2():
     """Spotcheck stored EMA values.
 
@@ -471,6 +482,7 @@ def shared_assertions_Indicator_spotcheck_ES_eth_e1h_EMA_close_l20_s2(i):
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_Indicator_calculated_spotcheck_ES_eth_e1h_EMA_close_l20_s2():
     """Spotcheck calculated EMA values.
 
@@ -489,6 +501,7 @@ def test_Indicator_calculated_spotcheck_ES_eth_e1h_EMA_close_l20_s2():
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_Indicator_storage_spotcheck_ES_eth_e1h_EMA_close_l20_s2():
     """Spotcheck stored EMA values.
 
@@ -504,6 +517,7 @@ def test_Indicator_storage_spotcheck_ES_eth_e1h_EMA_close_l20_s2():
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_Indicator_calculate():
     """Test for Indicator creation and basic calculation results.
 
@@ -604,6 +618,7 @@ def cleanup_indicator_storage():
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_Indicator_get_datapoints():
     """Test for Indicator get_datapoint, next, and prev methods.
 
@@ -636,6 +651,7 @@ def test_Indicator_get_datapoints():
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_Indicator_store_retrieve_delete(cleanup_indicator_storage):
     """Verify Indicator and IndicatorDataPoint storage, retrieval, deletion.
 
@@ -715,6 +731,7 @@ def test_Indicator_store_retrieve_delete(cleanup_indicator_storage):
 # IndicatorDataPoint
 # #############################################################################
 
+@pytest.mark.suppress_stdout
 def test_IndicatorDataPoint_create_and_verify_common_methods():
     """Test IndicatorDataPoint __init__ values, __eq__, __ne__, __str__,
     __repr__, to_clean_dict, to_json, and pretty.
@@ -825,6 +842,7 @@ def _make_indicator_chart():
     return chart
 
 
+@pytest.mark.suppress_stdout
 def test_Indicator_create_and_verify_common_methods():
     """Test Indicator __init__ values, __eq__, __ne__, __str__, __repr__,
     to_clean_dict, to_json, and pretty.
@@ -936,6 +954,7 @@ def test_Indicator_create_and_verify_common_methods():
     assert "DELETEME" in p
 
 
+@pytest.mark.suppress_stdout
 def test_IndicatorSMA_create_and_verify_common_methods():
     """Test IndicatorSMA __init__ values, __eq__, __ne__, __str__, __repr__,
     to_clean_dict, to_json, and pretty.
@@ -1048,6 +1067,7 @@ def test_IndicatorSMA_create_and_verify_common_methods():
     assert "SMA" in p
 
 
+@pytest.mark.suppress_stdout
 def test_IndicatorEMA_create_and_verify_common_methods():
     """Test IndicatorEMA __init__ values, __eq__, __ne__, __str__, __repr__,
     to_clean_dict, to_json, and pretty.

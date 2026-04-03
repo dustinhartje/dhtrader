@@ -44,6 +44,7 @@ def cleanup_dhstore_storage():
 
 @pytest.mark.slow
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_Backtest_TradeSeries_and_Trade_integrity_checks(
         cleanup_dhstore_storage):
     """Verify storage integrity checks fail for invalid Backtests, TradeSeries,

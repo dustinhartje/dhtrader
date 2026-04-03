@@ -13,6 +13,7 @@ def symbol():
                   tick_size=0.25)
 
 
+@pytest.mark.suppress_stdout
 def test_build_market_hours_context_metadata(symbol):
     """Verify context shape and schedule-day tracking for date spans."""
     context = symbol.build_market_hours_context(
@@ -28,6 +29,7 @@ def test_build_market_hours_context_metadata(symbol):
     assert len(context["closed_ranges"]) == len(context["closed_range_starts"])
 
 
+@pytest.mark.suppress_stdout
 def test_is_open_dt_matches_market_is_open_across_eras(symbol):
     """Verify is_open_dt preserves market_is_open semantics by era."""
     test_times = [
@@ -61,6 +63,7 @@ def test_is_open_dt_matches_market_is_open_across_eras(symbol):
             )
 
 
+@pytest.mark.suppress_stdout
 def test_is_open_dt_matches_market_is_open_for_event_boundaries(symbol):
     """Verify event inclusivity boundaries are preserved by helpers."""
     events = [
@@ -96,6 +99,7 @@ def test_is_open_dt_matches_market_is_open_for_event_boundaries(symbol):
         )
 
 
+@pytest.mark.suppress_stdout
 def test_filter_open_datetimes_matches_market_is_open(symbol):
     """Verify bulk datetime filtering matches per-datetime checks."""
     events = [
@@ -134,6 +138,7 @@ def test_filter_open_datetimes_matches_market_is_open(symbol):
     assert filtered == expected
 
 
+@pytest.mark.suppress_stdout
 def test_filter_open_candles_matches_market_is_open(symbol):
     """Verify bulk candle filtering matches per-candle checks."""
 
@@ -178,6 +183,7 @@ def test_filter_open_candles_matches_market_is_open(symbol):
     assert [c.c_datetime for c in filtered] == [c.c_datetime for c in expected]
 
 
+@pytest.mark.suppress_stdout
 def test_Symbol_market_is_open(symbol):
     """Verify Symbol.market_is_open() for eth and rth across various times."""
     # ETH
@@ -743,6 +749,7 @@ def test_Symbol_market_is_open(symbol):
                                      )
 
 
+@pytest.mark.suppress_stdout
 def test_Symbol_get_market_boundary(symbol):
     """Verify Symbol.get_next/previous_open/close for eth and rth."""
     sym = symbol
@@ -1056,6 +1063,7 @@ def test_Symbol_get_market_boundary(symbol):
                      events=events)) == "2099-02-20 09:30:00"
 
 
+@pytest.mark.suppress_stdout
 def test_Symbol_get_next_tick_up(symbol):
     """Verify Symbol.get_next_tick_up() rounds to tick_size."""
     sym = symbol  # ES with tick_size=0.25
@@ -1099,6 +1107,7 @@ def test_Symbol_get_next_tick_up(symbol):
     assert sym.get_next_tick_up(5000.01) == 5000.25
 
 
+@pytest.mark.suppress_stdout
 def test_Symbol_get_next_tick_down(symbol):
     """Verify Symbol.get_next_tick_down() rounds to tick_size."""
     """Test get_next_tick_down() rounds down to nearest 0.25 (ES tick size)"""
@@ -1143,6 +1152,7 @@ def test_Symbol_get_next_tick_down(symbol):
     assert sym.get_next_tick_down(5000.01) == 5000.0
 
 
+@pytest.mark.suppress_stdout
 def test_Symbol_tick_methods_roundtrip(symbol):
     """Verify get_next_tick_up and down roundtrip correctly."""
     sym = symbol
@@ -1185,6 +1195,7 @@ def test_Symbol_tick_methods_roundtrip(symbol):
         assert down_once == down_twice
 
 
+@pytest.mark.suppress_stdout
 def test_Symbol_get_era(symbol):
     """Verify Symbol.get_era() identifies correct market hour eras."""
     sym = symbol
@@ -1281,6 +1292,7 @@ def test_Symbol_get_era(symbol):
         sym.get_era("2007-12-31 12:00:00")
 
 
+@pytest.mark.suppress_stdout
 def test_Symbol_get_times_for_era(symbol):
     """Verify Symbol.get_times_for_era() returns correct hours."""
     sym = symbol
@@ -1331,6 +1343,7 @@ def test_Symbol_get_times_for_era(symbol):
         sym.get_times_for_era("nonexistent_era")
 
 
+@pytest.mark.suppress_stdout
 def test_Symbol_get_closed_hours_for_era(symbol):
     """Verify Symbol.get_closed_hours_for_era() returns correct gaps."""
     sym = symbol
@@ -1392,6 +1405,7 @@ def test_Symbol_get_closed_hours_for_era(symbol):
         sym.get_closed_hours_for_era("2099-06-15 12:00:00", "invalid")
 
 
+@pytest.mark.suppress_stdout
 def test_Symbol_market_is_open_historical_eras(symbol):
     """Verify Symbol.market_is_open() for historical hour changes."""
     sym = symbol
@@ -1465,6 +1479,7 @@ def test_Symbol_market_is_open_historical_eras(symbol):
                               check_closed_events=False)
 
 
+@pytest.mark.suppress_stdout
 def test_Symbol_get_market_boundary_historical_eras(symbol):
     """Verify Symbol boundary methods for historical hour changes."""
     sym = symbol
@@ -1531,6 +1546,7 @@ def test_Symbol_get_market_boundary_historical_eras(symbol):
     assert dt_as_str(result2) == "2012-11-19 09:30:00"
 
 
+@pytest.mark.suppress_stdout
 def test_Symbol_init(symbol):
     """Verify Symbol initialization and attributes."""
     sym = symbol
@@ -1563,6 +1579,7 @@ def test_Symbol_init(symbol):
     assert sym2.name == "Test"
 
 
+@pytest.mark.suppress_stdout
 def test_Symbol_equality(symbol):
     """Verify Symbol equality comparison."""
     sym1 = symbol
@@ -1589,6 +1606,7 @@ def test_Symbol_equality(symbol):
     assert sym1 != sym5
 
 
+@pytest.mark.suppress_stdout
 def test_Symbol_string_representations(symbol):
     """Verify Symbol.__str__, __repr__, and pretty() methods."""
     sym = symbol
@@ -1620,6 +1638,7 @@ def test_Symbol_string_representations(symbol):
     assert '"tick_size"' in pretty_result
 
 
+@pytest.mark.suppress_stdout
 def test_Symbol_serialization(symbol):
     """Verify Symbol to_json() and to_clean_dict() methods."""
     import json
@@ -1653,6 +1672,7 @@ def test_Symbol_serialization(symbol):
     assert clean_dict == parsed
 
 
+@pytest.mark.suppress_stdout
 def test_Symbol_set_times(symbol):
     """Verify Symbol.set_times() updates trading hours correctly."""
     import datetime as dt
@@ -1681,6 +1701,7 @@ def test_Symbol_set_times(symbol):
                leverage_ratio=1, tick_size=0.01)
 
 
+@pytest.mark.suppress_stdout
 def test_Symbol_create_and_verify_common_methods(symbol):
     """Test Symbol __init__ values, __eq__, __ne__, __str__, __repr__,
     to_clean_dict, to_json, and pretty.

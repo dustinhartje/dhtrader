@@ -5,6 +5,7 @@ from dhtrader import (
     Candle, Chart)
 
 
+@pytest.mark.suppress_stdout
 def test_Chart_create_and_verify_common_methods():
     """Test Chart __init__ values, __eq__, __ne__, __str__, __repr__,
     to_clean_dict, to_json, and pretty.
@@ -101,6 +102,7 @@ def test_Chart_create_and_verify_common_methods():
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_Chart_restrict_dates():
     """Verify restrict_dates adjusts candle ranges.
 

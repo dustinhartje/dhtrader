@@ -30,6 +30,7 @@ from dhtrader.dhcommon import (
 )
 
 
+@pytest.mark.suppress_stdout
 def test_log_say(capsys):
     """Verify log_say prints message at each supported log level."""
     for level in ["info", "debug", "warn", "error", "critical"]:
@@ -38,6 +39,7 @@ def test_log_say(capsys):
         assert f"test {level} message" in captured.out
 
 
+@pytest.mark.suppress_stdout
 def test_OperationTimer_init():
     """Verify OperationTimer starts or does not start based on auto_start."""
     # Auto start (default True)
@@ -50,6 +52,7 @@ def test_OperationTimer_init():
     assert t2.start_dt is None
 
 
+@pytest.mark.suppress_stdout
 def test_OperationTimer_stop():
     """Verify OperationTimer.stop sets end_dt and calculates elapsed."""
     t = OperationTimer(name="test_stop")
@@ -61,6 +64,7 @@ def test_OperationTimer_stop():
     assert len(t.elapsed_str) > 0
 
 
+@pytest.mark.suppress_stdout
 def test_OperationTimer_update_elapsed():
     """Verify update_elapsed calculates elapsed from start to now."""
     t = OperationTimer(name="test_elapsed")
@@ -69,6 +73,7 @@ def test_OperationTimer_update_elapsed():
     assert isinstance(t.elapsed_str, str)
 
 
+@pytest.mark.suppress_stdout
 def test_OperationTimer_create_and_verify_common_methods():
     """Test OperationTimer __init__ values, __str__, __repr__, to_clean_dict,
     to_json, and pretty.
@@ -128,6 +133,7 @@ def test_OperationTimer_create_and_verify_common_methods():
     assert "test_common" in p
 
 
+@pytest.mark.suppress_stdout
 def test_OperationTimer_summary():
     """Verify OperationTimer.summary returns a one-line string."""
     t = OperationTimer(name="test_summary")
@@ -137,6 +143,7 @@ def test_OperationTimer_summary():
     assert "test_summary" in s
 
 
+@pytest.mark.suppress_stdout
 def test_sort_dict():
     """Verify sort_dict returns keys in ascending order."""
     # Basic sorting
@@ -157,6 +164,7 @@ def test_sort_dict():
     assert list(sort_dict(d3).keys()) == ["a", "b", "c"]
 
 
+@pytest.mark.suppress_stdout
 def test_diff_dicts():
     """Verify diff_dicts returns correct difference tuples between dicts."""
     # No difference
@@ -182,6 +190,7 @@ def test_diff_dicts():
     assert result == {"a": (1, 9), "c": (3, 8)}
 
 
+@pytest.mark.suppress_stdout
 def test_valid_timeframe():
     """Verify valid_timeframe accepts valid and rejects invalid timeframes."""
     valid_tfs = TIMEFRAMES
@@ -197,6 +206,7 @@ def test_valid_timeframe():
     assert valid_timeframe("bad_tf", exit=False) is False
 
 
+@pytest.mark.suppress_stdout
 def test_valid_trading_hours():
     """Verify valid_trading_hours accepts rth/eth and rejects other values."""
     assert valid_trading_hours("rth") is True
@@ -206,6 +216,7 @@ def test_valid_trading_hours():
     assert valid_trading_hours("bad", exit=False) is False
 
 
+@pytest.mark.suppress_stdout
 def test_check_tf_th_compatibility():
     """Verify check_tf_th_compatibility rejects incompatible tf/th combos."""
     # Compatible ETH timeframes
@@ -226,6 +237,7 @@ def test_check_tf_th_compatibility():
     assert check_tf_th_compatibility("r1h", "eth", exit=False) is False
 
 
+@pytest.mark.suppress_stdout
 def test_valid_event_category():
     """Verify valid_event_category accepts valid and rejects invalid values."""
     valid_cats = EVENT_CATEGORIES
@@ -236,6 +248,7 @@ def test_valid_event_category():
     assert valid_event_category("BadCategory", exit=False) is False
 
 
+@pytest.mark.suppress_stdout
 def test_dt_as_dt():
     """Verify dt_as_dt converts various inputs to datetime or None."""
     # None returns None
@@ -258,6 +271,7 @@ def test_dt_as_dt():
         dt_as_dt(12345)
 
 
+@pytest.mark.suppress_stdout
 def test_dt_as_str():
     """Verify dt_as_str converts various inputs to canonical string or None."""
     # None returns None
@@ -275,6 +289,7 @@ def test_dt_as_str():
         dt_as_str(12345)
 
 
+@pytest.mark.suppress_stdout
 def test_dt_as_time():
     """Verify dt_as_time converts HH:MM:SS strings to time objects."""
     from datetime import time
@@ -290,6 +305,7 @@ def test_dt_as_time():
     assert dt_as_time("00:00:00") == time(0, 0, 0)
 
 
+@pytest.mark.suppress_stdout
 def test_dow_name():
     """Verify dow_name returns correct weekday name for each index 0-6."""
     assert dow_name(0) == "Monday"
@@ -301,6 +317,7 @@ def test_dow_name():
     assert dow_name(6) == "Sunday"
 
 
+@pytest.mark.suppress_stdout
 def test_dt_to_epoch():
     """Verify dt_to_epoch converts datetime or string to epoch int or None."""
     assert dt_to_epoch(None) is None
@@ -310,6 +327,7 @@ def test_dt_to_epoch():
     assert result == expected_epoch
 
 
+@pytest.mark.suppress_stdout
 def test_dt_from_epoch():
     """Verify dt_from_epoch converts epoch to datetime, with roundtrip."""
     assert dt_from_epoch(None) is None
@@ -320,6 +338,7 @@ def test_dt_from_epoch():
     assert dt_as_str(result) == "2099-01-15 10:30:00"
 
 
+@pytest.mark.suppress_stdout
 def test_timeframe_delta():
     """Verify timeframe_delta returns correct timedelta for each timeframe."""
     assert timeframe_delta("1m") == timedelta(minutes=1)
@@ -331,6 +350,7 @@ def test_timeframe_delta():
         timeframe_delta("invalid")
 
 
+@pytest.mark.suppress_stdout
 def test_start_of_week_date():
     """Verify start_of_week_date returns the Sunday starting the week."""
     # 2099-01-05 is Monday → prior Sunday 2099-01-04
@@ -345,6 +365,7 @@ def test_start_of_week_date():
     assert isinstance(start_of_week_date("2099-01-07 10:00:00"), date)
 
 
+@pytest.mark.suppress_stdout
 def test_dict_of_weeks():
     """Verify dict_of_weeks returns correct week-keyed template dictionary."""
     template = {"count": 0}
@@ -373,6 +394,7 @@ def test_dict_of_weeks():
     assert list(result4.keys())[0] == "2099-01-04"
 
 
+@pytest.mark.suppress_stdout
 def test_this_candle_start():
     """Verify this_candle_start returns correct parent candle start time."""
     # 1m: floors to the minute
@@ -439,6 +461,7 @@ def test_this_candle_start():
         this_candle_start("2099-01-15 10:00:00", "invalid")
 
 
+@pytest.mark.suppress_stdout
 def test_rangify_candle_times():
     """Verify rangify_candle_times aggregates consecutive times into ranges."""
     # Single time creates one range
@@ -487,6 +510,7 @@ def test_rangify_candle_times():
     assert len(result5) == 1
 
 
+@pytest.mark.suppress_stdout
 def test_bot():
     """Verify bot() returns the expected beginning-of-time string."""
     result = bot()

@@ -72,6 +72,7 @@ def cleanup_2099_candles():
     _delete_2099_candles()
 
 
+@pytest.mark.suppress_stdout
 def test_read_candles_from_csv():
     """Verify read_candles_from_csv reads and filters CSV candles correctly."""
     # Returns a list of Candle objects when dates span all rows
@@ -145,6 +146,7 @@ def test_read_candles_from_csv():
     assert result_end[-1].c_datetime == "2099-01-01 18:04:00"
 
 
+@pytest.mark.suppress_stdout
 def test_generate_zero_volume_candle():
     """Verify generate_zero_volume_candle output for common scenarios.
 
@@ -248,6 +250,7 @@ def test_generate_zero_volume_candle():
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_store_candles_from_csv_and_compare(cleanup_2099_candles):
     """Store candles from a CSV then verify compare_candles_vs_csv results.
 
@@ -331,6 +334,7 @@ def test_store_candles_from_csv_and_compare(cleanup_2099_candles):
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_remediate_candle_gaps(cleanup_2099_candles):
     """Test remediate_candle_gaps on a controlled 2099 candle set.
 

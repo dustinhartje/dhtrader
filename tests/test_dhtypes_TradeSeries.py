@@ -146,6 +146,7 @@ def cleanup_tradeseries_storage():
         clear_tradeseries_storage_by_name(name)
 
 
+@pytest.mark.suppress_stdout
 def test_TradeSeries_create_and_verify_common_methods():
     """Test TradeSeries __init__ values, __eq__, __ne__, __str__, __repr__,
     to_clean_dict, to_json, and pretty.
@@ -217,6 +218,7 @@ def test_TradeSeries_create_and_verify_common_methods():
     assert len(ts.pretty(suppress_trades=False).splitlines()) == 46
 
 
+@pytest.mark.suppress_stdout
 def test_TradeSeries_add_sort_and_get_trades():
     """Verify add_trade, get_trade_by_open_dt, and trade sorting."""
     ts = create_tradeseries()
@@ -243,6 +245,7 @@ def test_TradeSeries_add_sort_and_get_trades():
     assert ts.get_trade_by_open_dt("2099-01-04 08:35:00") is None
 
 
+@pytest.mark.suppress_stdout
 def test_TradeSeries_balance_impact_and_stats():
     """Verify TradeSeries.balance_impact() and stats() calculations."""
     # Test a TradeSeries with winning and losing trades that does not liquidate
@@ -456,6 +459,7 @@ def test_TradeSeries_balance_impact_and_stats():
                                  }
 
 
+@pytest.mark.suppress_stdout
 def test_TradeSeries_non_target_closes_stats_and_effective_risk_reward_calc():
     """Verify effective_risk_reward when trades close at non-target prices."""
     ts = create_tradeseries()
@@ -530,6 +534,7 @@ def test_TradeSeries_non_target_closes_stats_and_effective_risk_reward_calc():
                                 {'stop': 400, 'prof': 400, 'offset': 0}]
 
 
+@pytest.mark.suppress_stdout
 def test_TradeSeries_drawdown_impact():
     """Verify TradeSeries.drawdown_impact() calculations."""
     # Test a TradeSeries with winning and losing trades that does not liquidate
@@ -650,6 +655,7 @@ def test_TradeSeries_drawdown_impact():
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_TradeSeries_store_retrieve_and_delete(cleanup_tradeseries_storage):
     """Verify TradeSeries storage, retrieval, and deletion including trades.
 
@@ -712,6 +718,7 @@ def test_TradeSeries_store_retrieve_and_delete(cleanup_tradeseries_storage):
 
 
 @pytest.mark.historical
+@pytest.mark.suppress_stdout
 def test_TradeSeries_historical():
     """Test TradeSeries.stats, balance_impact, and drawdown_impact.
 
@@ -808,6 +815,7 @@ def test_TradeSeries_historical():
 
 
 @pytest.mark.storage
+@pytest.mark.suppress_stdout
 def test_delete_tradeseries(cleanup_tradeseries_storage):
     """Verify delete_tradeseries() using TradeSeries list.
 
