@@ -202,10 +202,11 @@ def extract_all(write=False, console_output=False):
     assert t[1]["ts_id"] == "BacktestEMAReject-eth_e1h_9_s80-p160-o40"
     assert len(t[0]["trades"]) == 76
     assert len(t[1]["trades"]) == 54
-    # Confirm first trade as expected
+    # Confirm first trade as expected, fudging the created_dt that can change
+    trade_created = t[0]["trades"][0]["created_dt"]
     assert t[0]["trades"][0] == {
         'open_dt': '2025-11-30 19:06:00', 'close_dt': '2025-11-30 19:48:00',
-        'created_dt': '2025-12-06 13:20:29', 'direction': 'long',
+        'created_dt': trade_created, 'direction': 'long',
         'timeframe': 'e1h', 'trading_hours': 'eth', 'entry_price': 6848.25,
         'stop_target': 6828.25, 'prof_target': 6888.25, 'high_price': 6848.25,
         'low_price': 6828.25, 'exit_price': 6828.25, 'stop_ticks': 80,
@@ -231,7 +232,8 @@ def extract_all(write=False, console_output=False):
     assert dps[0] == {'dt': '2025-11-23 18:00:00',
                       'value': 6626.4,
                       'ind_id': 'ES_eth_e1h_EMA_close_l9_s2',
-                      'epoch': 1763938800}
+                      'epoch': 1763938800,
+                      'name': 'EMA'}
     # If all extractions passed (no Exception and assertions good),
     # rerun extraction writing to json files this time
     say("All ids and object counts match expectations!", console_output)
