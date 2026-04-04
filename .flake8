@@ -23,6 +23,7 @@ exclude =
     v1,
     .venv,
     venv,
+    env,
     build,
     dist,
     *.egg-info
