@@ -1,158 +1,106 @@
 # Code Standards and Enforcement
 
-This document describes the coding standards enforced in this project and how they are automatically validated.
+This document is the canonical prose reference for coding standards in this
+repository.
 
-## Standards
+## Scope Matrix
 
-### Line Length Limit: 79 Characters
-
-All Python code must adhere to the 79-character line limit as defined in PEP 8. This ensures code readability and compatibility with various development environments.
-
-**Tools that enforce this:**
-- `.flake8` configuration file (linting)
-- `.editorconfig` for editor integration
-- `githooks/pre-commit` hook (on commit)
-
-**Why 79?**
-- PEP 8 standard for Python
-- Works well with split-screen editors
-- Consistent with Python community conventions
-
-### No Trailing Whitespace
-
-All files must have no trailing whitespace (spaces/tabs at end of lines).
-
-**Tools that enforce this:**
-- `.editorconfig` (editor-level trimming)
-- `.flake8` linting rules W291 and W293
-- `githooks/pre-commit` hook
-
-### File Endings
-
-- All files must end with a newline character
-- Unix line endings (LF, not CRLF)
+- **Line length (79 max):** Python files only (`*.py`)
+- **Trailing whitespace (spaces or tabs at line end):** all code and config
+    files
+- **Markdown files (`*.md`):** trailing whitespace is allowed when needed for
+    formatting/rendering
+- **Blank lines:** must not contain whitespace characters
+- **Line endings:** LF only for all text files
 
 ## Enforcement Tools
 
-### 1. EditorConfig (.editorconfig)
+### 1. Flake8 (`.flake8`)
 
-VS Code and most editors support EditorConfig for automatic code formatting rules:
-- Automatically trims trailing whitespace
-- Enforces line endings
-- Sets proper indentation
+Primary Python linting and line-length enforcement.
 
-**Install:** Most editors have built-in support or plugins readily available.
-
-### 2. Flake8 (.flake8)
-
-Linting tool that checks for PEP 8 compliance:
 ```bash
-flake8 .  # Run locally before committing
+flake8 .
 ```
 
-**Key rules:**
-- E501: line too long (>79 characters)
-- W291: trailing whitespace
-- W293: blank line contains whitespace
+Key enforced Python rules include line length and common whitespace issues.
 
-### 3. Pre-commit Hook (githooks/pre-commit)
+### 2. EditorConfig (`.editorconfig`)
 
-Automatically runs `flake8` before each commit to catch violations:
+Editor-level consistency:
+
+- UTF-8
+- LF line endings
+- final newline
+- trailing whitespace trimming (markdown exempted)
+- indentation conventions
+
+### 3. File Validator (`validate-file-quality.sh`)
+
+Per-file validator used for edited files:
+
+- Python files: line length + trailing whitespace + line endings
+- Markdown files: line endings only
+- Other non-Python text files: trailing whitespace + line endings
+
 ```bash
-# Install hook (from repository root):
-cp githooks/pre-commit .git/hooks/pre-commit
-chmod +x .git/hooks/pre-commit
-
-# Verify it's installed:
-chmod +x .git/hooks/pre-commit && ls -l .git/hooks/pre-commit
+./validate-file-quality.sh <file>
 ```
+
+Optional auto-fix mode:
+
+```bash
+./validate-file-quality.sh --fix <file>
+```
+
+`--fix` removes trailing spaces/tabs and converts CRLF to LF before
+re-validating.
+
+### 4. Pre-commit Hook (`githooks/pre-commit`)
+
+Runs repository checks before commit:
+
+- `flake8 .` for Python linting
 
 ## Validation Command Reference
 
-Use these commands to validate Python files for compliance:
+### Python line-length check (79 max)
 
-### Check for line length violations:
 ```bash
-awk 'length > 79 {print NR": "length" chars: "$0}' <file>
+awk 'length > 79 {print NR": "length" chars: "$0}' <file.py>
 ```
 
-### Check for trailing whitespace (spaces):
+### Trailing whitespace check (spaces and tabs)
+
 ```bash
-grep -n " $" <file>
+grep -nE '[[:blank:]]$' <file>
 ```
 
-### Check for trailing whitespace (tabs):
+### LF line ending check
+
 ```bash
-grep -n "\t$" <file>
+file <file> | grep -q "CRLF" && echo "CRLF found"
 ```
 
-### Check line endings:
-```bash
-file <file>  # Should show "LF line terminators"
-```
+### Remove trailing spaces/tabs
 
-### Verify no violations exist:
 ```bash
-awk 'length > 79' <file> | wc -l    # Should output: 0
-grep -n " $" <file> | wc -l         # Should output: 0
-file <file> | grep -q "LF"           # Should succeed
+sed -i 's/[[:blank:]]\+$//' <file>
 ```
 
 ## Making Changes
 
-When making changes to files, ensure:
-
-1. **Line length:** Keep lines ≤79 characters
-   - Break long strings using parentheses or backslash
-   - Indent continuation lines appropriately
-
-2. **Trailing whitespace:** Never create trailing spaces
-   - Use `.editorconfig`-compatible editor (VS Code, PyCharm, etc.)
-   - Or use automated tools: `sed -i 's/[[:space:]]*$//' file.py`
-
-3. **File endings:** Always end files with a newline
-
-## Example: Fixing Long Lines
-
-**Bad:**
-```python
-result = sym.market_is_open(trading_hours="eth", target_dt=f"{date_without} 16:15:00", check_closed_events=False)
-```
-
-**Good (wrapped with parentheses):**
-```python
-result = sym.market_is_open(
-    trading_hours="eth",
-    target_dt=f"{date_without} 16:15:00",
-    check_closed_events=False
-)
-```
-
-## Continuous Integration
-
-The checks run automatically:
-- **On commit:** Pre-commit hook validates before allowing commit
-- **On push:** CI/CD pipeline validates all changes
-- **On PR:** Automated checks prevent merge if standards violated
+1. Keep Python lines at 79 chars or less.
+2. Keep all edited code/config/docs files free of trailing spaces/tabs.
+3. Keep LF line endings.
+4. Run:
+   - `flake8 .` when Python files are edited
+   - `./validate-file-quality.sh <file>` for each edited text file
 
 ## Configuration Files Reference
 
-- **`.flake8`**: Flake8 linting configuration with max-line-length=79
-  - Primary enforcement mechanism for CI/CD
-  - Also used by pre-commit hooks
-
-- **`.editorconfig`**: Editor-level code formatting rules
-  - Mirrors `.flake8` settings for real-time editor feedback
-  - Automatically trims trailing whitespace
-  - Supports VS Code, PyCharm, and other editors
-
-- **`setup.cfg`**: Centralized project configuration
-  - `[metadata]`: Package information
-  - `[options]`: Python version and dependencies
-  - `[tool:pytest]`: Pytest test discovery and markers
-  - `[coverage:*]`: Code coverage configuration
-  - Note: Pytest config consolidated here (no pytest.ini file)
-
-- **`githooks/pre-commit`**: Git pre-commit hook script
-  - Runs flake8 before allowing commits
-  - Prevents violations from entering repository
+- `.flake8`: Python linting and line-length policy
+- `.editorconfig`: editor behavior for whitespace, endings, indentation
+- `setup.cfg`: pytest and coverage settings
+- `githooks/pre-commit`: commit-time quality checks
+- `validate-file-quality.sh`: file-level validation/fix helper

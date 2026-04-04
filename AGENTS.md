@@ -1,80 +1,51 @@
 # Guidelines for AI Agents
 
-This document contains essential guidelines for AI agents (including GitHub
-Copilot and other automated assistants) working on this project.
+This document defines the operational standards for AI agents working in this
+repository.
 
-## Python File Editing Requirements
+## Canonical Sources and Precedence
 
-When editing Python files (`.py`), all changes MUST adhere to three core
-rules.
+When guidance appears in multiple files, use this order:
 
-**For complete rule definitions, examples, tools, and configuration,
-see [CODING_STANDARDS.md](CODING_STANDARDS.md).**
+1. Machine-enforced configuration:
+   - `.flake8`
+   - `.editorconfig`
+   - `setup.cfg`
+   - `githooks/pre-commit`
+   - `validate-file-quality.sh`
+2. Canonical prose reference:
+   - `CODING_STANDARDS.md`
+3. Short summary for agent bootstrap:
+   - `.github/copilot-instructions.md`
 
-### Rule 1: Maximum Line Length - 79 Characters
+If a conflict is found, follow the higher-priority source and update docs to
+remove the conflict.
 
-- All lines in Python files must not exceed 79 characters
-- Complies with PEP 8 standard
-- Use parentheses to break long strings across multiple lines
+## Rule Scope
 
-### Rule 2: No Trailing Whitespace
+- **79-character line length:** Python files only (`*.py`)
+- **Trailing whitespace (spaces/tabs):** all code and config files
+- **Markdown files:** trailing whitespace is allowed for formatting/rendering
+- **Line endings:** LF only for all text files
 
-- Python files must have zero trailing spaces or tabs
-- Blank lines should be completely empty (zero characters)
+## Required Workflow
 
-### Rule 3: Unix Line Endings (LF Only)
+Before editing:
 
-- All files must use LF line endings, not CRLF
+1. Read `CODING_STANDARDS.md` if rule details are needed.
+2. Prefer config-driven enforcement over ad-hoc rules.
 
-## Pre-Edit Checklist (Python Files Only)
+After editing:
 
-Before making any changes to a Python file:
+1. For Python files, run lint/validation checks used by the repo.
+2. For all edited text files, run `validate-file-quality.sh <file>`.
+3. Fix violations before presenting changes.
 
-1. Review rules above and [CODING_STANDARDS.md](CODING_STANDARDS.md)
-2. Run pre-edit validation using commands from
-   [CODING_STANDARDS.md section "Validation Command
-   Reference"](CODING_STANDARDS.md#validation-command-reference)
-3. Plan line breaks to stay within 79 characters
+## Related Files
 
-## Post-Edit Verification (Python Files Only)
-
-After editing a Python file, run the verification commands from
-[CODING_STANDARDS.md section "Validation Command
-Reference"](CODING_STANDARDS.md#validation-command-reference)
-
-If any violations are found, fix them immediately before presenting changes.
-
-## Project Configuration Files
-
-- **`.flake8`** - Flake8 linting configuration (canonical enforcement)
-- **`.editorconfig`** - Editor-level formatting rules
-- **`CODING_STANDARDS.md`** - Complete standards and validation commands
-- **`.agent-edit-guidelines.md`** - Detailed agent checklists and examples
-- **`validate-file-quality.sh`** - Automated validation script
-
-## Scope of Rules
-
-- **Python files ONLY** (.py, tests, scripts)
-- Configuration files, markdown, shell scripts not subject to 79-char limit
-- Trailing whitespace rules apply ONLY to Python files
-- Line ending (LF) requirement applies to all files
-
-## See Also
-
-- [README.md](README.md) - Project overview and agent guidelines summary
-- [CODING_STANDARDS.md](CODING_STANDARDS.md) - **Canonical reference for all
-  rules, examples, validation commands, and tools**
-- [.agent-edit-guidelines.md](.agent-edit-guidelines.md) - Detailed
-  agent-specific checklists with code examples
-
-## Key Project Information
-
-See the main [README.md](README.md) for:
-- Code quality standards overview
-- Market era analysis details
-- Project structure and design principles
-
-See [CODING_STANDARDS.md](CODING_STANDARDS.md) for:
-- Detailed examples and patterns
-- Exception handling procedures
-- Comprehensive reference material
+- `CODING_STANDARDS.md` - canonical rule definitions and validation commands
+- `.flake8` - Python linting and line-length enforcement
+- `.editorconfig` - editor-level consistency rules
+- `setup.cfg` - centralized pytest and coverage configuration
+- `githooks/pre-commit` - pre-commit enforcement entry point
+- `validate-file-quality.sh` - file-level validation helper
