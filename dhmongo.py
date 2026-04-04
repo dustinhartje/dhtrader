@@ -304,7 +304,10 @@ def get_trades_by_field(field: str,
         total = min(total, limit)
     pbar = start_progbar(show_progress, total,
                          f"trade records fetched from {collection}")
-    cursor = c.find({field: value}).limit(limit)
+    # Enforce deterministic ordering for callers that depend on trade order.
+    cursor = c.find({field: value}).sort(
+        "open_epoch", pymongo.ASCENDING
+    ).limit(limit)
     result = []
     for i, doc in enumerate(cursor, start=1):
         result.append(doc)
