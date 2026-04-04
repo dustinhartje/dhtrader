@@ -26,7 +26,7 @@ different historical time periods.
 """
 import datetime as dt
 from bisect import bisect_right
-from datetime import timedelta
+from datetime import timedelta, date
 import sys
 import json
 from statistics import fmean
@@ -566,17 +566,19 @@ class Symbol():
         # Build epoch intervals from schedule (era-based closed hours)
         schedule_ranges = []
         schedule_days = 0
-        for date in _iter_dates(start_bound.date(), end_bound.date()):
+        for this_date in _iter_dates(start_bound.date(), end_bound.date()):
             schedule_days += 1
             # Lookup what's closed for this date/era/trading_hours
             closed_hours = self.get_closed_hours_for_era(
-                target_dt=dt.datetime.combine(date, dt.time(0, 0, 0)),
+                target_dt=dt.datetime.combine(this_date, dt.time(0, 0, 0)),
                 trading_hours=trading_hours,
             )
             # Convert each closed period to epoch range
-            for period in closed_hours[date.weekday()]:
-                closed_start_dt = dt.datetime.combine(date, period["close"])
-                closed_end_dt = dt.datetime.combine(date, period["open"])
+            for period in closed_hours[this_date.weekday()]:
+                closed_start_dt = dt.datetime.combine(this_date,
+                                                      period["close"])
+                closed_end_dt = dt.datetime.combine(this_date,
+                                                    period["open"])
                 start_epoch = dt_to_epoch(closed_start_dt)
                 end_epoch = dt_to_epoch(closed_end_dt) - 1
                 if end_epoch >= start_epoch:
@@ -3233,10 +3235,10 @@ class TradeSeries():
                 }
 
     def weekly_stats(self, include_first_min: bool = True):
-        """Return trade statistics grouped into weekly Sunday-keyed buckets.
+        """Return trade statistics grouped into weekly buckets.
 
-        Uses Sunday as the start of each week, with Sunday's date as the
-        bucket name.
+        Uses Sunday as the start of each week for bucket definition and
+        membership, but emits Monday date as the bucket label for each week.
         """
         # Build a dict of weeks with zeroes as default values to ensure we
         # represent non-traded weeks in the result rather than leave gaps
@@ -3255,11 +3257,14 @@ class TradeSeries():
         result = dict_of_weeks(start_dt=w_start,
                                end_dt=w_end,
                                template=template)
+        # Relabel all Sunday keys to Monday keys for output
+        result = {str(date.fromisoformat(k) + timedelta(days=1)): v
+                  for k, v in result.items()}
         # Loop through trades to aggregate stats
         for t in self.trades:
             if not t.first_min_open or include_first_min:
                 d = dt_as_dt(t.open_dt)
-                w = str(start_of_week_date(dt=d))
+                w = str(start_of_week_date(dt=d) + timedelta(days=1))
                 result[w]["total_trades"] += 1
                 if t.profitable:
                     result[w]["profitable_trades"] += 1
