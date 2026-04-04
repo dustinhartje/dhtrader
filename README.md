@@ -63,6 +63,34 @@ in `githooks/`. The pre-commit hook validates:
 - No trailing whitespace
 - Other code quality standards
 
+### Virtual Environment
+
+While not strictly necessary when used as a library, it is sometimes helpful to run adhoc scripts and python console commands from this repository.  These steps will build a compatible python virtual environment for such purposes.
+
+**Usage**
+If Initial Setup was already done, activate using:
+`. env/bin/activate`
+and deactivate using:
+`deactivate`
+
+**Initial Setup**
+1. Create the virutal environment in the root of the local repo clone
+`python3 -m venv env`
+
+2. Activate the virtual environment
+`. env/bin/activate`
+
+3. Upgrade pip and install requirements.txt
+```
+python3 -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+4. Confirm no broken requirements
+`pip check`
+should return:
+No broken requirements found.
+
 # ES Futures Market Era Analysis
 
 For historical backtesting accuracy, the `MARKET_ERAS` configuration, defined in `dhtypes.py`, specifies trading hours for different periods of ES futures history (2008-present). The configuration was derived from detailed analysis of 6.3M+ candle records and validated to 99.99% accuracy.
