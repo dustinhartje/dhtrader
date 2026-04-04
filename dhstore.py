@@ -157,14 +157,8 @@ def check_integrity_future_datetimes():
     Does not modify any data.
 
     Returns:
-        dict with keys:
-            status: 'OK' or 'ERRORS'
-            total_issues: count of all future-dated documents found
-            issues_by_collection: dict mapping collection name to a
-                list of dicts, each with keys collection, field,
-                value, name, _id
-            detected_fields_by_collection: per-collection field discovery
-                details from sampled records
+        dict: Results with keys status, total_issues,
+        issues_by_collection, and detected_fields_by_collection.
     """
     now_epoch = dt_to_epoch(dt.now())
     now_str = dt_as_str(dt_from_epoch(now_epoch))
@@ -238,11 +232,8 @@ def check_integrity_no_test_orphans():
     non-test environment.  Does not modify any data.
 
     Returns:
-        dict with keys:
-            status: 'OK' or 'ERRORS'
-            total_issues: count of all affected documents found
-            issues_by_collection: dict mapping collection name to a
-                list of dicts, each with keys collection, name, _id
+        dict: Results with keys status, total_issues,
+        and issues_by_collection.
     """
     issues_by_collection = {}
     total_issues = 0
@@ -278,17 +269,13 @@ def check_integrity_no_nameless_objects(ignore=None):
     in the ignore list are bypassed entirely.  Does not modify any data.
 
     Args:
-        ignore: List of collection name strings to skip.  Defaults to
-            MISSING_NAME_IGNORE_COLLECTIONS.
+        ignore: List of collection name strings to skip.
+            Defaults to MISSING_NAME_IGNORE_COLLECTIONS.
 
     Returns:
-        dict with keys:
-            status: 'OK' or 'ERRORS'
-            total_issues: count of all affected documents found
-            issues_by_collection: dict mapping collection name to the
-                count of documents with a missing/null/empty name
-            skipped_collections: list of collection names that were
-                skipped per the ignore list
+        dict: Results with keys status, total_issues,
+        issues_by_collection, sample_issues_by_collection,
+        and skipped_collections.
     """
     if ignore is None:
         ignore = MISSING_NAME_IGNORE_COLLECTIONS
@@ -2035,9 +2022,10 @@ def delete_candles_by_field(symbol: str,
 
     Typically used to delete by name or other identifying fields.
 
-    Example to delete all candles with name=="DELETEME":
-    delete_candles_by_field(symbol="ES", timeframe="1m",
-                            field="name", value="DELETEME")
+    Example to delete all candles with name=="DELETEME"::
+
+        delete_candles_by_field(symbol="ES", timeframe="1m",
+                                field="name", value="DELETEME")
     """
     return dhm.delete_candles_by_field(symbol=symbol,
                                        timeframe=timeframe,

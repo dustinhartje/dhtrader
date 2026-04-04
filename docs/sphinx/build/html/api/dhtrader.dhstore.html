@@ -125,6 +125,67 @@ utility layer with no storage dependencies.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhstore.check_integrity_future_datetimes">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">check_integrity_future_datetimes</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#check_integrity_future_datetimes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.check_integrity_future_datetimes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Identify documents with datetime attributes set in the future.</p>
+<p>Dynamically samples each collection to detect fields containing
+datetime strings (formatted like dt_as_str()) and integer epoch
+seconds, then checks those fields for values greater than “now”.
+Does not modify any data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Results with keys status, total_issues,
+issues_by_collection, and detected_fields_by_collection.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhstore.check_integrity_no_test_orphans">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">check_integrity_no_test_orphans</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#check_integrity_no_test_orphans"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.check_integrity_no_test_orphans" title="Permalink to this definition">¶</a></dt>
+<dd><p>Identify documents with TEST or DELETEME in their name attribute.</p>
+<p>Dynamically checks all collections in MongoDB for documents where
+the name field contains ‘TEST’ or ‘DELETEME’.  These strings
+indicate leftover unit test objects that must not persist in any
+non-test environment.  Does not modify any data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Results with keys status, total_issues,
+and issues_by_collection.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhstore.check_integrity_no_nameless_objects">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">check_integrity_no_nameless_objects</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ignore</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#check_integrity_no_nameless_objects"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.check_integrity_no_nameless_objects" title="Permalink to this definition">¶</a></dt>
+<dd><p>Identify documents missing a non-null, non-empty name attribute.</p>
+<p>Dynamically checks all collections in MongoDB for documents where
+the name field is absent, null, or an empty string.  Collections
+in the ignore list are bypassed entirely.  Does not modify any data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ignore</strong> – List of collection name strings to skip.
+Defaults to MISSING_NAME_IGNORE_COLLECTIONS.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Results with keys status, total_issues,
+issues_by_collection, sample_issues_by_collection,
+and skipped_collections.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.reconstruct_trade">
 <span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">reconstruct_trade</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#reconstruct_trade"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.reconstruct_trade" title="Permalink to this definition">¶</a></dt>
 <dd><p>Takes a dictionary and builds a Trade() object from it.</p>
@@ -178,7 +239,7 @@ storage.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.review_trades">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">review_trades</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">symbol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ES'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_TRADES</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bt_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ts_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_epochs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">check_integrity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">multi_ok</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">list_issues</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'trade_integrity_results.json'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pretty</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#review_trades"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.review_trades" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">review_trades</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">symbol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ES'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_TRADES</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bt_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ts_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_epochs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">check_integrity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">multi_ok</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">orphan_ok</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">list_issues</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'backtests_integrity_results.json'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pretty</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#review_trades"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.review_trades" title="Permalink to this definition">¶</a></dt>
 <dd><p>Provide aggregate summary data about trades in central storage.</p>
 <p>Optionally filters by bt_id and/or ts_id.  Earliest and latest dates
 are returned as strings; include_epochs can also provide them as epochs.</p>
@@ -197,7 +258,9 @@ format.</p>
 <li><p><strong>ts_id</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><em>None</em>) – </p></li>
 <li><p><strong>include_epochs</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – </p></li>
 <li><p><strong>check_integrity</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – </p></li>
+<li><p><strong>show_progress</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – </p></li>
 <li><p><strong>multi_ok</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em> | </em><em>None</em>) – </p></li>
+<li><p><strong>orphan_ok</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em> | </em><em>None</em>) – </p></li>
 <li><p><strong>list_issues</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – </p></li>
 <li><p><strong>out_path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><em>None</em>) – </p></li>
 <li><p><strong>out_file</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
@@ -580,6 +643,40 @@ range.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhstore.get_indicators_by_name">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">get_indicators_by_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">meta_collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_IND_META</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">autoload_chart</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">autoload_datapoints</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#get_indicators_by_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.get_indicators_by_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a list of Indicator objects for all indicators with the name.</p>
+<p>autoload_chart and autoload_datapoints both default to False for
+performance.  When enabled they load for the earliest_dt to latest_dt
+range.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>meta_collection</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>autoload_chart</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – </p></li>
+<li><p><strong>autoload_datapoints</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhstore.delete_indicators_by_name">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">delete_indicators_by_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">meta_collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_IND_META</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dp_collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_IND_DPS</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#delete_indicators_by_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.delete_indicators_by_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete all indicators and their datapoints with the given name.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>meta_collection</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>dp_collection</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.get_symbol_by_ticker">
 <span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">get_symbol_by_ticker</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ticker</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#get_symbol_by_ticker"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.get_symbol_by_ticker" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return a Symbol by ticker name, caching instances for performance.</p>
@@ -625,15 +722,21 @@ all Charts and Indicators.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.review_candles">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">review_candles</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timeframe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ES'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">check_integrity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_detail</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#review_candles"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.review_candles" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">review_candles</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timeframe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ES'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">check_integrity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_detail</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_dt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_dt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#review_candles"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.review_candles" title="Permalink to this definition">¶</a></dt>
 <dd><p>Provide aggregate summary data about candles in central storage.</p>
 <p>Options to further check completeness/integrity of candle data and
 provide remediation.</p>
+<p>There is substantial overlap in the integrity checks performed by this
+function with dhutil.compare_candles_vs_csv() validations.  Both are worth
+running as this reviews from a different perspective and covers higher
+timeframes for which we may not have CSVs available to validate against.
+They are complementary despite some redundancy.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>timeframe</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
 <li><p><strong>check_integrity</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – </p></li>
+<li><p><strong>show_progress</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – </p></li>
 <li><p><strong>return_detail</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – </p></li>
 </ul>
 </dd>
@@ -649,6 +752,27 @@ provide remediation.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>timeframe</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
 <li><p><strong>symbol</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhstore.delete_candles_by_field">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">delete_candles_by_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">symbol</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeframe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#delete_candles_by_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.delete_candles_by_field" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete candles from central storage with ‘field’ matching ‘value’.</p>
+<p>Typically used to delete by name or other identifying fields.</p>
+<p>Example to delete all candles with name==”DELETEME”:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">delete_candles_by_field</span><span class="p">(</span><span class="n">symbol</span><span class="o">=</span><span class="s2">&quot;ES&quot;</span><span class="p">,</span> <span class="n">timeframe</span><span class="o">=</span><span class="s2">&quot;1m&quot;</span><span class="p">,</span>
+                        <span class="n">field</span><span class="o">=</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="s2">&quot;DELETEME&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>symbol</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>timeframe</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>field</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
 </ul>
 </dd>
 </dl>
@@ -686,6 +810,23 @@ start before or on it.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>symbol</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhstore.delete_events_by_field">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">delete_events_by_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">symbol</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#delete_events_by_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.delete_events_by_field" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete events from central storage with ‘field’ matching ‘value’.</p>
+<p>Typically used to delete by name or category fields.</p>
+<p>Example to delete all events with name==”DELETEME”:
+delete_events_by_field(symbol=”ES”, field=”name”, value=”DELETEME”)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>symbol</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>field</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>
@@ -733,6 +874,9 @@ start before or on it.</p>
 <li><a class="reference internal" href="#dhtrader.dhstore.list_mongo_collections"><code class="docutils literal notranslate"><span class="pre">list_mongo_collections()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhstore.drop_mongo_collection"><code class="docutils literal notranslate"><span class="pre">drop_mongo_collection()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhstore.get_all_records_by_collection"><code class="docutils literal notranslate"><span class="pre">get_all_records_by_collection()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhstore.check_integrity_future_datetimes"><code class="docutils literal notranslate"><span class="pre">check_integrity_future_datetimes()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhstore.check_integrity_no_test_orphans"><code class="docutils literal notranslate"><span class="pre">check_integrity_no_test_orphans()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhstore.check_integrity_no_nameless_objects"><code class="docutils literal notranslate"><span class="pre">check_integrity_no_nameless_objects()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhstore.reconstruct_trade"><code class="docutils literal notranslate"><span class="pre">reconstruct_trade()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhstore.get_all_trades"><code class="docutils literal notranslate"><span class="pre">get_all_trades()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhstore.get_trades_by_field"><code class="docutils literal notranslate"><span class="pre">get_trades_by_field()</span></code></a></li>
@@ -761,15 +905,19 @@ start before or on it.</p>
 <li><a class="reference internal" href="#dhtrader.dhstore.store_indicator_datapoints"><code class="docutils literal notranslate"><span class="pre">store_indicator_datapoints()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhstore.store_indicator"><code class="docutils literal notranslate"><span class="pre">store_indicator()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhstore.delete_indicator"><code class="docutils literal notranslate"><span class="pre">delete_indicator()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhstore.get_indicators_by_name"><code class="docutils literal notranslate"><span class="pre">get_indicators_by_name()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhstore.delete_indicators_by_name"><code class="docutils literal notranslate"><span class="pre">delete_indicators_by_name()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhstore.get_symbol_by_ticker"><code class="docutils literal notranslate"><span class="pre">get_symbol_by_ticker()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhstore.store_candle"><code class="docutils literal notranslate"><span class="pre">store_candle()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhstore.store_candles"><code class="docutils literal notranslate"><span class="pre">store_candles()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhstore.get_candles"><code class="docutils literal notranslate"><span class="pre">get_candles()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhstore.review_candles"><code class="docutils literal notranslate"><span class="pre">review_candles()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhstore.delete_candles"><code class="docutils literal notranslate"><span class="pre">delete_candles()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhstore.delete_candles_by_field"><code class="docutils literal notranslate"><span class="pre">delete_candles_by_field()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhstore.store_event"><code class="docutils literal notranslate"><span class="pre">store_event()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhstore.get_events"><code class="docutils literal notranslate"><span class="pre">get_events()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhstore.clear_events"><code class="docutils literal notranslate"><span class="pre">clear_events()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhstore.delete_events_by_field"><code class="docutils literal notranslate"><span class="pre">delete_events_by_field()</span></code></a></li>
 </ul>
 </li>
 </ul>

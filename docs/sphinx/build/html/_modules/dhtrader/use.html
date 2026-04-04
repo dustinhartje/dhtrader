@@ -48,15 +48,6 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
 
-<span class="c1"># Make dhtrader package importable when run as standalone script</span>
-<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
-    <span class="c1"># Add git root to path (one directory up from dhtrader)</span>
-    <span class="n">_git_root</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)))</span>
-    <span class="k">if</span> <span class="n">_git_root</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
-        <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">_git_root</span><span class="p">)</span>
-
-<span class="kn">from</span><span class="w"> </span><span class="nn">dhtrader</span><span class="w"> </span><span class="kn">import</span> <span class="n">prompt_yn</span>
-
 
 <div class="viewcode-block" id="get_script_dir"><a class="viewcode-back" href="../../api/dhtrader.use.html#dhtrader.use.get_script_dir">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_script_dir</span><span class="p">(</span><span class="n">depth</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the directory of the calling script.</span>
@@ -101,6 +92,34 @@
 <div class="viewcode-block" id="available_environments"><a class="viewcode-back" href="../../api/dhtrader.use.html#dhtrader.use.available_environments">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">available_environments</span><span class="p">(</span><span class="n">script_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a sorted list of available environment names.&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">list_environment_files</span><span class="p">(</span><span class="n">script_dir</span><span class="p">)</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span></div>
+
+
+<div class="viewcode-block" id="get_mongo_conn_from_file"><a class="viewcode-back" href="../../api/dhtrader.use.html#dhtrader.use.get_mongo_conn_from_file">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_mongo_conn_from_file</span><span class="p">(</span><span class="n">file_path</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extract MONGO_CONN value from an environment file.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        file_path: Full path to mongo.env.&lt;env&gt; file</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: Value of MONGO_CONN, or &#39;&#39; if not found</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">raw_line</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">line</span> <span class="o">=</span> <span class="n">raw_line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">line</span> <span class="ow">or</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;#&#39;</span><span class="p">):</span>
+                    <span class="k">continue</span>
+                <span class="k">if</span> <span class="s1">&#39;=&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;=&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="n">normalized_key</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;export &#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">normalized_key</span> <span class="o">!=</span> <span class="s1">&#39;MONGO_CONN&#39;</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="k">return</span> <span class="n">value</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s1">&#39;&quot;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot;&#39;&quot;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;&#39;</span>
+
+    <span class="k">return</span> <span class="s1">&#39;&#39;</span></div>
 
 
 <div class="viewcode-block" id="detect_environment"><a class="viewcode-back" href="../../api/dhtrader.use.html#dhtrader.use.detect_environment">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">detect_environment</span><span class="p">(</span><span class="n">script_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -217,6 +236,8 @@
 <span class="sd">    Returns:</span>
 <span class="sd">        bool: True if user confirms or environment is prod, False if aborted</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">dhtrader</span><span class="w"> </span><span class="kn">import</span> <span class="n">prompt_yn</span>
+
     <span class="k">if</span> <span class="n">script_dir</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">script_dir</span> <span class="o">=</span> <span class="n">get_script_dir</span><span class="p">(</span><span class="n">depth</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
@@ -228,23 +249,10 @@
 
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Warning: Running in &#39;</span><span class="si">{</span><span class="n">current_env</span><span class="si">}</span><span class="s2">&#39; environment&quot;</span><span class="p">)</span>
 
-    <span class="n">prompt_fn</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">prompt_fn</span> <span class="o">=</span> <span class="n">prompt_yn</span>
-    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-        <span class="n">prompt_fn</span> <span class="o">=</span> <span class="kc">None</span>
-
-    <span class="k">if</span> <span class="n">prompt_fn</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">response</span> <span class="o">=</span> <span class="n">prompt_fn</span><span class="p">(</span><span class="s2">&quot;Continue with current environment?&quot;</span><span class="p">)</span>
-        <span class="k">except</span> <span class="ne">EOFError</span><span class="p">:</span>
-            <span class="n">response</span> <span class="o">=</span> <span class="kc">False</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">response_str</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s2">&quot;Continue with current environment? (Y/N): &quot;</span><span class="p">)</span>
-            <span class="n">response</span> <span class="o">=</span> <span class="n">response_str</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;yes&#39;</span><span class="p">]</span>
-        <span class="k">except</span> <span class="ne">EOFError</span><span class="p">:</span>
-            <span class="n">response</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">prompt_yn</span><span class="p">(</span><span class="s2">&quot;Continue with current environment?&quot;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">EOFError</span><span class="p">:</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="kc">False</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">response</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Aborted.&quot;</span><span class="p">)</span>
@@ -283,9 +291,20 @@
         <span class="nb">print</span><span class="p">(</span><span class="n">current_env</span><span class="p">)</span>
     <span class="c1"># Display available environments</span>
     <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">action</span> <span class="o">==</span> <span class="s1">&#39;list&#39;</span><span class="p">:</span>
-        <span class="n">envs</span> <span class="o">=</span> <span class="n">available_environments</span><span class="p">(</span><span class="n">script_dir</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">envs</span><span class="p">:</span>
-            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">envs</span><span class="p">))</span>
+        <span class="n">env_files</span> <span class="o">=</span> <span class="n">list_environment_files</span><span class="p">(</span><span class="n">script_dir</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">env_files</span><span class="p">:</span>
+            <span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">env</span><span class="p">,</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">env_files</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">mongo_conn</span> <span class="o">=</span> <span class="n">get_mongo_conn_from_file</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+                <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">env</span><span class="p">,</span> <span class="n">mongo_conn</span><span class="p">))</span>
+
+            <span class="n">rows</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">item</span><span class="p">:</span> <span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+
+            <span class="n">longest</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">env</span><span class="p">)</span> <span class="k">for</span> <span class="n">env</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">)</span>
+            <span class="n">min_gap</span> <span class="o">=</span> <span class="mi">3</span>
+            <span class="k">for</span> <span class="n">env</span><span class="p">,</span> <span class="n">mongo_conn</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">:</span>
+                <span class="n">spacing</span> <span class="o">=</span> <span class="s1">&#39; &#39;</span> <span class="o">*</span> <span class="p">(</span><span class="n">longest</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">env</span><span class="p">)</span> <span class="o">+</span> <span class="n">min_gap</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">env</span><span class="si">}{</span><span class="n">spacing</span><span class="si">}{</span><span class="n">mongo_conn</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;No environments found&quot;</span><span class="p">)</span>
     <span class="c1"># Switch to a specific mongo environment</span>

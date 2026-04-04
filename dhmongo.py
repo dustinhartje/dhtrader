@@ -742,9 +742,10 @@ def delete_candles_by_field(symbol: str,
 
     Typically used to delete by name or other identifying fields.
 
-    Example to delete all candles with name=="DELETEME":
-    delete_candles_by_field(symbol="ES", timeframe="1m",
-                            field="name", value="DELETEME")
+    Example to delete all candles with name=="DELETEME"::
+
+        delete_candles_by_field(symbol="ES", timeframe="1m",
+                                field="name", value="DELETEME")
     """
     c = db[f"candles_{symbol}_{timeframe}"]
     result = c.delete_many({field: value})

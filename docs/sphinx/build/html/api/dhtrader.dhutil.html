@@ -44,15 +44,24 @@ It relies on dhcommon for datetime utilities and dhstore for data retrieval
 and persistence.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhutil.generate_zero_volume_candle">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhutil.</span></span><span class="sig-name descname"><span class="pre">generate_zero_volume_candle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">c_datetime</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeframe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'1m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ES'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhutil.html#generate_zero_volume_candle"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhutil.generate_zero_volume_candle" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhutil.</span></span><span class="sig-name descname"><span class="pre">generate_zero_volume_candle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">c_datetime</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeframe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'1m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ES'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">DEFAULT_OBJ_NAME</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhutil.html#generate_zero_volume_candle"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhutil.generate_zero_volume_candle" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return a zero volume candle with all OHLC values set to prior close.</p>
 <p>Primarily used to fill gaps in 1m candle storage where data providers
 sometimes omit candles with zero trading volume.</p>
+<p>Returns None when no prior candle exists (e.g. a gap at the very
+start of stored data such as the 18:00 market open candle).</p>
+<blockquote>
+<div><dl class="simple">
+<dt>name: Optional candle name to apply to the generated candle.</dt><dd><p>If not passed, default naming is used.</p>
+</dd>
+</dl>
+</div></blockquote>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>timeframe</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
 <li><p><strong>symbol</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
 </ul>
 </dd>
 </dl>
@@ -60,7 +69,7 @@ sometimes omit candles with zero trading volume.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhutil.remediate_candle_gaps">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhutil.</span></span><span class="sig-name descname"><span class="pre">remediate_candle_gaps</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timeframe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'1m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ES'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prompt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fix_obvious</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fix_unclear</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dry_run</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhutil.html#remediate_candle_gaps"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhutil.remediate_candle_gaps" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhutil.</span></span><span class="sig-name descname"><span class="pre">remediate_candle_gaps</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timeframe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'1m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ES'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prompt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fix_obvious</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fix_unclear</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dry_run</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_dt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_dt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">DEFAULT_OBJ_NAME</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhutil.html#remediate_candle_gaps"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhutil.remediate_candle_gaps" title="Permalink to this definition">¶</a></dt>
 <dd><p>Identify candle gaps and offer to fill them with zero volume candles.</p>
 <p>Currently only supports 1m as the other timeframes are calculated from
 these, but timeframe is included to keep consistent argument flows and
@@ -73,6 +82,11 @@ normal after hours zero volume periods</p>
 </dl>
 <p>dry_run: Run all logic as if remediation is being performed, but only
 print candle storage actions without actually performing them.</p>
+<p>start_dt: Optional datetime to limit remediation to a specific start.
+If None, all candles from the earliest stored candle are reviewed.</p>
+<p>end_dt: Optional datetime to limit remediation to a specific end.
+If None, all candles up to the latest stored candle are reviewed.</p>
+<p>name: Optional candle name for generated zero-volume remediation candles.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -80,6 +94,7 @@ print candle storage actions without actually performing them.</p>
 <li><p><strong>prompt</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – </p></li>
 <li><p><strong>fix_obvious</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – </p></li>
 <li><p><strong>fix_unclear</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – </p></li>
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
 </ul>
 </dd>
 </dl>
@@ -105,7 +120,7 @@ This will fail badly if the format of the source file is incorrect!</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhutil.store_candles_from_csv">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhutil.</span></span><span class="sig-name descname"><span class="pre">store_candles_from_csv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filepath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeframe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'1m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ES'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhutil.html#store_candles_from_csv"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhutil.store_candles_from_csv" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhutil.</span></span><span class="sig-name descname"><span class="pre">store_candles_from_csv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filepath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeframe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'1m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ES'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">DEFAULT_OBJ_NAME</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhutil.html#store_candles_from_csv"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhutil.store_candles_from_csv" title="Permalink to this definition">¶</a></dt>
 <dd><p>Loads 1m candles from a CSV file into central storage.</p>
 <p>Mostly useful for quick manual gap fill operations via python console.</p>
 <dl class="field-list simple">
@@ -114,6 +129,7 @@ This will fail badly if the format of the source file is incorrect!</p>
 <li><p><strong>filepath</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
 <li><p><strong>timeframe</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
 <li><p><strong>symbol</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
 </ul>
 </dd>
 </dl>
@@ -125,6 +141,12 @@ This will fail badly if the format of the source file is incorrect!</p>
 <dd><p>Check stored candles against a CSV source file.</p>
 <p>Primarily used to confirm calculated higher timeframes against data
 provider equivalents to sanity check the calculation process.</p>
+<p>There is substantial overlap in the integrity checks performed by this
+function with dhstore.review_candles(check_integrity=True) validations.
+Both are worth running as this function can only cover timeframes for which
+we have source CSVs available, while review_candles covers all timeframes
+from a slightly different perspective.  They are complimentary despite
+some redundancy.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">

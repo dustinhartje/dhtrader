@@ -66,7 +66,7 @@ dt_from_epoch, etc.</p></li>
 including dhstore, dhutil, and dhtypes.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhcommon.log_say">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">log_say</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'info'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#log_say"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.log_say" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">log_say</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'info'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prefix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">suffix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#log_say"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.log_say" title="Permalink to this definition">¶</a></dt>
 <dd><p>Log messages while also printing to console.</p>
 </dd></dl>
 
@@ -148,42 +148,50 @@ ensuring a portable python data structure</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="dhtrader.dhcommon.ProgBar">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">ProgBar</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">total</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'TradeSeries</span> <span class="pre">calculated'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auto_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#ProgBar"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.ProgBar" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">ProgBar</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">total</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Things</span> <span class="pre">Handled'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auto_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#ProgBar"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.ProgBar" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <p>Wrapper to make progress bars smoother to implement.</p>
-<p>Starts the progress bar automatically on creation unless auto_start is
-False.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>total</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – </p></li>
-<li><p><strong>desc</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
-<li><p><strong>auto_start</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – </p></li>
+<li><p><strong>total</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Total number of items to track progress for.</p></li>
+<li><p><strong>desc</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Label string to display alongside the progress count.</p></li>
+<li><p><strong>auto_start</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – If True, start the progress bar immediately.</p></li>
 </ul>
 </dd>
 </dl>
 <dl class="py method">
 <dt class="sig sig-object py" id="dhtrader.dhcommon.ProgBar.start">
 <span class="sig-name descname"><span class="pre">start</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#ProgBar.start"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.ProgBar.start" title="Permalink to this definition">¶</a></dt>
-<dd><p>Build and start the underlying progressbar widget.</p>
+<dd><p>Initialize and display the underlying progressbar widget.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="dhtrader.dhcommon.ProgBar.update">
 <span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">val</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#ProgBar.update"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.ProgBar.update" title="Permalink to this definition">¶</a></dt>
 <dd><p>Update the progress bar to an absolute value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>val</strong> – Absolute progress value to display.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="dhtrader.dhcommon.ProgBar.increment">
 <span class="sig-name descname"><span class="pre">increment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">val</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#ProgBar.increment"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.ProgBar.increment" title="Permalink to this definition">¶</a></dt>
-<dd><p>Advance the progress bar by val steps (default 1).</p>
+<dd><p>Increment the progress bar by val steps.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>val</strong> – Number of steps to advance the bar (default 1).</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="dhtrader.dhcommon.ProgBar.finish">
 <span class="sig-name descname"><span class="pre">finish</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#ProgBar.finish"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.ProgBar.finish" title="Permalink to this definition">¶</a></dt>
-<dd><p>Mark the progress bar as complete.</p>
+<dd><p>Mark the progress bar as complete and finalize its display.</p>
 </dd></dl>
 
 </dd></dl>
@@ -354,14 +362,14 @@ not confirm market open and may not be able to answer in all cases.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhcommon.expected_candle_datetimes">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">expected_candle_datetimes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeframe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbol</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">events</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exclude_categories</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#expected_candle_datetimes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.expected_candle_datetimes" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">expected_candle_datetimes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeframe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbol</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">events</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#expected_candle_datetimes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.expected_candle_datetimes" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return expected candle datetimes for a symbol in a datetime range.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>timeframe</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
 <li><p><strong>events</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em> | </em><em>None</em>) – </p></li>
-<li><p><strong>exclude_categories</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em> | </em><em>None</em>) – </p></li>
+<li><p><strong>show_progress</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – </p></li>
 </ul>
 </dd>
 </dl>
@@ -385,16 +393,19 @@ unexpected candles during integrity checks.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhcommon.summarize_candles">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">summarize_candles</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timeframe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ES'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">candles</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#summarize_candles"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.summarize_candles" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">summarize_candles</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">timeframe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ES'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">candles</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expected_dts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#summarize_candles"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.summarize_candles" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return a summary of candle datetimes grouped by minute, hour, and date.</p>
 <p>Compares actual candle times against expected times for the given
-timeframe and returns both observed and expected sets for review.</p>
+timeframe. When expected_dts is provided the expected minutes, hours,
+and times are derived dynamically from that list, making the check
+era-aware and eliminating static per-timeframe hardcoded lists.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>timeframe</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
 <li><p><strong>symbol</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
 <li><p><strong>candles</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em> | </em><em>None</em>) – </p></li>
+<li><p><strong>expected_dts</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em> | </em><em>None</em>) – </p></li>
 </ul>
 </dd>
 </dl>

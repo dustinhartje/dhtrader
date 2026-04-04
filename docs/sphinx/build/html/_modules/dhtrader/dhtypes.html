@@ -60,7 +60,8 @@
 <span class="sd">different historical time periods.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">dt</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">timedelta</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">bisect</span><span class="w"> </span><span class="kn">import</span> <span class="n">bisect_right</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">timedelta</span><span class="p">,</span> <span class="n">date</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">statistics</span><span class="w"> </span><span class="kn">import</span> <span class="n">fmean</span>
@@ -71,231 +72,130 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">.dhcommon</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">dt_as_dt</span><span class="p">,</span> <span class="n">dt_as_str</span><span class="p">,</span> <span class="n">dt_as_time</span><span class="p">,</span> <span class="n">dt_to_epoch</span><span class="p">,</span> <span class="n">timeframe_delta</span><span class="p">,</span>
     <span class="n">valid_timeframe</span><span class="p">,</span> <span class="n">valid_trading_hours</span><span class="p">,</span> <span class="n">log_say</span><span class="p">,</span> <span class="n">this_candle_start</span><span class="p">,</span>
-    <span class="n">check_tf_th_compatibility</span><span class="p">,</span> <span class="n">start_of_week_date</span><span class="p">,</span> <span class="n">dict_of_weeks</span><span class="p">,</span> <span class="n">bot</span><span class="p">)</span>
+    <span class="n">check_tf_th_compatibility</span><span class="p">,</span> <span class="n">start_of_week_date</span><span class="p">,</span> <span class="n">dict_of_weeks</span><span class="p">,</span> <span class="n">bot</span><span class="p">,</span>
+    <span class="n">ProgBar</span><span class="p">,</span> <span class="n">DEFAULT_OBJ_NAME</span><span class="p">,</span> <span class="n">MARKET_ERAS</span><span class="p">)</span>
 <span class="n">CANDLE_TIMEFRAMES</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;1m&#39;</span><span class="p">,</span> <span class="s1">&#39;5m&#39;</span><span class="p">,</span> <span class="s1">&#39;15m&#39;</span><span class="p">,</span> <span class="s1">&#39;r1h&#39;</span><span class="p">,</span> <span class="s1">&#39;e1h&#39;</span><span class="p">,</span> <span class="s1">&#39;1d&#39;</span><span class="p">,</span> <span class="s1">&#39;1w&#39;</span><span class="p">]</span>
 <span class="n">BEGINNING_OF_TIME</span> <span class="o">=</span> <span class="s2">&quot;2008-01-01 00:00:00&quot;</span>
 
-<span class="c1"># Market Era Definitions</span>
-<span class="c1"># Define different historical market structures with start dates and schedules.</span>
-<span class="c1"># To add new eras: append a new dict to this list with start_date and schedule.</span>
-<span class="c1"># Eras are ordered chronologically; the system finds the era by checking which</span>
-<span class="c1"># start_date the target_dt is &gt;= to (uses the latest matching start_date).</span>
-<span class="c1"># Based on analysis of ES futures data presence patterns 2008-2026.</span>
-<span class="n">MARKET_ERAS</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="p">{</span>
-        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;2008_thru_2012&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;start_date&quot;</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">date</span><span class="p">(</span><span class="mi">2008</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
-        <span class="s2">&quot;times&quot;</span><span class="p">:</span> <span class="p">{</span>
-            <span class="s2">&quot;eth_open&quot;</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="mi">18</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
-            <span class="s2">&quot;eth_close&quot;</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="mi">17</span><span class="p">,</span> <span class="mi">29</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
-            <span class="s2">&quot;rth_open&quot;</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="mi">9</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
-            <span class="s2">&quot;rth_close&quot;</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
-        <span class="p">},</span>
-        <span class="s2">&quot;closed_hours&quot;</span><span class="p">:</span> <span class="p">{</span>
-            <span class="s2">&quot;eth&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="c1"># ETH close period: 17:30-17:59:59 with 15min break at 16:16</span>
-                <span class="mi">0</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:16:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;16:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;17:30:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;17:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">1</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:16:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;16:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;17:30:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;17:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">2</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:16:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;16:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;17:30:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;17:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">3</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:16:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;16:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;17:30:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;17:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">4</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:16:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">5</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">6</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;17:59:59&quot;</span><span class="p">}]</span>
-            <span class="p">},</span>
-            <span class="s2">&quot;rth&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="c1"># RTH: 9:30-16:00</span>
-                <span class="mi">0</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;09:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">1</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;09:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">2</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;09:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">3</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;09:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">4</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;09:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">5</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">6</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}]</span>
-            <span class="p">}</span>
-        <span class="p">}</span>
-    <span class="p">},</span>
-    <span class="p">{</span>
-        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;2012holidays_thru_2015holidays&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;start_date&quot;</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">date</span><span class="p">(</span><span class="mi">2012</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">17</span><span class="p">),</span>
-        <span class="s2">&quot;times&quot;</span><span class="p">:</span> <span class="p">{</span>
-            <span class="s2">&quot;eth_open&quot;</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="mi">18</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
-            <span class="s2">&quot;eth_close&quot;</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="mi">17</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
-            <span class="s2">&quot;rth_open&quot;</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="mi">9</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
-            <span class="s2">&quot;rth_close&quot;</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
-        <span class="p">},</span>
-        <span class="s2">&quot;closed_hours&quot;</span><span class="p">:</span> <span class="p">{</span>
-            <span class="s2">&quot;eth&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="c1"># ETH close period: 17:16-17:59:59 with 15min break at 16:15</span>
-                <span class="mi">0</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:15:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;16:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;17:16:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;17:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">1</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:15:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;16:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;17:16:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;17:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">2</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:15:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;16:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;17:16:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;17:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">3</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:15:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;16:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;17:16:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;17:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">4</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:15:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;16:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;17:16:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">5</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">6</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;17:59:59&quot;</span><span class="p">}]</span>
-            <span class="p">},</span>
-            <span class="s2">&quot;rth&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="c1"># RTH closes at 16:00</span>
-                <span class="mi">0</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;09:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">1</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;09:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">2</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;09:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">3</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;09:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">4</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;09:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">5</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">6</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}]</span>
-            <span class="p">}</span>
-        <span class="p">}</span>
-    <span class="p">},</span>
-    <span class="p">{</span>
-        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;2015holidays_thru_2020&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;start_date&quot;</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">date</span><span class="p">(</span><span class="mi">2015</span><span class="p">,</span> <span class="mi">9</span><span class="p">,</span> <span class="mi">19</span><span class="p">),</span>
-        <span class="s2">&quot;times&quot;</span><span class="p">:</span> <span class="p">{</span>
-            <span class="s2">&quot;eth_open&quot;</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="mi">18</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
-            <span class="s2">&quot;eth_close&quot;</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">59</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
-            <span class="s2">&quot;rth_open&quot;</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="mi">9</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
-            <span class="s2">&quot;rth_close&quot;</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
-        <span class="p">},</span>
-        <span class="s2">&quot;closed_hours&quot;</span><span class="p">:</span> <span class="p">{</span>
-            <span class="s2">&quot;eth&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="c1"># ETH close period: 17:00-17:59:59 with 15min break at 16:15</span>
-                <span class="mi">0</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:15:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;16:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;17:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;17:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">1</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:15:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;16:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;17:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;17:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">2</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:15:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;16:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;17:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;17:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">3</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:15:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;16:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;17:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;17:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">4</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:15:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;16:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;17:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">5</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">6</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;17:59:59&quot;</span><span class="p">}]</span>
-            <span class="p">},</span>
-            <span class="s2">&quot;rth&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="c1"># RTH closes at 16:00</span>
-                <span class="mi">0</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;09:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">1</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;09:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">2</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;09:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">3</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;09:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">4</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;09:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">5</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">6</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}]</span>
-            <span class="p">}</span>
-        <span class="p">}</span>
-    <span class="p">},</span>
-    <span class="p">{</span>
-        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;2021-01_thru_2021-06&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;start_date&quot;</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">date</span><span class="p">(</span><span class="mi">2021</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
-        <span class="s2">&quot;times&quot;</span><span class="p">:</span> <span class="p">{</span>
-            <span class="s2">&quot;eth_open&quot;</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="mi">18</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
-            <span class="s2">&quot;eth_close&quot;</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">59</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
-            <span class="s2">&quot;rth_open&quot;</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="mi">9</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
-            <span class="s2">&quot;rth_close&quot;</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
-        <span class="p">},</span>
-        <span class="s2">&quot;closed_hours&quot;</span><span class="p">:</span> <span class="p">{</span>
-            <span class="s2">&quot;eth&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="c1"># Nearly 24/5 trading with extended RTH</span>
-                <span class="c1"># Daily close: 16:15-16:29 on weekdays, then 17:00-17:59:59</span>
-                <span class="mi">0</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:15:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;16:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;17:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;17:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">1</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:15:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;16:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;17:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;17:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">2</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:15:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;16:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;17:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;17:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">3</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:15:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;16:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;17:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;17:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">4</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:15:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;16:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;17:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">5</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">6</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;17:59:59&quot;</span><span class="p">}]</span>
-            <span class="p">},</span>
-            <span class="s2">&quot;rth&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="c1"># RTH closes at 16:00</span>
-                <span class="mi">0</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;09:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">1</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;09:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">2</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;09:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">3</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;09:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">4</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;09:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">5</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">6</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}]</span>
-            <span class="p">}</span>
-        <span class="p">}</span>
-    <span class="p">},</span>
-    <span class="p">{</span>
-        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;2021-06_thru_present&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;start_date&quot;</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">date</span><span class="p">(</span><span class="mi">2021</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">26</span><span class="p">),</span>
-        <span class="s2">&quot;times&quot;</span><span class="p">:</span> <span class="p">{</span>
-            <span class="s2">&quot;eth_open&quot;</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="mi">18</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
-            <span class="s2">&quot;eth_close&quot;</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">59</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
-            <span class="s2">&quot;rth_open&quot;</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="mi">9</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
-            <span class="s2">&quot;rth_close&quot;</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
-        <span class="p">},</span>
-        <span class="s2">&quot;closed_hours&quot;</span><span class="p">:</span> <span class="p">{</span>
-            <span class="s2">&quot;eth&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="c1"># Nearly 24/5 trading with extended RTH</span>
-                <span class="c1"># Daily close: 17:00-17:59:59 (16:15-16:29 close removed)</span>
-                <span class="mi">0</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;17:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;17:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">1</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;17:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;17:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">2</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;17:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;17:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">3</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;17:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;17:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">4</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;17:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">5</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">6</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;17:59:59&quot;</span><span class="p">}]</span>
-            <span class="p">},</span>
-            <span class="s2">&quot;rth&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="c1"># RTH closes at 16:00</span>
-                <span class="mi">0</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;09:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">1</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;09:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">2</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;09:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">3</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;09:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">4</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;09:30:00&quot;</span><span class="p">},</span>
-                    <span class="p">{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;16:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">5</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}],</span>
-                <span class="mi">6</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;close&quot;</span><span class="p">:</span> <span class="s2">&quot;00:00:00&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">:</span> <span class="s2">&quot;23:59:59&quot;</span><span class="p">}]</span>
-            <span class="p">}</span>
-        <span class="p">}</span>
-    <span class="p">}</span>
-<span class="p">]</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_merge_epoch_ranges</span><span class="p">(</span><span class="n">ranges</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Sort and merge overlapping/touching [start, end] epoch ranges.</span>
+
+<span class="sd">    This helper normalizes a list of epoch-based closed time intervals</span>
+<span class="sd">    (both schedule closures and event closures) into a minimal set of</span>
+<span class="sd">    non-overlapping merged intervals. This enables fast O(log n) binary</span>
+<span class="sd">    search lookups via bisect rather than iterating each input interval.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        ranges: List of tuples [(start_epoch, end_epoch), ...]</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        List of merged, non-overlapping tuples, sorted by start_epoch.</span>
+<span class="sd">        Empty list if input is empty.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">ranges</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+
+    <span class="c1"># Sort by start epoch so we can merge left-to-right</span>
+    <span class="n">sorted_ranges</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">ranges</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">i</span><span class="p">:</span> <span class="n">i</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">merged</span> <span class="o">=</span> <span class="p">[</span><span class="n">sorted_ranges</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+
+    <span class="c1"># Merge overlapping or adjacent ranges</span>
+    <span class="k">for</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="ow">in</span> <span class="n">sorted_ranges</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+        <span class="n">prev_start</span><span class="p">,</span> <span class="n">prev_end</span> <span class="o">=</span> <span class="n">merged</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="c1"># If current range overlaps or touches previous, merge</span>
+        <span class="k">if</span> <span class="n">start</span> <span class="o">&lt;=</span> <span class="n">prev_end</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">merged</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">prev_start</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="n">prev_end</span><span class="p">,</span> <span class="n">end</span><span class="p">))</span>
+        <span class="c1"># Otherwise, append as new interval</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">merged</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">merged</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_epoch_in_ranges</span><span class="p">(</span>
+        <span class="n">target_epoch</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">merged_ranges</span><span class="p">,</span>
+        <span class="n">range_starts</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return True if target_epoch falls in any merged closed range.</span>
+
+<span class="sd">    Performs fast O(log n) binary search to check if a single epoch value</span>
+<span class="sd">    is contained within any precomputed closed-time interval. Used internally</span>
+<span class="sd">    by Symbol.is_open_epoch() to accelerate hot-loop market openness checks.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        target_epoch: Unix timestamp (seconds) to check.</span>
+<span class="sd">        merged_ranges: List of (start_epoch, end_epoch) tuples, sorted and</span>
+<span class="sd">                      non-overlapping (output from _merge_epoch_ranges).</span>
+<span class="sd">        range_starts: Optional pre-extracted list of range start epochs for</span>
+<span class="sd">                     faster bisect operations. If None, computed from</span>
+<span class="sd">                     merged_ranges (minor overhead on first call).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        True if target_epoch falls within any closed range, False otherwise.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">merged_ranges</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="c1"># Extract start epochs if not provided (for binary search)</span>
+    <span class="k">if</span> <span class="n">range_starts</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">range_starts</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">merged_ranges</span><span class="p">]</span>
+
+    <span class="c1"># Binary search: find the rightmost range that could contain target</span>
+    <span class="n">idx</span> <span class="o">=</span> <span class="n">bisect_right</span><span class="p">(</span><span class="n">range_starts</span><span class="p">,</span> <span class="n">target_epoch</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="k">if</span> <span class="n">idx</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>  <span class="c1"># target is before all ranges</span>
+
+    <span class="c1"># Check if target falls within the found range&#39;s boundaries</span>
+    <span class="k">return</span> <span class="n">target_epoch</span> <span class="o">&lt;=</span> <span class="n">merged_ranges</span><span class="p">[</span><span class="n">idx</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_iter_dates</span><span class="p">(</span><span class="n">start_date</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">date</span><span class="p">,</span>
+                <span class="n">end_date</span><span class="p">:</span> <span class="n">dt</span><span class="o">.</span><span class="n">date</span><span class="p">,</span>
+                <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Yield each date from start_date through end_date, inclusive.</span>
+
+<span class="sd">    Simple iterator used internally to build schedule closure ranges by date.</span>
+<span class="sd">    Essential for context building: we iterate each date, look up its era&#39;s</span>
+<span class="sd">    closed hours schedule, then convert to epoch intervals for binary search.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        start_date: First date to yield (datetime.date object).</span>
+<span class="sd">        end_date: Last date to yield (datetime.date object).</span>
+
+<span class="sd">    Yields:</span>
+<span class="sd">        datetime.date objects in ascending order from start_date to end_date.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">this_date</span> <span class="o">=</span> <span class="n">start_date</span>
+    <span class="k">while</span> <span class="n">this_date</span> <span class="o">&lt;=</span> <span class="n">end_date</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="n">this_date</span>
+        <span class="n">this_date</span> <span class="o">=</span> <span class="n">this_date</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
 
 <span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;dhtypes&quot;</span><span class="p">)</span>
 <span class="n">log</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">NullHandler</span><span class="p">())</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_dhstore</span><span class="p">(</span><span class="n">fn_name</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Delegate to dhstore if loaded.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Delegate to dhstore if loaded.</span>
+
+<span class="sd">    This function resolves the circular import between dhtypes and</span>
+<span class="sd">    dhstore:</span>
+<span class="sd">    - dhstore imports domain classes from dhtypes (Symbol, Candle, etc.)</span>
+<span class="sd">    - dhtypes needs storage functions from dhstore</span>
+
+<span class="sd">    ARCHITECTURE NOTE: External code should import storage functions</span>
+<span class="sd">    from dhstore (via dhtrader/__init__.py), not from dhtypes. This</span>
+<span class="sd">    wrapper is for internal use within dhtypes.py only, allowing class</span>
+<span class="sd">    constructors and methods to call storage functions without creating</span>
+<span class="sd">    circular imports at module load time.</span>
+
+<span class="sd">    The lazy loading pattern (checking sys.modules at call time rather</span>
+<span class="sd">    than import time) is a standard solution for circular dependencies</span>
+<span class="sd">    in Python. This is preferable to moving all storage logic out of</span>
+<span class="sd">    dhtypes or requiring all callers to pass Symbol objects explicitly.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># Try package-qualified name first, then bare name for compatibility</span>
     <span class="n">m</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;dhtrader.dhstore&#39;</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">m</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -514,7 +414,6 @@
 <span class="sd">                  and closed_hours</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">d</span> <span class="o">=</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="n">target_dt</span><span class="p">)</span><span class="o">.</span><span class="n">date</span><span class="p">()</span>
-
         <span class="c1"># Find the latest era whose start_date is &lt;= target date</span>
         <span class="c1"># MARKET_ERAS must be sorted chronologically</span>
         <span class="n">matching_era</span> <span class="o">=</span> <span class="kc">None</span>
@@ -523,7 +422,6 @@
                 <span class="n">matching_era</span> <span class="o">=</span> <span class="n">era</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">break</span>
-
         <span class="k">if</span> <span class="n">matching_era</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">&quot;No market era defined for date </span><span class="si">{</span><span class="n">d</span><span class="si">}</span><span class="s2">. &quot;</span>
@@ -628,6 +526,307 @@
 
         <span class="c1"># If we got this far it must be inside market hours, right?</span>
         <span class="k">return</span> <span class="kc">True</span></div>
+
+<div class="viewcode-block" id="Symbol.build_market_hours_context"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Symbol.build_market_hours_context">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">build_market_hours_context</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                                   <span class="n">trading_hours</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                                   <span class="n">events</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                                   <span class="n">start_dt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                                   <span class="n">end_dt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                                   <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Build merged closed ranges and metadata for fast open checks.</span>
+
+<span class="sd">        Precomputes all closed times for a date range into merged epoch</span>
+<span class="sd">        intervals. Callers build one context per batch of lookups and</span>
+<span class="sd">        reuse it rather than calling market_is_open() repeatedly.</span>
+
+<span class="sd">        The context includes both era-specific schedule closures (from</span>
+<span class="sd">        get_closed_hours_for_era per MARKET_ERAS) and event-based</span>
+<span class="sd">        closures. All intervals are merged to eliminate redundant</span>
+<span class="sd">        boundaries, enabling fast O(log n) binary search on the merged</span>
+<span class="sd">        range list.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            trading_hours: &quot;eth&quot; or &quot;rth&quot;.</span>
+<span class="sd">            events: Optional list of Event objects with</span>
+<span class="sd">                   category=&quot;Closed&quot;. If None, only schedule closures</span>
+<span class="sd">                   are included.</span>
+<span class="sd">            start_dt: Start datetime for schedule range. If None and</span>
+<span class="sd">                     events provided, auto-derived from events; else</span>
+<span class="sd">                     defaults to now.</span>
+<span class="sd">            end_dt: End datetime for schedule range. Same defaulting as</span>
+<span class="sd">                   start_dt.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Dict with keys:</span>
+<span class="sd">              - trading_hours: Input trading_hours.</span>
+<span class="sd">              - start_epoch, end_epoch: Requested date range as epochs.</span>
+<span class="sd">              - closed_ranges: List of merged (start, end) epoch tuples</span>
+<span class="sd">                             representing all closed times.</span>
+<span class="sd">              - closed_range_starts: Pre-extracted list of range start</span>
+<span class="sd">                                    epochs for fast bisect lookups</span>
+<span class="sd">                                    (internal).</span>
+<span class="sd">              - source_event_count: Count of input closure events.</span>
+<span class="sd">              - source_schedule_range_days: Number of dates processed.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If trading_hours is not &quot;eth&quot; or &quot;rth&quot;.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">valid_trading_hours</span><span class="p">(</span><span class="n">trading_hours</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;trading_hours must be either &#39;eth&#39; or &#39;rth&#39;&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">events</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">events</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">if</span> <span class="n">start_dt</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">end_dt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">events</span><span class="p">:</span>
+                <span class="n">start_epoch</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">dt_to_epoch</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">start_dt</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">events</span><span class="p">)</span>
+                <span class="n">end_epoch</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">dt_to_epoch</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">end_dt</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">events</span><span class="p">)</span>
+                <span class="n">start_bound</span> <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">fromtimestamp</span><span class="p">(</span><span class="n">start_epoch</span><span class="p">)</span>
+                <span class="n">end_bound</span> <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">fromtimestamp</span><span class="p">(</span><span class="n">end_epoch</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">now</span> <span class="o">=</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">())</span>
+                <span class="n">start_bound</span> <span class="o">=</span> <span class="n">now</span>
+                <span class="n">end_bound</span> <span class="o">=</span> <span class="n">now</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">start_dt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">start_dt</span> <span class="o">=</span> <span class="n">end_dt</span>
+            <span class="k">if</span> <span class="n">end_dt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">end_dt</span> <span class="o">=</span> <span class="n">start_dt</span>
+            <span class="n">start_bound</span> <span class="o">=</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="n">start_dt</span><span class="p">)</span>
+            <span class="n">end_bound</span> <span class="o">=</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="n">end_dt</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">start_bound</span> <span class="o">&gt;</span> <span class="n">end_bound</span><span class="p">:</span>
+            <span class="n">start_bound</span><span class="p">,</span> <span class="n">end_bound</span> <span class="o">=</span> <span class="n">end_bound</span><span class="p">,</span> <span class="n">start_bound</span>
+
+        <span class="c1"># Build epoch intervals from schedule (era-based closed hours)</span>
+        <span class="n">schedule_ranges</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">schedule_days</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">this_date</span> <span class="ow">in</span> <span class="n">_iter_dates</span><span class="p">(</span><span class="n">start_bound</span><span class="o">.</span><span class="n">date</span><span class="p">(),</span> <span class="n">end_bound</span><span class="o">.</span><span class="n">date</span><span class="p">()):</span>
+            <span class="n">schedule_days</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="c1"># Lookup what&#39;s closed for this date/era/trading_hours</span>
+            <span class="n">closed_hours</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_closed_hours_for_era</span><span class="p">(</span>
+                <span class="n">target_dt</span><span class="o">=</span><span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">combine</span><span class="p">(</span><span class="n">this_date</span><span class="p">,</span> <span class="n">dt</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span>
+                <span class="n">trading_hours</span><span class="o">=</span><span class="n">trading_hours</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="c1"># Convert each closed period to epoch range</span>
+            <span class="k">for</span> <span class="n">period</span> <span class="ow">in</span> <span class="n">closed_hours</span><span class="p">[</span><span class="n">this_date</span><span class="o">.</span><span class="n">weekday</span><span class="p">()]:</span>
+                <span class="n">closed_start_dt</span> <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">combine</span><span class="p">(</span><span class="n">this_date</span><span class="p">,</span>
+                                                      <span class="n">period</span><span class="p">[</span><span class="s2">&quot;close&quot;</span><span class="p">])</span>
+                <span class="n">closed_end_dt</span> <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">combine</span><span class="p">(</span><span class="n">this_date</span><span class="p">,</span>
+                                                    <span class="n">period</span><span class="p">[</span><span class="s2">&quot;open&quot;</span><span class="p">])</span>
+                <span class="n">start_epoch</span> <span class="o">=</span> <span class="n">dt_to_epoch</span><span class="p">(</span><span class="n">closed_start_dt</span><span class="p">)</span>
+                <span class="n">end_epoch</span> <span class="o">=</span> <span class="n">dt_to_epoch</span><span class="p">(</span><span class="n">closed_end_dt</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="n">end_epoch</span> <span class="o">&gt;=</span> <span class="n">start_epoch</span><span class="p">:</span>
+                    <span class="n">schedule_ranges</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">start_epoch</span><span class="p">,</span> <span class="n">end_epoch</span><span class="p">))</span>
+
+        <span class="c1"># Build epoch intervals from closure events</span>
+        <span class="n">event_ranges</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">events</span><span class="p">:</span>
+            <span class="n">event_start</span> <span class="o">=</span> <span class="n">dt_to_epoch</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">start_dt</span><span class="p">)</span>
+            <span class="n">event_end</span> <span class="o">=</span> <span class="n">dt_to_epoch</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">end_dt</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">event_start</span> <span class="o">&gt;</span> <span class="n">event_end</span><span class="p">:</span>
+                <span class="n">event_start</span><span class="p">,</span> <span class="n">event_end</span> <span class="o">=</span> <span class="n">event_end</span><span class="p">,</span> <span class="n">event_start</span>
+            <span class="n">event_ranges</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">event_start</span><span class="p">,</span> <span class="n">event_end</span><span class="p">))</span>
+
+        <span class="c1"># Merge all closed ranges into minimal non-overlapping set</span>
+        <span class="n">closed_ranges</span> <span class="o">=</span> <span class="n">_merge_epoch_ranges</span><span class="p">(</span><span class="n">schedule_ranges</span> <span class="o">+</span> <span class="n">event_ranges</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;trading_hours&quot;</span><span class="p">:</span> <span class="n">trading_hours</span><span class="p">,</span>
+            <span class="s2">&quot;start_epoch&quot;</span><span class="p">:</span> <span class="n">dt_to_epoch</span><span class="p">(</span><span class="n">start_bound</span><span class="p">),</span>
+            <span class="s2">&quot;end_epoch&quot;</span><span class="p">:</span> <span class="n">dt_to_epoch</span><span class="p">(</span><span class="n">end_bound</span><span class="p">),</span>
+            <span class="s2">&quot;closed_ranges&quot;</span><span class="p">:</span> <span class="n">closed_ranges</span><span class="p">,</span>
+            <span class="s2">&quot;closed_range_starts&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">closed_ranges</span><span class="p">],</span>
+            <span class="s2">&quot;source_event_count&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">events</span><span class="p">),</span>
+            <span class="s2">&quot;source_schedule_range_days&quot;</span><span class="p">:</span> <span class="n">schedule_days</span><span class="p">,</span>
+        <span class="p">}</span></div>
+
+<div class="viewcode-block" id="Symbol.is_open_epoch"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Symbol.is_open_epoch">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">is_open_epoch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                      <span class="n">target_epoch</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                      <span class="n">context</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+                      <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if epoch timestamp falls in open market hours.</span>
+
+<span class="sd">        Given a precomputed context (from build_market_hours_context)</span>
+<span class="sd">        and a single epoch value, returns True if that time is open</span>
+<span class="sd">        (not in any merged closed range).</span>
+
+<span class="sd">        Intended for use within tight loops where many checks share</span>
+<span class="sd">        the same context. For one-off checks or mixed trading_hours,</span>
+<span class="sd">        use is_open_dt() instead.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            target_epoch: Unix timestamp (seconds since epoch, as int)</span>
+<span class="sd">                         to check.</span>
+<span class="sd">            context: Dict returned from build_market_hours_context().</span>
+<span class="sd">                    Must contain &quot;closed_ranges&quot; and</span>
+<span class="sd">                    &quot;closed_range_starts&quot;.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            True if target_epoch is during open market hours (not in</span>
+<span class="sd">            any closed range), False otherwise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="ow">not</span> <span class="n">_epoch_in_ranges</span><span class="p">(</span>
+            <span class="n">target_epoch</span><span class="o">=</span><span class="n">target_epoch</span><span class="p">,</span>
+            <span class="n">merged_ranges</span><span class="o">=</span><span class="n">context</span><span class="p">[</span><span class="s2">&quot;closed_ranges&quot;</span><span class="p">],</span>
+            <span class="n">range_starts</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;closed_range_starts&quot;</span><span class="p">),</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Symbol.is_open_dt"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Symbol.is_open_dt">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">is_open_dt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                   <span class="n">target_dt</span><span class="p">,</span>
+                   <span class="n">context</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+                   <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if datetime falls in open market hours.</span>
+
+<span class="sd">        Wraps is_open_epoch() by handling datetime-to-epoch conversion.</span>
+<span class="sd">        For repeated checks, prefer extracting c_epoch from Candle</span>
+<span class="sd">        objects or caching converted epochs outside the loop, then</span>
+<span class="sd">        calling is_open_epoch() directly.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            target_dt: Datetime as string, date, or datetime object.</span>
+<span class="sd">                      Converted to epoch internally.</span>
+<span class="sd">            context: Dict returned from build_market_hours_context(),</span>
+<span class="sd">                    matching the trading_hours to check.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            True if target_dt is during open market hours, False</span>
+<span class="sd">            otherwise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_open_epoch</span><span class="p">(</span>
+            <span class="n">target_epoch</span><span class="o">=</span><span class="n">dt_to_epoch</span><span class="p">(</span><span class="n">target_dt</span><span class="p">),</span>
+            <span class="n">context</span><span class="o">=</span><span class="n">context</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Symbol.filter_open_datetimes"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Symbol.filter_open_datetimes">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">filter_open_datetimes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                              <span class="n">target_dts</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+                              <span class="n">trading_hours</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                              <span class="n">events</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                              <span class="n">start_dt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                              <span class="n">end_dt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                              <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return only datetimes that are open, using one shared context.</span>
+
+<span class="sd">        Filters a list of datetimes to include only those during open</span>
+<span class="sd">        market hours. Builds one context for the input date range and</span>
+<span class="sd">        reuses it across all checks.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            target_dts: List of datetime strings, dates, or datetime</span>
+<span class="sd">                       objects.</span>
+<span class="sd">            trading_hours: &quot;eth&quot; or &quot;rth&quot;.</span>
+<span class="sd">            events: Optional list of closure Event objects.</span>
+<span class="sd">            start_dt: Optional start of range for context. If None,</span>
+<span class="sd">                     auto-derived from min(target_dts).</span>
+<span class="sd">            end_dt: Optional end of range for context. If None,</span>
+<span class="sd">                   auto-derived from max(target_dts).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Filtered list of original datetime objects, containing</span>
+<span class="sd">            only those that fall within open market hours</span>
+<span class="sd">            (same order as input).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">target_dts</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">target_dts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[]</span>
+
+        <span class="c1"># Auto-derive bounds from input if not provided</span>
+        <span class="k">if</span> <span class="n">start_dt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">start_dt</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">dt_as_dt</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">target_dts</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">end_dt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">end_dt</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">dt_as_dt</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">target_dts</span><span class="p">)</span>
+
+        <span class="c1"># Build context once, reuse for all checks</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">build_market_hours_context</span><span class="p">(</span>
+            <span class="n">trading_hours</span><span class="o">=</span><span class="n">trading_hours</span><span class="p">,</span>
+            <span class="n">events</span><span class="o">=</span><span class="n">events</span><span class="p">,</span>
+            <span class="n">start_dt</span><span class="o">=</span><span class="n">start_dt</span><span class="p">,</span>
+            <span class="n">end_dt</span><span class="o">=</span><span class="n">end_dt</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Filter using shared context</span>
+        <span class="n">filtered</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">target_dt</span> <span class="ow">in</span> <span class="n">target_dts</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_open_dt</span><span class="p">(</span><span class="n">target_dt</span><span class="o">=</span><span class="n">target_dt</span><span class="p">,</span> <span class="n">context</span><span class="o">=</span><span class="n">context</span><span class="p">):</span>
+                <span class="n">filtered</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">target_dt</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">filtered</span></div>
+
+<div class="viewcode-block" id="Symbol.filter_open_candles"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Symbol.filter_open_candles">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">filter_open_candles</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                            <span class="n">candles</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+                            <span class="n">trading_hours</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                            <span class="n">events</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                            <span class="n">start_dt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                            <span class="n">end_dt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                            <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                            <span class="n">progress_desc</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="p">(</span>
+                                <span class="s2">&quot;Candles filtered for market hours&quot;</span>
+                            <span class="p">),</span>
+                            <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return only open-market candles using one shared context.</span>
+
+<span class="sd">        Filters a list of Candle objects to include only those during</span>
+<span class="sd">        open market hours. Builds one context for the input date range</span>
+<span class="sd">        and reuses it across all checks. Uses Candle.c_epoch directly</span>
+<span class="sd">        for fast lookups (no per-candle datetime parsing).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            candles: List of Candle objects (must have c_datetime and</span>
+<span class="sd">                    c_epoch).</span>
+<span class="sd">            trading_hours: &quot;eth&quot; or &quot;rth&quot;.</span>
+<span class="sd">            events: Optional list of closure Event objects.</span>
+<span class="sd">            start_dt: Optional start of range for context. If None,</span>
+<span class="sd">                     auto-derived from min(c.c_datetime for c in</span>
+<span class="sd">                     candles).</span>
+<span class="sd">            end_dt: Optional end of range for context. If None,</span>
+<span class="sd">                   auto-derived from max(c.c_datetime for c in candles).</span>
+<span class="sd">            show_progress: If True, displays a progress bar during</span>
+<span class="sd">                          filtering.</span>
+<span class="sd">            progress_desc: Label for progress bar (if</span>
+<span class="sd">                          show_progress=True).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Filtered list of Candle objects, containing only those that</span>
+<span class="sd">            fall within open market hours (same order as input).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">candles</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">candles</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[]</span>
+
+        <span class="c1"># Auto-derive bounds from input if not provided</span>
+        <span class="k">if</span> <span class="n">start_dt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">start_dt</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">c_datetime</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">candles</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">end_dt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">end_dt</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">c_datetime</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">candles</span><span class="p">)</span>
+
+        <span class="c1"># Build context once, reuse for all checks</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">build_market_hours_context</span><span class="p">(</span>
+            <span class="n">trading_hours</span><span class="o">=</span><span class="n">trading_hours</span><span class="p">,</span>
+            <span class="n">events</span><span class="o">=</span><span class="n">events</span><span class="p">,</span>
+            <span class="n">start_dt</span><span class="o">=</span><span class="n">start_dt</span><span class="p">,</span>
+            <span class="n">end_dt</span><span class="o">=</span><span class="n">end_dt</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Optionally show progress</span>
+        <span class="k">if</span> <span class="n">show_progress</span><span class="p">:</span>
+            <span class="n">pbar</span> <span class="o">=</span> <span class="n">ProgBar</span><span class="p">(</span><span class="n">total</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">candles</span><span class="p">),</span> <span class="n">desc</span><span class="o">=</span><span class="n">progress_desc</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">pbar</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># Filter using shared context, leveraging c_epoch for fast lookup</span>
+        <span class="n">filtered</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">candle</span> <span class="ow">in</span> <span class="n">candles</span><span class="p">:</span>
+            <span class="c1"># Use c_epoch directly (already computed, no string parsing needed)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_open_epoch</span><span class="p">(</span>
+                <span class="n">target_epoch</span><span class="o">=</span><span class="n">candle</span><span class="o">.</span><span class="n">c_epoch</span><span class="p">,</span>
+                <span class="n">context</span><span class="o">=</span><span class="n">context</span><span class="p">,</span>
+            <span class="p">):</span>
+                <span class="n">filtered</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">candle</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">pbar</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">pbar</span><span class="o">.</span><span class="n">increment</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">pbar</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">pbar</span><span class="o">.</span><span class="n">finish</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">filtered</span></div>
 
 <div class="viewcode-block" id="Symbol.get_market_boundary"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Symbol.get_market_boundary">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_market_boundary</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                             <span class="n">target_dt</span><span class="p">,</span>
@@ -831,7 +1030,8 @@
                  <span class="n">c_tags</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">c_epoch</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">c_date</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                 <span class="n">c_time</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span>
+                 <span class="n">c_time</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DEFAULT_OBJ_NAME</span><span class="p">,</span>
                  <span class="p">):</span>
         <span class="c1"># Precalculate datetime for calculating other attributes efficiently</span>
         <span class="n">c_datetime_dt</span> <span class="o">=</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="n">c_datetime</span><span class="p">)</span>
@@ -861,6 +1061,7 @@
         <span class="k">if</span> <span class="n">c_time</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">c_time</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_datetime</span><span class="p">[</span><span class="mi">11</span><span class="p">:</span><span class="mi">19</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">c_time</span> <span class="o">=</span> <span class="n">c_time</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
 
         <span class="c1"># Calculated attributes</span>
         <span class="n">delta</span> <span class="o">=</span> <span class="n">timeframe_delta</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">c_timeframe</span><span class="p">)</span>
@@ -970,6 +1171,7 @@
                  <span class="n">c_end</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">c_candles</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">autoload</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                 <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                  <span class="p">):</span>
         <span class="k">if</span> <span class="n">valid_timeframe</span><span class="p">(</span><span class="n">c_timeframe</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">c_timeframe</span> <span class="o">=</span> <span class="n">c_timeframe</span>
@@ -986,8 +1188,9 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">c_candles</span> <span class="o">=</span> <span class="n">c_candles</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">autoload</span> <span class="o">=</span> <span class="n">autoload</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">show_progress</span> <span class="o">=</span> <span class="n">show_progress</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">autoload</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">load_candles</span><span class="p">()</span>  <span class="c1"># includes review_candles()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">load_candles</span><span class="p">(</span><span class="n">show_progress</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">show_progress</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">review_candles</span><span class="p">()</span>
 
@@ -1080,7 +1283,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">c_end</span> <span class="o">=</span> <span class="n">new_candle</span><span class="o">.</span><span class="n">c_datetime</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">review_candles</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="Chart.load_candles"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Chart.load_candles">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">load_candles</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="Chart.load_candles"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Chart.load_candles">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">load_candles</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Load candles from central storage based on current attributes.&quot;&quot;&quot;</span>
         <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Loading candles for </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">c_symbol</span><span class="o">.</span><span class="n">ticker</span><span class="si">}</span><span class="s2"> &quot;</span>
                  <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">c_timeframe</span><span class="si">}</span><span class="s2"> &quot;</span><span class="p">)</span>
@@ -1096,12 +1299,18 @@
                             <span class="n">categories</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Closed&quot;</span><span class="p">],</span>
                             <span class="p">)</span>
         <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Filtering candles for market hours and events...&quot;</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">cans</span><span class="p">:</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_symbol</span><span class="o">.</span><span class="n">market_is_open</span><span class="p">(</span><span class="n">target_dt</span><span class="o">=</span><span class="n">c</span><span class="o">.</span><span class="n">c_datetime</span><span class="p">,</span>
-                                            <span class="n">trading_hours</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">c_trading_hours</span><span class="p">,</span>
-                                            <span class="n">events</span><span class="o">=</span><span class="n">events</span><span class="p">,</span>
-                                            <span class="p">):</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">c_candles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+        <span class="c1"># Use shared context helper to filter candles by market hours,</span>
+        <span class="c1"># building one context that is reused for all candles</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">c_candles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_symbol</span><span class="o">.</span><span class="n">filter_open_candles</span><span class="p">(</span>
+            <span class="n">candles</span><span class="o">=</span><span class="n">cans</span><span class="p">,</span>
+            <span class="n">trading_hours</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">c_trading_hours</span><span class="p">,</span>
+            <span class="n">events</span><span class="o">=</span><span class="n">events</span><span class="p">,</span>
+            <span class="n">start_dt</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">c_start</span><span class="p">,</span>
+            <span class="n">end_dt</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">c_end</span><span class="p">,</span>
+            <span class="n">show_progress</span><span class="o">=</span><span class="n">show_progress</span><span class="p">,</span>
+            <span class="n">progress_desc</span><span class="o">=</span><span class="s2">&quot;Candles filtered for market hours&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+
         <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Sorting candles&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sort_candles</span><span class="p">()</span>
         <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Reviewing candles&quot;</span><span class="p">)</span>
@@ -1168,6 +1377,7 @@
                  <span class="n">category</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                  <span class="n">tags</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">notes</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+                 <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DEFAULT_OBJ_NAME</span><span class="p">,</span>
                  <span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">start_dt</span> <span class="o">=</span> <span class="n">dt_as_str</span><span class="p">(</span><span class="n">start_dt</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">end_dt</span> <span class="o">=</span> <span class="n">dt_as_str</span><span class="p">(</span><span class="n">end_dt</span><span class="p">)</span>
@@ -1182,6 +1392,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">notes</span> <span class="o">=</span> <span class="n">notes</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">start_epoch</span> <span class="o">=</span> <span class="n">dt_to_epoch</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_dt</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">end_epoch</span> <span class="o">=</span> <span class="n">dt_to_epoch</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">end_dt</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
 
 <div class="viewcode-block" id="Event.to_json"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Event.to_json">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a JSON representation with custom types normalized.</span>
@@ -1445,6 +1656,7 @@
                  <span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
                  <span class="n">ind_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                  <span class="n">epoch</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DEFAULT_OBJ_NAME</span><span class="p">,</span>
                  <span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dt</span> <span class="o">=</span> <span class="n">dt_as_str</span><span class="p">(</span><span class="n">dt</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span>
@@ -1453,6 +1665,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">epoch</span> <span class="o">=</span> <span class="n">dt_to_epoch</span><span class="p">(</span><span class="n">dt</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">epoch</span> <span class="o">=</span> <span class="n">epoch</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
 
 <div class="viewcode-block" id="IndicatorDataPoint.to_json"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.IndicatorDataPoint.to_json">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a JSON representation with custom types normalized.</span>
@@ -1761,6 +1974,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">IndicatorDataPoint</span><span class="p">(</span><span class="n">dt</span><span class="o">=</span><span class="n">c</span><span class="o">.</span><span class="n">c_datetime</span><span class="p">,</span>
                                                       <span class="n">value</span><span class="o">=</span><span class="n">hod</span><span class="p">,</span>
                                                       <span class="n">ind_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ind_id</span><span class="p">,</span>
+                                                      <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
                                                       <span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sort_datapoints</span><span class="p">()</span>
 
@@ -1900,6 +2114,7 @@
                 <span class="n">dp</span> <span class="o">=</span> <span class="n">IndicatorDataPoint</span><span class="p">(</span><span class="n">dt</span><span class="o">=</span><span class="n">dt_as_str</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">c_datetime</span><span class="p">),</span>
                                         <span class="n">value</span><span class="o">=</span><span class="nb">round</span><span class="p">(</span><span class="n">fmean</span><span class="p">(</span><span class="n">values</span><span class="p">),</span> <span class="mi">2</span><span class="p">),</span>
                                         <span class="n">ind_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ind_id</span><span class="p">,</span>
+                                        <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
                                         <span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dp</span><span class="p">)</span>
             <span class="n">counter</span> <span class="o">+=</span> <span class="mi">1</span>
@@ -2025,6 +2240,7 @@
                     <span class="n">dp</span> <span class="o">=</span> <span class="n">IndicatorDataPoint</span><span class="p">(</span><span class="n">dt</span><span class="o">=</span><span class="n">dt_as_str</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">c_datetime</span><span class="p">),</span>
                                             <span class="n">value</span><span class="o">=</span><span class="nb">round</span><span class="p">(</span><span class="n">this_ema</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
                                             <span class="n">ind_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ind_id</span><span class="p">,</span>
+                                            <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
                                             <span class="p">)</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dp</span><span class="p">)</span>
                 <span class="c1"># Update vars for next candle</span>
@@ -2087,7 +2303,7 @@
                  <span class="n">symbol</span><span class="o">=</span><span class="s2">&quot;ES&quot;</span><span class="p">,</span>
                  <span class="n">is_open</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
                  <span class="n">profitable</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                 <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DEFAULT_OBJ_NAME</span><span class="p">,</span>
                  <span class="n">version</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;1.0.0&quot;</span><span class="p">,</span>
                  <span class="n">ts_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">bt_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -2624,7 +2840,7 @@
                  <span class="n">timeframe</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                  <span class="n">trading_hours</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                  <span class="n">symbol</span><span class="o">=</span><span class="s2">&quot;ES&quot;</span><span class="p">,</span>
-                 <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+                 <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DEFAULT_OBJ_NAME</span><span class="p">,</span>
                  <span class="n">params_str</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
                  <span class="n">ts_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">bt_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -3054,10 +3270,10 @@
                 <span class="p">}</span></div>
 
 <div class="viewcode-block" id="TradeSeries.weekly_stats"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradeSeries.weekly_stats">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">weekly_stats</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">include_first_min</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return trade statistics grouped into weekly Sunday-keyed buckets.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return trade statistics grouped into weekly buckets.</span>
 
-<span class="sd">        Uses Sunday as the start of each week, with Sunday&#39;s date as the</span>
-<span class="sd">        bucket name.</span>
+<span class="sd">        Uses Sunday as the start of each week for bucket definition and</span>
+<span class="sd">        membership, but emits Monday date as the bucket label for each week.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Build a dict of weeks with zeroes as default values to ensure we</span>
         <span class="c1"># represent non-traded weeks in the result rather than leave gaps</span>
@@ -3076,11 +3292,14 @@
         <span class="n">result</span> <span class="o">=</span> <span class="n">dict_of_weeks</span><span class="p">(</span><span class="n">start_dt</span><span class="o">=</span><span class="n">w_start</span><span class="p">,</span>
                                <span class="n">end_dt</span><span class="o">=</span><span class="n">w_end</span><span class="p">,</span>
                                <span class="n">template</span><span class="o">=</span><span class="n">template</span><span class="p">)</span>
+        <span class="c1"># Relabel all Sunday keys to Monday keys for output</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">date</span><span class="o">.</span><span class="n">fromisoformat</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">)):</span> <span class="n">v</span>
+                  <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
         <span class="c1"># Loop through trades to aggregate stats</span>
         <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">trades</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">t</span><span class="o">.</span><span class="n">first_min_open</span> <span class="ow">or</span> <span class="n">include_first_min</span><span class="p">:</span>
                 <span class="n">d</span> <span class="o">=</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">open_dt</span><span class="p">)</span>
-                <span class="n">w</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">start_of_week_date</span><span class="p">(</span><span class="n">dt</span><span class="o">=</span><span class="n">d</span><span class="p">))</span>
+                <span class="n">w</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">start_of_week_date</span><span class="p">(</span><span class="n">dt</span><span class="o">=</span><span class="n">d</span><span class="p">)</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
                 <span class="n">result</span><span class="p">[</span><span class="n">w</span><span class="p">][</span><span class="s2">&quot;total_trades&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
                 <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">profitable</span><span class="p">:</span>
                     <span class="n">result</span><span class="p">[</span><span class="n">w</span><span class="p">][</span><span class="s2">&quot;profitable_trades&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
@@ -3428,15 +3647,16 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Sort attached TradeSeries in ascending ts_id order.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">tradeseries</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">ts_id</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Backtest.load_tradeseries"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Backtest.load_tradeseries">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">load_tradeseries</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="Backtest.load_tradeseries"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Backtest.load_tradeseries">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">load_tradeseries</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">include_trades</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Load and attach all TradeSeries matching this bt_id from storage.</span>
 
 <span class="sd">        This will replace any currently attached tradeseries.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">tradeseries</span> <span class="o">=</span> <span class="n">get_tradeseries_by_field</span><span class="p">(</span><span class="n">field</span><span class="o">=</span><span class="s2">&quot;bt_id&quot;</span><span class="p">,</span>
-                                                    <span class="n">value</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bt_id</span><span class="p">,</span>
-                                                    <span class="n">include_trades</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-                                                    <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tradeseries</span> <span class="o">=</span> <span class="n">get_tradeseries_by_field</span><span class="p">(</span>
+            <span class="n">field</span><span class="o">=</span><span class="s2">&quot;bt_id&quot;</span><span class="p">,</span>
+            <span class="n">value</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bt_id</span><span class="p">,</span>
+            <span class="n">include_trades</span><span class="o">=</span><span class="n">include_trades</span><span class="p">,</span>
+            <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sort_tradeseries</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="Backtest.restrict_dates"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Backtest.restrict_dates">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">restrict_dates</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>

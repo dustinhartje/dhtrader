@@ -146,14 +146,34 @@ to higher-level code.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhmongo.run_query">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhmongo.</span></span><span class="sig-name descname"><span class="pre">run_query</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhmongo.html#run_query"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhmongo.run_query" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhmongo.</span></span><span class="sig-name descname"><span class="pre">run_query</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhmongo.html#run_query"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhmongo.run_query" title="Permalink to this definition">¶</a></dt>
 <dd><p>Run a standard mongo query and return the result.</p>
+<p>limit defaults to 0 which returns all matching records.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>collection</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
 <li><p><strong>show_progress</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – </p></li>
+<li><p><strong>limit</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – </p></li>
 </ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhmongo.count_records">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhmongo.</span></span><span class="sig-name descname"><span class="pre">count_records</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">collection</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">query</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhmongo.html#count_records"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhmongo.count_records" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return count of documents matching query in collection.</p>
+<p>query defaults to {} to count all documents in the collection.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>collection</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>query</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em> | </em><em>None</em>) – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -461,7 +481,7 @@ value=”DELETEME”)</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhmongo.store_candle">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhmongo.</span></span><span class="sig-name descname"><span class="pre">store_candle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">c_datetime</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_timeframe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_open</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_high</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_low</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_close</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_volume</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_symbol</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_epoch</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_date</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_time</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhmongo.html#store_candle"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhmongo.store_candle" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhmongo.</span></span><span class="sig-name descname"><span class="pre">store_candle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">c_datetime</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_timeframe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_open</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_high</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_low</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_close</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_volume</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_symbol</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_epoch</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_date</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_time</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhmongo.html#store_candle"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhmongo.store_candle" title="Permalink to this definition">¶</a></dt>
 <dd><p>Stores a single candle object in mongo.</p>
 <p>Overwrites if it exists.</p>
 <dl class="field-list simple">
@@ -477,6 +497,7 @@ value=”DELETEME”)</p>
 <li><p><strong>c_epoch</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – </p></li>
 <li><p><strong>c_date</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
 <li><p><strong>c_time</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
 </ul>
 </dd>
 </dl>
@@ -530,12 +551,47 @@ value=”DELETEME”)</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhmongo.delete_candles_by_field">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhmongo.</span></span><span class="sig-name descname"><span class="pre">delete_candles_by_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">symbol</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeframe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhmongo.html#delete_candles_by_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhmongo.delete_candles_by_field" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete all candles from mongo with ‘field’ matching ‘value’.</p>
+<p>Typically used to delete by name or other identifying fields.</p>
+<p>Example to delete all candles with name==”DELETEME”:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">delete_candles_by_field</span><span class="p">(</span><span class="n">symbol</span><span class="o">=</span><span class="s2">&quot;ES&quot;</span><span class="p">,</span> <span class="n">timeframe</span><span class="o">=</span><span class="s2">&quot;1m&quot;</span><span class="p">,</span>
+                        <span class="n">field</span><span class="o">=</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="s2">&quot;DELETEME&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>symbol</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>timeframe</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>field</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhmongo.list_indicators">
 <span class="sig-prename descclassname"><span class="pre">dhtrader.dhmongo.</span></span><span class="sig-name descname"><span class="pre">list_indicators</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">meta_collection</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhmongo.html#list_indicators"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhmongo.list_indicators" title="Permalink to this definition">¶</a></dt>
 <dd><p>Lists all available indicators in mongo based on metadata.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>meta_collection</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhmongo.get_indicators_by_name">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhmongo.</span></span><span class="sig-name descname"><span class="pre">get_indicators_by_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">meta_collection</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhmongo.html#get_indicators_by_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhmongo.get_indicators_by_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return raw meta docs for all indicators with the given name.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>meta_collection</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>
@@ -631,7 +687,7 @@ value=”DELETEME”)</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhmongo.store_event">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhmongo.</span></span><span class="sig-name descname"><span class="pre">store_event</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbol</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">category</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tags</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">notes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_epoch</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_epoch</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhmongo.html#store_event"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhmongo.store_event" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhmongo.</span></span><span class="sig-name descname"><span class="pre">store_event</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbol</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">category</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tags</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">notes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_epoch</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_epoch</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhmongo.html#store_event"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhmongo.store_event" title="Permalink to this definition">¶</a></dt>
 <dd><p>Write a single Event() to mongo.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -642,6 +698,24 @@ value=”DELETEME”)</p>
 <li><p><strong>notes</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
 <li><p><strong>start_epoch</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – </p></li>
 <li><p><strong>end_epoch</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – </p></li>
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhmongo.delete_events_by_field">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhmongo.</span></span><span class="sig-name descname"><span class="pre">delete_events_by_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">symbol</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhmongo.html#delete_events_by_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhmongo.delete_events_by_field" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete all events from mongo for a symbol with ‘field’ matching ‘value’.</p>
+<p>Typically used to delete by name or category fields.</p>
+<p>Example to delete all events with name==”DELETEME”:
+delete_events_by_field(symbol=”ES”, field=”name”, value=”DELETEME”)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>symbol</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>field</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
 </ul>
 </dd>
 </dl>
@@ -712,6 +786,7 @@ start before or on it.</p>
 <li><a class="reference internal" href="#dhtrader.dhmongo.drop_collection"><code class="docutils literal notranslate"><span class="pre">drop_collection()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhmongo.get_all_records_by_collection"><code class="docutils literal notranslate"><span class="pre">get_all_records_by_collection()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhmongo.run_query"><code class="docutils literal notranslate"><span class="pre">run_query()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhmongo.count_records"><code class="docutils literal notranslate"><span class="pre">count_records()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhmongo.count_records_by_field"><code class="docutils literal notranslate"><span class="pre">count_records_by_field()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhmongo.list_values_by_regex_match"><code class="docutils literal notranslate"><span class="pre">list_values_by_regex_match()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhmongo.update_records_value"><code class="docutils literal notranslate"><span class="pre">update_records_value()</span></code></a></li>
@@ -735,7 +810,9 @@ start before or on it.</p>
 <li><a class="reference internal" href="#dhtrader.dhmongo.get_candles"><code class="docutils literal notranslate"><span class="pre">get_candles()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhmongo.review_candles"><code class="docutils literal notranslate"><span class="pre">review_candles()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhmongo.delete_candles"><code class="docutils literal notranslate"><span class="pre">delete_candles()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhmongo.delete_candles_by_field"><code class="docutils literal notranslate"><span class="pre">delete_candles_by_field()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhmongo.list_indicators"><code class="docutils literal notranslate"><span class="pre">list_indicators()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhmongo.get_indicators_by_name"><code class="docutils literal notranslate"><span class="pre">get_indicators_by_name()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhmongo.get_indicator_datapoints"><code class="docutils literal notranslate"><span class="pre">get_indicator_datapoints()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhmongo.store_indicator_datapoints"><code class="docutils literal notranslate"><span class="pre">store_indicator_datapoints()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhmongo.review_indicators"><code class="docutils literal notranslate"><span class="pre">review_indicators()</span></code></a></li>
@@ -743,6 +820,7 @@ start before or on it.</p>
 <li><a class="reference internal" href="#dhtrader.dhmongo.store_indicator"><code class="docutils literal notranslate"><span class="pre">store_indicator()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhmongo.delete_indicator"><code class="docutils literal notranslate"><span class="pre">delete_indicator()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhmongo.store_event"><code class="docutils literal notranslate"><span class="pre">store_event()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhmongo.delete_events_by_field"><code class="docutils literal notranslate"><span class="pre">delete_events_by_field()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhmongo.get_events"><code class="docutils literal notranslate"><span class="pre">get_events()</span></code></a></li>
 </ul>
 </li>
