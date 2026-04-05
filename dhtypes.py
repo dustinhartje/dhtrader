@@ -29,6 +29,7 @@ from bisect import bisect_right
 from datetime import timedelta, date
 import sys
 import json
+from pathlib import Path
 from statistics import fmean
 from copy import copy, deepcopy
 import logging
@@ -3788,6 +3789,162 @@ class Backtest():
         pass
 
 
+class TradePlan():
+    """Core data type for a trade plan with an attached TradeSeries.
+
+    Stores identity, parameters, and serialization behavior. Analysis,
+    reporting, and visualization behavior are provided by backtesting
+    subclasses.
+
+    Args:
+        contracts: Number of contracts this plan is calculated with.
+        con_fee: Per-contract fee as a float.
+        tp_id: Optional unique trade plan identifier string.
+        nametag: Short nametag string used in output labels.
+        tags: Optional list of machine-oriented classifier tags.
+        label: Descriptive label string for this plan.
+        profit_perc: Profit percentage target for this plan.
+        start_dt: Start datetime string for the analysis window.
+        end_dt: End datetime string for the analysis window.
+        drawdown_open: Opening drawdown distance.
+        drawdown_limit: Maximum drawdown distance.
+        notes: Optional list of human-readable notes.
+        thresholds: Thresholds dict or instance applied to this plan.
+        tradeseries: TradeSeries object attached to this plan.
+        how_gl_heatmap_viz: Optional path to hour-of-week heatmap.
+        weekly_price_overlay_visuals: Optional list of visual paths.
+    """
+
+    def __init__(self,
+                 contracts: int,
+                 con_fee=float(0),
+                 tp_id=None,
+                 nametag=None,
+                 tags=None,
+                 label=None,
+                 profit_perc=100,
+                 start_dt=None,
+                 end_dt=None,
+                 drawdown_open=None,
+                 drawdown_limit=None,
+                 notes=None,
+                 thresholds=None,
+                 tradeseries=None,
+                 how_gl_heatmap_viz=None,
+                 weekly_price_overlay_visuals=None,
+                 ):
+        """Initialize a TradePlan instance."""
+        self.contracts = contracts
+        self.con_fee = con_fee
+        self.tp_id = tp_id
+        self.override_tp_id = False if self.tp_id is None else True
+        self.nametag = nametag
+        self.tags = self._normalize_str_list(tags, "tags")
+        self.label = label
+        self.profit_perc = profit_perc
+        self.start_dt = start_dt
+        self.end_dt = end_dt
+        self.drawdown_open = drawdown_open
+        self.drawdown_limit = drawdown_limit
+        self.notes = self._normalize_str_list(notes, "notes")
+        self.thresholds = {} if thresholds is None else thresholds
+        self.replace_tradeseries(tradeseries)
+        self.how_gl_heatmap_viz = how_gl_heatmap_viz
+        self.weekly_price_overlay_visuals = weekly_price_overlay_visuals
+        if self.weekly_price_overlay_visuals is None:
+            self.weekly_price_overlay_visuals = []
+
+    def _normalize_str_list(self, values, field_name):
+        """Return list[str], converting values where possible."""
+        if values is None:
+            return []
+        result = []
+        try:
+            for value in values:
+                result.append(str(value))
+        except Exception as e:
+            raise TypeError(
+                f"TradePlan.{field_name} must be list-like and "
+                "string-convertible"
+            ) from e
+        return result
+
+    def _tp_id_epoch_suffix(self):
+        """Return existing _e<epoch> suffix or generate a new one."""
+        if isinstance(self.tp_id, str):
+            parts = self.tp_id.rsplit("_e", 1)
+            if len(parts) == 2 and parts[1].isdigit():
+                return f"_e{parts[1]}"
+        return f"_e{dt_to_epoch(dt.datetime.now())}"
+
+    def replace_tradeseries(self, ts):
+        """Replace attached TradeSeries and update tp_id accordingly."""
+        self.tradeseries = deepcopy(ts)
+        if not self.override_tp_id:
+            suffix = self._tp_id_epoch_suffix()
+            if ts is None:
+                self.tp_id = (
+                    f"NoTradeSeries_{self.nametag}_{self.label}{suffix}"
+                )
+            else:
+                self.tp_id = (
+                    f"{ts.ts_id}_{self.nametag}_{self.label}{suffix}"
+                )
+
+    def source_ts_ids(self):
+        """Return sorted unique source ts_ids from trades in real time."""
+        if self.tradeseries is None or self.tradeseries.trades is None:
+            return []
+        return sorted({str(t.ts_id) for t in self.tradeseries.trades})
+
+    def to_json(self):
+        """Return a JSON string of this TradePlan, normalizing types."""
+        w = deepcopy(self.__dict__)
+        if w["tradeseries"] is not None:
+            w["tradeseries"] = self.tradeseries.to_clean_dict()
+        if not isinstance(w["thresholds"], dict):
+            w["thresholds"] = w["thresholds"].to_clean_dict()
+        return json.dumps(w)
+
+    def to_clean_dict(self):
+        """Return normalized plain dict by round-tripping through JSON."""
+        return json.loads(self.to_json())
+
+    def __str__(self):
+        """Return string representation of this TradePlan's __dict__."""
+        return str(self.__dict__)
+
+    def __repr__(self):
+        """Return a detailed string representation for debugging."""
+        return str(self.__dict__)
+
+    def pretty(self):
+        """Return a pretty-printed JSON string of this TradePlan."""
+        return json.dumps(self.to_clean_dict(), indent=4)
+
+    def list_trades(self, one_line=True, out_console=False,
+                    out_path=None, out_file=None):
+        """Return all Trades in single-line or pretty-printed format."""
+        results = []
+        for t in self.tradeseries.trades:
+            if one_line:
+                results.append(t.brief())
+            else:
+                results.append(t.pretty())
+        if out_console:
+            print(results)
+        if out_path is not None:
+            if out_file is None:
+                out_file = (f"tradeslist.{self.nametag}.{self.label}"
+                            f".perc{self.profit_perc}.txt")
+            out_file = Path(out_path) / out_file
+            with open(out_file, "w") as f:
+                for line in results:
+                    f.write("".join([line, "\n"]))
+            log_say(f"Wrote {out_file}")
+        return results
+
+
 __all__ = [
     "CANDLE_TIMEFRAMES",
     "BEGINNING_OF_TIME",
@@ -3817,6 +3974,7 @@ __all__ = [
     "IndicatorSMA",
     "IndicatorEMA",
     "Trade",
+    "TradePlan",
     "TradeSeries",
     "Backtest",
 ]

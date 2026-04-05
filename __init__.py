@@ -15,6 +15,7 @@ from .dhtypes import (
     IndicatorSMA,
     Symbol,
     Trade,
+    TradePlan,
     TradeSeries,
 )
 
@@ -180,6 +181,7 @@ __all__ = [
     'this_candle_start',
     'timeframe_delta',
     'Trade',
+    'TradePlan',
     'TradeSeries',
     'valid_timeframe',
     'valid_trading_hours',
