@@ -615,6 +615,70 @@ def delete_backtests(bt_ids: list,
 
 
 ##############################################################################
+# TradePlans
+def get_tradeplans_by_field(field: str,
+                            value,
+                            collection: str,
+                            limit=0,
+                            show_progress: bool = False,
+                            ):
+    """Return TradePlan dicts matching the field=value provided."""
+    c = db[collection]
+    total = c.count_documents({field: value})
+    if limit > 0:
+        total = min(total, limit)
+    pbar = start_progbar(show_progress, total,
+                         "tradeplan records fetched from "
+                         f"{collection}")
+    cursor = c.find({field: value}).limit(limit)
+    result = []
+    for i, doc in enumerate(cursor, start=1):
+        result.append(doc)
+        update_progbar(pbar, i, total)
+    finish_progbar(pbar)
+
+    return result
+
+
+def store_tradeplan(tradeplan: dict,
+                    collection: str,
+                    ):
+    """Store one TradePlan dict in mongo, upserted by tp_id."""
+    c = db[collection]
+    result = c.find_one_and_replace({"tp_id": tradeplan["tp_id"]},
+                                    tradeplan,
+                                    new=True,
+                                    upsert=True,
+                                    )
+
+    return result
+
+
+def delete_tradeplans_by_field(field: str,
+                               value,
+                               collection: str,
+                               ):
+    """Delete all tradeplan records with 'field' matching 'value'."""
+    c = db[collection]
+    result = c.delete_many({field: value})
+
+    return result
+
+
+def delete_tradeplans(tp_ids: list,
+                      collection: str,
+                      ):
+    """Delete tradeplans from mongo using tp_id as identifying field."""
+    c = db[collection]
+    result = []
+    for tp_id in tp_ids:
+        r = c.find_one_and_delete({"tp_id": tp_id})
+        result.append(r)
+
+    return result
+
+
+##############################################################################
 # Candles
 
 def store_candle(c_datetime,

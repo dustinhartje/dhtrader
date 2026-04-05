@@ -19,7 +19,7 @@ import logging
 from pathlib import Path
 from .dhtypes import (
     Candle, Event, IndicatorDataPoint, Symbol, IndicatorSMA, IndicatorEMA,
-    Trade, TradeSeries)
+    Trade, TradeSeries, TradePlan)
 from .dhcommon import (
     dt_as_str, dt_as_dt, dt_from_epoch, dt_to_epoch, valid_timeframe,
     this_candle_start, summarize_candles, log_say, sort_dict,
@@ -30,6 +30,7 @@ from . import dhmongo as dhm
 COLL_TRADES = "trades"
 COLL_TRADESERIES = "tradeseries"
 COLL_BACKTESTS = "backtests"
+COLL_TRADEPLANS = "tradeplans"
 COLL_IND_META = "indicators_meta"
 COLL_IND_DPS = "indicators_datapoints"
 
@@ -1216,6 +1217,148 @@ def delete_backtests(backtests: list,
 
     result = dhm.delete_backtests(bt_ids=bt_ids,
                                   collection=collection)
+
+    return result
+
+
+##############################################################################
+# TradePlans
+_TRADEPLAN_CTOR_KEYS = frozenset({
+    "contracts", "con_fee", "tp_id", "nametag", "tags", "label",
+    "profit_perc", "start_dt", "end_dt", "drawdown_open",
+    "drawdown_limit", "notes", "thresholds", "tradeseries",
+    "how_gl_heatmap_viz", "weekly_price_overlay_visuals",
+})
+
+
+def reconstruct_tradeplan(tp):
+    """Take a dictionary and build a TradePlan object from it.
+
+    Reconstructs using constructor fields first, then reattaches any
+    remaining stored keys via setattr to preserve post-init state.
+    """
+    raw_ts = tp.get("tradeseries")
+    ts = None
+    if isinstance(raw_ts, dict):
+        ts = reconstruct_tradeseries(raw_ts)
+
+    obj = TradePlan(
+        contracts=tp["contracts"],
+        con_fee=tp.get("con_fee", 0.0),
+        tp_id=tp.get("tp_id"),
+        nametag=tp.get("nametag"),
+        tags=tp.get("tags", []),
+        label=tp.get("label"),
+        profit_perc=tp.get("profit_perc", 100),
+        start_dt=tp.get("start_dt"),
+        end_dt=tp.get("end_dt"),
+        drawdown_open=tp.get("drawdown_open"),
+        drawdown_limit=tp.get("drawdown_limit"),
+        notes=tp.get("notes", []),
+        thresholds=tp.get("thresholds", {}),
+        tradeseries=ts,
+        how_gl_heatmap_viz=tp.get("how_gl_heatmap_viz"),
+        weekly_price_overlay_visuals=tp.get(
+            "weekly_price_overlay_visuals"
+        ),
+    )
+
+    for k, v in tp.items():
+        if k not in _TRADEPLAN_CTOR_KEYS and k != "_id":
+            setattr(obj, k, v)
+
+    return obj
+
+
+def get_all_tradeplans(collection: str = COLL_TRADEPLANS,
+                       limit=0,
+                       as_dict: bool = False,
+                       show_progress: bool = False,
+                       ):
+    """Get stored tradeplans as TradePlan objects or raw dicts."""
+    r = dhm.get_all_records_by_collection(collection=collection,
+                                          limit=limit,
+                                          show_progress=show_progress)
+    if as_dict:
+        return r
+
+    total = len(r)
+    pbar = start_progbar(show_progress, total,
+                         "TradePlan objects built")
+    result = []
+    for i, t in enumerate(r, start=1):
+        result.append(reconstruct_tradeplan(t))
+        update_progbar(pbar, i, total)
+    finish_progbar(pbar)
+
+    return result
+
+
+def get_tradeplans_by_field(field: str,
+                            value,
+                            collection: str = COLL_TRADEPLANS,
+                            as_dict: bool = False,
+                            limit=0,
+                            show_progress: bool = False,
+                            ):
+    """Return TradePlan objects or dicts matching given field=value."""
+    r = dhm.get_tradeplans_by_field(field=field,
+                                    value=value,
+                                    collection=collection,
+                                    limit=limit,
+                                    show_progress=show_progress,
+                                    )
+    if as_dict:
+        return r
+
+    total = len(r)
+    pbar = start_progbar(show_progress, total,
+                         "TradePlan objects built")
+    result = []
+    for i, t in enumerate(r, start=1):
+        result.append(reconstruct_tradeplan(t))
+        update_progbar(pbar, i, total)
+    finish_progbar(pbar)
+
+    return result
+
+
+def store_tradeplans(tradeplans: list,
+                     collection: str = COLL_TRADEPLANS,
+                     ):
+    """Store a list of TradePlan objects in central storage."""
+    result = []
+    for tp in tradeplans:
+        tp_result = dhm.store_tradeplan(tp.to_clean_dict(),
+                                        collection=collection,
+                                        )
+        tp_result["tp_id"] = tp.tp_id
+        result.append(tp_result)
+
+    return result
+
+
+def delete_tradeplans_by_field(field: str,
+                               value,
+                               collection: str = COLL_TRADEPLANS,
+                               ):
+    """Delete all tradeplan records with 'field' matching 'value'."""
+    result = dhm.delete_tradeplans_by_field(field=field,
+                                            value=value,
+                                            collection=collection,
+                                            )
+
+    return result
+
+
+def delete_tradeplans(tradeplans: list,
+                      collection: str = COLL_TRADEPLANS,
+                      ):
+    """Delete TradePlan objects from central storage using tp_id."""
+    tp_ids = [tp.tp_id for tp in tradeplans]
+    result = dhm.delete_tradeplans(tp_ids=tp_ids,
+                                   collection=collection,
+                                   )
 
     return result
 
