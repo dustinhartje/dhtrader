@@ -3888,6 +3888,7 @@ class TradePlan():
         contracts: Number of contracts this plan is calculated with.
         con_fee: Per-contract fee as a float.
         tp_id: Optional unique trade plan identifier string.
+        name: Name string used for integrity checks and cleanup.
         nametag: Short nametag string used in output labels.
         tags: Optional list of machine-oriented classifier tags.
         label: Descriptive label string for this plan.
@@ -3907,6 +3908,7 @@ class TradePlan():
                  contracts: int,
                  con_fee=float(0),
                  tp_id=None,
+                 name: str = DEFAULT_OBJ_NAME,
                  nametag=None,
                  tags=None,
                  label=None,
@@ -3926,6 +3928,7 @@ class TradePlan():
         self.con_fee = con_fee
         self.tp_id = tp_id
         self.override_tp_id = False if self.tp_id is None else True
+        self.name = name
         self.nametag = nametag
         self.tags = self._normalize_str_list(tags, "tags")
         self.label = label

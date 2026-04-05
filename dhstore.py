@@ -1313,7 +1313,8 @@ def delete_backtests(backtests: list,
 ##############################################################################
 # TradePlans
 _TRADEPLAN_CTOR_KEYS = frozenset({
-    "contracts", "con_fee", "tp_id", "nametag", "tags", "label",
+    "contracts", "con_fee", "tp_id", "name", "nametag", "tags",
+    "label",
     "profit_perc", "start_dt", "end_dt", "drawdown_open",
     "drawdown_limit", "notes", "thresholds", "tradeseries",
     "how_gl_heatmap_viz", "weekly_price_overlay_visuals",
@@ -1355,6 +1356,7 @@ def reconstruct_tradeplan(tp,
         contracts=tp["contracts"],
         con_fee=tp.get("con_fee", 0.0),
         tp_id=tp.get("tp_id"),
+        name=tp.get("name"),
         nametag=tp.get("nametag"),
         tags=tp.get("tags", []),
         label=tp.get("label"),
@@ -1444,6 +1446,23 @@ def store_tradeplans(tradeplans: list,
                      collection: str = COLL_TRADEPLANS,
                      ):
     """Store a list of TradePlan objects in central storage."""
+    for tp in tradeplans:
+        if not tp.name:
+            raise ValueError(
+                "TradePlan.name must not be None or empty "
+                f"string before storing: tp_id={tp.tp_id!r} name={tp.name!r}"
+            )
+        if not tp.nametag:
+            raise ValueError(
+                "TradePlan.nametag must not be None or empty "
+                f"string before storing: tp_id={tp.tp_id!r} "
+                f"nametag={tp.nametag!r}"
+            )
+        if not tp.label:
+            raise ValueError(
+                "TradePlan.label must not be None or empty "
+                f"string before storing: tp_id={tp.tp_id!r} label={tp.label!r}"
+            )
     result = []
     for tp in tradeplans:
         tp_result = dhm.store_tradeplan(tp.to_clean_dict(),
