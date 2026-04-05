@@ -1313,8 +1313,8 @@ def delete_backtests(backtests: list,
 ##############################################################################
 # TradePlans
 _TRADEPLAN_CTOR_KEYS = frozenset({
-    "contracts", "con_fee", "tp_id", "name", "nametag", "tags",
-    "label",
+    "contracts", "con_fee", "tp_id", "name", "id_slug", "tags",
+    "cfg_label",
     "profit_perc", "start_dt", "end_dt", "drawdown_open",
     "drawdown_limit", "notes", "thresholds", "tradeseries",
     "how_gl_heatmap_viz", "weekly_price_overlay_visuals",
@@ -1357,9 +1357,9 @@ def reconstruct_tradeplan(tp,
         con_fee=tp.get("con_fee", 0.0),
         tp_id=tp.get("tp_id"),
         name=tp.get("name"),
-        nametag=tp.get("nametag"),
+        id_slug=tp.get("id_slug"),
         tags=tp.get("tags", []),
-        label=tp.get("label"),
+        cfg_label=tp.get("cfg_label"),
         profit_perc=tp.get("profit_perc", 100),
         start_dt=tp.get("start_dt"),
         end_dt=tp.get("end_dt"),
@@ -1452,16 +1452,17 @@ def store_tradeplans(tradeplans: list,
                 "TradePlan.name must not be None or empty "
                 f"string before storing: tp_id={tp.tp_id!r} name={tp.name!r}"
             )
-        if not tp.nametag:
+        if not tp.id_slug:
             raise ValueError(
-                "TradePlan.nametag must not be None or empty "
+                "TradePlan.id_slug must not be None or empty "
                 f"string before storing: tp_id={tp.tp_id!r} "
-                f"nametag={tp.nametag!r}"
+                f"id_slug={tp.id_slug!r}"
             )
-        if not tp.label:
+        if not tp.cfg_label:
             raise ValueError(
-                "TradePlan.label must not be None or empty "
-                f"string before storing: tp_id={tp.tp_id!r} label={tp.label!r}"
+                "TradePlan.cfg_label must not be None or empty "
+                f"string before storing: tp_id={tp.tp_id!r} "
+                f"cfg_label={tp.cfg_label!r}"
             )
     result = []
     for tp in tradeplans:

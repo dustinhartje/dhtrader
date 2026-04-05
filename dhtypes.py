@@ -3889,9 +3889,9 @@ class TradePlan():
         con_fee: Per-contract fee as a float.
         tp_id: Optional unique trade plan identifier string.
         name: Name string used for integrity checks and cleanup.
-        nametag: Short nametag string used in output labels.
+        id_slug: Short identifier string used in output labels.
         tags: Optional list of machine-oriented classifier tags.
-        label: Descriptive label string for this plan.
+        cfg_label: Descriptive configuration label string for this plan.
         profit_perc: Profit percentage target for this plan.
         start_dt: Start datetime string for the analysis window.
         end_dt: End datetime string for the analysis window.
@@ -3909,9 +3909,9 @@ class TradePlan():
                  con_fee=float(0),
                  tp_id=None,
                  name: str = DEFAULT_OBJ_NAME,
-                 nametag=None,
+                 id_slug=None,
                  tags=None,
-                 label=None,
+                 cfg_label=None,
                  profit_perc=100,
                  start_dt=None,
                  end_dt=None,
@@ -3929,9 +3929,9 @@ class TradePlan():
         self.tp_id = tp_id
         self.override_tp_id = False if self.tp_id is None else True
         self.name = name
-        self.nametag = nametag
+        self.id_slug = id_slug
         self.tags = self._normalize_str_list(tags, "tags")
-        self.label = label
+        self.cfg_label = cfg_label
         self.profit_perc = profit_perc
         self.start_dt = start_dt
         self.end_dt = end_dt
@@ -3975,11 +3975,11 @@ class TradePlan():
             suffix = self._tp_id_epoch_suffix()
             if ts is None:
                 self.tp_id = (
-                    f"NoTradeSeries_{self.nametag}_{self.label}{suffix}"
+                    f"NoTradeSeries_{self.id_slug}_{self.cfg_label}{suffix}"
                 )
             else:
                 self.tp_id = (
-                    f"{ts.ts_id}_{self.nametag}_{self.label}{suffix}"
+                    f"{ts.ts_id}_{self.id_slug}_{self.cfg_label}{suffix}"
                 )
 
     def source_ts_ids(self):
@@ -4042,7 +4042,7 @@ class TradePlan():
             print(results)
         if out_path is not None:
             if out_file is None:
-                out_file = (f"tradeslist.{self.nametag}.{self.label}"
+                out_file = (f"tradeslist.{self.id_slug}.{self.cfg_label}"
                             f".perc{self.profit_perc}.txt")
             out_file = Path(out_path) / out_file
             with open(out_file, "w") as f:

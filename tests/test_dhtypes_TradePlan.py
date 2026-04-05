@@ -61,8 +61,8 @@ def create_tradeseries(name="DELETEME_tp_ts",
 
 
 def create_tradeplan(name="DELETEME_tp_default",
-                     nametag="DELETEME_tp_default_tag",
-                     label="DELETEME_tp_default_lbl",
+                     id_slug="DELETEME_tp_default_tag",
+                     cfg_label="DELETEME_tp_default_lbl",
                      tags=None,
                      notes=None,
                      with_trades=True,
@@ -84,10 +84,10 @@ def create_tradeplan(name="DELETEME_tp_default",
         contracts=2,
         con_fee=3.04,
         name=name,
-        nametag=nametag,
+        id_slug=id_slug,
         tags=tags,
         notes=notes,
-        label=label,
+        cfg_label=cfg_label,
         profit_perc=100,
         start_dt="2099-01-01 00:00:00",
         end_dt="2099-02-01 00:00:00",
@@ -156,15 +156,15 @@ def test_TradePlan_create_and_verify_common_methods():
     and pretty for attribute correctness and serialization.
     """
     tp = create_tradeplan(name="DELETEME_tp_common",
-                          nametag="DELETEME_tp_common_tag",
-                          label="DELETEME_tp_common_lbl")
+                          id_slug="DELETEME_tp_common_tag",
+                          cfg_label="DELETEME_tp_common_lbl")
 
     # __init__ attribute values
     assert tp.contracts == 2
     assert tp.con_fee == 3.04
     assert tp.name == "DELETEME_tp_common"
-    assert tp.nametag == "DELETEME_tp_common_tag"
-    assert tp.label == "DELETEME_tp_common_lbl"
+    assert tp.id_slug == "DELETEME_tp_common_tag"
+    assert tp.cfg_label == "DELETEME_tp_common_lbl"
     assert tp.profit_perc == 100
     assert tp.start_dt == "2099-01-01 00:00:00"
     assert tp.end_dt == "2099-02-01 00:00:00"
@@ -182,7 +182,7 @@ def test_TradePlan_create_and_verify_common_methods():
     expected_attrs = {
         "contracts", "con_fee", "tp_id", "override_tp_id",
         "name",
-        "nametag", "tags", "label", "profit_perc",
+        "id_slug", "tags", "cfg_label", "profit_perc",
         "start_dt", "end_dt", "drawdown_open", "drawdown_limit",
         "notes", "thresholds", "tradeseries",
         "how_gl_heatmap_viz", "weekly_price_overlay_visuals",
@@ -207,7 +207,7 @@ def test_TradePlan_create_and_verify_common_methods():
     d = tp.to_clean_dict()
     assert isinstance(d, dict)
     assert d["name"] == "DELETEME_tp_common"
-    assert d["nametag"] == "DELETEME_tp_common_tag"
+    assert d["id_slug"] == "DELETEME_tp_common_tag"
     assert d["contracts"] == 2
     assert "trade_ids" in d
     assert isinstance(d["trade_ids"], list)
@@ -223,7 +223,7 @@ def test_TradePlan_create_and_verify_common_methods():
     parsed = json.loads(j)
     assert isinstance(parsed, dict)
     assert parsed["name"] == "DELETEME_tp_common"
-    assert parsed["nametag"] == "DELETEME_tp_common_tag"
+    assert parsed["id_slug"] == "DELETEME_tp_common_tag"
     assert parsed["contracts"] == 2
 
     # pretty
@@ -232,7 +232,7 @@ def test_TradePlan_create_and_verify_common_methods():
     assert len(p.splitlines()) == 42
     reparsed = json.loads(p)
     assert reparsed["name"] == "DELETEME_tp_common"
-    assert reparsed["nametag"] == "DELETEME_tp_common_tag"
+    assert reparsed["id_slug"] == "DELETEME_tp_common_tag"
 
 
 @pytest.mark.suppress_stdout
@@ -258,22 +258,22 @@ def test_TradePlan_tags_and_notes_normalization():
         TradePlan(
             contracts=1,
             name="DELETEME_tp_tags",
-            nametag="DELETEME_tp_tags_tag",
-            label="DELETEME_tp_tags_lbl",
+            id_slug="DELETEME_tp_tags_tag",
+            cfg_label="DELETEME_tp_tags_lbl",
             tags=42,
         )
 
 
 @pytest.mark.suppress_stdout
 def test_TradePlan_tp_id_generation_and_epoch_suffix():
-    """tp_id should include nametag, label, and an _e<epoch> suffix.
+    """tp_id should include id_slug, cfg_label, and an _e<epoch> suffix.
 
     When replace_tradeseries is called, the existing epoch suffix should
     be preserved rather than regenerated.
     """
     tp = create_tradeplan(name="DELETEME_tp_id",
-                          nametag="DELETEME_tp_id_tag",
-                          label="DELETEME_tp_id_lbl")
+                          id_slug="DELETEME_tp_id_tag",
+                          cfg_label="DELETEME_tp_id_lbl")
     assert "DELETEME_tp_id_tag" in tp.tp_id
     assert "DELETEME_tp_id_lbl" in tp.tp_id
     # Epoch suffix format: ends with _e<digits>
@@ -297,8 +297,8 @@ def test_TradePlan_tp_id_generation_and_epoch_suffix():
     tp_explicit = TradePlan(
         contracts=1,
         name="DELETEME_tp_id_explicit",
-        nametag="DELETEME_tp_id_ex_tag",
-        label="DELETEME_tp_id_ex_lbl",
+        id_slug="DELETEME_tp_id_ex_tag",
+        cfg_label="DELETEME_tp_id_ex_lbl",
         tp_id="EXPLICIT_ID_e99999",
     )
     assert tp_explicit.tp_id == "EXPLICIT_ID_e99999"
@@ -312,8 +312,8 @@ def test_TradePlan_replace_tradeseries():
     while preserving the epoch suffix.
     """
     tp = create_tradeplan(name="DELETEME_tp_replace",
-                          nametag="DELETEME_tp_replace_tag",
-                          label="DELETEME_tp_replace_lbl")
+                          id_slug="DELETEME_tp_replace_tag",
+                          cfg_label="DELETEME_tp_replace_lbl")
     original_suffix = tp.tp_id.rsplit("_e", 1)[1]
 
     ts2 = create_tradeseries(name="DELETEME_tp_replace_b")
@@ -335,15 +335,15 @@ def test_TradePlan_source_ts_ids():
     """source_ts_ids should return sorted unique ts_ids from trades."""
     # No tradeseries
     tp = TradePlan(contracts=1, name="DELETEME_tp_src",
-                   nametag="DELETEME_tp_src_tag",
-                   label="DELETEME_tp_src_lbl")
+                   id_slug="DELETEME_tp_src_tag",
+                   cfg_label="DELETEME_tp_src_lbl")
     assert tp.source_ts_ids() == []
 
     # Tradeseries with no trades
     ts = create_tradeseries(name="DELETEME_tp_src_ts")
     tp = TradePlan(contracts=1, name="DELETEME_tp_src",
-                   nametag="DELETEME_tp_src_tag",
-                   label="DELETEME_tp_src_lbl", tradeseries=ts)
+                   id_slug="DELETEME_tp_src_tag",
+                   cfg_label="DELETEME_tp_src_lbl", tradeseries=ts)
     assert tp.source_ts_ids() == []
 
     # Trades all from the same ts_id
@@ -353,8 +353,8 @@ def test_TradePlan_source_ts_ids():
     ts.add_trade(create_trade(
         open_dt="2099-01-06 09:00:00", ts_id=ts.ts_id))
     tp = TradePlan(contracts=1, name="DELETEME_tp_src",
-                   nametag="DELETEME_tp_src_tag",
-                   label="DELETEME_tp_src_lbl", tradeseries=ts)
+                   id_slug="DELETEME_tp_src_tag",
+                   cfg_label="DELETEME_tp_src_lbl", tradeseries=ts)
     assert tp.source_ts_ids() == [ts.ts_id]
 
     # Trades from two different ts_ids (merged scenario).
@@ -365,8 +365,8 @@ def test_TradePlan_source_ts_ids():
     ts_merged = create_tradeseries(name="DELETEME_tp_src_merged")
     ts_merged.trades = [t_a, t_b]
     tp = TradePlan(contracts=1, name="DELETEME_tp_src",
-                   nametag="DELETEME_tp_src_tag",
-                   label="DELETEME_tp_src_lbl", tradeseries=ts_merged)
+                   id_slug="DELETEME_tp_src_tag",
+                   cfg_label="DELETEME_tp_src_lbl", tradeseries=ts_merged)
     assert tp.source_ts_ids() == ["AA_TS_B", "ZZ_TS_A"]
 
 
@@ -410,8 +410,8 @@ def test_TradePlan_store_retrieve_delete(cleanup_tradeplan_storage):
     cleanup_tradeplan_storage(name)
 
     tp = create_tradeplan(name=name,
-                          nametag="DELETEME_tp_roundtrip_tag",
-                          label="DELETEME_tp_roundtrip_lbl",
+                          id_slug="DELETEME_tp_roundtrip_tag",
+                          cfg_label="DELETEME_tp_roundtrip_lbl",
                           with_trades=True)
     original_tp_id = tp.tp_id
     original_trade_count = len(tp.tradeseries.trades)
@@ -431,8 +431,8 @@ def test_TradePlan_store_retrieve_delete(cleanup_tradeplan_storage):
     assert isinstance(r, TradePlan)
     assert r.tp_id == original_tp_id
     assert r.name == name
-    assert r.nametag == "DELETEME_tp_roundtrip_tag"
-    assert r.label == "DELETEME_tp_roundtrip_lbl"
+    assert r.id_slug == "DELETEME_tp_roundtrip_tag"
+    assert r.cfg_label == "DELETEME_tp_roundtrip_lbl"
     assert r.contracts == 2
     assert r.drawdown_open == 6000
     assert r.drawdown_limit == 6500
@@ -463,7 +463,7 @@ def test_TradePlan_store_retrieve_delete(cleanup_tradeplan_storage):
 
 @pytest.mark.suppress_stdout
 def test_TradePlan_required_identifiers_for_storage():
-    """name, nametag, and label must be non-empty strings before storing.
+    """name, id_slug, and cfg_label must be non-empty before storing.
 
     TradePlan accepts None for these fields at construction time —
     they have defined behavior in tp_id generation (embedded as the
@@ -472,15 +472,15 @@ def test_TradePlan_required_identifiers_for_storage():
     """
     # None values are accepted at construction — tp_id embeds "None"
     tp = TradePlan(contracts=1, name="DELETEME_tp_req",
-                   nametag=None, label=None)
+                   id_slug=None, cfg_label=None)
     assert "None" in tp.tp_id
 
     # store_tradeplans must raise when name is None
     tp_none_name = TradePlan(
         contracts=1,
         name=None,
-        nametag="DELETEME_tp_req_tag",
-        label="DELETEME_tp_req_lbl")
+        id_slug="DELETEME_tp_req_tag",
+        cfg_label="DELETEME_tp_req_lbl")
     with pytest.raises(ValueError):
         store_tradeplans([tp_none_name])
 
@@ -488,44 +488,44 @@ def test_TradePlan_required_identifiers_for_storage():
     tp_empty_name = TradePlan(
         contracts=1,
         name="",
-        nametag="DELETEME_tp_req_tag",
-        label="DELETEME_tp_req_lbl")
+        id_slug="DELETEME_tp_req_tag",
+        cfg_label="DELETEME_tp_req_lbl")
     with pytest.raises(ValueError):
         store_tradeplans([tp_empty_name])
 
-    # store_tradeplans must raise when nametag is None
+    # store_tradeplans must raise when id_slug is None
     tp_none_tag = TradePlan(
         contracts=1,
         name="DELETEME_tp_req",
-        nametag=None,
-        label="DELETEME_tp_req_lbl")
+        id_slug=None,
+        cfg_label="DELETEME_tp_req_lbl")
     with pytest.raises(ValueError):
         store_tradeplans([tp_none_tag])
 
-    # store_tradeplans must raise when label is None
+    # store_tradeplans must raise when cfg_label is None
     tp_none_label = TradePlan(
         contracts=1,
         name="DELETEME_tp_req",
-        nametag="DELETEME_tp_req_tag",
-        label=None)
+        id_slug="DELETEME_tp_req_tag",
+        cfg_label=None)
     with pytest.raises(ValueError):
         store_tradeplans([tp_none_label])
 
-    # store_tradeplans must raise when nametag is empty string
+    # store_tradeplans must raise when id_slug is empty string
     tp_empty_tag = TradePlan(
         contracts=1,
         name="DELETEME_tp_req",
-        nametag="",
-        label="DELETEME_tp_req_lbl")
+        id_slug="",
+        cfg_label="DELETEME_tp_req_lbl")
     with pytest.raises(ValueError):
         store_tradeplans([tp_empty_tag])
 
-    # store_tradeplans must raise when label is empty string
+    # store_tradeplans must raise when cfg_label is empty string
     tp_empty_label = TradePlan(
         contracts=1,
         name="DELETEME_tp_req",
-        nametag="DELETEME_tp_req_tag",
-        label="")
+        id_slug="DELETEME_tp_req_tag",
+        cfg_label="")
     with pytest.raises(ValueError):
         store_tradeplans([tp_empty_label])
 
@@ -554,9 +554,9 @@ def test_reconstruct_tradeplan_always_hydrates_by_trade_id(monkeypatch):
         "con_fee": 0.0,
         "tp_id": "TP-1",
         "name": "DELETEME_tp_recon",
-        "nametag": "DELETEME_tp_recon_tag",
+        "id_slug": "DELETEME_tp_recon_tag",
         "tags": ["x"],
-        "label": "DELETEME_tp_recon_lbl",
+        "cfg_label": "DELETEME_tp_recon_lbl",
         "profit_perc": 100,
         "start_dt": "2099-01-01 00:00:00",
         "end_dt": "2099-01-02 00:00:00",
