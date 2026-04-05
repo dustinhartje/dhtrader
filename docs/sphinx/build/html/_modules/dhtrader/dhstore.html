@@ -54,7 +54,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.dhtypes</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">Candle</span><span class="p">,</span> <span class="n">Event</span><span class="p">,</span> <span class="n">IndicatorDataPoint</span><span class="p">,</span> <span class="n">Symbol</span><span class="p">,</span> <span class="n">IndicatorSMA</span><span class="p">,</span> <span class="n">IndicatorEMA</span><span class="p">,</span>
-    <span class="n">Trade</span><span class="p">,</span> <span class="n">TradeSeries</span><span class="p">)</span>
+    <span class="n">Trade</span><span class="p">,</span> <span class="n">TradeSeries</span><span class="p">,</span> <span class="n">TradePlan</span><span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.dhcommon</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">dt_as_str</span><span class="p">,</span> <span class="n">dt_as_dt</span><span class="p">,</span> <span class="n">dt_from_epoch</span><span class="p">,</span> <span class="n">dt_to_epoch</span><span class="p">,</span> <span class="n">valid_timeframe</span><span class="p">,</span>
     <span class="n">this_candle_start</span><span class="p">,</span> <span class="n">summarize_candles</span><span class="p">,</span> <span class="n">log_say</span><span class="p">,</span> <span class="n">sort_dict</span><span class="p">,</span>
@@ -65,6 +65,7 @@
 <span class="n">COLL_TRADES</span> <span class="o">=</span> <span class="s2">&quot;trades&quot;</span>
 <span class="n">COLL_TRADESERIES</span> <span class="o">=</span> <span class="s2">&quot;tradeseries&quot;</span>
 <span class="n">COLL_BACKTESTS</span> <span class="o">=</span> <span class="s2">&quot;backtests&quot;</span>
+<span class="n">COLL_TRADEPLANS</span> <span class="o">=</span> <span class="s2">&quot;tradeplans&quot;</span>
 <span class="n">COLL_IND_META</span> <span class="o">=</span> <span class="s2">&quot;indicators_meta&quot;</span>
 <span class="n">COLL_IND_DPS</span> <span class="o">=</span> <span class="s2">&quot;indicators_datapoints&quot;</span>
 
@@ -352,6 +353,63 @@
     <span class="p">}</span></div>
 
 
+<div class="viewcode-block" id="check_integrity_trade_ids"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.check_integrity_trade_ids">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">check_integrity_trade_ids</span><span class="p">(</span><span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADES</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check all stored trades have non-empty, unique trade_id values.</span>
+
+<span class="sd">    Iterates every trade record in the collection once and checks two</span>
+<span class="sd">    conditions:</span>
+<span class="sd">    - trade_id is neither None nor blank (missing/backfill gap)</span>
+<span class="sd">    - trade_id is unique across the collection (no duplicates)</span>
+
+<span class="sd">    Does not modify any data.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dict: Results with keys status, total_trades, missing_count,</span>
+<span class="sd">        missing_samples, duplicate_count, and duplicate_samples.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">all_docs</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">get_all_records_by_collection</span><span class="p">(</span><span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">)</span>
+    <span class="n">total_trades</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_docs</span><span class="p">)</span>
+    <span class="n">missing</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">trade_id_counts</span> <span class="o">=</span> <span class="n">Counter</span><span class="p">()</span>
+
+    <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">all_docs</span><span class="p">:</span>
+        <span class="n">tid</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;trade_id&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">tid</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="p">(</span>
+            <span class="nb">isinstance</span><span class="p">(</span><span class="n">tid</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">tid</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span>
+        <span class="p">):</span>
+            <span class="n">missing</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                <span class="s2">&quot;_id&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;_id&quot;</span><span class="p">)),</span>
+                <span class="s2">&quot;ts_id&quot;</span><span class="p">:</span> <span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ts_id&quot;</span><span class="p">),</span>
+                <span class="s2">&quot;open_dt&quot;</span><span class="p">:</span> <span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;open_dt&quot;</span><span class="p">),</span>
+                <span class="s2">&quot;trade_id&quot;</span><span class="p">:</span> <span class="n">tid</span><span class="p">,</span>
+            <span class="p">})</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">trade_id_counts</span><span class="p">[</span><span class="n">tid</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="n">duplicates</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">tid</span><span class="p">:</span> <span class="n">count</span>
+        <span class="k">for</span> <span class="n">tid</span><span class="p">,</span> <span class="n">count</span> <span class="ow">in</span> <span class="n">trade_id_counts</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="mi">1</span>
+    <span class="p">}</span>
+
+    <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;OK&quot;</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">missing</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">duplicates</span> <span class="k">else</span> <span class="s2">&quot;ERRORS&quot;</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="n">status</span><span class="p">,</span>
+        <span class="s2">&quot;total_trades&quot;</span><span class="p">:</span> <span class="n">total_trades</span><span class="p">,</span>
+        <span class="s2">&quot;missing_count&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">missing</span><span class="p">),</span>
+        <span class="s2">&quot;missing_samples&quot;</span><span class="p">:</span> <span class="n">missing</span><span class="p">[:</span><span class="mi">10</span><span class="p">],</span>
+        <span class="s2">&quot;duplicate_count&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">duplicates</span><span class="p">),</span>
+        <span class="s2">&quot;duplicate_samples&quot;</span><span class="p">:</span> <span class="p">[</span>
+            <span class="p">{</span><span class="s2">&quot;trade_id&quot;</span><span class="p">:</span> <span class="n">tid</span><span class="p">,</span> <span class="s2">&quot;count&quot;</span><span class="p">:</span> <span class="n">count</span><span class="p">}</span>
+            <span class="k">for</span> <span class="n">tid</span><span class="p">,</span> <span class="n">count</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span>
+                <span class="n">duplicates</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span>
+                <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="p">)[:</span><span class="mi">10</span><span class="p">]</span>
+        <span class="p">],</span>
+    <span class="p">}</span></div>
+
+
 <span class="c1">##############################################################################</span>
 <span class="c1"># Trades</span>
 <div class="viewcode-block" id="reconstruct_trade"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.reconstruct_trade">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">reconstruct_trade</span><span class="p">(</span><span class="n">t</span><span class="p">):</span>
@@ -383,10 +441,11 @@
                    <span class="n">symbol</span><span class="o">=</span><span class="n">t</span><span class="p">[</span><span class="s2">&quot;symbol&quot;</span><span class="p">],</span>
                    <span class="n">is_open</span><span class="o">=</span><span class="n">t</span><span class="p">[</span><span class="s2">&quot;is_open&quot;</span><span class="p">],</span>
                    <span class="n">profitable</span><span class="o">=</span><span class="n">t</span><span class="p">[</span><span class="s2">&quot;profitable&quot;</span><span class="p">],</span>
-                   <span class="n">name</span><span class="o">=</span><span class="n">t</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="n">DEFAULT_OBJ_NAME</span><span class="p">),</span>
+                   <span class="n">name</span><span class="o">=</span><span class="n">t</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">],</span>
                    <span class="n">version</span><span class="o">=</span><span class="n">t</span><span class="p">[</span><span class="s2">&quot;version&quot;</span><span class="p">],</span>
                    <span class="n">ts_id</span><span class="o">=</span><span class="n">t</span><span class="p">[</span><span class="s2">&quot;ts_id&quot;</span><span class="p">],</span>
                    <span class="n">bt_id</span><span class="o">=</span><span class="n">t</span><span class="p">[</span><span class="s2">&quot;bt_id&quot;</span><span class="p">],</span>
+                   <span class="n">trade_id</span><span class="o">=</span><span class="n">t</span><span class="p">[</span><span class="s2">&quot;trade_id&quot;</span><span class="p">],</span>
                    <span class="n">tags</span><span class="o">=</span><span class="n">t</span><span class="p">[</span><span class="s2">&quot;tags&quot;</span><span class="p">],</span>
                    <span class="p">)</span>
     <span class="k">if</span> <span class="n">close_dt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -454,6 +513,32 @@
     <span class="k">return</span> <span class="n">result</span></div>
 
 
+<div class="viewcode-block" id="get_trades_by_field_in"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.get_trades_by_field_in">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_trades_by_field_in</span><span class="p">(</span><span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                           <span class="n">values</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+                           <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADES</span><span class="p">,</span>
+                           <span class="n">limit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                           <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                           <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return Trade objects where field is in values.&quot;&quot;&quot;</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">get_trades_by_field_in</span><span class="p">(</span><span class="n">field</span><span class="o">=</span><span class="n">field</span><span class="p">,</span>
+                                   <span class="n">values</span><span class="o">=</span><span class="n">values</span><span class="p">,</span>
+                                   <span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">,</span>
+                                   <span class="n">limit</span><span class="o">=</span><span class="n">limit</span><span class="p">,</span>
+                                   <span class="n">show_progress</span><span class="o">=</span><span class="n">show_progress</span><span class="p">,</span>
+                                   <span class="p">)</span>
+
+    <span class="n">total</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+    <span class="n">pbar</span> <span class="o">=</span> <span class="n">start_progbar</span><span class="p">(</span><span class="n">show_progress</span><span class="p">,</span> <span class="n">total</span><span class="p">,</span>
+                         <span class="s2">&quot;Trade objects built&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">reconstruct_trade</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+        <span class="n">update_progbar</span><span class="p">(</span><span class="n">pbar</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">total</span><span class="p">)</span>
+    <span class="n">finish_progbar</span><span class="p">(</span><span class="n">pbar</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
 <div class="viewcode-block" id="store_trades"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.store_trades">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">store_trades</span><span class="p">(</span><span class="n">trades</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
                  <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADES</span><span class="p">,</span>
                  <span class="p">):</span>
@@ -462,6 +547,11 @@
     <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Preparing </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">trades</span><span class="p">)</span><span class="si">}</span><span class="s2"> trades to store by converting to dicts&quot;</span><span class="p">)</span>
     <span class="n">working_trades</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">trades</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">trade_id</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">str</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">trade_id</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Cannot store Trade with empty trade_id </span><span class="si">{</span><span class="n">t</span><span class="o">.</span><span class="n">trade_id</span><span class="si">}</span><span class="s2">. &quot;</span>
+                <span class="s2">&quot;Bind ts_id first.&quot;</span>
+            <span class="p">)</span>
         <span class="n">working_trades</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">to_clean_dict</span><span class="p">())</span>
 
     <span class="c1"># Store in database</span>
@@ -824,7 +914,7 @@
 <span class="c1">##############################################################################</span>
 <span class="c1"># TradeSeries</span>
 <div class="viewcode-block" id="reconstruct_tradeseries"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.reconstruct_tradeseries">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">reconstruct_tradeseries</span><span class="p">(</span><span class="n">ts</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Takes a dictionary and builds a Trade() object from it.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Takes a dictionary and builds a TradeSeries() object from it.</span>
 
 <span class="sd">    Primarily used by other functions to convert results retrieved from</span>
 <span class="sd">    storage.</span>
@@ -1251,6 +1341,196 @@
 
     <span class="n">result</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">delete_backtests</span><span class="p">(</span><span class="n">bt_ids</span><span class="o">=</span><span class="n">bt_ids</span><span class="p">,</span>
                                   <span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<span class="c1">##############################################################################</span>
+<span class="c1"># TradePlans</span>
+<span class="n">_TRADEPLAN_CTOR_KEYS</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span>
+    <span class="s2">&quot;contracts&quot;</span><span class="p">,</span> <span class="s2">&quot;con_fee&quot;</span><span class="p">,</span> <span class="s2">&quot;tp_id&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="s2">&quot;id_slug&quot;</span><span class="p">,</span> <span class="s2">&quot;tags&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;cfg_label&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;profit_perc&quot;</span><span class="p">,</span> <span class="s2">&quot;start_dt&quot;</span><span class="p">,</span> <span class="s2">&quot;end_dt&quot;</span><span class="p">,</span> <span class="s2">&quot;drawdown_open&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;drawdown_limit&quot;</span><span class="p">,</span> <span class="s2">&quot;notes&quot;</span><span class="p">,</span> <span class="s2">&quot;thresholds&quot;</span><span class="p">,</span> <span class="s2">&quot;tradeseries&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;how_gl_heatmap_viz&quot;</span><span class="p">,</span> <span class="s2">&quot;weekly_price_overlay_visuals&quot;</span><span class="p">,</span>
+<span class="p">})</span>
+
+
+<div class="viewcode-block" id="reconstruct_tradeplan"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.reconstruct_tradeplan">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">reconstruct_tradeplan</span><span class="p">(</span><span class="n">tp</span><span class="p">,</span>
+                          <span class="n">collection_trades</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADES</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Take a dictionary and build a TradePlan object from it.</span>
+
+<span class="sd">    Reconstructs using constructor fields first, then reattaches any</span>
+<span class="sd">    remaining stored keys via setattr to preserve post-init state.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">raw_ts</span> <span class="o">=</span> <span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;tradeseries&quot;</span><span class="p">)</span>
+    <span class="n">ts</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">raw_ts</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="n">ts</span> <span class="o">=</span> <span class="n">reconstruct_tradeseries</span><span class="p">(</span><span class="n">raw_ts</span><span class="p">)</span>
+
+    <span class="n">trade_ids</span> <span class="o">=</span> <span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;trade_ids&quot;</span><span class="p">,</span> <span class="p">[])</span>
+    <span class="k">if</span> <span class="n">trade_ids</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">trade_ids</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">trade_ids</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;TradePlan trade_ids must be a list when provided&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">trade_id</span> <span class="ow">in</span> <span class="n">trade_ids</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">trade_id</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">trade_id</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s2">&quot;TradePlan trade_ids entries must be non-empty strings&quot;</span>
+            <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">ts</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">ts</span><span class="o">.</span><span class="n">trades</span> <span class="o">=</span> <span class="n">get_trades_by_field_in</span><span class="p">(</span>
+            <span class="n">field</span><span class="o">=</span><span class="s2">&quot;trade_id&quot;</span><span class="p">,</span>
+            <span class="n">values</span><span class="o">=</span><span class="n">trade_ids</span><span class="p">,</span>
+            <span class="n">collection</span><span class="o">=</span><span class="n">collection_trades</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">ts</span><span class="o">.</span><span class="n">sort_trades</span><span class="p">()</span>
+
+    <span class="n">obj</span> <span class="o">=</span> <span class="n">TradePlan</span><span class="p">(</span>
+        <span class="n">contracts</span><span class="o">=</span><span class="n">tp</span><span class="p">[</span><span class="s2">&quot;contracts&quot;</span><span class="p">],</span>
+        <span class="n">con_fee</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;con_fee&quot;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>
+        <span class="n">tp_id</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;tp_id&quot;</span><span class="p">),</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">),</span>
+        <span class="n">id_slug</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id_slug&quot;</span><span class="p">),</span>
+        <span class="n">tags</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;tags&quot;</span><span class="p">,</span> <span class="p">[]),</span>
+        <span class="n">cfg_label</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;cfg_label&quot;</span><span class="p">),</span>
+        <span class="n">profit_perc</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;profit_perc&quot;</span><span class="p">,</span> <span class="mi">100</span><span class="p">),</span>
+        <span class="n">start_dt</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;start_dt&quot;</span><span class="p">),</span>
+        <span class="n">end_dt</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;end_dt&quot;</span><span class="p">),</span>
+        <span class="n">drawdown_open</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;drawdown_open&quot;</span><span class="p">),</span>
+        <span class="n">drawdown_limit</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;drawdown_limit&quot;</span><span class="p">),</span>
+        <span class="n">notes</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;notes&quot;</span><span class="p">,</span> <span class="p">[]),</span>
+        <span class="n">thresholds</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;thresholds&quot;</span><span class="p">,</span> <span class="p">{}),</span>
+        <span class="n">tradeseries</span><span class="o">=</span><span class="n">ts</span><span class="p">,</span>
+        <span class="n">how_gl_heatmap_viz</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;how_gl_heatmap_viz&quot;</span><span class="p">),</span>
+        <span class="n">weekly_price_overlay_visuals</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="s2">&quot;weekly_price_overlay_visuals&quot;</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">tp</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_TRADEPLAN_CTOR_KEYS</span> <span class="ow">and</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;_id&quot;</span><span class="p">,</span> <span class="s2">&quot;trade_ids&quot;</span><span class="p">}:</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">obj</span></div>
+
+
+<div class="viewcode-block" id="get_all_tradeplans"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.get_all_tradeplans">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_all_tradeplans</span><span class="p">(</span><span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADEPLANS</span><span class="p">,</span>
+                       <span class="n">collection_trades</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADES</span><span class="p">,</span>
+                       <span class="n">limit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                       <span class="n">as_dict</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                       <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                       <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get stored tradeplans as TradePlan objects or raw dicts.&quot;&quot;&quot;</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">get_all_records_by_collection</span><span class="p">(</span><span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">,</span>
+                                          <span class="n">limit</span><span class="o">=</span><span class="n">limit</span><span class="p">,</span>
+                                          <span class="n">show_progress</span><span class="o">=</span><span class="n">show_progress</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">as_dict</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">r</span>
+
+    <span class="n">total</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+    <span class="n">pbar</span> <span class="o">=</span> <span class="n">start_progbar</span><span class="p">(</span><span class="n">show_progress</span><span class="p">,</span> <span class="n">total</span><span class="p">,</span>
+                         <span class="s2">&quot;TradePlan objects built&quot;</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">reconstruct_tradeplan</span><span class="p">(</span>
+            <span class="n">t</span><span class="p">,</span>
+            <span class="n">collection_trades</span><span class="o">=</span><span class="n">collection_trades</span><span class="p">,</span>
+        <span class="p">))</span>
+        <span class="n">update_progbar</span><span class="p">(</span><span class="n">pbar</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">total</span><span class="p">)</span>
+    <span class="n">finish_progbar</span><span class="p">(</span><span class="n">pbar</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="get_tradeplans_by_field"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.get_tradeplans_by_field">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_tradeplans_by_field</span><span class="p">(</span><span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                            <span class="n">value</span><span class="p">,</span>
+                            <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADEPLANS</span><span class="p">,</span>
+                            <span class="n">collection_trades</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADES</span><span class="p">,</span>
+                            <span class="n">as_dict</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                            <span class="n">limit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                            <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                            <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return TradePlan objects or dicts matching given field=value.&quot;&quot;&quot;</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">get_tradeplans_by_field</span><span class="p">(</span><span class="n">field</span><span class="o">=</span><span class="n">field</span><span class="p">,</span>
+                                    <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">,</span>
+                                    <span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">,</span>
+                                    <span class="n">limit</span><span class="o">=</span><span class="n">limit</span><span class="p">,</span>
+                                    <span class="n">show_progress</span><span class="o">=</span><span class="n">show_progress</span><span class="p">,</span>
+                                    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">as_dict</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">r</span>
+
+    <span class="n">total</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+    <span class="n">pbar</span> <span class="o">=</span> <span class="n">start_progbar</span><span class="p">(</span><span class="n">show_progress</span><span class="p">,</span> <span class="n">total</span><span class="p">,</span>
+                         <span class="s2">&quot;TradePlan objects built&quot;</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">reconstruct_tradeplan</span><span class="p">(</span>
+            <span class="n">t</span><span class="p">,</span>
+            <span class="n">collection_trades</span><span class="o">=</span><span class="n">collection_trades</span><span class="p">,</span>
+        <span class="p">))</span>
+        <span class="n">update_progbar</span><span class="p">(</span><span class="n">pbar</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">total</span><span class="p">)</span>
+    <span class="n">finish_progbar</span><span class="p">(</span><span class="n">pbar</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="store_tradeplans"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.store_tradeplans">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">store_tradeplans</span><span class="p">(</span><span class="n">tradeplans</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+                     <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADEPLANS</span><span class="p">,</span>
+                     <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Store a list of TradePlan objects in central storage.&quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">tp</span> <span class="ow">in</span> <span class="n">tradeplans</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">tp</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;TradePlan.name must not be None or empty &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;string before storing: tp_id=</span><span class="si">{</span><span class="n">tp</span><span class="o">.</span><span class="n">tp_id</span><span class="si">!r}</span><span class="s2"> name=</span><span class="si">{</span><span class="n">tp</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">tp</span><span class="o">.</span><span class="n">id_slug</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;TradePlan.id_slug must not be None or empty &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;string before storing: tp_id=</span><span class="si">{</span><span class="n">tp</span><span class="o">.</span><span class="n">tp_id</span><span class="si">!r}</span><span class="s2"> &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;id_slug=</span><span class="si">{</span><span class="n">tp</span><span class="o">.</span><span class="n">id_slug</span><span class="si">!r}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">tp</span><span class="o">.</span><span class="n">cfg_label</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;TradePlan.cfg_label must not be None or empty &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;string before storing: tp_id=</span><span class="si">{</span><span class="n">tp</span><span class="o">.</span><span class="n">tp_id</span><span class="si">!r}</span><span class="s2"> &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;cfg_label=</span><span class="si">{</span><span class="n">tp</span><span class="o">.</span><span class="n">cfg_label</span><span class="si">!r}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">tp</span> <span class="ow">in</span> <span class="n">tradeplans</span><span class="p">:</span>
+        <span class="n">tp_result</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">store_tradeplan</span><span class="p">(</span><span class="n">tp</span><span class="o">.</span><span class="n">to_clean_dict</span><span class="p">(),</span>
+                                        <span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">,</span>
+                                        <span class="p">)</span>
+        <span class="n">tp_result</span><span class="p">[</span><span class="s2">&quot;tp_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tp</span><span class="o">.</span><span class="n">tp_id</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tp_result</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="delete_tradeplans_by_field"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.delete_tradeplans_by_field">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">delete_tradeplans_by_field</span><span class="p">(</span><span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                               <span class="n">value</span><span class="p">,</span>
+                               <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADEPLANS</span><span class="p">,</span>
+                               <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete all tradeplan records with &#39;field&#39; matching &#39;value&#39;.&quot;&quot;&quot;</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">delete_tradeplans_by_field</span><span class="p">(</span><span class="n">field</span><span class="o">=</span><span class="n">field</span><span class="p">,</span>
+                                            <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">,</span>
+                                            <span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">,</span>
+                                            <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="delete_tradeplans"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.delete_tradeplans">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">delete_tradeplans</span><span class="p">(</span><span class="n">tradeplans</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+                      <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADEPLANS</span><span class="p">,</span>
+                      <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete TradePlan objects from central storage using tp_id.&quot;&quot;&quot;</span>
+    <span class="n">tp_ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">tp</span><span class="o">.</span><span class="n">tp_id</span> <span class="k">for</span> <span class="n">tp</span> <span class="ow">in</span> <span class="n">tradeplans</span><span class="p">]</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">delete_tradeplans</span><span class="p">(</span><span class="n">tp_ids</span><span class="o">=</span><span class="n">tp_ids</span><span class="p">,</span>
+                                   <span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">,</span>
+                                   <span class="p">)</span>
 
     <span class="k">return</span> <span class="n">result</span></div>
 
