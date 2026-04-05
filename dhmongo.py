@@ -317,6 +317,37 @@ def get_trades_by_field(field: str,
     return result
 
 
+def get_trades_by_field_in(field: str,
+                           values: list,
+                           collection: str,
+                           limit=0,
+                           show_progress: bool = False,
+                           ):
+    """Return Trade docs where field is in values, ordered by open_epoch."""
+    c = db[collection]
+    if values is None:
+        values = []
+    if len(values) == 0:
+        return []
+
+    query = {field: {"$in": values}}
+    total = c.count_documents(query)
+    if limit > 0:
+        total = min(total, limit)
+    pbar = start_progbar(show_progress, total,
+                         f"trade records fetched from {collection}")
+    cursor = c.find(query).sort(
+        "open_epoch", pymongo.ASCENDING
+    ).limit(limit)
+    result = []
+    for i, doc in enumerate(cursor, start=1):
+        result.append(doc)
+        update_progbar(pbar, i, total)
+    finish_progbar(pbar)
+
+    return result
+
+
 def store_trades(trades: list,
                  collection: str,
                  ):
@@ -329,6 +360,11 @@ def store_trades(trades: list,
     # Build bulk operations list
     operations = []
     for t in trades:
+        if t.get("trade_id") is None or str(t.get("trade_id")).strip() == "":
+            raise ValueError(
+                "Cannot store trade record with empty trade_id "
+                f"`{t.get('trade_id')}`. Bind ts_id first."
+            )
         filter_doc = {
             "open_dt": t["open_dt"],
             "direction": t["direction"],

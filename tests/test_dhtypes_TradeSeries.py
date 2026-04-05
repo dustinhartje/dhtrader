@@ -20,7 +20,8 @@ def create_trade(open_dt="2099-01-02 12:00:00",
                  stop_target=4995,
                  prof_ticks=20,
                  prof_target=5005,
-                 name="DELETEME"
+                 name="DELETEME",
+                 ts_id="DELETEME_TS",
                  ):
     """Create and return a Trade with default test parameters."""
     return Trade(open_dt=open_dt,
@@ -34,6 +35,7 @@ def create_trade(open_dt="2099-01-02 12:00:00",
                  prof_ticks=prof_ticks,
                  prof_target=prof_target,
                  name=name,
+                 ts_id=ts_id,
                  )
 
 
@@ -215,7 +217,7 @@ def test_TradeSeries_create_and_verify_common_methods():
     assert len(ts.pretty().splitlines()) == 15
     ts.add_trade(test_trade)
     # With trades shown
-    assert len(ts.pretty(suppress_trades=False).splitlines()) == 46
+    assert len(ts.pretty(suppress_trades=False).splitlines()) == 47
 
 
 @pytest.mark.suppress_stdout

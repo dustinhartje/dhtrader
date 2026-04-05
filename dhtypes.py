@@ -2249,6 +2249,47 @@ class Trade():
         bt_id (str): unique id of associated Backtest this was created by
     """
 
+    @staticmethod
+    def _normalize_ts_id(ts_id):
+        """Return normalized ts_id, mapping None/blank to None."""
+        if ts_id is None:
+            return None
+        if not isinstance(ts_id, str):
+            raise ValueError("ts_id must be a string or None")
+        normalized = ts_id.strip()
+        if normalized == "":
+            return None
+        return normalized
+
+    def _expected_trade_id(self):
+        """Return expected trade_id or None for unbound trades."""
+        if self.ts_id is None:
+            return None
+        return f"{self.ts_id}_{self.open_epoch}"
+
+    def _sync_trade_identity(self):
+        """Sync identity-derived fields from open_dt and ts_id."""
+        if "open_dt" not in self.__dict__:
+            return
+        expected_open_epoch = dt_to_epoch(self.open_dt)
+        object.__setattr__(self, "open_epoch", expected_open_epoch)
+        open_as_dt = dt_as_dt(self.open_dt)
+        object.__setattr__(self, "open_date", str(open_as_dt.date()))
+        object.__setattr__(self, "open_time", str(open_as_dt.time()))
+        object.__setattr__(self, "trade_id", self._expected_trade_id())
+
+    def __setattr__(self, name, value):
+        """Intercept identity field changes to keep derived values in sync."""
+        if name == "ts_id":
+            value = self._normalize_ts_id(value)
+
+        object.__setattr__(self, name, value)
+
+        if name in {"open_dt", "ts_id"} and not self.__dict__.get(
+            "_identity_sync_lock", False
+        ):
+            self._sync_trade_identity()
+
     def __init__(self,
                  open_dt: str,
                  direction: str,
@@ -2273,8 +2314,11 @@ class Trade():
                  version: str = "1.0.0",
                  ts_id: str = None,
                  bt_id: str = None,
+                 trade_id: str = None,
                  tags: list = None,
                  ):
+        # Allow attributes to be set without dynamic syncing through init
+        object.__setattr__(self, "_identity_sync_lock", True)
         # Passable attributes
         self.open_dt = open_dt
         self.close_dt = close_dt
@@ -2329,9 +2373,52 @@ class Trade():
             self.flipper = -1
         else:
             self.flipper = 0  # If this happens there's a bug somewhere
-        self.open_epoch = dt_to_epoch(self.open_dt)
-        self.open_date = str(dt_as_dt(self.open_dt).date())
-        self.open_time = str(dt_as_dt(self.open_dt).time())
+
+        # Reenable dynamic syncing and sync identity-derived fields
+        object.__setattr__(self, "_identity_sync_lock", False)
+        self._sync_trade_identity()
+
+        # Validate open_epoch if explicitly provided. It must match the
+        # epoch already computed from open_dt by _sync_trade_identity().
+        if open_epoch is not None:
+            try:
+                parsed_open_epoch = int(open_epoch)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    "open_epoch must be an integer when provided"
+                ) from exc
+            if parsed_open_epoch != self.open_epoch:
+                raise ValueError(
+                    f"open_epoch {parsed_open_epoch} does not match open_dt "
+                    f"{self.open_dt}"
+                )
+
+        # Validate trade_id if explicitly provided. _sync_trade_identity()
+        # already computed and stored the correct value. None/blank defers
+        # to that computed value. A non-blank value must match exactly;
+        # trade_id is derived from ts_id + open_epoch so there is no valid
+        # reason for the caller to supply a different value.
+        if not isinstance(trade_id, (str, type(None))):
+            raise ValueError(
+                "trade_id must be a string or None when provided, we got "
+                f"{str(trade_id)} which is a {type(trade_id)}"
+            )
+        provided_trade_id = (
+            trade_id.strip() if isinstance(trade_id, str) else None
+        )
+        if provided_trade_id:
+            if self.ts_id is None:
+                raise ValueError(
+                    "trade_id cannot be set when ts_id is missing or empty"
+                )
+            if provided_trade_id != self.trade_id:
+                raise ValueError(
+                    f"trade_id `{provided_trade_id}` does not match "
+                    f"expected `{self.trade_id}`"
+                )
+
+        del self._identity_sync_lock
+
         if self.close_dt is not None:
             self.close_date = str(dt_as_dt(self.close_dt).date())
             self.close_time = str(dt_as_dt(self.close_dt).time())
@@ -2474,6 +2561,7 @@ class Trade():
                 and self.version == other.version
                 and self.ts_id == other.ts_id
                 and self.bt_id == other.bt_id
+                and self.trade_id == other.trade_id
                 )
 
     def __ne__(self, other):
@@ -3900,8 +3988,24 @@ class TradePlan():
     def to_json(self):
         """Return a JSON string of this TradePlan, normalizing types."""
         w = deepcopy(self.__dict__)
+        w["trade_ids"] = []
         if w["tradeseries"] is not None:
-            w["tradeseries"] = self.tradeseries.to_clean_dict()
+            w["tradeseries"] = self.tradeseries.to_clean_dict(
+                suppress_trades=True,
+            )
+            trade_ids = []
+            for t in self.tradeseries.trades:
+                if not hasattr(t, "trade_id"):
+                    raise ValueError(
+                        "TradePlan serialization requires each trade to "
+                        "have trade_id"
+                    )
+                if not isinstance(t.trade_id, str) or not t.trade_id:
+                    raise ValueError(
+                        "TradePlan serialization found invalid trade_id"
+                    )
+                trade_ids.append(t.trade_id)
+            w["trade_ids"] = trade_ids
         if not isinstance(w["thresholds"], dict):
             w["thresholds"] = w["thresholds"].to_clean_dict()
         return json.dumps(w)

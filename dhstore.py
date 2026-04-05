@@ -318,6 +318,63 @@ def check_integrity_no_nameless_objects(ignore=None):
     }
 
 
+def check_integrity_trade_ids(collection: str = COLL_TRADES):
+    """Check all stored trades have non-empty, unique trade_id values.
+
+    Iterates every trade record in the collection once and checks two
+    conditions:
+    - trade_id is neither None nor blank (missing/backfill gap)
+    - trade_id is unique across the collection (no duplicates)
+
+    Does not modify any data.
+
+    Returns:
+        dict: Results with keys status, total_trades, missing_count,
+        missing_samples, duplicate_count, and duplicate_samples.
+    """
+    all_docs = dhm.get_all_records_by_collection(collection=collection)
+    total_trades = len(all_docs)
+    missing = []
+    trade_id_counts = Counter()
+
+    for doc in all_docs:
+        tid = doc.get("trade_id")
+        if tid is None or (
+            isinstance(tid, str) and tid.strip() == ""
+        ):
+            missing.append({
+                "_id": str(doc.get("_id")),
+                "ts_id": doc.get("ts_id"),
+                "open_dt": doc.get("open_dt"),
+                "trade_id": tid,
+            })
+        else:
+            trade_id_counts[tid] += 1
+
+    duplicates = {
+        tid: count
+        for tid, count in trade_id_counts.items()
+        if count > 1
+    }
+
+    status = "OK" if not missing and not duplicates else "ERRORS"
+    return {
+        "status": status,
+        "total_trades": total_trades,
+        "missing_count": len(missing),
+        "missing_samples": missing[:10],
+        "duplicate_count": len(duplicates),
+        "duplicate_samples": [
+            {"trade_id": tid, "count": count}
+            for tid, count in sorted(
+                duplicates.items(),
+                key=lambda x: x[1],
+                reverse=True,
+            )[:10]
+        ],
+    }
+
+
 ##############################################################################
 # Trades
 def reconstruct_trade(t):
@@ -349,10 +406,11 @@ def reconstruct_trade(t):
                    symbol=t["symbol"],
                    is_open=t["is_open"],
                    profitable=t["profitable"],
-                   name=t.get("name", DEFAULT_OBJ_NAME),
+                   name=t["name"],
                    version=t["version"],
                    ts_id=t["ts_id"],
                    bt_id=t["bt_id"],
+                   trade_id=t["trade_id"],
                    tags=t["tags"],
                    )
     if close_dt is None:
@@ -420,6 +478,32 @@ def get_trades_by_field(field: str,
     return result
 
 
+def get_trades_by_field_in(field: str,
+                           values: list,
+                           collection: str = COLL_TRADES,
+                           limit=0,
+                           show_progress: bool = False,
+                           ):
+    """Return Trade objects where field is in values."""
+    result = []
+    r = dhm.get_trades_by_field_in(field=field,
+                                   values=values,
+                                   collection=collection,
+                                   limit=limit,
+                                   show_progress=show_progress,
+                                   )
+
+    total = len(r)
+    pbar = start_progbar(show_progress, total,
+                         "Trade objects built")
+    for i, t in enumerate(r, start=1):
+        result.append(reconstruct_trade(t))
+        update_progbar(pbar, i, total)
+    finish_progbar(pbar)
+
+    return result
+
+
 def store_trades(trades: list,
                  collection: str = COLL_TRADES,
                  ):
@@ -428,6 +512,11 @@ def store_trades(trades: list,
     log.info(f"Preparing {len(trades)} trades to store by converting to dicts")
     working_trades = []
     for t in trades:
+        if t.trade_id is None or str(t.trade_id).strip() == "":
+            raise ValueError(
+                f"Cannot store Trade with empty trade_id {t.trade_id}. "
+                "Bind ts_id first."
+            )
         working_trades.append(t.to_clean_dict())
 
     # Store in database
@@ -790,7 +879,7 @@ def delete_trades(trades: list,
 ##############################################################################
 # TradeSeries
 def reconstruct_tradeseries(ts):
-    """Takes a dictionary and builds a Trade() object from it.
+    """Takes a dictionary and builds a TradeSeries() object from it.
 
     Primarily used by other functions to convert results retrieved from
     storage.
@@ -1231,7 +1320,8 @@ _TRADEPLAN_CTOR_KEYS = frozenset({
 })
 
 
-def reconstruct_tradeplan(tp):
+def reconstruct_tradeplan(tp,
+                          collection_trades: str = COLL_TRADES):
     """Take a dictionary and build a TradePlan object from it.
 
     Reconstructs using constructor fields first, then reattaches any
@@ -1241,6 +1331,25 @@ def reconstruct_tradeplan(tp):
     ts = None
     if isinstance(raw_ts, dict):
         ts = reconstruct_tradeseries(raw_ts)
+
+    trade_ids = tp.get("trade_ids", [])
+    if trade_ids is None:
+        trade_ids = []
+    if not isinstance(trade_ids, list):
+        raise TypeError("TradePlan trade_ids must be a list when provided")
+    for trade_id in trade_ids:
+        if not isinstance(trade_id, str) or not trade_id:
+            raise TypeError(
+                "TradePlan trade_ids entries must be non-empty strings"
+            )
+
+    if ts is not None:
+        ts.trades = get_trades_by_field_in(
+            field="trade_id",
+            values=trade_ids,
+            collection=collection_trades,
+        )
+        ts.sort_trades()
 
     obj = TradePlan(
         contracts=tp["contracts"],
@@ -1264,13 +1373,14 @@ def reconstruct_tradeplan(tp):
     )
 
     for k, v in tp.items():
-        if k not in _TRADEPLAN_CTOR_KEYS and k != "_id":
+        if k not in _TRADEPLAN_CTOR_KEYS and k not in {"_id", "trade_ids"}:
             setattr(obj, k, v)
 
     return obj
 
 
 def get_all_tradeplans(collection: str = COLL_TRADEPLANS,
+                       collection_trades: str = COLL_TRADES,
                        limit=0,
                        as_dict: bool = False,
                        show_progress: bool = False,
@@ -1287,7 +1397,10 @@ def get_all_tradeplans(collection: str = COLL_TRADEPLANS,
                          "TradePlan objects built")
     result = []
     for i, t in enumerate(r, start=1):
-        result.append(reconstruct_tradeplan(t))
+        result.append(reconstruct_tradeplan(
+            t,
+            collection_trades=collection_trades,
+        ))
         update_progbar(pbar, i, total)
     finish_progbar(pbar)
 
@@ -1297,6 +1410,7 @@ def get_all_tradeplans(collection: str = COLL_TRADEPLANS,
 def get_tradeplans_by_field(field: str,
                             value,
                             collection: str = COLL_TRADEPLANS,
+                            collection_trades: str = COLL_TRADES,
                             as_dict: bool = False,
                             limit=0,
                             show_progress: bool = False,
@@ -1316,7 +1430,10 @@ def get_tradeplans_by_field(field: str,
                          "TradePlan objects built")
     result = []
     for i, t in enumerate(r, start=1):
-        result.append(reconstruct_tradeplan(t))
+        result.append(reconstruct_tradeplan(
+            t,
+            collection_trades=collection_trades,
+        ))
         update_progbar(pbar, i, total)
     finish_progbar(pbar)
 
