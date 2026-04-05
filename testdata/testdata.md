@@ -88,6 +88,28 @@ Primarily used as reference for rebuilding setN data into dhtrader objects for t
 **setN_tradeseries.json / .csv**
 - All TradeSeries included in the set
 
+### TradePlan Field References
+
+`TradePlan` is defined in `dhtypes.py` and can be serialized in datasets,
+debug artifacts, or derived expected-result files created by implementation
+projects.
+
+When documenting or validating serialized TradePlan structures, use these
+identifier fields:
+
+- `name`: Human-readable object name
+- `id_slug`: Stable identifier slug for the plan
+- `cfg_label`: Configuration label for the plan variant
+- `tp_id`: Derived plan identifier string
+
+TradePlan serialization may also include lightweight nested references such as
+`trade_ids` or `tradeseries_ids` for provenance and retrieval context.
+These are reference fields only; full nested Trade and TradeSeries payloads
+remain stored in their own collections.
+
+If a dataset includes serialized TradePlan dictionaries, confirm these
+fields are present and aligned with the expected build inputs for the test.
+
 ## Expected Results Manual Validation
 A Google Sheets document was used to manually calculate expected results for set1 outside of my code with minimal review of code during buildout to ensure unbiased fresh thinking of the intended application of each value.  This was fine tuned until all results matched up, with some minor bug fixing in dhtrader code (see commits in Jan 2026) and updates to the spreadsheet until everything matched up to give strong conviction that the code is calculating accurately as intended.
 

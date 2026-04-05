@@ -6,7 +6,39 @@ This is not a detailed and robust backtesting/analysis platform nor is it intend
 
 Two main reasons exist for building this.  Mostly it's a personal project to help me learn OOP and develop more robust coding skills beyond what my "Ops Guy" mostly-scripting professional career has provided opportunities for.  The reason to have this project outside of learning was to develop a framework to backtest and analyze trades that include a live drawdown factor in proprietary funded trading accounts ("prop firms") which I did not find when initially reviewing the more popular backtesting libraries available.  It also allows me to approach digging into ideas without the bias inherent towards particular techniques or ideas built into popular systems, in which anything that works is likely to get arbitraged out quickly.
 
-See /docs/ for class details
+See [docs index](/docs/index.html) for class details
+
+## Core Domain Classes (`dhtypes.py`)
+
+The framework's domain model is defined in `dhtypes.py`. These classes are
+the core object types used throughout storage, backtesting, and analysis:
+
+- `Symbol`: Market symbol metadata, trading schedules, and market-open
+  checks.
+- `Candle`: Single OHLCV bar with timeframe/trading-hours context.
+- `Chart`: Candle collection and indicator-aware chart operations.
+- `Event`: Market events such as closures/announcements used during
+  analysis.
+- `Day`: Day-level wrapper for candle/time-slice operations.
+- `IndicatorDataPoint`: Single indicator output value at a timestamp.
+- `Indicator`: Base indicator API for retrieval, calculation, and
+  persistence.
+- `IndicatorSMA`: Simple moving average indicator implementation.
+- `IndicatorEMA`: Exponential moving average indicator implementation.
+- `Trade`: Individual trade lifecycle, outcomes, and drawdown helpers.
+- `TradeSeries`: Group of trades with aggregate and risk metrics.
+- `Backtest`: Collection of TradeSeries with backtest-wide statistics.
+- `TradePlan`: Strategy plan container combining configuration,
+  selected TradeSeries, and plan-level analytics.
+
+### TradePlan Details
+
+`TradePlan` is the reusable base class for plan configuration and plan
+analytics in this framework.
+
+Implementation projects are expected to subclass `TradePlan` and add
+additional methods as needed for strategy-specific analytic and refinement
+workflows.
 
 Note to self - docs are not autoupdating, run mkdocs.sh to update them.
 Perhaps this can be a pre-commit hook?
@@ -106,6 +138,12 @@ See [ES Market Era Analysis](docs/es_market_era_analysis.md) for:
 To keep logic within each class's own methods where it belongs, I'm writing storage functions in dhstore.py and dhmongo.py so that they only store information pertient to the object in question itself and not any of it's nested objects.  Nested objects might include a Chart(), a list of Trades(), or a number of other items along these lines.  This was decided after several such functions were already created and may not be fully backported.  See Backtest and TradeSeries for examples of this implementation
 
 Each class should then determine, within it's own methods exclusively, whether and how to go about looping through the nested objects it contains when performing storage and retrieval tasks and then call the related functions or methods on each of the nested objects where appropriate.  If there is a need for them to link to the parent they should each include an attribute with a unique id shared by the parent.
+
+Exception for TradePlan: the TradePlan record may include lightweight
+metadata about nested items plus `trade_ids`/`tradeseries_ids` references as
+part of the TradePlan document itself for provenance and retrieval context.
+It does not embed full nested object payloads there; full Trade and
+TradeSeries objects remain stored/retrieved through their own collections.
 
 Each class with nested objects should include a .to_clean_dict() method which will return a python dictionary of it's storable attributes while stripping any nested objects.  This way the storage function can receive the entire object and call back to it to get just the storable parts to pass to dhmongo as a json object while remaining compatible with future storage systems that may need something different.
 
