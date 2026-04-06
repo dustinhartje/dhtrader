@@ -6,7 +6,7 @@ import pytest
 from dhtrader import (
     Candle, delete_trades, delete_trades_by_field,
     dt_as_dt, get_trades_by_field, store_trades,
-    Symbol, Trade)
+    Symbol, Trade, TradeSeries)
 from dhtrader.testdata.testdata import Rebuilder
 
 
@@ -20,6 +20,7 @@ def create_trade(open_dt="2099-01-08 12:00:00",
                  prof_ticks=500,  # wide to allow test to control close price
                  prof_target=None,
                  name="DELETEME",
+                 ts_id="DELETEME_TS",
                  ):
     """Create a Trade and validate its attributes and defaults."""
     # Do not add further arguments to this function where defaults are set
@@ -37,6 +38,7 @@ def create_trade(open_dt="2099-01-08 12:00:00",
               prof_ticks=prof_ticks,
               prof_target=prof_target,
               name=name,
+              ts_id=ts_id,
               )
     # Validate passed attributes
     assert isinstance(r, Trade)
@@ -56,8 +58,9 @@ def create_trade(open_dt="2099-01-08 12:00:00",
     assert r.is_open
     assert r.profitable is None
     assert r.version == "1.0.0"
-    assert r.ts_id is None
+    assert r.ts_id == ts_id
     assert r.bt_id is None
+    assert r.trade_id == f"{ts_id}_{r.open_epoch}"
     # Validate calculated attributes
     assert isinstance(r.created_dt, str)
     assert isinstance(dt_as_dt(r.created_dt), datetime.datetime)
@@ -73,6 +76,83 @@ def create_trade(open_dt="2099-01-08 12:00:00",
     else:
         assert r.flipper == -1
     return r
+
+
+def test_trade_id_generated_from_ts_id_and_open_epoch():
+    """Trade should deterministically build trade_id from ts_id/open_epoch."""
+    t = create_trade(open_dt="2099-01-08 12:05:00", ts_id="TS_ALPHA")
+    assert t.trade_id == f"TS_ALPHA_{t.open_epoch}"
+
+
+def test_trade_init_allows_missing_ts_id_with_null_trade_id():
+    """Trade can be unbound and should have trade_id=None until ts_id set."""
+    for unbound_id in [None, ""]:
+        t = Trade(open_dt="2099-01-08 12:00:00",
+                  close_dt=None,
+                  direction="long",
+                  timeframe="5m",
+                  trading_hours="rth",
+                  entry_price=5000,
+                  stop_ticks=100,
+                  prof_ticks=100,
+                  name="DELETEME",
+                  ts_id=unbound_id,
+                  )
+        assert t.ts_id is None
+        assert t.trade_id is None
+
+
+def test_trade_identity_updates_when_ts_id_or_open_dt_change():
+    """Changing ts_id/open_dt should keep open_epoch and trade_id in sync."""
+    t = Trade(open_dt="2099-01-08 12:00:00",
+              close_dt=None,
+              direction="long",
+              timeframe="5m",
+              trading_hours="rth",
+              entry_price=5000,
+              stop_ticks=100,
+              prof_ticks=100,
+              name="DELETEME",
+              ts_id=None,
+              )
+
+    assert t.trade_id is None
+    t.ts_id = "TS_BOUND"
+    assert t.trade_id == f"TS_BOUND_{t.open_epoch}"
+
+    old_epoch = t.open_epoch
+    t.open_dt = "2099-01-08 12:05:00"
+    assert t.open_epoch != old_epoch
+    assert t.open_time == "12:05:00"
+    assert t.trade_id == f"TS_BOUND_{t.open_epoch}"
+
+
+def test_unbound_trade_binds_identity_when_added_to_tradeseries():
+    """Attaching unbound trade to TradeSeries should set ts_id/trade_id."""
+    t = Trade(open_dt="2099-01-08 12:00:00",
+              close_dt=None,
+              direction="long",
+              timeframe="5m",
+              trading_hours="rth",
+              entry_price=5000,
+              stop_ticks=100,
+              prof_ticks=100,
+              name="DELETEME",
+              ts_id=None,
+              )
+    assert t.trade_id is None
+
+    ts = TradeSeries(start_dt="2099-01-01 00:00:00",
+                     end_dt="2099-02-01 00:00:00",
+                     timeframe="5m",
+                     trading_hours="rth",
+                     symbol="ES",
+                     name="DELETEME",
+                     params_str="p0")
+
+    ts.add_trade(t)
+    assert t.ts_id == ts.ts_id
+    assert t.trade_id == f"{ts.ts_id}_{t.open_epoch}"
 
 
 def add_1m_candle(trade, dt, c_open, c_high, c_low, c_close):
@@ -594,8 +674,9 @@ def test_Trade_create_and_verify_common_methods():
     assert trade.profitable is None
     assert trade.name == "DELETEME"
     assert trade.version == "1.0.0"
-    assert trade.ts_id is None
+    assert trade.ts_id == "DELETEME_TS"
     assert trade.bt_id is None
+    assert trade.trade_id == f"DELETEME_TS_{trade.open_epoch}"
     assert trade.tags == []
     assert trade.flipper == 1
     assert isinstance(trade.open_epoch, int)
@@ -611,7 +692,7 @@ def test_Trade_create_and_verify_common_methods():
         "low_price", "name", "offset_ticks", "open_date",
         "open_dt", "open_epoch", "open_time", "prof_target",
         "prof_ticks", "profitable", "stop_target", "stop_ticks",
-        "symbol", "tags", "timeframe", "trading_hours",
+        "symbol", "tags", "timeframe", "trade_id", "trading_hours",
         "ts_id", "version",
     }
     actual_attrs = set(vars(trade).keys())
@@ -654,7 +735,7 @@ def test_Trade_create_and_verify_common_methods():
     assert parsed["direction"] == "long"
     # pretty
     assert isinstance(trade.pretty(), str)
-    assert len(trade.pretty().splitlines()) == 32
+    assert len(trade.pretty().splitlines()) == 33
     # brief
     result = trade.brief()
     assert result == ("2099-01-08 12:00:00 - None | Thursday | long | "
@@ -1254,6 +1335,23 @@ def test_Trade_store_retrieve_delete(cleanup_trade_storage):
                            value="DELETEME-TEST")
     stored = get_trades_by_field(field="name", value="DELETEME-TEST")
     assert len(stored) == 0
+
+
+def test_store_trades_rejects_missing_trade_id():
+    """Storage should reject unbound trades where trade_id is None."""
+    t = Trade(open_dt="2099-01-08 12:00:00",
+              close_dt=None,
+              direction="long",
+              timeframe="5m",
+              trading_hours="rth",
+              entry_price=5000,
+              stop_ticks=100,
+              prof_ticks=100,
+              name="DELETEME-UNBOUND",
+              ts_id=None,
+              )
+    with pytest.raises(ValueError):
+        store_trades([t])
     # Create and store a basic test, confirming it can be retreived after
     t = create_trade(name="DELETEME-TEST")
     stored = store_trades([t])

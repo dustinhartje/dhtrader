@@ -20,7 +20,8 @@ def create_trade(open_dt="2099-01-02 12:00:00",
                  stop_target=4995,
                  prof_ticks=20,
                  prof_target=5005,
-                 name="DELETEME"
+                 name="DELETEME",
+                 ts_id="DELETEME_TS",
                  ):
     """Create and return a Trade with default test parameters."""
     return Trade(open_dt=open_dt,
@@ -33,6 +34,7 @@ def create_trade(open_dt="2099-01-02 12:00:00",
                  prof_ticks=prof_ticks,
                  prof_target=prof_target,
                  name=name,
+                 ts_id=ts_id,
                  )
 
 
@@ -244,7 +246,7 @@ def test_Backtest_create_and_verify_common_methods():
     bt.update_tradeseries(ts, clear_storage=False)
     # With TradeSeries and Trades shown
     assert len(bt.pretty(suppress_tradeseries=False,
-                         suppress_trades=False).splitlines()) == 66
+                         suppress_trades=False).splitlines()) == 67
 
 
 @pytest.mark.storage
@@ -301,17 +303,20 @@ def test_Backtest_restrict_dates(cleanup_backtest_storage):
     ts1.add_trade(create_trade(open_dt="2025-01-02 12:00:00",
                                timeframe="e1h",
                                trading_hours="eth",
-                               name=test_name
+                               name=test_name,
+                               ts_id=ts1.ts_id,
                                ))
     ts1.add_trade(create_trade(open_dt="2025-01-12 12:00:00",
                                timeframe="e1h",
                                trading_hours="eth",
-                               name=test_name
+                               name=test_name,
+                               ts_id=ts1.ts_id,
                                ))
     ts1.add_trade(create_trade(open_dt="2025-01-20 12:00:00",
                                timeframe="e1h",
                                trading_hours="eth",
-                               name=test_name
+                               name=test_name,
+                               ts_id=ts1.ts_id,
                                ))
     bt.update_tradeseries(ts1)
     assert bt.start_dt == "2025-01-01 18:00:00"
@@ -375,12 +380,14 @@ def test_Backtest_restrict_dates(cleanup_backtest_storage):
     bt.tradeseries[0].add_trade(create_trade(open_dt="2024-12-10 12:00:00",
                                              timeframe="e1h",
                                              trading_hours="eth",
-                                             name=test_name
+                                             name=test_name,
+                                             ts_id=ts1.ts_id,
                                              ))
     bt.tradeseries[0].add_trade(create_trade(open_dt="2025-02-10 12:00:00",
                                              timeframe="e1h",
                                              trading_hours="eth",
-                                             name=test_name
+                                             name=test_name,
+                                             ts_id=ts1.ts_id,
                                              ))
     assert len(bt.tradeseries[0].trades) == 5
     bt.restrict_dates(new_start_dt="2025-01-01 18:00:00",
@@ -490,17 +497,20 @@ def test_Backtest_restrict_dates(cleanup_backtest_storage):
     ts1.add_trade(create_trade(open_dt="2025-01-02 12:00:00",
                                timeframe="e1h",
                                trading_hours="eth",
-                               name=test_name
+                               name=test_name,
+                               ts_id=ts1.ts_id,
                                ))
     ts1.add_trade(create_trade(open_dt="2025-01-12 12:00:00",
                                timeframe="e1h",
                                trading_hours="eth",
-                               name=test_name
+                               name=test_name,
+                               ts_id=ts1.ts_id,
                                ))
     ts1.add_trade(create_trade(open_dt="2025-01-20 12:00:00",
                                timeframe="e1h",
                                trading_hours="eth",
-                               name=test_name
+                               name=test_name,
+                               ts_id=ts1.ts_id,
                                ))
     bt.update_tradeseries(ts1)
     store_backtests([bt], include_tradeseries=True, include_trades=True)
@@ -606,7 +616,7 @@ def test_Backtest_add_and_remove_tradeseries_and_trades(
     assert ts1.bt_id is None
     # Create and add 2 Trades
     for dt in ["2099-01-05 12:00:00", "2099-01-05 13:00:00"]:
-        tr = create_trade(open_dt=dt, name=test_name)
+        tr = create_trade(open_dt=dt, name=test_name, ts_id=None)
         assert isinstance(tr, Trade)
         # Trade should not have a ts_id or bt_id yet
         assert tr.ts_id is None

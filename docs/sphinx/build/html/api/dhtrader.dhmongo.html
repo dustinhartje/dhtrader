@@ -270,6 +270,22 @@ there.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhmongo.get_trades_by_field_in">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhmongo.</span></span><span class="sig-name descname"><span class="pre">get_trades_by_field_in</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhmongo.html#get_trades_by_field_in"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhmongo.get_trades_by_field_in" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return Trade docs where field is in values, ordered by open_epoch.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>field</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>values</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a>) – </p></li>
+<li><p><strong>collection</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>show_progress</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhmongo.store_trades">
 <span class="sig-prename descclassname"><span class="pre">dhtrader.dhmongo.</span></span><span class="sig-name descname"><span class="pre">store_trades</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">trades</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhmongo.html#store_trades"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhmongo.store_trades" title="Permalink to this definition">¶</a></dt>
 <dd><p>Store one or more trades in mongo using bulk operations.</p>
@@ -473,6 +489,63 @@ value=”DELETEME”)</p>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>bt_ids</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a>) – </p></li>
+<li><p><strong>collection</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhmongo.get_tradeplans_by_field">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhmongo.</span></span><span class="sig-name descname"><span class="pre">get_tradeplans_by_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhmongo.html#get_tradeplans_by_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhmongo.get_tradeplans_by_field" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return TradePlan dicts matching the field=value provided.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>field</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>collection</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>show_progress</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhmongo.store_tradeplan">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhmongo.</span></span><span class="sig-name descname"><span class="pre">store_tradeplan</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tradeplan</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhmongo.html#store_tradeplan"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhmongo.store_tradeplan" title="Permalink to this definition">¶</a></dt>
+<dd><p>Store one TradePlan dict in mongo, upserted by tp_id.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tradeplan</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – </p></li>
+<li><p><strong>collection</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhmongo.delete_tradeplans_by_field">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhmongo.</span></span><span class="sig-name descname"><span class="pre">delete_tradeplans_by_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhmongo.html#delete_tradeplans_by_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhmongo.delete_tradeplans_by_field" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete all tradeplan records with ‘field’ matching ‘value’.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>field</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>collection</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhmongo.delete_tradeplans">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhmongo.</span></span><span class="sig-name descname"><span class="pre">delete_tradeplans</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tp_ids</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhmongo.html#delete_tradeplans"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhmongo.delete_tradeplans" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete tradeplans from mongo using tp_id as identifying field.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tp_ids</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a>) – </p></li>
 <li><p><strong>collection</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
 </ul>
 </dd>
@@ -792,6 +865,7 @@ start before or on it.</p>
 <li><a class="reference internal" href="#dhtrader.dhmongo.update_records_value"><code class="docutils literal notranslate"><span class="pre">update_records_value()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhmongo.delete_one_document"><code class="docutils literal notranslate"><span class="pre">delete_one_document()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhmongo.get_trades_by_field"><code class="docutils literal notranslate"><span class="pre">get_trades_by_field()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhmongo.get_trades_by_field_in"><code class="docutils literal notranslate"><span class="pre">get_trades_by_field_in()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhmongo.store_trades"><code class="docutils literal notranslate"><span class="pre">store_trades()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhmongo.review_trades"><code class="docutils literal notranslate"><span class="pre">review_trades()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhmongo.delete_trades_by_field"><code class="docutils literal notranslate"><span class="pre">delete_trades_by_field()</span></code></a></li>
@@ -806,6 +880,10 @@ start before or on it.</p>
 <li><a class="reference internal" href="#dhtrader.dhmongo.review_backtests"><code class="docutils literal notranslate"><span class="pre">review_backtests()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhmongo.delete_backtests_by_field"><code class="docutils literal notranslate"><span class="pre">delete_backtests_by_field()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhmongo.delete_backtests"><code class="docutils literal notranslate"><span class="pre">delete_backtests()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhmongo.get_tradeplans_by_field"><code class="docutils literal notranslate"><span class="pre">get_tradeplans_by_field()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhmongo.store_tradeplan"><code class="docutils literal notranslate"><span class="pre">store_tradeplan()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhmongo.delete_tradeplans_by_field"><code class="docutils literal notranslate"><span class="pre">delete_tradeplans_by_field()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhmongo.delete_tradeplans"><code class="docutils literal notranslate"><span class="pre">delete_tradeplans()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhmongo.store_candle"><code class="docutils literal notranslate"><span class="pre">store_candle()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhmongo.get_candles"><code class="docutils literal notranslate"><span class="pre">get_candles()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhmongo.review_candles"><code class="docutils literal notranslate"><span class="pre">review_candles()</span></code></a></li>

@@ -119,11 +119,15 @@
 </li>
         <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.Trade.__repr__">(dhtrader.dhtypes.Trade method)</a>
 </li>
+        <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradePlan.__repr__">(dhtrader.dhtypes.TradePlan method)</a>
+</li>
         <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradeSeries.__repr__">(dhtrader.dhtypes.TradeSeries method)</a>
 </li>
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.Trade.__setattr__">__setattr__() (dhtrader.dhtypes.Trade method)</a>
+</li>
       <li><a href="api/dhtrader.dhcommon.html#dhtrader.dhcommon.OperationTimer.__str__">__str__() (dhtrader.dhcommon.OperationTimer method)</a>
 
       <ul>
@@ -144,6 +148,8 @@
         <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.Symbol.__str__">(dhtrader.dhtypes.Symbol method)</a>
 </li>
         <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.Trade.__str__">(dhtrader.dhtypes.Trade method)</a>
+</li>
+        <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradePlan.__str__">(dhtrader.dhtypes.TradePlan method)</a>
 </li>
         <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradeSeries.__str__">(dhtrader.dhtypes.TradeSeries method)</a>
 </li>
@@ -238,14 +244,16 @@
 </li>
       <li><a href="api/dhtrader.dhstore.html#dhtrader.dhstore.check_integrity_no_test_orphans">check_integrity_no_test_orphans() (in module dhtrader.dhstore)</a>
 </li>
+      <li><a href="api/dhtrader.dhstore.html#dhtrader.dhstore.check_integrity_trade_ids">check_integrity_trade_ids() (in module dhtrader.dhstore)</a>
+</li>
       <li><a href="api/dhtrader.dhcommon.html#dhtrader.dhcommon.check_tf_th_compatibility">check_tf_th_compatibility() (in module dhtrader.dhcommon)</a>
 </li>
       <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.Backtest.class_name">class_name (dhtrader.dhtypes.Backtest attribute)</a>
 </li>
-      <li><a href="api/dhtrader.dhmongo.html#dhtrader.dhmongo.clear_collection">clear_collection() (in module dhtrader.dhmongo)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/dhtrader.dhmongo.html#dhtrader.dhmongo.clear_collection">clear_collection() (in module dhtrader.dhmongo)</a>
+</li>
       <li><a href="api/dhtrader.dhstore.html#dhtrader.dhstore.clear_events">clear_events() (in module dhtrader.dhstore)</a>
 </li>
       <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.Trade.close">close() (dhtrader.dhtypes.Trade method)</a>
@@ -344,6 +352,18 @@
 </li>
       <li><a href="api/dhtrader.dhmongo.html#dhtrader.dhmongo.delete_one_document">delete_one_document() (in module dhtrader.dhmongo)</a>
 </li>
+      <li><a href="api/dhtrader.dhmongo.html#dhtrader.dhmongo.delete_tradeplans">delete_tradeplans() (in module dhtrader.dhmongo)</a>
+
+      <ul>
+        <li><a href="api/dhtrader.dhstore.html#dhtrader.dhstore.delete_tradeplans">(in module dhtrader.dhstore)</a>
+</li>
+      </ul></li>
+      <li><a href="api/dhtrader.dhmongo.html#dhtrader.dhmongo.delete_tradeplans_by_field">delete_tradeplans_by_field() (in module dhtrader.dhmongo)</a>
+
+      <ul>
+        <li><a href="api/dhtrader.dhstore.html#dhtrader.dhstore.delete_tradeplans_by_field">(in module dhtrader.dhstore)</a>
+</li>
+      </ul></li>
       <li><a href="api/dhtrader.dhmongo.html#dhtrader.dhmongo.delete_trades">delete_trades() (in module dhtrader.dhmongo)</a>
 
       <ul>
@@ -514,6 +534,8 @@
         <li><a href="api/dhtrader.dhstore.html#dhtrader.dhstore.get_all_records_by_collection">(in module dhtrader.dhstore)</a>
 </li>
       </ul></li>
+      <li><a href="api/dhtrader.dhstore.html#dhtrader.dhstore.get_all_tradeplans">get_all_tradeplans() (in module dhtrader.dhstore)</a>
+</li>
       <li><a href="api/dhtrader.dhstore.html#dhtrader.dhstore.get_all_trades">get_all_trades() (in module dhtrader.dhstore)</a>
 </li>
       <li><a href="api/dhtrader.dhstore.html#dhtrader.dhstore.get_all_tradeseries">get_all_tradeseries() (in module dhtrader.dhstore)</a>
@@ -602,12 +624,24 @@
 </li>
       <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradeSeries.get_trade_by_open_dt">get_trade_by_open_dt() (dhtrader.dhtypes.TradeSeries method)</a>
 </li>
+      <li><a href="api/dhtrader.dhmongo.html#dhtrader.dhmongo.get_tradeplans_by_field">get_tradeplans_by_field() (in module dhtrader.dhmongo)</a>
+
+      <ul>
+        <li><a href="api/dhtrader.dhstore.html#dhtrader.dhstore.get_tradeplans_by_field">(in module dhtrader.dhstore)</a>
+</li>
+      </ul></li>
       <li><a href="api/dhtrader.dhmongo.html#dhtrader.dhmongo.get_trades_by_field">get_trades_by_field() (in module dhtrader.dhmongo)</a>
 
       <ul>
         <li><a href="api/dhtrader.dhstore.html#dhtrader.dhstore.get_trades_by_field">(in module dhtrader.dhstore)</a>
 </li>
         <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.get_trades_by_field">(in module dhtrader.dhtypes)</a>
+</li>
+      </ul></li>
+      <li><a href="api/dhtrader.dhmongo.html#dhtrader.dhmongo.get_trades_by_field_in">get_trades_by_field_in() (in module dhtrader.dhmongo)</a>
+
+      <ul>
+        <li><a href="api/dhtrader.dhstore.html#dhtrader.dhstore.get_trades_by_field_in">(in module dhtrader.dhstore)</a>
 </li>
       </ul></li>
       <li><a href="api/dhtrader.dhmongo.html#dhtrader.dhmongo.get_tradeseries_by_field">get_tradeseries_by_field() (in module dhtrader.dhmongo)</a>
@@ -672,12 +706,16 @@
 </li>
       <li><a href="api/dhtrader.dhstore.html#dhtrader.dhstore.list_mongo_collections">list_mongo_collections() (in module dhtrader.dhstore)</a>
 </li>
-      <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradeSeries.list_trades">list_trades() (dhtrader.dhtypes.TradeSeries method)</a>
+      <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradePlan.list_trades">list_trades() (dhtrader.dhtypes.TradePlan method)</a>
+
+      <ul>
+        <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradeSeries.list_trades">(dhtrader.dhtypes.TradeSeries method)</a>
 </li>
-      <li><a href="api/dhtrader.dhmongo.html#dhtrader.dhmongo.list_values_by_regex_match">list_values_by_regex_match() (in module dhtrader.dhmongo)</a>
-</li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/dhtrader.dhmongo.html#dhtrader.dhmongo.list_values_by_regex_match">list_values_by_regex_match() (in module dhtrader.dhmongo)</a>
+</li>
       <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.Chart.load_candles">load_candles() (dhtrader.dhtypes.Chart method)</a>
 </li>
       <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.Backtest.load_charts">load_charts() (dhtrader.dhtypes.Backtest method)</a>
@@ -792,6 +830,8 @@
 </li>
         <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.Trade.pretty">(dhtrader.dhtypes.Trade method)</a>
 </li>
+        <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradePlan.pretty">(dhtrader.dhtypes.TradePlan method)</a>
+</li>
         <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradeSeries.pretty">(dhtrader.dhtypes.TradeSeries method)</a>
 </li>
       </ul></li>
@@ -825,11 +865,15 @@
 </li>
       <li><a href="api/dhtrader.dhstore.html#dhtrader.dhstore.reconstruct_trade">reconstruct_trade() (in module dhtrader.dhstore)</a>
 </li>
+      <li><a href="api/dhtrader.dhstore.html#dhtrader.dhstore.reconstruct_tradeplan">reconstruct_tradeplan() (in module dhtrader.dhstore)</a>
+</li>
       <li><a href="api/dhtrader.dhstore.html#dhtrader.dhstore.reconstruct_tradeseries">reconstruct_tradeseries() (in module dhtrader.dhstore)</a>
 </li>
       <li><a href="api/dhtrader.dhutil.html#dhtrader.dhutil.remediate_candle_gaps">remediate_candle_gaps() (in module dhtrader.dhutil)</a>
 </li>
       <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.Backtest.remove_tradeseries">remove_tradeseries() (dhtrader.dhtypes.Backtest method)</a>
+</li>
+      <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradePlan.replace_tradeseries">replace_tradeseries() (dhtrader.dhtypes.TradePlan method)</a>
 </li>
       <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.Backtest.restrict_dates">restrict_dates() (dhtrader.dhtypes.Backtest method)</a>
 
@@ -839,14 +883,14 @@
         <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradeSeries.restrict_dates">(dhtrader.dhtypes.TradeSeries method)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/dhtrader.dhmongo.html#dhtrader.dhmongo.review_backtests">review_backtests() (in module dhtrader.dhmongo)</a>
 
       <ul>
         <li><a href="api/dhtrader.dhstore.html#dhtrader.dhstore.review_backtests">(in module dhtrader.dhstore)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.Chart.review_candles">review_candles() (dhtrader.dhtypes.Chart method)</a>
 
       <ul>
@@ -895,6 +939,8 @@
 </li>
       <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.Backtest.sort_tradeseries">sort_tradeseries() (dhtrader.dhtypes.Backtest method)</a>
 </li>
+      <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradePlan.source_ts_ids">source_ts_ids() (dhtrader.dhtypes.TradePlan method)</a>
+</li>
       <li><a href="api/dhtrader.dhcommon.html#dhtrader.dhcommon.OperationTimer.start">start() (dhtrader.dhcommon.OperationTimer method)</a>
 
       <ul>
@@ -935,10 +981,10 @@
       </ul></li>
       <li><a href="api/dhtrader.dhstore.html#dhtrader.dhstore.store_candles">store_candles() (in module dhtrader.dhstore)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/dhtrader.dhutil.html#dhtrader.dhutil.store_candles_from_csv">store_candles_from_csv() (in module dhtrader.dhutil)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/dhtrader.dhmongo.html#dhtrader.dhmongo.store_event">store_event() (in module dhtrader.dhmongo)</a>
 
       <ul>
@@ -961,6 +1007,10 @@
         <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.store_indicator_datapoints">(in module dhtrader.dhtypes)</a>
 </li>
       </ul></li>
+      <li><a href="api/dhtrader.dhmongo.html#dhtrader.dhmongo.store_tradeplan">store_tradeplan() (in module dhtrader.dhmongo)</a>
+</li>
+      <li><a href="api/dhtrader.dhstore.html#dhtrader.dhstore.store_tradeplans">store_tradeplans() (in module dhtrader.dhstore)</a>
+</li>
       <li><a href="api/dhtrader.dhmongo.html#dhtrader.dhmongo.store_trades">store_trades() (in module dhtrader.dhmongo)</a>
 
       <ul>
@@ -1036,6 +1086,8 @@
 </li>
         <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.Trade.to_clean_dict">(dhtrader.dhtypes.Trade method)</a>
 </li>
+        <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradePlan.to_clean_dict">(dhtrader.dhtypes.TradePlan method)</a>
+</li>
         <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradeSeries.to_clean_dict">(dhtrader.dhtypes.TradeSeries method)</a>
 </li>
       </ul></li>
@@ -1060,12 +1112,16 @@
 </li>
         <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.Trade.to_json">(dhtrader.dhtypes.Trade method)</a>
 </li>
+        <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradePlan.to_json">(dhtrader.dhtypes.TradePlan method)</a>
+</li>
         <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradeSeries.to_json">(dhtrader.dhtypes.TradeSeries method)</a>
 </li>
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.Trade">Trade (class in dhtrader.dhtypes)</a>
+</li>
+      <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradePlan">TradePlan (class in dhtrader.dhtypes)</a>
 </li>
       <li><a href="api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradeSeries.trades">trades (dhtrader.dhtypes.TradeSeries attribute)</a>
 </li>

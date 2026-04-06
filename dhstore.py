@@ -19,7 +19,7 @@ import logging
 from pathlib import Path
 from .dhtypes import (
     Candle, Event, IndicatorDataPoint, Symbol, IndicatorSMA, IndicatorEMA,
-    Trade, TradeSeries)
+    Trade, TradeSeries, TradePlan)
 from .dhcommon import (
     dt_as_str, dt_as_dt, dt_from_epoch, dt_to_epoch, valid_timeframe,
     this_candle_start, summarize_candles, log_say, sort_dict,
@@ -30,6 +30,7 @@ from . import dhmongo as dhm
 COLL_TRADES = "trades"
 COLL_TRADESERIES = "tradeseries"
 COLL_BACKTESTS = "backtests"
+COLL_TRADEPLANS = "tradeplans"
 COLL_IND_META = "indicators_meta"
 COLL_IND_DPS = "indicators_datapoints"
 
@@ -317,6 +318,63 @@ def check_integrity_no_nameless_objects(ignore=None):
     }
 
 
+def check_integrity_trade_ids(collection: str = COLL_TRADES):
+    """Check all stored trades have non-empty, unique trade_id values.
+
+    Iterates every trade record in the collection once and checks two
+    conditions:
+    - trade_id is neither None nor blank (missing/backfill gap)
+    - trade_id is unique across the collection (no duplicates)
+
+    Does not modify any data.
+
+    Returns:
+        dict: Results with keys status, total_trades, missing_count,
+        missing_samples, duplicate_count, and duplicate_samples.
+    """
+    all_docs = dhm.get_all_records_by_collection(collection=collection)
+    total_trades = len(all_docs)
+    missing = []
+    trade_id_counts = Counter()
+
+    for doc in all_docs:
+        tid = doc.get("trade_id")
+        if tid is None or (
+            isinstance(tid, str) and tid.strip() == ""
+        ):
+            missing.append({
+                "_id": str(doc.get("_id")),
+                "ts_id": doc.get("ts_id"),
+                "open_dt": doc.get("open_dt"),
+                "trade_id": tid,
+            })
+        else:
+            trade_id_counts[tid] += 1
+
+    duplicates = {
+        tid: count
+        for tid, count in trade_id_counts.items()
+        if count > 1
+    }
+
+    status = "OK" if not missing and not duplicates else "ERRORS"
+    return {
+        "status": status,
+        "total_trades": total_trades,
+        "missing_count": len(missing),
+        "missing_samples": missing[:10],
+        "duplicate_count": len(duplicates),
+        "duplicate_samples": [
+            {"trade_id": tid, "count": count}
+            for tid, count in sorted(
+                duplicates.items(),
+                key=lambda x: x[1],
+                reverse=True,
+            )[:10]
+        ],
+    }
+
+
 ##############################################################################
 # Trades
 def reconstruct_trade(t):
@@ -348,10 +406,11 @@ def reconstruct_trade(t):
                    symbol=t["symbol"],
                    is_open=t["is_open"],
                    profitable=t["profitable"],
-                   name=t.get("name", DEFAULT_OBJ_NAME),
+                   name=t["name"],
                    version=t["version"],
                    ts_id=t["ts_id"],
                    bt_id=t["bt_id"],
+                   trade_id=t["trade_id"],
                    tags=t["tags"],
                    )
     if close_dt is None:
@@ -419,6 +478,32 @@ def get_trades_by_field(field: str,
     return result
 
 
+def get_trades_by_field_in(field: str,
+                           values: list,
+                           collection: str = COLL_TRADES,
+                           limit=0,
+                           show_progress: bool = False,
+                           ):
+    """Return Trade objects where field is in values."""
+    result = []
+    r = dhm.get_trades_by_field_in(field=field,
+                                   values=values,
+                                   collection=collection,
+                                   limit=limit,
+                                   show_progress=show_progress,
+                                   )
+
+    total = len(r)
+    pbar = start_progbar(show_progress, total,
+                         "Trade objects built")
+    for i, t in enumerate(r, start=1):
+        result.append(reconstruct_trade(t))
+        update_progbar(pbar, i, total)
+    finish_progbar(pbar)
+
+    return result
+
+
 def store_trades(trades: list,
                  collection: str = COLL_TRADES,
                  ):
@@ -427,6 +512,11 @@ def store_trades(trades: list,
     log.info(f"Preparing {len(trades)} trades to store by converting to dicts")
     working_trades = []
     for t in trades:
+        if t.trade_id is None or str(t.trade_id).strip() == "":
+            raise ValueError(
+                f"Cannot store Trade with empty trade_id {t.trade_id}. "
+                "Bind ts_id first."
+            )
         working_trades.append(t.to_clean_dict())
 
     # Store in database
@@ -789,7 +879,7 @@ def delete_trades(trades: list,
 ##############################################################################
 # TradeSeries
 def reconstruct_tradeseries(ts):
-    """Takes a dictionary and builds a Trade() object from it.
+    """Takes a dictionary and builds a TradeSeries() object from it.
 
     Primarily used by other functions to convert results retrieved from
     storage.
@@ -1216,6 +1306,196 @@ def delete_backtests(backtests: list,
 
     result = dhm.delete_backtests(bt_ids=bt_ids,
                                   collection=collection)
+
+    return result
+
+
+##############################################################################
+# TradePlans
+_TRADEPLAN_CTOR_KEYS = frozenset({
+    "contracts", "con_fee", "tp_id", "name", "id_slug", "tags",
+    "cfg_label",
+    "profit_perc", "start_dt", "end_dt", "drawdown_open",
+    "drawdown_limit", "notes", "thresholds", "tradeseries",
+    "how_gl_heatmap_viz", "weekly_price_overlay_visuals",
+})
+
+
+def reconstruct_tradeplan(tp,
+                          collection_trades: str = COLL_TRADES):
+    """Take a dictionary and build a TradePlan object from it.
+
+    Reconstructs using constructor fields first, then reattaches any
+    remaining stored keys via setattr to preserve post-init state.
+    """
+    raw_ts = tp.get("tradeseries")
+    ts = None
+    if isinstance(raw_ts, dict):
+        ts = reconstruct_tradeseries(raw_ts)
+
+    trade_ids = tp.get("trade_ids", [])
+    if trade_ids is None:
+        trade_ids = []
+    if not isinstance(trade_ids, list):
+        raise TypeError("TradePlan trade_ids must be a list when provided")
+    for trade_id in trade_ids:
+        if not isinstance(trade_id, str) or not trade_id:
+            raise TypeError(
+                "TradePlan trade_ids entries must be non-empty strings"
+            )
+
+    if ts is not None:
+        ts.trades = get_trades_by_field_in(
+            field="trade_id",
+            values=trade_ids,
+            collection=collection_trades,
+        )
+        ts.sort_trades()
+
+    obj = TradePlan(
+        contracts=tp["contracts"],
+        con_fee=tp.get("con_fee", 0.0),
+        tp_id=tp.get("tp_id"),
+        name=tp.get("name"),
+        id_slug=tp.get("id_slug"),
+        tags=tp.get("tags", []),
+        cfg_label=tp.get("cfg_label"),
+        profit_perc=tp.get("profit_perc", 100),
+        start_dt=tp.get("start_dt"),
+        end_dt=tp.get("end_dt"),
+        drawdown_open=tp.get("drawdown_open"),
+        drawdown_limit=tp.get("drawdown_limit"),
+        notes=tp.get("notes", []),
+        thresholds=tp.get("thresholds", {}),
+        tradeseries=ts,
+        how_gl_heatmap_viz=tp.get("how_gl_heatmap_viz"),
+        weekly_price_overlay_visuals=tp.get(
+            "weekly_price_overlay_visuals"
+        ),
+    )
+
+    for k, v in tp.items():
+        if k not in _TRADEPLAN_CTOR_KEYS and k not in {"_id", "trade_ids"}:
+            setattr(obj, k, v)
+
+    return obj
+
+
+def get_all_tradeplans(collection: str = COLL_TRADEPLANS,
+                       collection_trades: str = COLL_TRADES,
+                       limit=0,
+                       as_dict: bool = False,
+                       show_progress: bool = False,
+                       ):
+    """Get stored tradeplans as TradePlan objects or raw dicts."""
+    r = dhm.get_all_records_by_collection(collection=collection,
+                                          limit=limit,
+                                          show_progress=show_progress)
+    if as_dict:
+        return r
+
+    total = len(r)
+    pbar = start_progbar(show_progress, total,
+                         "TradePlan objects built")
+    result = []
+    for i, t in enumerate(r, start=1):
+        result.append(reconstruct_tradeplan(
+            t,
+            collection_trades=collection_trades,
+        ))
+        update_progbar(pbar, i, total)
+    finish_progbar(pbar)
+
+    return result
+
+
+def get_tradeplans_by_field(field: str,
+                            value,
+                            collection: str = COLL_TRADEPLANS,
+                            collection_trades: str = COLL_TRADES,
+                            as_dict: bool = False,
+                            limit=0,
+                            show_progress: bool = False,
+                            ):
+    """Return TradePlan objects or dicts matching given field=value."""
+    r = dhm.get_tradeplans_by_field(field=field,
+                                    value=value,
+                                    collection=collection,
+                                    limit=limit,
+                                    show_progress=show_progress,
+                                    )
+    if as_dict:
+        return r
+
+    total = len(r)
+    pbar = start_progbar(show_progress, total,
+                         "TradePlan objects built")
+    result = []
+    for i, t in enumerate(r, start=1):
+        result.append(reconstruct_tradeplan(
+            t,
+            collection_trades=collection_trades,
+        ))
+        update_progbar(pbar, i, total)
+    finish_progbar(pbar)
+
+    return result
+
+
+def store_tradeplans(tradeplans: list,
+                     collection: str = COLL_TRADEPLANS,
+                     ):
+    """Store a list of TradePlan objects in central storage."""
+    for tp in tradeplans:
+        if not tp.name:
+            raise ValueError(
+                "TradePlan.name must not be None or empty "
+                f"string before storing: tp_id={tp.tp_id!r} name={tp.name!r}"
+            )
+        if not tp.id_slug:
+            raise ValueError(
+                "TradePlan.id_slug must not be None or empty "
+                f"string before storing: tp_id={tp.tp_id!r} "
+                f"id_slug={tp.id_slug!r}"
+            )
+        if not tp.cfg_label:
+            raise ValueError(
+                "TradePlan.cfg_label must not be None or empty "
+                f"string before storing: tp_id={tp.tp_id!r} "
+                f"cfg_label={tp.cfg_label!r}"
+            )
+    result = []
+    for tp in tradeplans:
+        tp_result = dhm.store_tradeplan(tp.to_clean_dict(),
+                                        collection=collection,
+                                        )
+        tp_result["tp_id"] = tp.tp_id
+        result.append(tp_result)
+
+    return result
+
+
+def delete_tradeplans_by_field(field: str,
+                               value,
+                               collection: str = COLL_TRADEPLANS,
+                               ):
+    """Delete all tradeplan records with 'field' matching 'value'."""
+    result = dhm.delete_tradeplans_by_field(field=field,
+                                            value=value,
+                                            collection=collection,
+                                            )
+
+    return result
+
+
+def delete_tradeplans(tradeplans: list,
+                      collection: str = COLL_TRADEPLANS,
+                      ):
+    """Delete TradePlan objects from central storage using tp_id."""
+    tp_ids = [tp.tp_id for tp in tradeplans]
+    result = dhm.delete_tradeplans(tp_ids=tp_ids,
+                                   collection=collection,
+                                   )
 
     return result
 

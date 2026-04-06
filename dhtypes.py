@@ -29,6 +29,7 @@ from bisect import bisect_right
 from datetime import timedelta, date
 import sys
 import json
+from pathlib import Path
 from statistics import fmean
 from copy import copy, deepcopy
 import logging
@@ -2248,6 +2249,47 @@ class Trade():
         bt_id (str): unique id of associated Backtest this was created by
     """
 
+    @staticmethod
+    def _normalize_ts_id(ts_id):
+        """Return normalized ts_id, mapping None/blank to None."""
+        if ts_id is None:
+            return None
+        if not isinstance(ts_id, str):
+            raise ValueError("ts_id must be a string or None")
+        normalized = ts_id.strip()
+        if normalized == "":
+            return None
+        return normalized
+
+    def _expected_trade_id(self):
+        """Return expected trade_id or None for unbound trades."""
+        if self.ts_id is None:
+            return None
+        return f"{self.ts_id}_{self.open_epoch}"
+
+    def _sync_trade_identity(self):
+        """Sync identity-derived fields from open_dt and ts_id."""
+        if "open_dt" not in self.__dict__:
+            return
+        expected_open_epoch = dt_to_epoch(self.open_dt)
+        object.__setattr__(self, "open_epoch", expected_open_epoch)
+        open_as_dt = dt_as_dt(self.open_dt)
+        object.__setattr__(self, "open_date", str(open_as_dt.date()))
+        object.__setattr__(self, "open_time", str(open_as_dt.time()))
+        object.__setattr__(self, "trade_id", self._expected_trade_id())
+
+    def __setattr__(self, name, value):
+        """Intercept identity field changes to keep derived values in sync."""
+        if name == "ts_id":
+            value = self._normalize_ts_id(value)
+
+        object.__setattr__(self, name, value)
+
+        if name in {"open_dt", "ts_id"} and not self.__dict__.get(
+            "_identity_sync_lock", False
+        ):
+            self._sync_trade_identity()
+
     def __init__(self,
                  open_dt: str,
                  direction: str,
@@ -2272,8 +2314,11 @@ class Trade():
                  version: str = "1.0.0",
                  ts_id: str = None,
                  bt_id: str = None,
+                 trade_id: str = None,
                  tags: list = None,
                  ):
+        # Allow attributes to be set without dynamic syncing through init
+        object.__setattr__(self, "_identity_sync_lock", True)
         # Passable attributes
         self.open_dt = open_dt
         self.close_dt = close_dt
@@ -2328,9 +2373,52 @@ class Trade():
             self.flipper = -1
         else:
             self.flipper = 0  # If this happens there's a bug somewhere
-        self.open_epoch = dt_to_epoch(self.open_dt)
-        self.open_date = str(dt_as_dt(self.open_dt).date())
-        self.open_time = str(dt_as_dt(self.open_dt).time())
+
+        # Reenable dynamic syncing and sync identity-derived fields
+        object.__setattr__(self, "_identity_sync_lock", False)
+        self._sync_trade_identity()
+
+        # Validate open_epoch if explicitly provided. It must match the
+        # epoch already computed from open_dt by _sync_trade_identity().
+        if open_epoch is not None:
+            try:
+                parsed_open_epoch = int(open_epoch)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    "open_epoch must be an integer when provided"
+                ) from exc
+            if parsed_open_epoch != self.open_epoch:
+                raise ValueError(
+                    f"open_epoch {parsed_open_epoch} does not match open_dt "
+                    f"{self.open_dt}"
+                )
+
+        # Validate trade_id if explicitly provided. _sync_trade_identity()
+        # already computed and stored the correct value. None/blank defers
+        # to that computed value. A non-blank value must match exactly;
+        # trade_id is derived from ts_id + open_epoch so there is no valid
+        # reason for the caller to supply a different value.
+        if not isinstance(trade_id, (str, type(None))):
+            raise ValueError(
+                "trade_id must be a string or None when provided, we got "
+                f"{str(trade_id)} which is a {type(trade_id)}"
+            )
+        provided_trade_id = (
+            trade_id.strip() if isinstance(trade_id, str) else None
+        )
+        if provided_trade_id:
+            if self.ts_id is None:
+                raise ValueError(
+                    "trade_id cannot be set when ts_id is missing or empty"
+                )
+            if provided_trade_id != self.trade_id:
+                raise ValueError(
+                    f"trade_id `{provided_trade_id}` does not match "
+                    f"expected `{self.trade_id}`"
+                )
+
+        del self._identity_sync_lock
+
         if self.close_dt is not None:
             self.close_date = str(dt_as_dt(self.close_dt).date())
             self.close_time = str(dt_as_dt(self.close_dt).time())
@@ -2473,6 +2561,7 @@ class Trade():
                 and self.version == other.version
                 and self.ts_id == other.ts_id
                 and self.bt_id == other.bt_id
+                and self.trade_id == other.trade_id
                 )
 
     def __ne__(self, other):
@@ -3788,6 +3877,181 @@ class Backtest():
         pass
 
 
+class TradePlan():
+    """Core data type for a trade plan with an attached TradeSeries.
+
+    Stores identity, parameters, and serialization behavior. Analysis,
+    reporting, and visualization behavior are provided by backtesting
+    subclasses.
+
+    Args:
+        contracts: Number of contracts this plan is calculated with.
+        con_fee: Per-contract fee as a float.
+        tp_id: Optional unique trade plan identifier string.
+        name: Name string used for integrity checks and cleanup.
+        id_slug: Short identifier string used in output labels.
+        tags: Optional list of machine-oriented classifier tags.
+        cfg_label: Descriptive configuration label string for this plan.
+        profit_perc: Profit percentage target for this plan.
+        start_dt: Start datetime string for the analysis window.
+        end_dt: End datetime string for the analysis window.
+        drawdown_open: Opening drawdown distance.
+        drawdown_limit: Maximum drawdown distance.
+        notes: Optional list of human-readable notes.
+        thresholds: Thresholds dict or instance applied to this plan.
+        tradeseries: TradeSeries object attached to this plan.
+        how_gl_heatmap_viz: Optional path to hour-of-week heatmap.
+        weekly_price_overlay_visuals: Optional list of visual paths.
+    """
+
+    def __init__(self,
+                 contracts: int,
+                 con_fee=float(0),
+                 tp_id=None,
+                 name: str = DEFAULT_OBJ_NAME,
+                 id_slug=None,
+                 tags=None,
+                 cfg_label=None,
+                 profit_perc=100,
+                 start_dt=None,
+                 end_dt=None,
+                 drawdown_open=None,
+                 drawdown_limit=None,
+                 notes=None,
+                 thresholds=None,
+                 tradeseries=None,
+                 how_gl_heatmap_viz=None,
+                 weekly_price_overlay_visuals=None,
+                 ):
+        """Initialize a TradePlan instance."""
+        self.contracts = contracts
+        self.con_fee = con_fee
+        self.tp_id = tp_id
+        self.override_tp_id = False if self.tp_id is None else True
+        self.name = name
+        self.id_slug = id_slug
+        self.tags = self._normalize_str_list(tags, "tags")
+        self.cfg_label = cfg_label
+        self.profit_perc = profit_perc
+        self.start_dt = start_dt
+        self.end_dt = end_dt
+        self.drawdown_open = drawdown_open
+        self.drawdown_limit = drawdown_limit
+        self.notes = self._normalize_str_list(notes, "notes")
+        self.thresholds = {} if thresholds is None else thresholds
+        self.replace_tradeseries(tradeseries)
+        self.how_gl_heatmap_viz = how_gl_heatmap_viz
+        self.weekly_price_overlay_visuals = weekly_price_overlay_visuals
+        if self.weekly_price_overlay_visuals is None:
+            self.weekly_price_overlay_visuals = []
+
+    def _normalize_str_list(self, values, field_name):
+        """Return list[str], converting values where possible."""
+        if values is None:
+            return []
+        result = []
+        try:
+            for value in values:
+                result.append(str(value))
+        except Exception as e:
+            raise TypeError(
+                f"TradePlan.{field_name} must be list-like and "
+                "string-convertible"
+            ) from e
+        return result
+
+    def _tp_id_epoch_suffix(self):
+        """Return existing _e<epoch> suffix or generate a new one."""
+        if isinstance(self.tp_id, str):
+            parts = self.tp_id.rsplit("_e", 1)
+            if len(parts) == 2 and parts[1].isdigit():
+                return f"_e{parts[1]}"
+        return f"_e{dt_to_epoch(dt.datetime.now())}"
+
+    def replace_tradeseries(self, ts):
+        """Replace attached TradeSeries and update tp_id accordingly."""
+        self.tradeseries = deepcopy(ts)
+        if not self.override_tp_id:
+            suffix = self._tp_id_epoch_suffix()
+            if ts is None:
+                self.tp_id = (
+                    f"NoTradeSeries_{self.id_slug}_{self.cfg_label}{suffix}"
+                )
+            else:
+                self.tp_id = (
+                    f"{ts.ts_id}_{self.id_slug}_{self.cfg_label}{suffix}"
+                )
+
+    def source_ts_ids(self):
+        """Return sorted unique source ts_ids from trades in real time."""
+        if self.tradeseries is None or self.tradeseries.trades is None:
+            return []
+        return sorted({str(t.ts_id) for t in self.tradeseries.trades})
+
+    def to_json(self):
+        """Return a JSON string of this TradePlan, normalizing types."""
+        w = deepcopy(self.__dict__)
+        w["trade_ids"] = []
+        if w["tradeseries"] is not None:
+            w["tradeseries"] = self.tradeseries.to_clean_dict(
+                suppress_trades=True,
+            )
+            trade_ids = []
+            for t in self.tradeseries.trades:
+                if not hasattr(t, "trade_id"):
+                    raise ValueError(
+                        "TradePlan serialization requires each trade to "
+                        "have trade_id"
+                    )
+                if not isinstance(t.trade_id, str) or not t.trade_id:
+                    raise ValueError(
+                        "TradePlan serialization found invalid trade_id"
+                    )
+                trade_ids.append(t.trade_id)
+            w["trade_ids"] = trade_ids
+        if not isinstance(w["thresholds"], dict):
+            w["thresholds"] = w["thresholds"].to_clean_dict()
+        return json.dumps(w)
+
+    def to_clean_dict(self):
+        """Return normalized plain dict by round-tripping through JSON."""
+        return json.loads(self.to_json())
+
+    def __str__(self):
+        """Return string representation of this TradePlan's __dict__."""
+        return str(self.__dict__)
+
+    def __repr__(self):
+        """Return a detailed string representation for debugging."""
+        return str(self.__dict__)
+
+    def pretty(self):
+        """Return a pretty-printed JSON string of this TradePlan."""
+        return json.dumps(self.to_clean_dict(), indent=4)
+
+    def list_trades(self, one_line=True, out_console=False,
+                    out_path=None, out_file=None):
+        """Return all Trades in single-line or pretty-printed format."""
+        results = []
+        for t in self.tradeseries.trades:
+            if one_line:
+                results.append(t.brief())
+            else:
+                results.append(t.pretty())
+        if out_console:
+            print(results)
+        if out_path is not None:
+            if out_file is None:
+                out_file = (f"tradeslist.{self.id_slug}.{self.cfg_label}"
+                            f".perc{self.profit_perc}.txt")
+            out_file = Path(out_path) / out_file
+            with open(out_file, "w") as f:
+                for line in results:
+                    f.write("".join([line, "\n"]))
+            log_say(f"Wrote {out_file}")
+        return results
+
+
 __all__ = [
     "CANDLE_TIMEFRAMES",
     "BEGINNING_OF_TIME",
@@ -3817,6 +4081,7 @@ __all__ = [
     "IndicatorSMA",
     "IndicatorEMA",
     "Trade",
+    "TradePlan",
     "TradeSeries",
     "Backtest",
 ]

@@ -64,6 +64,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">timedelta</span><span class="p">,</span> <span class="n">date</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">statistics</span><span class="w"> </span><span class="kn">import</span> <span class="n">fmean</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">copy</span><span class="w"> </span><span class="kn">import</span> <span class="n">copy</span><span class="p">,</span> <span class="n">deepcopy</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
@@ -2283,6 +2284,47 @@
 <span class="sd">        bt_id (str): unique id of associated Backtest this was created by</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_normalize_ts_id</span><span class="p">(</span><span class="n">ts_id</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return normalized ts_id, mapping None/blank to None.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">ts_id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ts_id</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;ts_id must be a string or None&quot;</span><span class="p">)</span>
+        <span class="n">normalized</span> <span class="o">=</span> <span class="n">ts_id</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">normalized</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">normalized</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_expected_trade_id</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return expected trade_id or None for unbound trades.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ts_id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ts_id</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">open_epoch</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_sync_trade_identity</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Sync identity-derived fields from open_dt and ts_id.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="s2">&quot;open_dt&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">expected_open_epoch</span> <span class="o">=</span> <span class="n">dt_to_epoch</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">open_dt</span><span class="p">)</span>
+        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;open_epoch&quot;</span><span class="p">,</span> <span class="n">expected_open_epoch</span><span class="p">)</span>
+        <span class="n">open_as_dt</span> <span class="o">=</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">open_dt</span><span class="p">)</span>
+        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;open_date&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">open_as_dt</span><span class="o">.</span><span class="n">date</span><span class="p">()))</span>
+        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;open_time&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">open_as_dt</span><span class="o">.</span><span class="n">time</span><span class="p">()))</span>
+        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;trade_id&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_expected_trade_id</span><span class="p">())</span>
+
+<div class="viewcode-block" id="Trade.__setattr__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Trade.__setattr__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Intercept identity field changes to keep derived values in sync.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;ts_id&quot;</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_normalize_ts_id</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;open_dt&quot;</span><span class="p">,</span> <span class="s2">&quot;ts_id&quot;</span><span class="p">}</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="s2">&quot;_identity_sync_lock&quot;</span><span class="p">,</span> <span class="kc">False</span>
+        <span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_sync_trade_identity</span><span class="p">()</span></div>
+
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">open_dt</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                  <span class="n">direction</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -2307,8 +2349,11 @@
                  <span class="n">version</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;1.0.0&quot;</span><span class="p">,</span>
                  <span class="n">ts_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">bt_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">trade_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">tags</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="p">):</span>
+        <span class="c1"># Allow attributes to be set without dynamic syncing through init</span>
+        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_identity_sync_lock&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
         <span class="c1"># Passable attributes</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">open_dt</span> <span class="o">=</span> <span class="n">open_dt</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">close_dt</span> <span class="o">=</span> <span class="n">close_dt</span>
@@ -2363,9 +2408,52 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">flipper</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">flipper</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># If this happens there&#39;s a bug somewhere</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">open_epoch</span> <span class="o">=</span> <span class="n">dt_to_epoch</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">open_dt</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">open_date</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">dt_as_dt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">open_dt</span><span class="p">)</span><span class="o">.</span><span class="n">date</span><span class="p">())</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">open_time</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">dt_as_dt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">open_dt</span><span class="p">)</span><span class="o">.</span><span class="n">time</span><span class="p">())</span>
+
+        <span class="c1"># Reenable dynamic syncing and sync identity-derived fields</span>
+        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_identity_sync_lock&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sync_trade_identity</span><span class="p">()</span>
+
+        <span class="c1"># Validate open_epoch if explicitly provided. It must match the</span>
+        <span class="c1"># epoch already computed from open_dt by _sync_trade_identity().</span>
+        <span class="k">if</span> <span class="n">open_epoch</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">parsed_open_epoch</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">open_epoch</span><span class="p">)</span>
+            <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">)</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;open_epoch must be an integer when provided&quot;</span>
+                <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+            <span class="k">if</span> <span class="n">parsed_open_epoch</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">open_epoch</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;open_epoch </span><span class="si">{</span><span class="n">parsed_open_epoch</span><span class="si">}</span><span class="s2"> does not match open_dt &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">open_dt</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+
+        <span class="c1"># Validate trade_id if explicitly provided. _sync_trade_identity()</span>
+        <span class="c1"># already computed and stored the correct value. None/blank defers</span>
+        <span class="c1"># to that computed value. A non-blank value must match exactly;</span>
+        <span class="c1"># trade_id is derived from ts_id + open_epoch so there is no valid</span>
+        <span class="c1"># reason for the caller to supply a different value.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">trade_id</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="kc">None</span><span class="p">))):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;trade_id must be a string or None when provided, we got &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">trade_id</span><span class="p">)</span><span class="si">}</span><span class="s2"> which is a </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">trade_id</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="n">provided_trade_id</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">trade_id</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">trade_id</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">provided_trade_id</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ts_id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;trade_id cannot be set when ts_id is missing or empty&quot;</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="n">provided_trade_id</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trade_id</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;trade_id `</span><span class="si">{</span><span class="n">provided_trade_id</span><span class="si">}</span><span class="s2">` does not match &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;expected `</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">trade_id</span><span class="si">}</span><span class="s2">`&quot;</span>
+                <span class="p">)</span>
+
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_identity_sync_lock</span>
+
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">close_dt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">close_date</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">dt_as_dt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">close_dt</span><span class="p">)</span><span class="o">.</span><span class="n">date</span><span class="p">())</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">close_time</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">dt_as_dt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">close_dt</span><span class="p">)</span><span class="o">.</span><span class="n">time</span><span class="p">())</span>
@@ -2508,6 +2596,7 @@
                 <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">version</span>
                 <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">ts_id</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">ts_id</span>
                 <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">bt_id</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">bt_id</span>
+                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">trade_id</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">trade_id</span>
                 <span class="p">)</span></div>
 
 <div class="viewcode-block" id="Trade.__ne__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Trade.__ne__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__ne__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
@@ -3823,6 +3912,181 @@
         <span class="k">pass</span></div></div>
 
 
+<div class="viewcode-block" id="TradePlan"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradePlan">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">TradePlan</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Core data type for a trade plan with an attached TradeSeries.</span>
+
+<span class="sd">    Stores identity, parameters, and serialization behavior. Analysis,</span>
+<span class="sd">    reporting, and visualization behavior are provided by backtesting</span>
+<span class="sd">    subclasses.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        contracts: Number of contracts this plan is calculated with.</span>
+<span class="sd">        con_fee: Per-contract fee as a float.</span>
+<span class="sd">        tp_id: Optional unique trade plan identifier string.</span>
+<span class="sd">        name: Name string used for integrity checks and cleanup.</span>
+<span class="sd">        id_slug: Short identifier string used in output labels.</span>
+<span class="sd">        tags: Optional list of machine-oriented classifier tags.</span>
+<span class="sd">        cfg_label: Descriptive configuration label string for this plan.</span>
+<span class="sd">        profit_perc: Profit percentage target for this plan.</span>
+<span class="sd">        start_dt: Start datetime string for the analysis window.</span>
+<span class="sd">        end_dt: End datetime string for the analysis window.</span>
+<span class="sd">        drawdown_open: Opening drawdown distance.</span>
+<span class="sd">        drawdown_limit: Maximum drawdown distance.</span>
+<span class="sd">        notes: Optional list of human-readable notes.</span>
+<span class="sd">        thresholds: Thresholds dict or instance applied to this plan.</span>
+<span class="sd">        tradeseries: TradeSeries object attached to this plan.</span>
+<span class="sd">        how_gl_heatmap_viz: Optional path to hour-of-week heatmap.</span>
+<span class="sd">        weekly_price_overlay_visuals: Optional list of visual paths.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">contracts</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                 <span class="n">con_fee</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
+                 <span class="n">tp_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DEFAULT_OBJ_NAME</span><span class="p">,</span>
+                 <span class="n">id_slug</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">tags</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">cfg_label</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">profit_perc</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+                 <span class="n">start_dt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">end_dt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">drawdown_open</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">drawdown_limit</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">notes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">thresholds</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">tradeseries</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">how_gl_heatmap_viz</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">weekly_price_overlay_visuals</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize a TradePlan instance.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">contracts</span> <span class="o">=</span> <span class="n">contracts</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">con_fee</span> <span class="o">=</span> <span class="n">con_fee</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tp_id</span> <span class="o">=</span> <span class="n">tp_id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">override_tp_id</span> <span class="o">=</span> <span class="kc">False</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tp_id</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id_slug</span> <span class="o">=</span> <span class="n">id_slug</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tags</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_normalize_str_list</span><span class="p">(</span><span class="n">tags</span><span class="p">,</span> <span class="s2">&quot;tags&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cfg_label</span> <span class="o">=</span> <span class="n">cfg_label</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">profit_perc</span> <span class="o">=</span> <span class="n">profit_perc</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">start_dt</span> <span class="o">=</span> <span class="n">start_dt</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">end_dt</span> <span class="o">=</span> <span class="n">end_dt</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">drawdown_open</span> <span class="o">=</span> <span class="n">drawdown_open</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">drawdown_limit</span> <span class="o">=</span> <span class="n">drawdown_limit</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">notes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_normalize_str_list</span><span class="p">(</span><span class="n">notes</span><span class="p">,</span> <span class="s2">&quot;notes&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">thresholds</span> <span class="o">=</span> <span class="p">{}</span> <span class="k">if</span> <span class="n">thresholds</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">thresholds</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">replace_tradeseries</span><span class="p">(</span><span class="n">tradeseries</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">how_gl_heatmap_viz</span> <span class="o">=</span> <span class="n">how_gl_heatmap_viz</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">weekly_price_overlay_visuals</span> <span class="o">=</span> <span class="n">weekly_price_overlay_visuals</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">weekly_price_overlay_visuals</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">weekly_price_overlay_visuals</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_normalize_str_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">field_name</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return list[str], converting values where possible.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">values</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[]</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">values</span><span class="p">:</span>
+                <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;TradePlan.</span><span class="si">{</span><span class="n">field_name</span><span class="si">}</span><span class="s2"> must be list-like and &quot;</span>
+                <span class="s2">&quot;string-convertible&quot;</span>
+            <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_tp_id_epoch_suffix</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return existing _e&lt;epoch&gt; suffix or generate a new one.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tp_id</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">parts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tp_id</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">&quot;_e&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+                <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;_e</span><span class="si">{</span><span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;_e</span><span class="si">{</span><span class="n">dt_to_epoch</span><span class="p">(</span><span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span>
+
+<div class="viewcode-block" id="TradePlan.replace_tradeseries"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradePlan.replace_tradeseries">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">replace_tradeseries</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ts</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Replace attached TradeSeries and update tp_id accordingly.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tradeseries</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">ts</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">override_tp_id</span><span class="p">:</span>
+            <span class="n">suffix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tp_id_epoch_suffix</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">ts</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">tp_id</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;NoTradeSeries_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">id_slug</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg_label</span><span class="si">}{</span><span class="n">suffix</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">tp_id</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">ts</span><span class="o">.</span><span class="n">ts_id</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">id_slug</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg_label</span><span class="si">}{</span><span class="n">suffix</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span></div>
+
+<div class="viewcode-block" id="TradePlan.source_ts_ids"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradePlan.source_ts_ids">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">source_ts_ids</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return sorted unique source ts_ids from trades in real time.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tradeseries</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">tradeseries</span><span class="o">.</span><span class="n">trades</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[]</span>
+        <span class="k">return</span> <span class="nb">sorted</span><span class="p">({</span><span class="nb">str</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">ts_id</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tradeseries</span><span class="o">.</span><span class="n">trades</span><span class="p">})</span></div>
+
+<div class="viewcode-block" id="TradePlan.to_json"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradePlan.to_json">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a JSON string of this TradePlan, normalizing types.&quot;&quot;&quot;</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">)</span>
+        <span class="n">w</span><span class="p">[</span><span class="s2">&quot;trade_ids&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">w</span><span class="p">[</span><span class="s2">&quot;tradeseries&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">w</span><span class="p">[</span><span class="s2">&quot;tradeseries&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tradeseries</span><span class="o">.</span><span class="n">to_clean_dict</span><span class="p">(</span>
+                <span class="n">suppress_trades</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">trade_ids</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tradeseries</span><span class="o">.</span><span class="n">trades</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="s2">&quot;trade_id&quot;</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="s2">&quot;TradePlan serialization requires each trade to &quot;</span>
+                        <span class="s2">&quot;have trade_id&quot;</span>
+                    <span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">trade_id</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">t</span><span class="o">.</span><span class="n">trade_id</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="s2">&quot;TradePlan serialization found invalid trade_id&quot;</span>
+                    <span class="p">)</span>
+                <span class="n">trade_ids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">trade_id</span><span class="p">)</span>
+            <span class="n">w</span><span class="p">[</span><span class="s2">&quot;trade_ids&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">trade_ids</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">w</span><span class="p">[</span><span class="s2">&quot;thresholds&quot;</span><span class="p">],</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="n">w</span><span class="p">[</span><span class="s2">&quot;thresholds&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">w</span><span class="p">[</span><span class="s2">&quot;thresholds&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_clean_dict</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">w</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TradePlan.to_clean_dict"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradePlan.to_clean_dict">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">to_clean_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return normalized plain dict by round-tripping through JSON.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">to_json</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="TradePlan.__str__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradePlan.__str__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return string representation of this TradePlan&#39;s __dict__.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TradePlan.__repr__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradePlan.__repr__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a detailed string representation for debugging.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TradePlan.pretty"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradePlan.pretty">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">pretty</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a pretty-printed JSON string of this TradePlan.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">to_clean_dict</span><span class="p">(),</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TradePlan.list_trades"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradePlan.list_trades">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">list_trades</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">one_line</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">out_console</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                    <span class="n">out_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">out_file</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return all Trades in single-line or pretty-printed format.&quot;&quot;&quot;</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tradeseries</span><span class="o">.</span><span class="n">trades</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">one_line</span><span class="p">:</span>
+                <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">brief</span><span class="p">())</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">pretty</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">out_console</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">out_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">out_file</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">out_file</span> <span class="o">=</span> <span class="p">(</span><span class="sa">f</span><span class="s2">&quot;tradeslist.</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">id_slug</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg_label</span><span class="si">}</span><span class="s2">&quot;</span>
+                            <span class="sa">f</span><span class="s2">&quot;.perc</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">profit_perc</span><span class="si">}</span><span class="s2">.txt&quot;</span><span class="p">)</span>
+            <span class="n">out_file</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">out_path</span><span class="p">)</span> <span class="o">/</span> <span class="n">out_file</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">out_file</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+                    <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">line</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">]))</span>
+            <span class="n">log_say</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Wrote </span><span class="si">{</span><span class="n">out_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">results</span></div></div>
+
+
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
     <span class="s2">&quot;CANDLE_TIMEFRAMES&quot;</span><span class="p">,</span>
     <span class="s2">&quot;BEGINNING_OF_TIME&quot;</span><span class="p">,</span>
@@ -3852,6 +4116,7 @@
     <span class="s2">&quot;IndicatorSMA&quot;</span><span class="p">,</span>
     <span class="s2">&quot;IndicatorEMA&quot;</span><span class="p">,</span>
     <span class="s2">&quot;Trade&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;TradePlan&quot;</span><span class="p">,</span>
     <span class="s2">&quot;TradeSeries&quot;</span><span class="p">,</span>
     <span class="s2">&quot;Backtest&quot;</span><span class="p">,</span>
 <span class="p">]</span>

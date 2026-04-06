@@ -237,6 +237,7 @@ def test_store_and_get_trade_roundtrip(cleanup_dhmongo_storage):
     delete_trades_by_field cleans up.
     """
     test_dt = _TEST_DT
+    test_open_epoch = dt_to_epoch(test_dt)
     trade_doc = {
         "open_dt": test_dt,
         "close_dt": "2099-12-31 23:00:00",
@@ -248,7 +249,8 @@ def test_store_and_get_trade_roundtrip(cleanup_dhmongo_storage):
         "bt_id": _TEST_DELETEME_NAME,
         "entry_price": 9000.0,
         "exit_price": 9010.0,
-        "open_epoch": dt_to_epoch(test_dt),
+        "open_epoch": test_open_epoch,
+        "trade_id": f"{_TEST_DELETEME_NAME}_{test_open_epoch}",
     }
 
     # Store the trade
@@ -267,6 +269,7 @@ def test_store_and_get_trade_roundtrip(cleanup_dhmongo_storage):
     assert doc["name"] == _TEST_DELETEME_NAME
     assert doc["entry_price"] == 9000.0
     assert doc["exit_price"] == 9010.0
+    assert doc["trade_id"] == f"{_TEST_DELETEME_NAME}_{test_open_epoch}"
 
     # Delete by name field
     delete_trades_by_field(
