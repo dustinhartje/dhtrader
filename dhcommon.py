@@ -401,8 +401,8 @@ def dt_as_dt(d):
         second = int(match.group(6))
         return dt(year, month, day, hour, minute, second)
 
-    # Raise a ValueError Exception if we could not successfully parse a valid
-    # datetime from the given string
+    # All supported regex patterns exhausted; the input format is not
+    # recognized.
     raise ValueError(
         f"Unsupported datetime string format: {d}. Expected "
         "YYYY-mm-dd HH:MM:SS or shorthand with '-' separators."
@@ -516,7 +516,7 @@ def this_candle_start(dt, timeframe: str):
     min_delta = timedelta(minutes=1)
     # Start by removing secs and microsecs to get to the whole minute
     this_dt = this_dt.replace(microsecond=0, second=0)
-    # Now drop back 1 minute at a time to reach the timeframe correct start
+    # Align to the timeframe's period boundary by stepping back one minute.
     if timeframe == "1m":
         pass
     elif timeframe == "5m":
@@ -532,8 +532,8 @@ def this_candle_start(dt, timeframe: str):
         while this_dt.minute != 0:
             this_dt = this_dt - min_delta
     elif timeframe == "e1d":
-        # e1d candles start at 18:00:00
-        # Return the most recent 18:00:00 datetime
+        # ETH daily sessions start at 18:00; find the most recent 18:00
+        # boundary (same or prior day depending on current time).
         if this_dt.hour >= 18:
             # At or after 6pm, return today at 18:00
             this_dt = this_dt.replace(
@@ -543,8 +543,8 @@ def this_candle_start(dt, timeframe: str):
             this_dt = (this_dt - timedelta(days=1)).replace(
                 hour=18, minute=0, second=0, microsecond=0)
     elif timeframe == "e1w":
-        # e1w candles start at Sunday 18:00:00
-        # Return the most recent Sunday at 18:00:00
+        # ETH weekly sessions start at Sunday 18:00; find the most recent
+        # such boundary by walking back to the prior Sunday if needed.
         if this_dt.weekday() == 6 and this_dt.hour >= 18:
             # Sunday at/after 6pm, return Sunday at 18:00
             this_dt = this_dt.replace(

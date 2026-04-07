@@ -40,6 +40,8 @@ def list_environment_files(script_dir=None):
 
     env_files = {}
     try:
+        # Parse the rightmost segment of mongo.env.<name> filenames to
+        # build the name-to-path mapping.
         for name in sorted(os.listdir(script_dir)):
             if not name.startswith('mongo.env.'):
                 continue
@@ -77,6 +79,7 @@ def get_mongo_conn_from_file(file_path):
                 if '=' not in line:
                     continue
                 key, value = line.split('=', 1)
+                # Strip optional bash 'export' prefix and normalize quotes.
                 normalized_key = key.strip().replace('export ', '')
                 if normalized_key != 'MONGO_CONN':
                     continue

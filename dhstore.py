@@ -132,7 +132,8 @@ def _detect_temporal_fields(collection: str,
                                                 limit=sample_limit)
     dt_string_fields = set()
     epoch_int_fields = set()
-
+    # Infer field types from a small sample rather than hardcoding —
+    # different collections may store dates in different fields.
     for doc in samples:
         for field, value in doc.items():
             if field == "_id":

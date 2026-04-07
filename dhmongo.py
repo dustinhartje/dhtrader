@@ -357,7 +357,8 @@ def store_trades(trades: list,
     if not trades:
         return []
 
-    # Build bulk operations list
+    # Build upsert operations keyed on identity fields; handles both new
+    # inserts and idempotent updates without separate existence checks.
     operations = []
     for t in trades:
         if t.get("trade_id") is None or str(t.get("trade_id")).strip() == "":
