@@ -104,3 +104,85 @@ sed -i 's/[[:blank:]]\+$//' <file>
 - `setup.cfg`: pytest and coverage settings
 - `githooks/pre-commit`: commit-time quality checks
 - `validate-file-quality.sh`: file-level validation/fix helper
+
+## Logging and Comments
+
+### Log levels
+
+Use these levels consistently in all Python code:
+
+- **`log.critical`** — immediately before every `raise`
+  statement, whether the exception exits the script or
+  propagates to a caller.  Include the function name and
+  the value that triggered the rejection so the message
+  is self-contained without needing a stack trace.  Always
+  visible regardless of log level configuration.
+  Example:
+  ```python
+  log.critical(
+      f"retrieve_backtests: cache missing for {bt_id!r}"
+  )
+  raise ValueError(f"Missing trades cache for {bt_id}")
+  ```
+
+- **`log.error`** — non-raising error conditions: unexpected
+  states that are logged as errors but allow the function
+  to continue (e.g., a write concern warning that returns
+  an empty result instead of raising).  Clearly visible in
+  all standard log configurations.
+
+- **`log.info` / `log_say`** — key milestones: function
+  entry with primary arguments, completion with result
+  count or ID, and non-error state changes.  `log_say()`
+  writes to both console and log file; `log.info()` goes
+  to log file only.  Use `log_say` for messages a human
+  watching the console should see; use `log.info` for
+  file-only audit trail entries.
+
+- **`log.debug`** — high-volume or low-value detail reserved
+  for troubleshooting: per-item loop messages, timing
+  values (via `log_timer()`), and test-mode flag overrides.
+  Must not appear during normal operation.
+
+### Timing pattern
+
+Capture a start time with `tpc()` immediately before a
+block, then emit a `log_timer()` call at `log.debug` level
+after:
+
+```python
+time_step = tpc()
+# ... work ...
+log_timer("label", tpc() - time_step,
+          refresh_id=..., run_id=...)
+```
+
+### Public function entry and exit
+
+Every public store, retrieve, delete, list, and review
+function must log at entry with its key arguments and at
+exit with the result count or ID:
+
+```python
+log.info(
+    f"store_custom_documents: collection={collection!r}, "
+    f"count={len(documents)}"
+)
+# ... work ...
+log.info(
+    f"store_custom_documents: stored {len(results)} docs "
+    f"to {collection!r}"
+)
+```
+
+### Inline comments
+
+- Required before every non-obvious block.
+- Must describe intent or reason, **not restate what the
+  code does**.  "Filter to profitable series" is not
+  useful; "Exclude series below profit threshold before
+  merging to avoid diluting the merged result" is.
+- Keep comments accurate — update or remove them when the
+  code they describe changes.
+
+### No logging in unit tests

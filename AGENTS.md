@@ -49,3 +49,22 @@ After editing:
 - `setup.cfg` - centralized pytest and coverage configuration
 - `githooks/pre-commit` - pre-commit enforcement entry point
 - `validate-file-quality.sh` - file-level validation helper
+
+## Logging and Comments
+
+- **`log.critical` before every `raise`**: include function
+  name and the triggering value; applies whether the
+  exception exits the script or propagates to a caller.
+- **`log.error`** for non-raising error conditions only
+  (unexpected states logged but execution continues).
+- **`log.info`/`log_say` entry and exit** on every public
+  store/retrieve/delete/list/review function; `log_say` for
+  console-visible messages, `log.info` for file-only.
+- **`log.debug`** for timing (`log_timer()`), per-item loop
+  detail, and test-mode overrides — not visible in normal
+  operation.
+- **Timing**: `time_x = tpc()` before, `log_timer(label,
+  tpc() - time_x, ...)` after each meaningful stage.
+- **Inline comments** describe intent, not restatement of
+  code; required before every non-obvious block.
+- **No logging in unit tests.**
