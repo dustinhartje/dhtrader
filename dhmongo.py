@@ -287,6 +287,91 @@ def delete_one_document(query: dict,
 
     return result
 
+
+def store_custom_document(document: dict,
+                          collection: str,
+                          ):
+    """Upsert a single custom document by doc_id.
+
+    doc_id is guaranteed present by store_custom_documents() before
+    this is called.
+
+    Args:
+        document: Dict with a pre-assigned doc_id field.
+        collection: Target collection name.
+
+    Returns:
+        The stored document dict as returned by MongoDB.
+    """
+    c = db[collection]
+    result = c.find_one_and_replace(
+        {"doc_id": document["doc_id"]},
+        document,
+        upsert=True,
+        return_document=pymongo.ReturnDocument.AFTER,
+    )
+    return result
+
+
+def get_custom_documents_by_field(collection: str,
+                                  field: str,
+                                  value,
+                                  limit: int = 0,
+                                  ):
+    """Return documents matching field==value from collection.
+
+    Args:
+        collection: Source collection name.
+        field: Field name to filter on.
+        value: Value to match.
+        limit: Maximum documents to return; 0 means no limit.
+
+    Returns:
+        list of dicts, insertion order preserved.
+    """
+    c = db[collection]
+    cursor = c.find({field: value})
+    if limit > 0:
+        cursor = cursor.limit(limit)
+    return list(cursor)
+
+
+def get_all_custom_documents(collection: str,
+                             limit: int = 0,
+                             ):
+    """Return all documents from collection.
+
+    Args:
+        collection: Source collection name.
+        limit: Maximum documents to return; 0 means no limit.
+
+    Returns:
+        list of dicts, insertion order preserved.
+    """
+    c = db[collection]
+    cursor = c.find({})
+    if limit > 0:
+        cursor = cursor.limit(limit)
+    return list(cursor)
+
+
+def delete_custom_documents_by_field(collection: str,
+                                     field: str,
+                                     value,
+                                     ):
+    """Delete all documents matching field==value from collection.
+
+    Args:
+        collection: Target collection name.
+        field: Field name to match on.
+        value: Value to match.
+
+    Returns:
+        pymongo DeleteResult.
+    """
+    c = db[collection]
+    return c.delete_many({field: value})
+
 ##############################################################################
 # Trades
 

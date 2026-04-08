@@ -11,6 +11,9 @@ utility layer with no storage dependencies.
 """
 
 import json
+import re
+import time
+import uuid
 from collections import Counter, defaultdict
 from datetime import datetime as dt
 from datetime import date, timedelta
@@ -27,12 +30,31 @@ from .dhcommon import (
     ProgBar, OperationTimer, DEFAULT_OBJ_NAME)
 from . import dhmongo as dhm
 
-COLL_TRADES = "trades"
-COLL_TRADESERIES = "tradeseries"
-COLL_BACKTESTS = "backtests"
-COLL_TRADEPLANS = "tradeplans"
-COLL_IND_META = "indicators_meta"
-COLL_IND_DPS = "indicators_datapoints"
+# All collection names owned by dhtrader classes.  Custom document
+# functions refuse to operate on any collection listed here.
+# Add new managed collections here when new classes are introduced.
+COLLECTIONS: dict = {
+    "trades": "trades",
+    "tradeseries": "tradeseries",
+    "backtests": "backtests",
+    "tradeplans": "tradeplans",
+    "ind_meta": "indicators_meta",
+    "ind_dps": "indicators_datapoints",
+    "images": "images",
+}
+
+# Regex patterns for dynamically named managed collections.
+# Add new patterns here when new dynamic collections are introduced.
+# gridfs pattern is scoped to the images bucket prefix so other
+# collections with 'files' or 'chunks' in the name are not blocked.
+COLL_PATTERNS: dict = {
+    "candles": re.compile(r"candles_.+_.+"),
+    "events": re.compile(r"events_.+"),
+    "gridfs": re.compile(
+        rf"^{re.escape(COLLECTIONS['images'])}\.("
+        r"files|chunks)$"
+    ),
+}
 
 # Cache for Symbol instances to avoid repeated creation
 SYMBOL_CACHE = {}
@@ -94,6 +116,362 @@ def get_all_records_by_collection(collection: str,
     return dhm.get_all_records_by_collection(collection=collection,
                                              limit=limit,
                                              show_progress=show_progress)
+
+
+##############################################################################
+# Custom document functions (non-class-specific collections)
+
+def _guard_managed_collection(collection: str, func_name: str):
+    """Raise ValueError if collection is managed by a dhtrader class.
+
+    Guards against accidental writes or deletes to class-owned collections
+    (COLLECTIONS dict) or dynamically named managed collections
+    (COLL_PATTERNS dict).
+    """
+    if collection in COLLECTIONS.values():
+        log.critical(
+            f"{func_name}: collection {collection!r} is a managed "
+            "collection and cannot be used with custom document functions"
+        )
+        raise ValueError(
+            f"collection {collection!r} is managed by a dhtrader class "
+            "and cannot be used with custom document functions"
+        )
+    for pattern_name, pattern in COLL_PATTERNS.items():
+        if pattern.search(collection):
+            log.critical(
+                f"{func_name}: collection {collection!r} matches managed "
+                f"pattern {pattern_name!r} and cannot be used with "
+                "custom document functions"
+            )
+            raise ValueError(
+                f"collection {collection!r} matches managed pattern "
+                f"{pattern_name!r} and cannot be used with custom "
+                "document functions"
+            )
+
+
+def store_custom_documents(collection: str,
+                           documents: list,
+                           ):
+    """Store a list of plain dicts in a non-managed collection.
+
+    Args:
+        collection: Target collection name.  Must not be a
+            managed (class-owned) collection.
+        documents: Non-empty list of dicts to store.
+
+    Raises:
+        ValueError: If collection is managed, documents is
+            empty, any element is not a dict, or any element
+            cannot be serialized to JSON.
+
+    Returns:
+        list: Mongo result dicts, one per document stored.
+    """
+    log.info(
+        f"store_custom_documents: collection={collection!r}, "
+        f"count={len(documents)}"
+    )
+    # Guard against writes to managed (class-owned) collections.
+    _guard_managed_collection(collection, "store_custom_documents")
+
+    # Validate inputs before touching storage.
+    if not documents:
+        log.critical(
+            "store_custom_documents: documents list is empty"
+        )
+        raise ValueError(
+            "store_custom_documents: documents must be a non-empty list"
+        )
+    for i, doc in enumerate(documents):
+        if not isinstance(doc, dict):
+            # Attempt to coerce the object to a dict before failing.
+            # Try vars() for objects with __dict__, then dict() for
+            # mappings and iterables of (key, value) pairs.
+            converted = None
+            try:
+                converted = dict(vars(doc))
+            except TypeError:
+                pass
+            if converted is None:
+                try:
+                    converted = dict(doc)
+                except (TypeError, ValueError):
+                    pass
+            if converted is None:
+                log.critical(
+                    f"store_custom_documents: element {i} cannot be "
+                    f"converted to dict: {type(doc)}"
+                )
+                raise ValueError(
+                    f"store_custom_documents: element {i} cannot be "
+                    f"converted to dict, got {type(doc)}"
+                )
+            log.debug(
+                f"store_custom_documents: element {i} coerced from "
+                f"{type(doc)} to dict"
+            )
+            documents[i] = converted
+            doc = documents[i]
+        try:
+            json.dumps(doc)
+        except (TypeError, ValueError) as exc:
+            log.critical(
+                f"store_custom_documents: element {i} is not "
+                f"JSON-serializable: {exc}"
+            )
+            raise ValueError(
+                f"store_custom_documents: element {i} is not "
+                f"JSON-serializable: {exc}"
+            ) from exc
+        # Require a non-blank 'name' field on every document so
+        # doc_id can be prefixed meaningfully and records are
+        # always identifiable by name in storage.
+        name_val = doc.get("name")
+        if not name_val or not str(name_val).strip():
+            log.critical(
+                f"store_custom_documents: element {i} has no "
+                "valid 'name' field"
+            )
+            raise ValueError(
+                f"store_custom_documents: element {i} must have "
+                "a non-blank 'name' field"
+            )
+
+    # Assign a unique doc_id to each document that does not already have
+    # one.  doc_id is generated here (not in dhmongo) so the caller can
+    # reference it before storage completes.  The doc_id is prefixed
+    # with the document's name attribute (if present) to aid debugging.
+    for doc in documents:
+        if not doc.get("doc_id"):
+            name_prefix = str(doc["name"]).strip()
+            while True:
+                candidate = f"{name_prefix}_{str(uuid.uuid4())}"
+                existing = dhm.get_custom_documents_by_field(
+                    collection=collection,
+                    field="doc_id",
+                    value=candidate,
+                    limit=1,
+                )
+                if not existing:
+                    break
+            doc["doc_id"] = candidate
+
+    # Store each document via upsert and collect results.
+    time_store = time.perf_counter()
+    results = []
+    for doc in documents:
+        result = dhm.store_custom_document(
+            document=doc,
+            collection=collection,
+        )
+        results.append(result)
+    log.debug(
+        f"store_custom_documents: storage loop elapsed "
+        f"{time.perf_counter() - time_store:.6f}s"
+    )
+
+    log.info(
+        f"store_custom_documents: stored {len(results)} documents "
+        f"to {collection!r}"
+    )
+    return results
+
+
+def delete_custom_documents_by_field(collection: str,
+                                     field: str,
+                                     value,
+                                     ):
+    """Delete documents matching field==value from a non-managed collection.
+
+    Args:
+        collection: Target collection name.
+        field: Document field to match on.
+        value: Value to match.
+
+    Raises:
+        ValueError: If collection is managed.
+
+    Returns:
+        pymongo DeleteResult.
+    """
+    log.info(
+        f"delete_custom_documents_by_field: collection={collection!r}, "
+        f"field={field!r}, value={value!r}"
+    )
+    # Guard against deletes from managed (class-owned) collections.
+    _guard_managed_collection(
+        collection, "delete_custom_documents_by_field"
+    )
+
+    time_delete = time.perf_counter()
+    result = dhm.delete_custom_documents_by_field(
+        collection=collection,
+        field=field,
+        value=value,
+    )
+    log.debug(
+        f"delete_custom_documents_by_field: delete elapsed "
+        f"{time.perf_counter() - time_delete:.6f}s"
+    )
+
+    log.info(
+        f"delete_custom_documents_by_field: deleted "
+        f"{result.deleted_count} documents from {collection!r}"
+    )
+    return result
+
+
+def list_custom_documents(collection: str,
+                          field: str = None,
+                          value=None,
+                          limit: int = 0,
+                          ):
+    """Return a list of dicts from a non-managed collection.
+
+    If field and value are provided, filters by that field.
+    If neither is provided, returns all documents.  limit=0
+    means no limit.
+
+    Raises:
+        ValueError: If collection is managed.
+
+    Returns:
+        list of dicts.
+    """
+    log.info(
+        f"list_custom_documents: collection={collection!r}, "
+        f"field={field!r}, value={value!r}, limit={limit}"
+    )
+    _guard_managed_collection(collection, "list_custom_documents")
+
+    if field is not None:
+        results = dhm.get_custom_documents_by_field(
+            collection=collection,
+            field=field,
+            value=value,
+            limit=limit,
+        )
+    else:
+        results = dhm.get_all_custom_documents(
+            collection=collection,
+            limit=limit,
+        )
+
+    log.info(
+        f"list_custom_documents: returning {len(results)} documents "
+        f"from {collection!r}"
+    )
+    return results
+
+
+def get_custom_documents_by_field(collection: str,
+                                  field: str,
+                                  value,
+                                  limit: int = 0,
+                                  ):
+    """Return documents matching field==value from a non-managed collection.
+
+    Args:
+        collection: Source collection name.
+        field: Document field to filter on.
+        value: Value to match.
+        limit: Maximum number of results (0 = no limit).
+
+    Raises:
+        ValueError: If collection is managed.
+
+    Returns:
+        list of dicts.
+    """
+    log.info(
+        f"get_custom_documents_by_field: collection={collection!r}, "
+        f"field={field!r}, value={value!r}, limit={limit}"
+    )
+    _guard_managed_collection(
+        collection, "get_custom_documents_by_field"
+    )
+    results = dhm.get_custom_documents_by_field(
+        collection=collection,
+        field=field,
+        value=value,
+        limit=limit,
+    )
+    log.info(
+        f"get_custom_documents_by_field: returning {len(results)} "
+        f"documents from {collection!r}"
+    )
+    return results
+
+
+def get_all_custom_documents(collection: str,
+                             limit: int = 0,
+                             ):
+    """Return all documents from a non-managed collection.
+
+    Args:
+        collection: Source collection name.
+        limit: Maximum number of results (0 = no limit).
+
+    Raises:
+        ValueError: If collection is managed.
+
+    Returns:
+        list of dicts.
+    """
+    log.info(
+        f"get_all_custom_documents: collection={collection!r}, "
+        f"limit={limit}"
+    )
+    _guard_managed_collection(collection, "get_all_custom_documents")
+    results = dhm.get_all_custom_documents(
+        collection=collection,
+        limit=limit,
+    )
+    log.info(
+        f"get_all_custom_documents: returning {len(results)} documents "
+        f"from {collection!r}"
+    )
+    return results
+
+
+def review_custom_documents(collection: str,
+                            field: str = None,
+                            value=None,
+                            limit: int = 20,
+                            ):
+    """Print a human-readable summary of documents from a non-managed
+    collection.  Intended for interactive/CLI use.
+
+    Raises:
+        ValueError: If collection is managed.
+    """
+    log.info(
+        f"review_custom_documents: collection={collection!r}, "
+        f"field={field!r}, value={value!r}, limit={limit}"
+    )
+    _guard_managed_collection(collection, "review_custom_documents")
+
+    docs = list_custom_documents(
+        collection=collection,
+        field=field,
+        value=value,
+        limit=limit,
+    )
+
+    print(f"\n--- review_custom_documents: {collection!r} "
+          f"({len(docs)} documents) ---")
+    for doc in docs:
+        # Strip the internal MongoDB _id from display output.
+        display = {k: v for k, v in doc.items() if k != "_id"}
+        print(json.dumps(display, indent=2, default=str))
+    print("---\n")
+
+    log.info(
+        f"review_custom_documents: displayed {len(docs)} documents "
+        f"from {collection!r}"
+    )
 
 
 ##############################################################################
@@ -319,7 +697,7 @@ def check_integrity_no_nameless_objects(ignore=None):
     }
 
 
-def check_integrity_trade_ids(collection: str = COLL_TRADES):
+def check_integrity_trade_ids(collection: str = COLLECTIONS["trades"]):
     """Check all stored trades have non-empty, unique trade_id values.
 
     Iterates every trade record in the collection once and checks two
@@ -423,7 +801,7 @@ def reconstruct_trade(t):
     return result
 
 
-def get_all_trades(collection: str = COLL_TRADES,
+def get_all_trades(collection: str = COLLECTIONS["trades"],
                    limit=0,
                    show_progress: bool = False,
                    ):
@@ -445,7 +823,7 @@ def get_all_trades(collection: str = COLL_TRADES,
 
 def get_trades_by_field(field: str,
                         value,
-                        collection: str = COLL_TRADES,
+                        collection: str = COLLECTIONS["trades"],
                         limit=0,
                         show_progress: bool = False,
                         ):
@@ -481,7 +859,7 @@ def get_trades_by_field(field: str,
 
 def get_trades_by_field_in(field: str,
                            values: list,
-                           collection: str = COLL_TRADES,
+                           collection: str = COLLECTIONS["trades"],
                            limit=0,
                            show_progress: bool = False,
                            ):
@@ -506,7 +884,7 @@ def get_trades_by_field_in(field: str,
 
 
 def store_trades(trades: list,
-                 collection: str = COLL_TRADES,
+                 collection: str = COLLECTIONS["trades"],
                  ):
     """Store one or more Trade() objects in central storage."""
     # Convert Trade objects to dictionaries for storage
@@ -531,7 +909,7 @@ def store_trades(trades: list,
 
 
 def review_trades(symbol: str = "ES",
-                  collection: str = COLL_TRADES,
+                  collection: str = COLLECTIONS["trades"],
                   bt_id: str = None,
                   ts_id: str = None,
                   include_epochs: bool = False,
@@ -838,7 +1216,7 @@ def review_trades(symbol: str = "ES",
 def delete_trades_by_field(symbol: str,
                            field: str,
                            value,
-                           collection: str = COLL_TRADES,
+                           collection: str = COLLECTIONS["trades"],
                            ):
     """Delete all trade records with 'field' matching 'value'.
 
@@ -858,7 +1236,7 @@ def delete_trades_by_field(symbol: str,
 
 
 def delete_trades(trades: list,
-                  collection: str = COLL_TRADES,
+                  collection: str = COLLECTIONS["trades"],
                   ):
     """Delete Trade objects from central storage by open_dt, ts_id, and symbol.
     """
@@ -899,7 +1277,7 @@ def reconstruct_tradeseries(ts):
                        )
 
 
-def get_all_tradeseries(collection: str = COLL_TRADESERIES,
+def get_all_tradeseries(collection: str = COLLECTIONS["tradeseries"],
                         limit=0,
                         show_progress: bool = False,
                         ):
@@ -921,8 +1299,8 @@ def get_all_tradeseries(collection: str = COLL_TRADESERIES,
 
 def get_tradeseries_by_field(field: str,
                              value,
-                             collection: str = COLL_TRADESERIES,
-                             collection_trades: str = COLL_TRADES,
+                             collection: str = COLLECTIONS["tradeseries"],
+                             collection_trades: str = COLLECTIONS["trades"],
                              limit=0,
                              include_trades: bool = True,
                              show_progress: bool = False,
@@ -964,7 +1342,7 @@ def get_tradeseries_by_field(field: str,
 
 
 def store_tradeseries(series: list,
-                      collection: str = COLL_TRADESERIES,
+                      collection: str = COLLECTIONS["tradeseries"],
                       include_trades: bool = False,
                       ):
     """Store a list of TradeSeries() objects in central storage.
@@ -1006,7 +1384,7 @@ def store_tradeseries(series: list,
 
 
 def review_tradeseries(symbol: str = "ES",
-                       collection: str = COLL_TRADESERIES,
+                       collection: str = COLLECTIONS["tradeseries"],
                        bt_id: str = None,
                        include_trades: bool = False,
                        pretty: bool = False,
@@ -1098,8 +1476,8 @@ def review_tradeseries(symbol: str = "ES",
 def delete_tradeseries_by_field(symbol: str,
                                 field: str,
                                 value,
-                                collection: str = COLL_TRADESERIES,
-                                coll_trades=COLL_TRADES,
+                                collection: str = COLLECTIONS["tradeseries"],
+                                coll_trades=COLLECTIONS["trades"],
                                 include_trades: bool = False,
                                 ):
     """Delete all tradeseries records with 'field' matching 'value'.
@@ -1124,7 +1502,7 @@ def delete_tradeseries_by_field(symbol: str,
 
 
 def delete_tradeseries(tradeseries: list,
-                       collection: str = COLL_TRADESERIES,
+                       collection: str = COLLECTIONS["tradeseries"],
                        ):
     """Delete TradeSeries objects from central storage using ts_id.
     """
@@ -1141,7 +1519,7 @@ def delete_tradeseries(tradeseries: list,
 
 ##############################################################################
 # Backtests
-def get_all_backtests(collection: str = COLL_BACKTESTS,
+def get_all_backtests(collection: str = COLLECTIONS["backtests"],
                       limit=0,
                       show_progress: bool = False,
                       ):
@@ -1158,7 +1536,7 @@ def get_all_backtests(collection: str = COLL_BACKTESTS,
 
 def get_backtests_by_field(field: str,
                            value,
-                           collection: str = COLL_BACKTESTS,
+                           collection: str = COLLECTIONS["backtests"],
                            limit=0,
                            show_progress: bool = False,
                            ):
@@ -1179,7 +1557,7 @@ def get_backtests_by_field(field: str,
 
 
 def store_backtests(backtests: list,
-                    collection: str = COLL_BACKTESTS,
+                    collection: str = COLLECTIONS["backtests"],
                     include_tradeseries: bool = False,
                     include_trades: bool = False,
                     ):
@@ -1238,7 +1616,7 @@ def store_backtests(backtests: list,
 
 
 def review_backtests(symbol: str = "ES",
-                     collection: str = COLL_BACKTESTS,
+                     collection: str = COLLECTIONS["backtests"],
                      include_tradeseries: bool = False,
                      include_trades: bool = False,
                      pretty: bool = False,
@@ -1265,9 +1643,10 @@ def review_backtests(symbol: str = "ES",
 def delete_backtests_by_field(symbol: str,
                               field: str,
                               value,
-                              collection: str = COLL_BACKTESTS,
-                              coll_tradeseries: str = COLL_TRADESERIES,
-                              coll_trades: str = COLL_TRADES,
+                              collection: str = COLLECTIONS["backtests"],
+                              coll_tradeseries: str = (
+                                  COLLECTIONS["tradeseries"]),
+                              coll_trades: str = COLLECTIONS["trades"],
                               include_tradeseries: bool = False,
                               include_trades: bool = False,
                               ):
@@ -1296,7 +1675,7 @@ def delete_backtests_by_field(symbol: str,
 
 
 def delete_backtests(backtests: list,
-                     collection: str = COLL_BACKTESTS,
+                     collection: str = COLLECTIONS["backtests"],
                      ):
     """Delete Backtest objects from central storage using bt_id.
     """
@@ -1323,7 +1702,7 @@ _TRADEPLAN_CTOR_KEYS = frozenset({
 
 
 def reconstruct_tradeplan(tp,
-                          collection_trades: str = COLL_TRADES):
+                          collection_trades: str = COLLECTIONS["trades"]):
     """Take a dictionary and build a TradePlan object from it.
 
     Reconstructs using constructor fields first, then reattaches any
@@ -1382,8 +1761,8 @@ def reconstruct_tradeplan(tp,
     return obj
 
 
-def get_all_tradeplans(collection: str = COLL_TRADEPLANS,
-                       collection_trades: str = COLL_TRADES,
+def get_all_tradeplans(collection: str = COLLECTIONS["tradeplans"],
+                       collection_trades: str = COLLECTIONS["trades"],
                        limit=0,
                        as_dict: bool = False,
                        show_progress: bool = False,
@@ -1412,8 +1791,8 @@ def get_all_tradeplans(collection: str = COLL_TRADEPLANS,
 
 def get_tradeplans_by_field(field: str,
                             value,
-                            collection: str = COLL_TRADEPLANS,
-                            collection_trades: str = COLL_TRADES,
+                            collection: str = COLLECTIONS["tradeplans"],
+                            collection_trades: str = COLLECTIONS["trades"],
                             as_dict: bool = False,
                             limit=0,
                             show_progress: bool = False,
@@ -1444,7 +1823,7 @@ def get_tradeplans_by_field(field: str,
 
 
 def store_tradeplans(tradeplans: list,
-                     collection: str = COLL_TRADEPLANS,
+                     collection: str = COLLECTIONS["tradeplans"],
                      ):
     """Store a list of TradePlan objects in central storage."""
     for tp in tradeplans:
@@ -1478,7 +1857,7 @@ def store_tradeplans(tradeplans: list,
 
 def delete_tradeplans_by_field(field: str,
                                value,
-                               collection: str = COLL_TRADEPLANS,
+                               collection: str = COLLECTIONS["tradeplans"],
                                ):
     """Delete all tradeplan records with 'field' matching 'value'."""
     result = dhm.delete_tradeplans_by_field(field=field,
@@ -1490,7 +1869,7 @@ def delete_tradeplans_by_field(field: str,
 
 
 def delete_tradeplans(tradeplans: list,
-                      collection: str = COLL_TRADEPLANS,
+                      collection: str = COLLECTIONS["tradeplans"],
                       ):
     """Delete TradePlan objects from central storage using tp_id."""
     tp_ids = [tp.tp_id for tp in tradeplans]
@@ -1503,14 +1882,14 @@ def delete_tradeplans(tradeplans: list,
 
 ##############################################################################
 # Indicators
-def list_indicators(meta_collection: str = COLL_IND_META):
+def list_indicators(meta_collection: str = COLLECTIONS["ind_meta"]):
     """Return a simple list of indicators in storage."""
     result = dhm.list_indicators(meta_collection=meta_collection)
 
     return result
 
 
-def list_indicators_names(meta_collection: str = COLL_IND_META):
+def list_indicators_names(meta_collection: str = COLLECTIONS["ind_meta"]):
     """Return a simple list of indicators (ind_id only) in storage."""
     indicators = dhm.list_indicators(meta_collection=meta_collection)
     result = []
@@ -1520,8 +1899,8 @@ def list_indicators_names(meta_collection: str = COLL_IND_META):
     return result
 
 
-def review_indicators(meta_collection: str = COLL_IND_META,
-                      dp_collection: str = COLL_IND_DPS):
+def review_indicators(meta_collection: str = COLLECTIONS["ind_meta"],
+                      dp_collection: str = COLLECTIONS["ind_dps"]):
     """Return a more detailed overview of indicators in storage."""
     result = dhm.review_indicators(meta_collection=meta_collection,
                                    dp_collection=dp_collection,
@@ -1531,7 +1910,7 @@ def review_indicators(meta_collection: str = COLL_IND_META,
 
 
 def get_indicator(ind_id: str,
-                  meta_collection: str = COLL_IND_META,
+                  meta_collection: str = COLLECTIONS["ind_meta"],
                   autoload_chart: bool = False,
                   autoload_datapoints: bool = False,
                   ):
@@ -1585,7 +1964,7 @@ def get_indicator(ind_id: str,
 
 
 def get_indicator_datapoints(ind_id: str,
-                             dp_collection: str = COLL_IND_DPS,
+                             dp_collection: str = COLLECTIONS["ind_dps"],
                              earliest_dt: str = None,
                              latest_dt: str = None,
                              show_progress: bool = False,
@@ -1628,7 +2007,7 @@ def get_indicator_datapoints(ind_id: str,
 
 
 def store_indicator_datapoints(datapoints: list,
-                               collection: str = COLL_IND_DPS,
+                               collection: str = COLLECTIONS["ind_dps"],
                                skip_dupes: bool = True,
                                ):
     """Store one or more IndicatorDatapoint() objects in central storage."""
@@ -1678,8 +2057,8 @@ def store_indicator_datapoints(datapoints: list,
 
 
 def store_indicator(indicator,
-                    meta_collection: str = COLL_IND_META,
-                    dp_collection: str = COLL_IND_DPS,
+                    meta_collection: str = COLLECTIONS["ind_meta"],
+                    dp_collection: str = COLLECTIONS["ind_dps"],
                     store_datapoints: bool = True,
                     fast_dps_check: bool = False,
                     show_progress: bool = False,
@@ -1806,8 +2185,8 @@ def store_indicator(indicator,
 
 
 def delete_indicator(ind_id: str,
-                     meta_collection: str = COLL_IND_META,
-                     dp_collection: str = COLL_IND_DPS,
+                     meta_collection: str = COLLECTIONS["ind_meta"],
+                     dp_collection: str = COLLECTIONS["ind_dps"],
                      ):
     """Remove an indicator and all its datapoints from storage by ind_id.
     """
@@ -1818,7 +2197,7 @@ def delete_indicator(ind_id: str,
 
 
 def get_indicators_by_name(name: str,
-                           meta_collection: str = COLL_IND_META,
+                           meta_collection: str = COLLECTIONS["ind_meta"],
                            autoload_chart: bool = False,
                            autoload_datapoints: bool = False,
                            ):
@@ -1860,8 +2239,8 @@ def get_indicators_by_name(name: str,
 
 
 def delete_indicators_by_name(name: str,
-                              meta_collection: str = COLL_IND_META,
-                              dp_collection: str = COLL_IND_DPS,
+                              meta_collection: str = COLLECTIONS["ind_meta"],
+                              dp_collection: str = COLLECTIONS["ind_dps"],
                               ):
     """Delete all indicators and their datapoints with the given name."""
     indicators = get_indicators_by_name(name=name,
