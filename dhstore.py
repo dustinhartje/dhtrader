@@ -14,7 +14,7 @@ import json
 import re
 import time
 import uuid
-from collections import Counter, defaultdict
+from collections import Counter, defaultdict, namedtuple
 from datetime import datetime as dt
 from datetime import date, timedelta
 from copy import deepcopy
@@ -22,7 +22,7 @@ import logging
 from pathlib import Path
 from .dhtypes import (
     Candle, Event, IndicatorDataPoint, Symbol, IndicatorSMA, IndicatorEMA,
-    Trade, TradeSeries, TradePlan)
+    Trade, TradeSeries, TradePlan, StoredImage)
 from .dhcommon import (
     dt_as_str, dt_as_dt, dt_from_epoch, dt_to_epoch, valid_timeframe,
     this_candle_start, summarize_candles, log_say, sort_dict,
@@ -475,11 +475,400 @@ def review_custom_documents(collection: str,
 
 
 ##############################################################################
+# Image storage (GridFS)
+
+# Named tuple returned by get_image_by_id; contains everything a web
+# server needs to serve an image without any further lookups.
+ImageResponse = namedtuple(
+    "ImageResponse",
+    ["data", "content_type", "filename", "metadata"],
+)
+
+
+def store_images(
+        images: list,
+        data_list: list,
+        bucket: str = COLLECTIONS["images"],
+        ) -> list:
+    """Store StoredImage objects and their binary data in GridFS.
+
+    image_id is set on each StoredImage at object creation time as
+    f"{name}_{created_epoch}" and is used as the stable retrieval key.
+    Binary data is stored in GridFS; this function stores no binary
+    attributes on the objects themselves.
+
+    Args:
+        images: List of StoredImage objects.  image_id must be set
+            before calling (set at creation as f"{name}_{created_epoch}").
+        data_list: Parallel list of bytes, one per image in images.
+        bucket: GridFS bucket prefix.  Defaults to COLLECTIONS["images"].
+
+    Returns:
+        list: image_id strings from the stored objects, one per image.
+
+    Raises:
+        ValueError: If images or data_list is empty, or if their
+            lengths do not match.
+    """
+    log.info(
+        f"store_images: bucket={bucket!r}, count={len(images)}"
+    )
+    if not images:
+        log.critical(
+            "store_images: images list is empty"
+        )
+        raise ValueError(
+            "store_images: images must be a non-empty list"
+        )
+    if len(images) != len(data_list):
+        log.critical(
+            f"store_images: images length {len(images)} does not match "
+            f"data_list length {len(data_list)}"
+        )
+        raise ValueError(
+            "store_images: images and data_list must have the same length"
+        )
+
+    results = []
+    time_store = time.perf_counter()
+    for image, data in zip(images, data_list):
+        metadata = image.to_clean_dict()
+        image_id = dhm.store_image(
+            image_data=data,
+            metadata=metadata,
+            bucket=bucket,
+        )
+        results.append(image_id)
+        log.debug(
+            f"store_images: stored image_id={image_id!r}"
+        )
+    log.debug(
+        f"store_images: storage loop elapsed "
+        f"{time.perf_counter() - time_store:.6f}s"
+    )
+    log.info(
+        f"store_images: stored {len(results)} images "
+        f"in bucket={bucket!r}"
+    )
+    return results
+
+
+def get_image_data(
+        image_id: str,
+        bucket: str = COLLECTIONS["images"],
+        ) -> bytes:
+    """Retrieve raw binary data for a stored image by image_id.
+
+    Args:
+        image_id: The stable image_id assigned at object creation.
+        bucket: GridFS bucket prefix.  Defaults to COLLECTIONS["images"].
+
+    Returns:
+        bytes: Raw binary content of the stored image.
+
+    Raises:
+        KeyError: If no image with the given image_id is found.
+    """
+    log.info(
+        f"get_image_data: image_id={image_id!r}, bucket={bucket!r}"
+    )
+    result = dhm.get_image_data(image_id=image_id, bucket=bucket)
+    log.info(
+        f"get_image_data: returned {len(result)} bytes "
+        f"for image_id={image_id!r}"
+    )
+    return result
+
+
+def get_image_by_id(
+        image_id: str,
+        bucket: str = COLLECTIONS["images"],
+        ) -> ImageResponse:
+    """Retrieve everything needed to serve an image via a web endpoint.
+
+    Performs a single round-trip to GridFS, returning binary data,
+    content type, filename, and full metadata in one ImageResponse.
+    The calling web server only needs image_id; no further lookups
+    are required.
+
+    Args:
+        image_id: The stable image_id assigned at object creation.
+        bucket: GridFS bucket prefix.  Defaults to COLLECTIONS["images"].
+
+    Returns:
+        ImageResponse: Named tuple with fields:
+            data (bytes): Raw binary content ready to stream.
+            content_type (str): MIME type for Content-Type header.
+            filename (str or None): Original filename for
+                Content-Disposition header.
+            metadata (StoredImage): Full metadata object.
+
+    Raises:
+        KeyError: If no image with the given image_id is found.
+    """
+    log.info(
+        f"get_image_by_id: image_id={image_id!r}, bucket={bucket!r}"
+    )
+    data, meta_dict = dhm.get_image_by_id(
+        image_id=image_id, bucket=bucket
+    )
+    stored_image = StoredImage.from_dict(meta_dict)
+    log.info(
+        f"get_image_by_id: returned {len(data)} bytes "
+        f"for image_id={image_id!r}"
+    )
+    return ImageResponse(
+        data=data,
+        content_type=stored_image.content_type,
+        filename=stored_image.filename,
+        metadata=stored_image,
+    )
+
+
+def get_images_metadata_by_field(
+        field: str,
+        value,
+        bucket: str = COLLECTIONS["images"],
+        ) -> list:
+    """Retrieve StoredImage metadata objects matching field==value.
+
+    Binary data is not loaded; call load_data() on each returned
+    object to retrieve bytes.
+
+    Args:
+        field: Metadata field name to filter on.
+        value: Value to match.
+        bucket: GridFS bucket prefix.  Defaults to COLLECTIONS["images"].
+
+    Returns:
+        list of StoredImage objects (metadata only, no binary data).
+    """
+    log.info(
+        f"get_images_metadata_by_field: field={field!r}, "
+        f"value={value!r}, bucket={bucket!r}"
+    )
+    metadata_list = dhm.get_image_metadata_by_field(
+        field=field, value=value, bucket=bucket
+    )
+    results = [StoredImage.from_dict(m) for m in metadata_list]
+    log.info(
+        f"get_images_metadata_by_field: returning {len(results)} "
+        f"images for {field}={value!r}"
+    )
+    return results
+
+
+def list_images(
+        field: str = None,
+        value=None,
+        bucket: str = COLLECTIONS["images"],
+        ) -> list:
+    """Return a list of StoredImage metadata objects.
+
+    If field and value are provided, filters by that field.
+    If neither is provided, returns all images.  Binary data
+    is not loaded; call load_data() on each object to retrieve bytes.
+
+    Args:
+        field: Optional metadata field name to filter on.
+        value: Optional value to match.
+        bucket: GridFS bucket prefix.  Defaults to COLLECTIONS["images"].
+
+    Returns:
+        list of StoredImage objects.
+    """
+    log.info(
+        f"list_images: field={field!r}, value={value!r}, "
+        f"bucket={bucket!r}"
+    )
+    if field is not None and value is not None:
+        metadata_list = dhm.get_image_metadata_by_field(
+            field=field, value=value, bucket=bucket
+        )
+    else:
+        # No filter: scan all files in the bucket.
+        files_coll = dhm.db[f"{bucket}.files"]
+        docs = list(files_coll.find({}))
+        metadata_list = [doc.get("metadata", {}) for doc in docs]
+    results = [StoredImage.from_dict(m) for m in metadata_list]
+    log.info(
+        f"list_images: returning {len(results)} images "
+        f"from bucket={bucket!r}"
+    )
+    return results
+
+
+def delete_images_by_field(
+        field: str,
+        value,
+        bucket: str = COLLECTIONS["images"],
+        ) -> int:
+    """Delete stored images whose metadata matches field==value.
+
+    Args:
+        field: Metadata field name to match on.
+        value: Value to match.
+        bucket: GridFS bucket prefix.  Defaults to COLLECTIONS["images"].
+
+    Returns:
+        int: Count of images deleted.
+    """
+    log.info(
+        f"delete_images_by_field: field={field!r}, value={value!r}, "
+        f"bucket={bucket!r}"
+    )
+    time_delete = time.perf_counter()
+    count = dhm.delete_images_by_field(
+        field=field, value=value, bucket=bucket
+    )
+    log.debug(
+        f"delete_images_by_field: delete elapsed "
+        f"{time.perf_counter() - time_delete:.6f}s"
+    )
+    log.info(
+        f"delete_images_by_field: deleted {count} images "
+        f"matching {field}={value!r} from bucket={bucket!r}"
+    )
+    return count
+
+
+def delete_images_by_image_id(
+        image_ids: list,
+        bucket: str = COLLECTIONS["images"],
+        ) -> int:
+    """Delete stored images by their image_id values.
+
+    Args:
+        image_ids: List of image_id strings to delete.
+        bucket: GridFS bucket prefix.  Defaults to COLLECTIONS["images"].
+
+    Returns:
+        int: Count of images actually deleted.
+    """
+    log.info(
+        f"delete_images_by_image_id: count={len(image_ids)}, "
+        f"bucket={bucket!r}"
+    )
+    time_delete = time.perf_counter()
+    count = dhm.delete_images_by_image_id(
+        image_ids=image_ids, bucket=bucket
+    )
+    log.debug(
+        f"delete_images_by_image_id: delete elapsed "
+        f"{time.perf_counter() - time_delete:.6f}s"
+    )
+    log.info(
+        f"delete_images_by_image_id: deleted {count} images "
+        f"from bucket={bucket!r}"
+    )
+    return count
+
+
+def review_images(
+        field: str = None,
+        value=None,
+        limit: int = 20,
+        bucket: str = COLLECTIONS["images"],
+        ):
+    """Print a human-readable summary of stored image metadata.
+
+    Intended for interactive/CLI use.  Binary data is not loaded.
+
+    Args:
+        field: Optional metadata field name to filter on.
+        value: Optional value to match.
+        limit: Maximum number of images to display.  0 means no limit.
+        bucket: GridFS bucket prefix.  Defaults to COLLECTIONS["images"].
+    """
+    log.info(
+        f"review_images: field={field!r}, value={value!r}, "
+        f"limit={limit}, bucket={bucket!r}"
+    )
+    images = list_images(field=field, value=value, bucket=bucket)
+    if limit > 0:
+        images = images[:limit]
+    print(
+        f"\n--- review_images: bucket={bucket!r} "
+        f"({len(images)} images) ---"
+    )
+    for img in images:
+        display = img.to_clean_dict()
+        print(json.dumps(display, indent=2, default=str))
+    print("---\n")
+    log.info(
+        f"review_images: displayed {len(images)} images "
+        f"from bucket={bucket!r}"
+    )
+
+
+def store_image_from_path(
+        filepath: str,
+        content_type: str = "image/jpeg",
+        description: str = None,
+        parent_collection: str = None,
+        parent_id_field: str = None,
+        parent_id_value=None,
+        tags: list = None,
+        bucket: str = COLLECTIONS["images"],
+        ) -> str:
+    """Read a file from disk and store it as a StoredImage in GridFS.
+
+    The filename stem (without extension) is used as the StoredImage
+    name, which is also used to build a deterministic image_id as
+    f"{name}_{created_epoch}" at object creation time.
+
+    Args:
+        filepath: Path to the image file on disk.
+        content_type: MIME type string.  Defaults to "image/jpeg".
+        description: Optional human-readable description.
+        parent_collection: Collection name of the parent document.
+        parent_id_field: Field name of the parent's unique ID.
+        parent_id_value: Value of the parent's unique ID.
+        tags: Optional list of string tags.
+        bucket: GridFS bucket prefix.
+
+    Returns:
+        str: The image_id assigned to the stored StoredImage object.
+    """
+    p = Path(filepath)
+    # Use the filename stem as the descriptive name so image_id
+    # reflects the original file's role (e.g., chart name).
+    name = p.stem
+    log.info(
+        f"store_image_from_path: filepath={str(p)!r}, "
+        f"name={name!r}, bucket={bucket!r}"
+    )
+    image = StoredImage(
+        name=name,
+        content_type=content_type,
+        filename=p.name,
+        description=description,
+        parent_collection=parent_collection,
+        parent_id_field=parent_id_field,
+        parent_id_value=parent_id_value,
+        tags=tags,
+    )
+    data = p.read_bytes()
+    store_images([image], [data], bucket=bucket)
+    log.info(
+        f"store_image_from_path: stored image_id={image.image_id!r}"
+    )
+    return image.image_id
+
+
+##############################################################################
 # Cross-collection integrity checks
 
 # Collections to skip when checking for missing name attributes.
 # Populate with collection names that legitimately have no name field.
-MISSING_NAME_IGNORE_COLLECTIONS: list = []
+# images.chunks stores raw binary GridFS chunk data and has no name
+# field at any level.  images.files stores StoredImage metadata where
+# name lives under metadata.name (not at root); it is checked via a
+# separate query branch in check_integrity_no_nameless_objects rather
+# than being skipped entirely.
+MISSING_NAME_IGNORE_COLLECTIONS: list = [
+    "images.chunks",
+]
 FUTURE_DATETIMES_IGNORE_COLLECTIONS: list = ['events_ES']
 
 
@@ -663,28 +1052,54 @@ def check_integrity_no_nameless_objects(ignore=None):
     sample_issues_by_collection = {}
     skipped_collections = []
     total_issues = 0
-    query = {"$or": [{"name": None}, {"name": ""}]}
 
     for coll in list_mongo_collections():
         if coll in ignore:
             skipped_collections.append(coll)
             continue
+        # images.files stores name under metadata.name (GridFS layout);
+        # every other collection stores name at the document root.
+        # Check for blank "", None, and missing name in either case.  None
+        # check will also return documents with no name field at all
+        if coll == COLLECTIONS["images"] + ".files":
+            query = {"$or": [
+                {"metadata.name": None},
+                {"metadata.name": ""},
+            ]}
+        else:
+            query = {"$or": [{"name": None}, {"name": ""}]}
         count = dhm.count_records(collection=coll, query=query)
         if count > 0:
             issues_by_collection[coll] = count
             docs = dhm.run_query(query=query,
                                  collection=coll,
                                  limit=10)
-            sample_issues_by_collection[coll] = [
-                {
-                    "collection": coll,
-                    "_id": str(doc.get("_id")),
-                    "name": doc.get("name"),
-                    "ts_id": doc.get("ts_id"),
-                    "bt_id": doc.get("bt_id"),
-                }
-                for doc in docs
-            ]
+            if coll == COLLECTIONS["images"] + ".files":
+                # Extract name from the metadata sub-document for image.files.
+                sample_issues_by_collection[coll] = [
+                    {
+                        "collection": coll,
+                        "_id": str(doc.get("_id")),
+                        "name": doc.get(
+                            "metadata", {}
+                        ).get("name"),
+                        "ts_id": None,
+                        "bt_id": None,
+                    }
+                    for doc in docs
+                ]
+            else:
+                # For other collections, name is at the document root.
+                sample_issues_by_collection[coll] = [
+                    {
+                        "collection": coll,
+                        "_id": str(doc.get("_id")),
+                        "name": doc.get("name"),
+                        "ts_id": doc.get("ts_id"),
+                        "bt_id": doc.get("bt_id"),
+                    }
+                    for doc in docs
+                ]
             total_issues += count
 
     status = "OK" if total_issues == 0 else "ERRORS"

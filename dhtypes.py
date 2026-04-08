@@ -4052,6 +4052,169 @@ class TradePlan():
         return results
 
 
+class StoredImage():
+    """Image stored in MongoDB GridFS with a metadata record.
+
+    Binary data lives in GridFS and is retrieved on demand via
+    load_data() or dhstore.get_image_data(image_id).  This class
+    holds metadata only; no binary attribute is stored here.
+
+    Args:
+        name: Descriptive name matching the role of the image
+            (e.g., the chart filename stem).  Must be a non-blank,
+            non-None string; raises ValueError at construction if
+            blank or None.  Defaults to DEFAULT_OBJ_NAME.  Test
+            objects must include "DELETEME" in this field.
+        image_id: Stable unique ID generated at object creation as
+            f"{name}_{created_epoch}".  Set before storage; never
+            changes after creation.  Used as the primary key for
+            all retrieval and deletion operations through the
+            public API.  If None, generated automatically from
+            name and created_epoch.
+        content_type: MIME type string (e.g., "image/jpeg").
+        filename: Original filename string for reference.
+        description: Optional human-readable description.
+        parent_collection: Collection name of the parent document.
+        parent_id_field: Field name of the parent's unique ID.
+        parent_id_value: Value of the parent's unique ID.
+        created_epoch: Integer Unix timestamp set at creation;
+            included in image_id.  Defaults to now.
+        created_dt: ISO datetime string derived from created_epoch.
+            Set automatically from created_epoch if not supplied.
+        tags: Optional list of string tags.
+    """
+
+    def __init__(
+            self,
+            name: str = DEFAULT_OBJ_NAME,
+            image_id: str = None,
+            content_type: str = "image/jpeg",
+            filename: str = None,
+            description: str = None,
+            parent_collection: str = None,
+            parent_id_field: str = None,
+            parent_id_value=None,
+            created_epoch: int = None,
+            created_dt: str = None,
+            tags: list = None,
+            ):
+        """Initialize a StoredImage instance."""
+        # Enforce non-blank name so integrity checks always identify it.
+        if not name or not str(name).strip():
+            raise ValueError(
+                "StoredImage name must be a non-blank, non-None string; "
+                f"got {name!r}"
+            )
+        self.name = name
+        # Record creation time; used to build a deterministic image_id.
+        if created_epoch is None:
+            self.created_epoch = int(dt.datetime.now().timestamp())
+        else:
+            self.created_epoch = created_epoch
+        # Derive ISO datetime string from the stored epoch.
+        if created_dt is None:
+            self.created_dt = dt_as_str(
+                dt.datetime.fromtimestamp(self.created_epoch)
+            )
+        else:
+            self.created_dt = created_dt
+        # Build a stable, descriptive image_id if not supplied.
+        if image_id is None:
+            self.image_id = f"{self.name}_{self.created_epoch}"
+        else:
+            self.image_id = image_id
+        self.content_type = content_type
+        self.filename = filename
+        self.description = description
+        self.parent_collection = parent_collection
+        self.parent_id_field = parent_id_field
+        self.parent_id_value = parent_id_value
+        if tags is None:
+            self.tags = []
+        else:
+            self.tags = list(tags)
+
+    def __eq__(self, other):
+        """Return True if image_id and name match."""
+        return (
+            isinstance(other, StoredImage)
+            and self.image_id == other.image_id
+            and self.name == other.name
+        )
+
+    def __repr__(self):
+        """Return a concise developer-facing representation."""
+        return (
+            f"StoredImage(name={self.name!r}, "
+            f"image_id={self.image_id!r})"
+        )
+
+    def __str__(self):
+        """Return string form of the clean metadata dict."""
+        return str(self.to_clean_dict())
+
+    def to_clean_dict(self):
+        """Return a plain dict of all metadata fields (no binary).
+
+        Suitable for JSON serialization and MongoDB storage via
+        store_custom_documents().  Binary data is not included;
+        call load_data() to retrieve bytes separately.
+        """
+        return {
+            "name": self.name,
+            "image_id": self.image_id,
+            "content_type": self.content_type,
+            "filename": self.filename,
+            "description": self.description,
+            "parent_collection": self.parent_collection,
+            "parent_id_field": self.parent_id_field,
+            "parent_id_value": self.parent_id_value,
+            "created_epoch": self.created_epoch,
+            "created_dt": self.created_dt,
+            "tags": list(self.tags),
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict):
+        """Reconstruct a StoredImage from a metadata dict.
+
+        Suitable for rebuilding from MongoDB documents returned by
+        dhstore.get_images_metadata_by_field() or list_images().
+
+        Args:
+            d: Dict with StoredImage metadata keys.
+
+        Returns:
+            StoredImage instance.
+        """
+        return cls(
+            name=d.get("name", DEFAULT_OBJ_NAME),
+            image_id=d.get("image_id"),
+            content_type=d.get("content_type", "image/jpeg"),
+            filename=d.get("filename"),
+            description=d.get("description"),
+            parent_collection=d.get("parent_collection"),
+            parent_id_field=d.get("parent_id_field"),
+            parent_id_value=d.get("parent_id_value"),
+            created_epoch=d.get("created_epoch"),
+            created_dt=d.get("created_dt"),
+            tags=d.get("tags"),
+        )
+
+    def load_data(self) -> bytes:
+        """Return the raw binary data for this image from GridFS.
+
+        Delegates to dhstore.get_image_data() via the lazy import
+        wrapper to avoid circular imports.
+
+        Returns:
+            bytes: Raw binary content of the stored image.
+        """
+        # Import dhstore lazily to avoid circular import at module load.
+        import dhtrader.dhstore as dhstore
+        return dhstore.get_image_data(self.image_id)
+
+
 __all__ = [
     "CANDLE_TIMEFRAMES",
     "BEGINNING_OF_TIME",
@@ -4084,4 +4247,5 @@ __all__ = [
     "TradePlan",
     "TradeSeries",
     "Backtest",
+    "StoredImage",
 ]
