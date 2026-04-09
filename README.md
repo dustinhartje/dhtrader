@@ -43,6 +43,106 @@ workflows.
 Note to self - docs are not autoupdating, run mkdocs.sh to update them.
 Perhaps this can be a pre-commit hook?
 
+## Storage Architecture (`dhstore.py`)
+
+### Managed Collections
+
+All managed collections are declared at the top of `dhstore.py` so the
+guard logic in the custom document functions has a single authoritative
+source of truth.
+
+**`COLLECTIONS` dict** — fixed-name collections:
+
+| Key | Collection name |
+|---|---|
+| `trades` | `trades` |
+| `tradeseries` | `tradeseries` |
+| `backtests` | `backtests` |
+| `tradeplans` | `tradeplans` |
+| `ind_meta` | `indicators_meta` |
+| `ind_dps` | `indicators_datapoints` |
+| `images` | `images` (GridFS bucket root) |
+
+**`COLL_PATTERNS` dict** — dynamically named managed collections
+matched by compiled regex:
+
+| Key | Pattern | Matches |
+|---|---|---|
+| `candles` | `candles_.+_.+` | Any candles collection |
+| `events` | `events_.+` | Any events collection |
+| `gridfs` | `^images\.(files\|chunks)$` | GridFS bucket collections |
+
+### Custom Document Functions
+
+These functions in `dhstore.py` allow caller-defined collections (not
+in `COLLECTIONS` or `COLL_PATTERNS`) to store arbitrary structured
+documents.  All functions guard against accidental writes to managed
+collections and raise `ValueError` if the target collection is managed.
+
+- **`store_custom_documents(collection, documents)`** — upserts a list
+  of documents, one per dict.  Each document must have a non-blank
+  `name` field.  `doc_id` is auto-assigned as `"{name}_{uuid4}"` if
+  not pre-set by the caller.  Non-dict objects are coerced via
+  `vars()`/`dict()` before raising on failure.  Documents must be
+  JSON-serializable.
+- **`delete_custom_documents_by_field(collection, field, value)`** —
+  deletes all custom documents where `field == value`.
+- **`get_custom_documents_by_field(collection, field, value)`** —
+  returns matching custom documents as a list of dicts.
+- **`get_all_custom_documents(collection)`** — returns all documents
+  in the collection as a list of dicts.
+
+### StoredImage and GridFS
+
+**`StoredImage`** (defined in `dhtypes.py`) is a metadata-only object
+for images stored in MongoDB GridFS:
+
+| Field | Description |
+|---|---|
+| `image_id` | Unique ID, auto-generated as `"{name}_{created_epoch}"` |
+| `name` | Required non-blank label; raises `ValueError` if blank or None |
+| `created_epoch` | Integer epoch timestamp at creation |
+
+Binary data is not held in the object.  Use `load_data()` to retrieve
+bytes from GridFS after construction.
+
+GridFS storage functions in `dhstore.py`:
+
+- **`store_images(images, data_list, bucket)`** — stores a list of
+  `StoredImage` objects and corresponding binary data to GridFS.
+  `image_id` must already be set on each object before calling.
+  Returns a list of `image_id` strings.
+- **`store_image_from_path(path, name, ...)`** — convenience wrapper;
+  reads binary from a file path, constructs a `StoredImage`, and
+  stores it in one call.
+- **`get_image_data(image_id, bucket)`** — returns raw bytes from
+  GridFS for the given `image_id`.
+- **`get_image_by_id(image_id, bucket)`** — returns an `ImageResponse`
+  with `data`, `content_type`, `filename`, and `metadata` fields in a
+  single round-trip.
+- **`get_images_metadata_by_field(field, value, bucket)`** — returns
+  matching GridFS metadata documents (no binary data).
+- **`delete_images_by_field(field, value, bucket)`** — deletes all
+  GridFS images where `metadata.<field> == value`.
+- **`delete_images_by_image_id(image_ids, bucket)`** — deletes
+  specific GridFS images by a list of `image_id` strings.
+
+A unique index on `metadata.image_id` in `images.files` prevents
+duplicate image entries.
+
+### Integrity Checks
+
+`dhstore.py` exposes integrity check functions used to audit stored
+data quality:
+
+- **`check_integrity_no_nameless_objects()`** — finds documents
+  without a valid `name` field across all managed collections.
+- **`check_integrity_orphaned_images(reference_map)`** — finds GridFS
+  images whose `image_id` is not referenced by any document in the
+  caller-supplied map of `{collection: [field_paths]}`.  Uses
+  `distinct()` per field path so indexes are leveraged rather than
+  loading full documents.
+
 ## For AI Agents
 
 **Important:** AI agents working on this project MUST read
