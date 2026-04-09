@@ -255,6 +255,243 @@ there.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhmongo.store_custom_document">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhmongo.</span></span><span class="sig-name descname"><span class="pre">store_custom_document</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">document</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhmongo.html#store_custom_document"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhmongo.store_custom_document" title="Permalink to this definition">¶</a></dt>
+<dd><p>Upsert a single custom document by doc_id.</p>
+<p>doc_id is guaranteed present by store_custom_documents() before
+this is called.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>document</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – Dict with a pre-assigned doc_id field.</p></li>
+<li><p><strong>collection</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Target collection name.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The stored document dict as returned by MongoDB.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhmongo.get_custom_documents_by_field">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhmongo.</span></span><span class="sig-name descname"><span class="pre">get_custom_documents_by_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">collection</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhmongo.html#get_custom_documents_by_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhmongo.get_custom_documents_by_field" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return documents matching field==value from collection.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>collection</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Source collection name.</p></li>
+<li><p><strong>field</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Field name to filter on.</p></li>
+<li><p><strong>value</strong> – Value to match.</p></li>
+<li><p><strong>limit</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Maximum documents to return; 0 means no limit.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>list of dicts, insertion order preserved.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhmongo.get_all_custom_documents">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhmongo.</span></span><span class="sig-name descname"><span class="pre">get_all_custom_documents</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">collection</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhmongo.html#get_all_custom_documents"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhmongo.get_all_custom_documents" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return all documents from collection.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>collection</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Source collection name.</p></li>
+<li><p><strong>limit</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Maximum documents to return; 0 means no limit.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>list of dicts, insertion order preserved.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhmongo.delete_custom_documents_by_field">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhmongo.</span></span><span class="sig-name descname"><span class="pre">delete_custom_documents_by_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">collection</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhmongo.html#delete_custom_documents_by_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhmongo.delete_custom_documents_by_field" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete all documents matching field==value from collection.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>collection</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Target collection name.</p></li>
+<li><p><strong>field</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Field name to match on.</p></li>
+<li><p><strong>value</strong> – Value to match.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>pymongo DeleteResult.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhmongo.store_image">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhmongo.</span></span><span class="sig-name descname"><span class="pre">store_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bucket</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhmongo.html#store_image"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhmongo.store_image" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write binary image data and metadata to GridFS.</p>
+<p>Uses GridFSBucket with the given bucket prefix.  The metadata
+dict must include image_id (the stable human-readable key built
+from name and created_epoch); it is stored as GridFS file metadata
+so subsequent queries by image_id can resolve the internal ObjectId.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image_data</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)"><em>bytes</em></a>) – Raw bytes of the image.</p></li>
+<li><p><strong>metadata</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – Dict of metadata fields to embed in the GridFS file
+document.  Must contain image_id and name.</p></li>
+<li><p><strong>bucket</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – GridFS bucket prefix (e.g., “images”).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The image_id from the metadata dict.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhmongo.get_image_data">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhmongo.</span></span><span class="sig-name descname"><span class="pre">get_image_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bucket</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhmongo.html#get_image_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhmongo.get_image_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return raw binary data for the image identified by image_id.</p>
+<p>The internal GridFS ObjectId (_id) is resolved by querying the
+files sub-collection for image_id rather than used directly;
+the public API always accepts image_id as the primary key
+so callers never need to manage ObjectIds.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image_id</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The stable image_id string assigned at creation.</p></li>
+<li><p><strong>bucket</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – GridFS bucket prefix.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Raw binary content.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)">bytes</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#KeyError" title="(in Python v3.14)"><strong>KeyError</strong></a> – If no image with the given image_id is found.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhmongo.get_image_by_id">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhmongo.</span></span><span class="sig-name descname"><span class="pre">get_image_by_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bucket</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhmongo.html#get_image_by_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhmongo.get_image_by_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return binary data and metadata dict for the image.</p>
+<p>Performs a single round-trip: resolves the internal ObjectId
+from the files sub-collection, streams the binary data, and
+returns both the raw bytes and metadata dict in one call.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image_id</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The stable image_id string assigned at creation.</p></li>
+<li><p><strong>bucket</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – GridFS bucket prefix.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>(data: bytes, metadata: dict)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#KeyError" title="(in Python v3.14)"><strong>KeyError</strong></a> – If no image with the given image_id is found.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhmongo.get_image_metadata_by_field">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhmongo.</span></span><span class="sig-name descname"><span class="pre">get_image_metadata_by_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bucket</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhmongo.html#get_image_metadata_by_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhmongo.get_image_metadata_by_field" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return metadata dicts for images matching metadata.field==value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>field</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Metadata field name to filter on.</p></li>
+<li><p><strong>value</strong> – Value to match.</p></li>
+<li><p><strong>bucket</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – GridFS bucket prefix.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>list of metadata dicts extracted from matching GridFS documents.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhmongo.delete_image">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhmongo.</span></span><span class="sig-name descname"><span class="pre">delete_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bucket</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhmongo.html#delete_image"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhmongo.delete_image" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete the GridFS image identified by image_id.</p>
+<p>The internal ObjectId is resolved from the image_id metadata field
+rather than used directly; the public API always uses image_id.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image_id</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The stable image_id string assigned at creation.</p></li>
+<li><p><strong>bucket</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – GridFS bucket prefix.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#KeyError" title="(in Python v3.14)"><strong>KeyError</strong></a> – If no image with the given image_id is found.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhmongo.delete_images_by_field">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhmongo.</span></span><span class="sig-name descname"><span class="pre">delete_images_by_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bucket</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhmongo.html#delete_images_by_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhmongo.delete_images_by_field" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete all GridFS images whose metadata.field matches value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>field</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Metadata field name to match on.</p></li>
+<li><p><strong>value</strong> – Value to match.</p></li>
+<li><p><strong>bucket</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – GridFS bucket prefix.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Count of images deleted.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhmongo.delete_images_by_image_id">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhmongo.</span></span><span class="sig-name descname"><span class="pre">delete_images_by_image_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image_ids</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bucket</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhmongo.html#delete_images_by_image_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhmongo.delete_images_by_image_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete GridFS images for each image_id in the list.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image_ids</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a>) – List of image_id strings to delete.</p></li>
+<li><p><strong>bucket</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – GridFS bucket prefix.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>Count of images actually deleted (may be less than</dt><dd><p>len(image_ids) if some were not found).</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhmongo.get_trades_by_field">
 <span class="sig-prename descclassname"><span class="pre">dhtrader.dhmongo.</span></span><span class="sig-name descname"><span class="pre">get_trades_by_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhmongo.html#get_trades_by_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhmongo.get_trades_by_field" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns &lt;limit&gt; (0 = all) Trade documents matching (field == value).</p>
@@ -864,6 +1101,17 @@ start before or on it.</p>
 <li><a class="reference internal" href="#dhtrader.dhmongo.list_values_by_regex_match"><code class="docutils literal notranslate"><span class="pre">list_values_by_regex_match()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhmongo.update_records_value"><code class="docutils literal notranslate"><span class="pre">update_records_value()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhmongo.delete_one_document"><code class="docutils literal notranslate"><span class="pre">delete_one_document()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhmongo.store_custom_document"><code class="docutils literal notranslate"><span class="pre">store_custom_document()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhmongo.get_custom_documents_by_field"><code class="docutils literal notranslate"><span class="pre">get_custom_documents_by_field()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhmongo.get_all_custom_documents"><code class="docutils literal notranslate"><span class="pre">get_all_custom_documents()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhmongo.delete_custom_documents_by_field"><code class="docutils literal notranslate"><span class="pre">delete_custom_documents_by_field()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhmongo.store_image"><code class="docutils literal notranslate"><span class="pre">store_image()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhmongo.get_image_data"><code class="docutils literal notranslate"><span class="pre">get_image_data()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhmongo.get_image_by_id"><code class="docutils literal notranslate"><span class="pre">get_image_by_id()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhmongo.get_image_metadata_by_field"><code class="docutils literal notranslate"><span class="pre">get_image_metadata_by_field()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhmongo.delete_image"><code class="docutils literal notranslate"><span class="pre">delete_image()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhmongo.delete_images_by_field"><code class="docutils literal notranslate"><span class="pre">delete_images_by_field()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhmongo.delete_images_by_image_id"><code class="docutils literal notranslate"><span class="pre">delete_images_by_image_id()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhmongo.get_trades_by_field"><code class="docutils literal notranslate"><span class="pre">get_trades_by_field()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhmongo.get_trades_by_field_in"><code class="docutils literal notranslate"><span class="pre">get_trades_by_field_in()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhmongo.store_trades"><code class="docutils literal notranslate"><span class="pre">store_trades()</span></code></a></li>

@@ -75,6 +75,8 @@
 
     <span class="n">env_files</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">try</span><span class="p">:</span>
+        <span class="c1"># Parse the rightmost segment of mongo.env.&lt;name&gt; filenames to</span>
+        <span class="c1"># build the name-to-path mapping.</span>
         <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">script_dir</span><span class="p">)):</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;mongo.env.&#39;</span><span class="p">):</span>
                 <span class="k">continue</span>
@@ -112,6 +114,7 @@
                 <span class="k">if</span> <span class="s1">&#39;=&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
                     <span class="k">continue</span>
                 <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;=&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="c1"># Strip optional bash &#39;export&#39; prefix and normalize quotes.</span>
                 <span class="n">normalized_key</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;export &#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">normalized_key</span> <span class="o">!=</span> <span class="s1">&#39;MONGO_CONN&#39;</span><span class="p">:</span>
                     <span class="k">continue</span>

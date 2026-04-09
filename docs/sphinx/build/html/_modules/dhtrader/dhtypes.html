@@ -4087,6 +4087,169 @@
         <span class="k">return</span> <span class="n">results</span></div></div>
 
 
+<div class="viewcode-block" id="StoredImage"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.StoredImage">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">StoredImage</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Image stored in MongoDB GridFS with a metadata record.</span>
+
+<span class="sd">    Binary data lives in GridFS and is retrieved on demand via</span>
+<span class="sd">    load_data() or dhstore.get_image_data(image_id).  This class</span>
+<span class="sd">    holds metadata only; no binary attribute is stored here.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name: Descriptive name matching the role of the image</span>
+<span class="sd">            (e.g., the chart filename stem).  Must be a non-blank,</span>
+<span class="sd">            non-None string; raises ValueError at construction if</span>
+<span class="sd">            blank or None.  Defaults to DEFAULT_OBJ_NAME.  Test</span>
+<span class="sd">            objects must include &quot;DELETEME&quot; in this field.</span>
+<span class="sd">        image_id: Stable unique ID generated at object creation as</span>
+<span class="sd">            f&quot;{name}_{created_epoch}&quot;.  Set before storage; never</span>
+<span class="sd">            changes after creation.  Used as the primary key for</span>
+<span class="sd">            all retrieval and deletion operations through the</span>
+<span class="sd">            public API.  If None, generated automatically from</span>
+<span class="sd">            name and created_epoch.</span>
+<span class="sd">        content_type: MIME type string (e.g., &quot;image/jpeg&quot;).</span>
+<span class="sd">        filename: Original filename string for reference.</span>
+<span class="sd">        description: Optional human-readable description.</span>
+<span class="sd">        parent_collection: Collection name of the parent document.</span>
+<span class="sd">        parent_id_field: Field name of the parent&#39;s unique ID.</span>
+<span class="sd">        parent_id_value: Value of the parent&#39;s unique ID.</span>
+<span class="sd">        created_epoch: Integer Unix timestamp set at creation;</span>
+<span class="sd">            included in image_id.  Defaults to now.</span>
+<span class="sd">        created_dt: ISO datetime string derived from created_epoch.</span>
+<span class="sd">            Set automatically from created_epoch if not supplied.</span>
+<span class="sd">        tags: Optional list of string tags.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DEFAULT_OBJ_NAME</span><span class="p">,</span>
+            <span class="n">image_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">content_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;image/jpeg&quot;</span><span class="p">,</span>
+            <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">parent_collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">parent_id_field</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">parent_id_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">created_epoch</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">created_dt</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">tags</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize a StoredImage instance.&quot;&quot;&quot;</span>
+        <span class="c1"># Enforce non-blank name so integrity checks always identify it.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">name</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;StoredImage name must be a non-blank, non-None string; &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;got </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="c1"># Record creation time; used to build a deterministic image_id.</span>
+        <span class="k">if</span> <span class="n">created_epoch</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">created_epoch</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">timestamp</span><span class="p">())</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">created_epoch</span> <span class="o">=</span> <span class="n">created_epoch</span>
+        <span class="c1"># Derive ISO datetime string from the stored epoch.</span>
+        <span class="k">if</span> <span class="n">created_dt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">created_dt</span> <span class="o">=</span> <span class="n">dt_as_str</span><span class="p">(</span>
+                <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">fromtimestamp</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">created_epoch</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">created_dt</span> <span class="o">=</span> <span class="n">created_dt</span>
+        <span class="c1"># Build a stable, descriptive image_id if not supplied.</span>
+        <span class="k">if</span> <span class="n">image_id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">image_id</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">created_epoch</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">image_id</span> <span class="o">=</span> <span class="n">image_id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">content_type</span> <span class="o">=</span> <span class="n">content_type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filename</span> <span class="o">=</span> <span class="n">filename</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="n">description</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent_collection</span> <span class="o">=</span> <span class="n">parent_collection</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent_id_field</span> <span class="o">=</span> <span class="n">parent_id_field</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent_id_value</span> <span class="o">=</span> <span class="n">parent_id_value</span>
+        <span class="k">if</span> <span class="n">tags</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tags</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tags</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span>
+
+<div class="viewcode-block" id="StoredImage.__eq__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.StoredImage.__eq__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return True if image_id and name match.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">StoredImage</span><span class="p">)</span>
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">image_id</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">image_id</span>
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">name</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="StoredImage.__repr__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.StoredImage.__repr__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a concise developer-facing representation.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;StoredImage(name=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2">, &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;image_id=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">image_id</span><span class="si">!r}</span><span class="s2">)&quot;</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="StoredImage.__str__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.StoredImage.__str__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return string form of the clean metadata dict.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">to_clean_dict</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="StoredImage.to_clean_dict"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.StoredImage.to_clean_dict">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">to_clean_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a plain dict of all metadata fields (no binary).</span>
+
+<span class="sd">        Suitable for JSON serialization and MongoDB storage via</span>
+<span class="sd">        store_custom_documents().  Binary data is not included;</span>
+<span class="sd">        call load_data() to retrieve bytes separately.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="s2">&quot;image_id&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">image_id</span><span class="p">,</span>
+            <span class="s2">&quot;content_type&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">content_type</span><span class="p">,</span>
+            <span class="s2">&quot;filename&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">filename</span><span class="p">,</span>
+            <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">,</span>
+            <span class="s2">&quot;parent_collection&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_collection</span><span class="p">,</span>
+            <span class="s2">&quot;parent_id_field&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_id_field</span><span class="p">,</span>
+            <span class="s2">&quot;parent_id_value&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_id_value</span><span class="p">,</span>
+            <span class="s2">&quot;created_epoch&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">created_epoch</span><span class="p">,</span>
+            <span class="s2">&quot;created_dt&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">created_dt</span><span class="p">,</span>
+            <span class="s2">&quot;tags&quot;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tags</span><span class="p">),</span>
+        <span class="p">}</span></div>
+
+<div class="viewcode-block" id="StoredImage.from_dict"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.StoredImage.from_dict">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">d</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Reconstruct a StoredImage from a metadata dict.</span>
+
+<span class="sd">        Suitable for rebuilding from MongoDB documents returned by</span>
+<span class="sd">        dhstore.get_images_metadata_by_field() or list_images().</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            d: Dict with StoredImage metadata keys.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            StoredImage instance.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="n">DEFAULT_OBJ_NAME</span><span class="p">),</span>
+            <span class="n">image_id</span><span class="o">=</span><span class="n">d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;image_id&quot;</span><span class="p">),</span>
+            <span class="n">content_type</span><span class="o">=</span><span class="n">d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content_type&quot;</span><span class="p">,</span> <span class="s2">&quot;image/jpeg&quot;</span><span class="p">),</span>
+            <span class="n">filename</span><span class="o">=</span><span class="n">d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;filename&quot;</span><span class="p">),</span>
+            <span class="n">description</span><span class="o">=</span><span class="n">d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;description&quot;</span><span class="p">),</span>
+            <span class="n">parent_collection</span><span class="o">=</span><span class="n">d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;parent_collection&quot;</span><span class="p">),</span>
+            <span class="n">parent_id_field</span><span class="o">=</span><span class="n">d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;parent_id_field&quot;</span><span class="p">),</span>
+            <span class="n">parent_id_value</span><span class="o">=</span><span class="n">d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;parent_id_value&quot;</span><span class="p">),</span>
+            <span class="n">created_epoch</span><span class="o">=</span><span class="n">d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;created_epoch&quot;</span><span class="p">),</span>
+            <span class="n">created_dt</span><span class="o">=</span><span class="n">d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;created_dt&quot;</span><span class="p">),</span>
+            <span class="n">tags</span><span class="o">=</span><span class="n">d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;tags&quot;</span><span class="p">),</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="StoredImage.load_data"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.StoredImage.load_data">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">load_data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the raw binary data for this image from GridFS.</span>
+
+<span class="sd">        Delegates to dhstore.get_image_data() via the lazy import</span>
+<span class="sd">        wrapper to avoid circular imports.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bytes: Raw binary content of the stored image.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Import dhstore lazily to avoid circular import at module load.</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">dhtrader.dhstore</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">dhstore</span>
+        <span class="k">return</span> <span class="n">dhstore</span><span class="o">.</span><span class="n">get_image_data</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">image_id</span><span class="p">)</span></div></div>
+
+
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
     <span class="s2">&quot;CANDLE_TIMEFRAMES&quot;</span><span class="p">,</span>
     <span class="s2">&quot;BEGINNING_OF_TIME&quot;</span><span class="p">,</span>
@@ -4119,6 +4282,7 @@
     <span class="s2">&quot;TradePlan&quot;</span><span class="p">,</span>
     <span class="s2">&quot;TradeSeries&quot;</span><span class="p">,</span>
     <span class="s2">&quot;Backtest&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;StoredImage&quot;</span><span class="p">,</span>
 <span class="p">]</span>
 </pre></div>
 

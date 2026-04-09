@@ -322,6 +322,285 @@
 
     <span class="k">return</span> <span class="n">result</span></div>
 
+
+<div class="viewcode-block" id="store_custom_document"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.store_custom_document">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">store_custom_document</span><span class="p">(</span><span class="n">document</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+                          <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                          <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Upsert a single custom document by doc_id.</span>
+
+<span class="sd">    doc_id is guaranteed present by store_custom_documents() before</span>
+<span class="sd">    this is called.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        document: Dict with a pre-assigned doc_id field.</span>
+<span class="sd">        collection: Target collection name.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        The stored document dict as returned by MongoDB.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">find_one_and_replace</span><span class="p">(</span>
+        <span class="p">{</span><span class="s2">&quot;doc_id&quot;</span><span class="p">:</span> <span class="n">document</span><span class="p">[</span><span class="s2">&quot;doc_id&quot;</span><span class="p">]},</span>
+        <span class="n">document</span><span class="p">,</span>
+        <span class="n">upsert</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">return_document</span><span class="o">=</span><span class="n">pymongo</span><span class="o">.</span><span class="n">ReturnDocument</span><span class="o">.</span><span class="n">AFTER</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="get_custom_documents_by_field"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.get_custom_documents_by_field">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_custom_documents_by_field</span><span class="p">(</span><span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                                  <span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                                  <span class="n">value</span><span class="p">,</span>
+                                  <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+                                  <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return documents matching field==value from collection.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        collection: Source collection name.</span>
+<span class="sd">        field: Field name to filter on.</span>
+<span class="sd">        value: Value to match.</span>
+<span class="sd">        limit: Maximum documents to return; 0 means no limit.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        list of dicts, insertion order preserved.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+    <span class="n">cursor</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="n">field</span><span class="p">:</span> <span class="n">value</span><span class="p">})</span>
+    <span class="k">if</span> <span class="n">limit</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">cursor</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="n">limit</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">cursor</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_all_custom_documents"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.get_all_custom_documents">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_all_custom_documents</span><span class="p">(</span><span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                             <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+                             <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return all documents from collection.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        collection: Source collection name.</span>
+<span class="sd">        limit: Maximum documents to return; 0 means no limit.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        list of dicts, insertion order preserved.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+    <span class="n">cursor</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">find</span><span class="p">({})</span>
+    <span class="k">if</span> <span class="n">limit</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">cursor</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="n">limit</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">cursor</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="delete_custom_documents_by_field"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.delete_custom_documents_by_field">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">delete_custom_documents_by_field</span><span class="p">(</span><span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                                     <span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                                     <span class="n">value</span><span class="p">,</span>
+                                     <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete all documents matching field==value from collection.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        collection: Target collection name.</span>
+<span class="sd">        field: Field name to match on.</span>
+<span class="sd">        value: Value to match.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        pymongo DeleteResult.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">c</span><span class="o">.</span><span class="n">delete_many</span><span class="p">({</span><span class="n">field</span><span class="p">:</span> <span class="n">value</span><span class="p">})</span></div>
+
+<span class="c1">##############################################################################</span>
+<span class="c1"># GridFS image storage</span>
+
+
+<div class="viewcode-block" id="store_image"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.store_image">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">store_image</span><span class="p">(</span>
+        <span class="n">image_data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span>
+        <span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+        <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Write binary image data and metadata to GridFS.</span>
+
+<span class="sd">    Uses GridFSBucket with the given bucket prefix.  The metadata</span>
+<span class="sd">    dict must include image_id (the stable human-readable key built</span>
+<span class="sd">    from name and created_epoch); it is stored as GridFS file metadata</span>
+<span class="sd">    so subsequent queries by image_id can resolve the internal ObjectId.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        image_data: Raw bytes of the image.</span>
+<span class="sd">        metadata: Dict of metadata fields to embed in the GridFS file</span>
+<span class="sd">            document.  Must contain image_id and name.</span>
+<span class="sd">        bucket: GridFS bucket prefix (e.g., &quot;images&quot;).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: The image_id from the metadata dict.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">gridfs</span><span class="w"> </span><span class="kn">import</span> <span class="n">GridFSBucket</span>
+    <span class="n">fs</span> <span class="o">=</span> <span class="n">GridFSBucket</span><span class="p">(</span><span class="n">db</span><span class="p">,</span> <span class="n">bucket_name</span><span class="o">=</span><span class="n">bucket</span><span class="p">)</span>
+    <span class="n">filename</span> <span class="o">=</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;filename&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;image_id&quot;</span><span class="p">,</span> <span class="s2">&quot;image&quot;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">fs</span><span class="o">.</span><span class="n">open_upload_stream</span><span class="p">(</span>
+        <span class="n">filename</span><span class="p">,</span>
+        <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span>
+    <span class="p">)</span> <span class="k">as</span> <span class="n">grid_in</span><span class="p">:</span>
+        <span class="n">grid_in</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">image_data</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;image_id&quot;</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="get_image_data"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.get_image_data">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_image_data</span><span class="p">(</span><span class="n">image_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return raw binary data for the image identified by image_id.</span>
+
+<span class="sd">    The internal GridFS ObjectId (_id) is resolved by querying the</span>
+<span class="sd">    files sub-collection for image_id rather than used directly;</span>
+<span class="sd">    the public API always accepts image_id as the primary key</span>
+<span class="sd">    so callers never need to manage ObjectIds.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        image_id: The stable image_id string assigned at creation.</span>
+<span class="sd">        bucket: GridFS bucket prefix.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        bytes: Raw binary content.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        KeyError: If no image with the given image_id is found.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">gridfs</span><span class="w"> </span><span class="kn">import</span> <span class="n">GridFSBucket</span>
+    <span class="n">fs</span> <span class="o">=</span> <span class="n">GridFSBucket</span><span class="p">(</span><span class="n">db</span><span class="p">,</span> <span class="n">bucket_name</span><span class="o">=</span><span class="n">bucket</span><span class="p">)</span>
+    <span class="c1"># Resolve the internal ObjectId from the image_id metadata field.</span>
+    <span class="n">files_coll</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">.files&quot;</span><span class="p">]</span>
+    <span class="n">doc</span> <span class="o">=</span> <span class="n">files_coll</span><span class="o">.</span><span class="n">find_one</span><span class="p">({</span><span class="s2">&quot;metadata.image_id&quot;</span><span class="p">:</span> <span class="n">image_id</span><span class="p">})</span>
+    <span class="k">if</span> <span class="n">doc</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;get_image_data: no image found with image_id=</span><span class="si">{</span><span class="n">image_id</span><span class="si">!r}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+    <span class="k">with</span> <span class="n">fs</span><span class="o">.</span><span class="n">open_download_stream</span><span class="p">(</span><span class="n">doc</span><span class="p">[</span><span class="s2">&quot;_id&quot;</span><span class="p">])</span> <span class="k">as</span> <span class="n">grid_out</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">grid_out</span><span class="o">.</span><span class="n">read</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="get_image_by_id"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.get_image_by_id">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_image_by_id</span><span class="p">(</span><span class="n">image_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return binary data and metadata dict for the image.</span>
+
+<span class="sd">    Performs a single round-trip: resolves the internal ObjectId</span>
+<span class="sd">    from the files sub-collection, streams the binary data, and</span>
+<span class="sd">    returns both the raw bytes and metadata dict in one call.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        image_id: The stable image_id string assigned at creation.</span>
+<span class="sd">        bucket: GridFS bucket prefix.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple: (data: bytes, metadata: dict)</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        KeyError: If no image with the given image_id is found.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">gridfs</span><span class="w"> </span><span class="kn">import</span> <span class="n">GridFSBucket</span>
+    <span class="n">fs</span> <span class="o">=</span> <span class="n">GridFSBucket</span><span class="p">(</span><span class="n">db</span><span class="p">,</span> <span class="n">bucket_name</span><span class="o">=</span><span class="n">bucket</span><span class="p">)</span>
+    <span class="c1"># Resolve ObjectId and metadata in one query.</span>
+    <span class="n">files_coll</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">.files&quot;</span><span class="p">]</span>
+    <span class="n">doc</span> <span class="o">=</span> <span class="n">files_coll</span><span class="o">.</span><span class="n">find_one</span><span class="p">({</span><span class="s2">&quot;metadata.image_id&quot;</span><span class="p">:</span> <span class="n">image_id</span><span class="p">})</span>
+    <span class="k">if</span> <span class="n">doc</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
+            <span class="s2">&quot;get_image_by_id: no image found with &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;image_id=</span><span class="si">{</span><span class="n">image_id</span><span class="si">!r}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+    <span class="k">with</span> <span class="n">fs</span><span class="o">.</span><span class="n">open_download_stream</span><span class="p">(</span><span class="n">doc</span><span class="p">[</span><span class="s2">&quot;_id&quot;</span><span class="p">])</span> <span class="k">as</span> <span class="n">grid_out</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">grid_out</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="p">{}))</span></div>
+
+
+<div class="viewcode-block" id="get_image_metadata_by_field"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.get_image_metadata_by_field">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_image_metadata_by_field</span><span class="p">(</span>
+        <span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">value</span><span class="p">,</span>
+        <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return metadata dicts for images matching metadata.field==value.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        field: Metadata field name to filter on.</span>
+<span class="sd">        value: Value to match.</span>
+<span class="sd">        bucket: GridFS bucket prefix.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        list of metadata dicts extracted from matching GridFS documents.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">files_coll</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">.files&quot;</span><span class="p">]</span>
+    <span class="n">docs</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">files_coll</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="sa">f</span><span class="s2">&quot;metadata.</span><span class="si">{</span><span class="n">field</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">:</span> <span class="n">value</span><span class="p">}))</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="p">{})</span> <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">docs</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="delete_image"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.delete_image">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">delete_image</span><span class="p">(</span><span class="n">image_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete the GridFS image identified by image_id.</span>
+
+<span class="sd">    The internal ObjectId is resolved from the image_id metadata field</span>
+<span class="sd">    rather than used directly; the public API always uses image_id.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        image_id: The stable image_id string assigned at creation.</span>
+<span class="sd">        bucket: GridFS bucket prefix.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        KeyError: If no image with the given image_id is found.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">gridfs</span><span class="w"> </span><span class="kn">import</span> <span class="n">GridFSBucket</span>
+    <span class="n">fs</span> <span class="o">=</span> <span class="n">GridFSBucket</span><span class="p">(</span><span class="n">db</span><span class="p">,</span> <span class="n">bucket_name</span><span class="o">=</span><span class="n">bucket</span><span class="p">)</span>
+    <span class="c1"># Resolve internal ObjectId from image_id metadata field.</span>
+    <span class="n">files_coll</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">.files&quot;</span><span class="p">]</span>
+    <span class="n">doc</span> <span class="o">=</span> <span class="n">files_coll</span><span class="o">.</span><span class="n">find_one</span><span class="p">({</span><span class="s2">&quot;metadata.image_id&quot;</span><span class="p">:</span> <span class="n">image_id</span><span class="p">})</span>
+    <span class="k">if</span> <span class="n">doc</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;delete_image: no image found with image_id=</span><span class="si">{</span><span class="n">image_id</span><span class="si">!r}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+    <span class="n">fs</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">doc</span><span class="p">[</span><span class="s2">&quot;_id&quot;</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="delete_images_by_field"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.delete_images_by_field">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">delete_images_by_field</span><span class="p">(</span>
+        <span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">value</span><span class="p">,</span>
+        <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete all GridFS images whose metadata.field matches value.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        field: Metadata field name to match on.</span>
+<span class="sd">        value: Value to match.</span>
+<span class="sd">        bucket: GridFS bucket prefix.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        int: Count of images deleted.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">gridfs</span><span class="w"> </span><span class="kn">import</span> <span class="n">GridFSBucket</span>
+    <span class="n">fs</span> <span class="o">=</span> <span class="n">GridFSBucket</span><span class="p">(</span><span class="n">db</span><span class="p">,</span> <span class="n">bucket_name</span><span class="o">=</span><span class="n">bucket</span><span class="p">)</span>
+    <span class="n">files_coll</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">.files&quot;</span><span class="p">]</span>
+    <span class="c1"># Collect all matching internal ObjectIds before deletion.</span>
+    <span class="n">docs</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">files_coll</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="sa">f</span><span class="s2">&quot;metadata.</span><span class="si">{</span><span class="n">field</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">:</span> <span class="n">value</span><span class="p">}))</span>
+    <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">docs</span><span class="p">:</span>
+        <span class="n">fs</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">doc</span><span class="p">[</span><span class="s2">&quot;_id&quot;</span><span class="p">])</span>
+    <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">docs</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="delete_images_by_image_id"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.delete_images_by_image_id">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">delete_images_by_image_id</span><span class="p">(</span>
+        <span class="n">image_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+        <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete GridFS images for each image_id in the list.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        image_ids: List of image_id strings to delete.</span>
+<span class="sd">        bucket: GridFS bucket prefix.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        int: Count of images actually deleted (may be less than</span>
+<span class="sd">            len(image_ids) if some were not found).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">gridfs</span><span class="w"> </span><span class="kn">import</span> <span class="n">GridFSBucket</span>
+    <span class="n">fs</span> <span class="o">=</span> <span class="n">GridFSBucket</span><span class="p">(</span><span class="n">db</span><span class="p">,</span> <span class="n">bucket_name</span><span class="o">=</span><span class="n">bucket</span><span class="p">)</span>
+    <span class="n">files_coll</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">.files&quot;</span><span class="p">]</span>
+    <span class="n">deleted</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">image_id</span> <span class="ow">in</span> <span class="n">image_ids</span><span class="p">:</span>
+        <span class="n">doc</span> <span class="o">=</span> <span class="n">files_coll</span><span class="o">.</span><span class="n">find_one</span><span class="p">({</span><span class="s2">&quot;metadata.image_id&quot;</span><span class="p">:</span> <span class="n">image_id</span><span class="p">})</span>
+        <span class="k">if</span> <span class="n">doc</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">fs</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">doc</span><span class="p">[</span><span class="s2">&quot;_id&quot;</span><span class="p">])</span>
+            <span class="n">deleted</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="n">deleted</span></div>
+
 <span class="c1">##############################################################################</span>
 <span class="c1"># Trades</span>
 
@@ -392,7 +671,8 @@
     <span class="k">if</span> <span class="ow">not</span> <span class="n">trades</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">[]</span>
 
-    <span class="c1"># Build bulk operations list</span>
+    <span class="c1"># Build upsert operations keyed on identity fields; handles both new</span>
+    <span class="c1"># inserts and idempotent updates without separate existence checks.</span>
     <span class="n">operations</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">trades</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;trade_id&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">str</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;trade_id&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>

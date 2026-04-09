@@ -436,8 +436,8 @@
         <span class="n">second</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">6</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">dt</span><span class="p">(</span><span class="n">year</span><span class="p">,</span> <span class="n">month</span><span class="p">,</span> <span class="n">day</span><span class="p">,</span> <span class="n">hour</span><span class="p">,</span> <span class="n">minute</span><span class="p">,</span> <span class="n">second</span><span class="p">)</span>
 
-    <span class="c1"># Raise a ValueError Exception if we could not successfully parse a valid</span>
-    <span class="c1"># datetime from the given string</span>
+    <span class="c1"># All supported regex patterns exhausted; the input format is not</span>
+    <span class="c1"># recognized.</span>
     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
         <span class="sa">f</span><span class="s2">&quot;Unsupported datetime string format: </span><span class="si">{</span><span class="n">d</span><span class="si">}</span><span class="s2">. Expected &quot;</span>
         <span class="s2">&quot;YYYY-mm-dd HH:MM:SS or shorthand with &#39;-&#39; separators.&quot;</span>
@@ -551,7 +551,7 @@
     <span class="n">min_delta</span> <span class="o">=</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
     <span class="c1"># Start by removing secs and microsecs to get to the whole minute</span>
     <span class="n">this_dt</span> <span class="o">=</span> <span class="n">this_dt</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">microsecond</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">second</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-    <span class="c1"># Now drop back 1 minute at a time to reach the timeframe correct start</span>
+    <span class="c1"># Align to the timeframe&#39;s period boundary by stepping back one minute.</span>
     <span class="k">if</span> <span class="n">timeframe</span> <span class="o">==</span> <span class="s2">&quot;1m&quot;</span><span class="p">:</span>
         <span class="k">pass</span>
     <span class="k">elif</span> <span class="n">timeframe</span> <span class="o">==</span> <span class="s2">&quot;5m&quot;</span><span class="p">:</span>
@@ -567,8 +567,8 @@
         <span class="k">while</span> <span class="n">this_dt</span><span class="o">.</span><span class="n">minute</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">this_dt</span> <span class="o">=</span> <span class="n">this_dt</span> <span class="o">-</span> <span class="n">min_delta</span>
     <span class="k">elif</span> <span class="n">timeframe</span> <span class="o">==</span> <span class="s2">&quot;e1d&quot;</span><span class="p">:</span>
-        <span class="c1"># e1d candles start at 18:00:00</span>
-        <span class="c1"># Return the most recent 18:00:00 datetime</span>
+        <span class="c1"># ETH daily sessions start at 18:00; find the most recent 18:00</span>
+        <span class="c1"># boundary (same or prior day depending on current time).</span>
         <span class="k">if</span> <span class="n">this_dt</span><span class="o">.</span><span class="n">hour</span> <span class="o">&gt;=</span> <span class="mi">18</span><span class="p">:</span>
             <span class="c1"># At or after 6pm, return today at 18:00</span>
             <span class="n">this_dt</span> <span class="o">=</span> <span class="n">this_dt</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
@@ -578,8 +578,8 @@
             <span class="n">this_dt</span> <span class="o">=</span> <span class="p">(</span><span class="n">this_dt</span> <span class="o">-</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
                 <span class="n">hour</span><span class="o">=</span><span class="mi">18</span><span class="p">,</span> <span class="n">minute</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">second</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">microsecond</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
     <span class="k">elif</span> <span class="n">timeframe</span> <span class="o">==</span> <span class="s2">&quot;e1w&quot;</span><span class="p">:</span>
-        <span class="c1"># e1w candles start at Sunday 18:00:00</span>
-        <span class="c1"># Return the most recent Sunday at 18:00:00</span>
+        <span class="c1"># ETH weekly sessions start at Sunday 18:00; find the most recent</span>
+        <span class="c1"># such boundary by walking back to the prior Sunday if needed.</span>
         <span class="k">if</span> <span class="n">this_dt</span><span class="o">.</span><span class="n">weekday</span><span class="p">()</span> <span class="o">==</span> <span class="mi">6</span> <span class="ow">and</span> <span class="n">this_dt</span><span class="o">.</span><span class="n">hour</span> <span class="o">&gt;=</span> <span class="mi">18</span><span class="p">:</span>
             <span class="c1"># Sunday at/after 6pm, return Sunday at 18:00</span>
             <span class="n">this_dt</span> <span class="o">=</span> <span class="n">this_dt</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>

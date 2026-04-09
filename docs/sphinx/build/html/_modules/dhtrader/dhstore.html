@@ -46,7 +46,10 @@
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">Counter</span><span class="p">,</span> <span class="n">defaultdict</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">uuid</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">Counter</span><span class="p">,</span> <span class="n">defaultdict</span><span class="p">,</span> <span class="n">namedtuple</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span> <span class="k">as</span> <span class="n">dt</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">date</span><span class="p">,</span> <span class="n">timedelta</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">copy</span><span class="w"> </span><span class="kn">import</span> <span class="n">deepcopy</span>
@@ -54,7 +57,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.dhtypes</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">Candle</span><span class="p">,</span> <span class="n">Event</span><span class="p">,</span> <span class="n">IndicatorDataPoint</span><span class="p">,</span> <span class="n">Symbol</span><span class="p">,</span> <span class="n">IndicatorSMA</span><span class="p">,</span> <span class="n">IndicatorEMA</span><span class="p">,</span>
-    <span class="n">Trade</span><span class="p">,</span> <span class="n">TradeSeries</span><span class="p">,</span> <span class="n">TradePlan</span><span class="p">)</span>
+    <span class="n">Trade</span><span class="p">,</span> <span class="n">TradeSeries</span><span class="p">,</span> <span class="n">TradePlan</span><span class="p">,</span> <span class="n">StoredImage</span><span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.dhcommon</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">dt_as_str</span><span class="p">,</span> <span class="n">dt_as_dt</span><span class="p">,</span> <span class="n">dt_from_epoch</span><span class="p">,</span> <span class="n">dt_to_epoch</span><span class="p">,</span> <span class="n">valid_timeframe</span><span class="p">,</span>
     <span class="n">this_candle_start</span><span class="p">,</span> <span class="n">summarize_candles</span><span class="p">,</span> <span class="n">log_say</span><span class="p">,</span> <span class="n">sort_dict</span><span class="p">,</span>
@@ -62,12 +65,31 @@
     <span class="n">ProgBar</span><span class="p">,</span> <span class="n">OperationTimer</span><span class="p">,</span> <span class="n">DEFAULT_OBJ_NAME</span><span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">dhmongo</span> <span class="k">as</span> <span class="n">dhm</span>
 
-<span class="n">COLL_TRADES</span> <span class="o">=</span> <span class="s2">&quot;trades&quot;</span>
-<span class="n">COLL_TRADESERIES</span> <span class="o">=</span> <span class="s2">&quot;tradeseries&quot;</span>
-<span class="n">COLL_BACKTESTS</span> <span class="o">=</span> <span class="s2">&quot;backtests&quot;</span>
-<span class="n">COLL_TRADEPLANS</span> <span class="o">=</span> <span class="s2">&quot;tradeplans&quot;</span>
-<span class="n">COLL_IND_META</span> <span class="o">=</span> <span class="s2">&quot;indicators_meta&quot;</span>
-<span class="n">COLL_IND_DPS</span> <span class="o">=</span> <span class="s2">&quot;indicators_datapoints&quot;</span>
+<span class="c1"># All collection names owned by dhtrader classes.  Custom document</span>
+<span class="c1"># functions refuse to operate on any collection listed here.</span>
+<span class="c1"># Add new managed collections here when new classes are introduced.</span>
+<span class="n">COLLECTIONS</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;trades&quot;</span><span class="p">:</span> <span class="s2">&quot;trades&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;tradeseries&quot;</span><span class="p">:</span> <span class="s2">&quot;tradeseries&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;backtests&quot;</span><span class="p">:</span> <span class="s2">&quot;backtests&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;tradeplans&quot;</span><span class="p">:</span> <span class="s2">&quot;tradeplans&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ind_meta&quot;</span><span class="p">:</span> <span class="s2">&quot;indicators_meta&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ind_dps&quot;</span><span class="p">:</span> <span class="s2">&quot;indicators_datapoints&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;images&quot;</span><span class="p">:</span> <span class="s2">&quot;images&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="c1"># Regex patterns for dynamically named managed collections.</span>
+<span class="c1"># Add new patterns here when new dynamic collections are introduced.</span>
+<span class="c1"># gridfs pattern is scoped to the images bucket prefix so other</span>
+<span class="c1"># collections with &#39;files&#39; or &#39;chunks&#39; in the name are not blocked.</span>
+<span class="n">COLL_PATTERNS</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;candles&quot;</span><span class="p">:</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;candles_.+_.+&quot;</span><span class="p">),</span>
+    <span class="s2">&quot;events&quot;</span><span class="p">:</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;events_.+&quot;</span><span class="p">),</span>
+    <span class="s2">&quot;gridfs&quot;</span><span class="p">:</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
+        <span class="sa">rf</span><span class="s2">&quot;^</span><span class="si">{</span><span class="n">re</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">COLLECTIONS</span><span class="p">[</span><span class="s1">&#39;images&#39;</span><span class="p">])</span><span class="si">}</span><span class="s2">\.(&quot;</span>
+        <span class="sa">r</span><span class="s2">&quot;files|chunks)$&quot;</span>
+    <span class="p">),</span>
+<span class="p">}</span>
 
 <span class="c1"># Cache for Symbol instances to avoid repeated creation</span>
 <span class="n">SYMBOL_CACHE</span> <span class="o">=</span> <span class="p">{}</span>
@@ -132,11 +154,755 @@
 
 
 <span class="c1">##############################################################################</span>
+<span class="c1"># Custom document functions (non-class-specific collections)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_guard_managed_collection</span><span class="p">(</span><span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">func_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Raise ValueError if collection is managed by a dhtrader class.</span>
+
+<span class="sd">    Guards against accidental writes or deletes to class-owned collections</span>
+<span class="sd">    (COLLECTIONS dict) or dynamically named managed collections</span>
+<span class="sd">    (COLL_PATTERNS dict).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">collection</span> <span class="ow">in</span> <span class="n">COLLECTIONS</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">func_name</span><span class="si">}</span><span class="s2">: collection </span><span class="si">{</span><span class="n">collection</span><span class="si">!r}</span><span class="s2"> is a managed &quot;</span>
+            <span class="s2">&quot;collection and cannot be used with custom document functions&quot;</span>
+        <span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;collection </span><span class="si">{</span><span class="n">collection</span><span class="si">!r}</span><span class="s2"> is managed by a dhtrader class &quot;</span>
+            <span class="s2">&quot;and cannot be used with custom document functions&quot;</span>
+        <span class="p">)</span>
+    <span class="k">for</span> <span class="n">pattern_name</span><span class="p">,</span> <span class="n">pattern</span> <span class="ow">in</span> <span class="n">COLL_PATTERNS</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">pattern</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">collection</span><span class="p">):</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">func_name</span><span class="si">}</span><span class="s2">: collection </span><span class="si">{</span><span class="n">collection</span><span class="si">!r}</span><span class="s2"> matches managed &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;pattern </span><span class="si">{</span><span class="n">pattern_name</span><span class="si">!r}</span><span class="s2"> and cannot be used with &quot;</span>
+                <span class="s2">&quot;custom document functions&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;collection </span><span class="si">{</span><span class="n">collection</span><span class="si">!r}</span><span class="s2"> matches managed pattern &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pattern_name</span><span class="si">!r}</span><span class="s2"> and cannot be used with custom &quot;</span>
+                <span class="s2">&quot;document functions&quot;</span>
+            <span class="p">)</span>
+
+
+<div class="viewcode-block" id="store_custom_documents"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.store_custom_documents">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">store_custom_documents</span><span class="p">(</span><span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                           <span class="n">documents</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+                           <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Store a list of plain dicts in a non-managed collection.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        collection: Target collection name.  Must not be a</span>
+<span class="sd">            managed (class-owned) collection.</span>
+<span class="sd">        documents: Non-empty list of dicts to store.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If collection is managed, documents is</span>
+<span class="sd">            empty, any element is not a dict, or any element</span>
+<span class="sd">            cannot be serialized to JSON.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        list: Mongo result dicts, one per document stored.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;store_custom_documents: collection=</span><span class="si">{</span><span class="n">collection</span><span class="si">!r}</span><span class="s2">, &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;count=</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">documents</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="c1"># Guard against writes to managed (class-owned) collections.</span>
+    <span class="n">_guard_managed_collection</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="s2">&quot;store_custom_documents&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Validate inputs before touching storage.</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">documents</span><span class="p">:</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+            <span class="s2">&quot;store_custom_documents: documents list is empty&quot;</span>
+        <span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;store_custom_documents: documents must be a non-empty list&quot;</span>
+        <span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">doc</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">documents</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">doc</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="c1"># Attempt to coerce the object to a dict before failing.</span>
+            <span class="c1"># Try vars() for objects with __dict__, then dict() for</span>
+            <span class="c1"># mappings and iterables of (key, value) pairs.</span>
+            <span class="n">converted</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">converted</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">vars</span><span class="p">(</span><span class="n">doc</span><span class="p">))</span>
+            <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+                <span class="k">pass</span>
+            <span class="k">if</span> <span class="n">converted</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">converted</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span>
+                <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+                    <span class="k">pass</span>
+            <span class="k">if</span> <span class="n">converted</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;store_custom_documents: element </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> cannot be &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;converted to dict: </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;store_custom_documents: element </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> cannot be &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;converted to dict, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;store_custom_documents: element </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> coerced from &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span><span class="si">}</span><span class="s2"> to dict&quot;</span>
+            <span class="p">)</span>
+            <span class="n">documents</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">converted</span>
+            <span class="n">doc</span> <span class="o">=</span> <span class="n">documents</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">)</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;store_custom_documents: element </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> is not &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;JSON-serializable: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;store_custom_documents: element </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> is not &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;JSON-serializable: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+        <span class="c1"># Require a non-blank &#39;name&#39; field on every document so</span>
+        <span class="c1"># doc_id can be prefixed meaningfully and records are</span>
+        <span class="c1"># always identifiable by name in storage.</span>
+        <span class="n">name_val</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">name_val</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">str</span><span class="p">(</span><span class="n">name_val</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;store_custom_documents: element </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> has no &quot;</span>
+                <span class="s2">&quot;valid &#39;name&#39; field&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;store_custom_documents: element </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> must have &quot;</span>
+                <span class="s2">&quot;a non-blank &#39;name&#39; field&quot;</span>
+            <span class="p">)</span>
+
+    <span class="c1"># Assign a unique doc_id to each document that does not already have</span>
+    <span class="c1"># one.  doc_id is generated here (not in dhmongo) so the caller can</span>
+    <span class="c1"># reference it before storage completes.  The doc_id is prefixed</span>
+    <span class="c1"># with the document&#39;s name attribute (if present) to aid debugging.</span>
+    <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">documents</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;doc_id&quot;</span><span class="p">):</span>
+            <span class="n">name_prefix</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">doc</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="n">candidate</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name_prefix</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="n">existing</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">get_custom_documents_by_field</span><span class="p">(</span>
+                    <span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">,</span>
+                    <span class="n">field</span><span class="o">=</span><span class="s2">&quot;doc_id&quot;</span><span class="p">,</span>
+                    <span class="n">value</span><span class="o">=</span><span class="n">candidate</span><span class="p">,</span>
+                    <span class="n">limit</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">existing</span><span class="p">:</span>
+                    <span class="k">break</span>
+            <span class="n">doc</span><span class="p">[</span><span class="s2">&quot;doc_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">candidate</span>
+
+    <span class="c1"># Store each document via upsert and collect results.</span>
+    <span class="n">time_store</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">documents</span><span class="p">:</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">store_custom_document</span><span class="p">(</span>
+            <span class="n">document</span><span class="o">=</span><span class="n">doc</span><span class="p">,</span>
+            <span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;store_custom_documents: storage loop elapsed &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">time_store</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2">s&quot;</span>
+    <span class="p">)</span>
+
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;store_custom_documents: stored </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span><span class="si">}</span><span class="s2"> documents &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;to </span><span class="si">{</span><span class="n">collection</span><span class="si">!r}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">results</span></div>
+
+
+<div class="viewcode-block" id="delete_custom_documents_by_field"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.delete_custom_documents_by_field">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">delete_custom_documents_by_field</span><span class="p">(</span><span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                                     <span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                                     <span class="n">value</span><span class="p">,</span>
+                                     <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete documents matching field==value from a non-managed collection.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        collection: Target collection name.</span>
+<span class="sd">        field: Document field to match on.</span>
+<span class="sd">        value: Value to match.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If collection is managed.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        pymongo DeleteResult.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;delete_custom_documents_by_field: collection=</span><span class="si">{</span><span class="n">collection</span><span class="si">!r}</span><span class="s2">, &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;field=</span><span class="si">{</span><span class="n">field</span><span class="si">!r}</span><span class="s2">, value=</span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="c1"># Guard against deletes from managed (class-owned) collections.</span>
+    <span class="n">_guard_managed_collection</span><span class="p">(</span>
+        <span class="n">collection</span><span class="p">,</span> <span class="s2">&quot;delete_custom_documents_by_field&quot;</span>
+    <span class="p">)</span>
+
+    <span class="n">time_delete</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">delete_custom_documents_by_field</span><span class="p">(</span>
+        <span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">,</span>
+        <span class="n">field</span><span class="o">=</span><span class="n">field</span><span class="p">,</span>
+        <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;delete_custom_documents_by_field: delete elapsed &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">time_delete</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2">s&quot;</span>
+    <span class="p">)</span>
+
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;delete_custom_documents_by_field: deleted &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">deleted_count</span><span class="si">}</span><span class="s2"> documents from </span><span class="si">{</span><span class="n">collection</span><span class="si">!r}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="list_custom_documents"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.list_custom_documents">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">list_custom_documents</span><span class="p">(</span><span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                          <span class="n">field</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                          <span class="n">value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                          <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+                          <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a list of dicts from a non-managed collection.</span>
+
+<span class="sd">    If field and value are provided, filters by that field.</span>
+<span class="sd">    If neither is provided, returns all documents.  limit=0</span>
+<span class="sd">    means no limit.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If collection is managed.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        list of dicts.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;list_custom_documents: collection=</span><span class="si">{</span><span class="n">collection</span><span class="si">!r}</span><span class="s2">, &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;field=</span><span class="si">{</span><span class="n">field</span><span class="si">!r}</span><span class="s2">, value=</span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">, limit=</span><span class="si">{</span><span class="n">limit</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="n">_guard_managed_collection</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="s2">&quot;list_custom_documents&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">field</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">get_custom_documents_by_field</span><span class="p">(</span>
+            <span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">,</span>
+            <span class="n">field</span><span class="o">=</span><span class="n">field</span><span class="p">,</span>
+            <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">,</span>
+            <span class="n">limit</span><span class="o">=</span><span class="n">limit</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">get_all_custom_documents</span><span class="p">(</span>
+            <span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">,</span>
+            <span class="n">limit</span><span class="o">=</span><span class="n">limit</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;list_custom_documents: returning </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span><span class="si">}</span><span class="s2"> documents &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;from </span><span class="si">{</span><span class="n">collection</span><span class="si">!r}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">results</span></div>
+
+
+<div class="viewcode-block" id="get_custom_documents_by_field"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.get_custom_documents_by_field">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_custom_documents_by_field</span><span class="p">(</span><span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                                  <span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                                  <span class="n">value</span><span class="p">,</span>
+                                  <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+                                  <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return documents matching field==value from a non-managed collection.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        collection: Source collection name.</span>
+<span class="sd">        field: Document field to filter on.</span>
+<span class="sd">        value: Value to match.</span>
+<span class="sd">        limit: Maximum number of results (0 = no limit).</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If collection is managed.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        list of dicts.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;get_custom_documents_by_field: collection=</span><span class="si">{</span><span class="n">collection</span><span class="si">!r}</span><span class="s2">, &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;field=</span><span class="si">{</span><span class="n">field</span><span class="si">!r}</span><span class="s2">, value=</span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">, limit=</span><span class="si">{</span><span class="n">limit</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="n">_guard_managed_collection</span><span class="p">(</span>
+        <span class="n">collection</span><span class="p">,</span> <span class="s2">&quot;get_custom_documents_by_field&quot;</span>
+    <span class="p">)</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">get_custom_documents_by_field</span><span class="p">(</span>
+        <span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">,</span>
+        <span class="n">field</span><span class="o">=</span><span class="n">field</span><span class="p">,</span>
+        <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">,</span>
+        <span class="n">limit</span><span class="o">=</span><span class="n">limit</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;get_custom_documents_by_field: returning </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span><span class="si">}</span><span class="s2"> &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;documents from </span><span class="si">{</span><span class="n">collection</span><span class="si">!r}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">results</span></div>
+
+
+<div class="viewcode-block" id="get_all_custom_documents"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.get_all_custom_documents">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_all_custom_documents</span><span class="p">(</span><span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                             <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+                             <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return all documents from a non-managed collection.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        collection: Source collection name.</span>
+<span class="sd">        limit: Maximum number of results (0 = no limit).</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If collection is managed.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        list of dicts.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;get_all_custom_documents: collection=</span><span class="si">{</span><span class="n">collection</span><span class="si">!r}</span><span class="s2">, &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;limit=</span><span class="si">{</span><span class="n">limit</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="n">_guard_managed_collection</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="s2">&quot;get_all_custom_documents&quot;</span><span class="p">)</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">get_all_custom_documents</span><span class="p">(</span>
+        <span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">,</span>
+        <span class="n">limit</span><span class="o">=</span><span class="n">limit</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;get_all_custom_documents: returning </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span><span class="si">}</span><span class="s2"> documents &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;from </span><span class="si">{</span><span class="n">collection</span><span class="si">!r}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">results</span></div>
+
+
+<div class="viewcode-block" id="review_custom_documents"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.review_custom_documents">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">review_custom_documents</span><span class="p">(</span><span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                            <span class="n">field</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                            <span class="n">value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                            <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span>
+                            <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Print a human-readable summary of documents from a non-managed</span>
+<span class="sd">    collection.  Intended for interactive/CLI use.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If collection is managed.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;review_custom_documents: collection=</span><span class="si">{</span><span class="n">collection</span><span class="si">!r}</span><span class="s2">, &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;field=</span><span class="si">{</span><span class="n">field</span><span class="si">!r}</span><span class="s2">, value=</span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">, limit=</span><span class="si">{</span><span class="n">limit</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="n">_guard_managed_collection</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="s2">&quot;review_custom_documents&quot;</span><span class="p">)</span>
+
+    <span class="n">docs</span> <span class="o">=</span> <span class="n">list_custom_documents</span><span class="p">(</span>
+        <span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">,</span>
+        <span class="n">field</span><span class="o">=</span><span class="n">field</span><span class="p">,</span>
+        <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">,</span>
+        <span class="n">limit</span><span class="o">=</span><span class="n">limit</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">--- review_custom_documents: </span><span class="si">{</span><span class="n">collection</span><span class="si">!r}</span><span class="s2"> &quot;</span>
+          <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">docs</span><span class="p">)</span><span class="si">}</span><span class="s2"> documents) ---&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">docs</span><span class="p">:</span>
+        <span class="c1"># Strip the internal MongoDB _id from display output.</span>
+        <span class="n">display</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">doc</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="o">!=</span> <span class="s2">&quot;_id&quot;</span><span class="p">}</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">display</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="nb">str</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;---</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;review_custom_documents: displayed </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">docs</span><span class="p">)</span><span class="si">}</span><span class="s2"> documents &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;from </span><span class="si">{</span><span class="n">collection</span><span class="si">!r}</span><span class="s2">&quot;</span>
+    <span class="p">)</span></div>
+
+
+<span class="c1">##############################################################################</span>
+<span class="c1"># Image storage (GridFS)</span>
+
+<span class="c1"># Named tuple returned by get_image_by_id; contains everything a web</span>
+<span class="c1"># server needs to serve an image without any further lookups.</span>
+<span class="n">ImageResponse</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span>
+    <span class="s2">&quot;ImageResponse&quot;</span><span class="p">,</span>
+    <span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="s2">&quot;content_type&quot;</span><span class="p">,</span> <span class="s2">&quot;filename&quot;</span><span class="p">,</span> <span class="s2">&quot;metadata&quot;</span><span class="p">],</span>
+<span class="p">)</span>
+
+
+<div class="viewcode-block" id="store_images"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.store_images">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">store_images</span><span class="p">(</span>
+        <span class="n">images</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+        <span class="n">data_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+        <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;images&quot;</span><span class="p">],</span>
+        <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Store StoredImage objects and their binary data in GridFS.</span>
+
+<span class="sd">    image_id is set on each StoredImage at object creation time as</span>
+<span class="sd">    f&quot;{name}_{created_epoch}&quot; and is used as the stable retrieval key.</span>
+<span class="sd">    Binary data is stored in GridFS; this function stores no binary</span>
+<span class="sd">    attributes on the objects themselves.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        images: List of StoredImage objects.  image_id must be set</span>
+<span class="sd">            before calling (set at creation as f&quot;{name}_{created_epoch}&quot;).</span>
+<span class="sd">        data_list: Parallel list of bytes, one per image in images.</span>
+<span class="sd">        bucket: GridFS bucket prefix.  Defaults to COLLECTIONS[&quot;images&quot;].</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        list: image_id strings from the stored objects, one per image.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        ValueError: If images or data_list is empty, or if their</span>
+<span class="sd">            lengths do not match.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;store_images: bucket=</span><span class="si">{</span><span class="n">bucket</span><span class="si">!r}</span><span class="s2">, count=</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">images</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">images</span><span class="p">:</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+            <span class="s2">&quot;store_images: images list is empty&quot;</span>
+        <span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;store_images: images must be a non-empty list&quot;</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">images</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_list</span><span class="p">):</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;store_images: images length </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">images</span><span class="p">)</span><span class="si">}</span><span class="s2"> does not match &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;data_list length </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">data_list</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;store_images: images and data_list must have the same length&quot;</span>
+        <span class="p">)</span>
+
+    <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">time_store</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">image</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">images</span><span class="p">,</span> <span class="n">data_list</span><span class="p">):</span>
+        <span class="n">metadata</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">to_clean_dict</span><span class="p">()</span>
+        <span class="n">image_id</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">store_image</span><span class="p">(</span>
+            <span class="n">image_data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+            <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span>
+            <span class="n">bucket</span><span class="o">=</span><span class="n">bucket</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">image_id</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;store_images: stored image_id=</span><span class="si">{</span><span class="n">image_id</span><span class="si">!r}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;store_images: storage loop elapsed &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">time_store</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2">s&quot;</span>
+    <span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;store_images: stored </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span><span class="si">}</span><span class="s2"> images &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;in bucket=</span><span class="si">{</span><span class="n">bucket</span><span class="si">!r}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">results</span></div>
+
+
+<div class="viewcode-block" id="get_image_data"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.get_image_data">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_image_data</span><span class="p">(</span>
+        <span class="n">image_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;images&quot;</span><span class="p">],</span>
+        <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Retrieve raw binary data for a stored image by image_id.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        image_id: The stable image_id assigned at object creation.</span>
+<span class="sd">        bucket: GridFS bucket prefix.  Defaults to COLLECTIONS[&quot;images&quot;].</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        bytes: Raw binary content of the stored image.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        KeyError: If no image with the given image_id is found.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;get_image_data: image_id=</span><span class="si">{</span><span class="n">image_id</span><span class="si">!r}</span><span class="s2">, bucket=</span><span class="si">{</span><span class="n">bucket</span><span class="si">!r}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">get_image_data</span><span class="p">(</span><span class="n">image_id</span><span class="o">=</span><span class="n">image_id</span><span class="p">,</span> <span class="n">bucket</span><span class="o">=</span><span class="n">bucket</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;get_image_data: returned </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="si">}</span><span class="s2"> bytes &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;for image_id=</span><span class="si">{</span><span class="n">image_id</span><span class="si">!r}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="get_image_by_id"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.get_image_by_id">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_image_by_id</span><span class="p">(</span>
+        <span class="n">image_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;images&quot;</span><span class="p">],</span>
+        <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ImageResponse</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Retrieve everything needed to serve an image via a web endpoint.</span>
+
+<span class="sd">    Performs a single round-trip to GridFS, returning binary data,</span>
+<span class="sd">    content type, filename, and full metadata in one ImageResponse.</span>
+<span class="sd">    The calling web server only needs image_id; no further lookups</span>
+<span class="sd">    are required.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        image_id: The stable image_id assigned at object creation.</span>
+<span class="sd">        bucket: GridFS bucket prefix.  Defaults to COLLECTIONS[&quot;images&quot;].</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        ImageResponse: Named tuple with fields:</span>
+<span class="sd">            data (bytes): Raw binary content ready to stream.</span>
+<span class="sd">            content_type (str): MIME type for Content-Type header.</span>
+<span class="sd">            filename (str or None): Filename for Content-Disposition.</span>
+<span class="sd">            metadata (StoredImage): Full metadata object.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        KeyError: If no image with the given image_id is found.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;get_image_by_id: image_id=</span><span class="si">{</span><span class="n">image_id</span><span class="si">!r}</span><span class="s2">, bucket=</span><span class="si">{</span><span class="n">bucket</span><span class="si">!r}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="n">data</span><span class="p">,</span> <span class="n">meta_dict</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">get_image_by_id</span><span class="p">(</span>
+        <span class="n">image_id</span><span class="o">=</span><span class="n">image_id</span><span class="p">,</span> <span class="n">bucket</span><span class="o">=</span><span class="n">bucket</span>
+    <span class="p">)</span>
+    <span class="n">stored_image</span> <span class="o">=</span> <span class="n">StoredImage</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">meta_dict</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;get_image_by_id: returned </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="si">}</span><span class="s2"> bytes &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;for image_id=</span><span class="si">{</span><span class="n">image_id</span><span class="si">!r}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">ImageResponse</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+        <span class="n">content_type</span><span class="o">=</span><span class="n">stored_image</span><span class="o">.</span><span class="n">content_type</span><span class="p">,</span>
+        <span class="n">filename</span><span class="o">=</span><span class="n">stored_image</span><span class="o">.</span><span class="n">filename</span><span class="p">,</span>
+        <span class="n">metadata</span><span class="o">=</span><span class="n">stored_image</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_images_metadata_by_field"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.get_images_metadata_by_field">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_images_metadata_by_field</span><span class="p">(</span>
+        <span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">value</span><span class="p">,</span>
+        <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;images&quot;</span><span class="p">],</span>
+        <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Retrieve StoredImage metadata objects matching field==value.</span>
+
+<span class="sd">    Binary data is not loaded; call load_data() on each returned</span>
+<span class="sd">    object to retrieve bytes.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        field: Metadata field name to filter on.</span>
+<span class="sd">        value: Value to match.</span>
+<span class="sd">        bucket: GridFS bucket prefix.  Defaults to COLLECTIONS[&quot;images&quot;].</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        list of StoredImage objects (metadata only, no binary data).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;get_images_metadata_by_field: field=</span><span class="si">{</span><span class="n">field</span><span class="si">!r}</span><span class="s2">, &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;value=</span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">, bucket=</span><span class="si">{</span><span class="n">bucket</span><span class="si">!r}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="n">metadata_list</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">get_image_metadata_by_field</span><span class="p">(</span>
+        <span class="n">field</span><span class="o">=</span><span class="n">field</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">,</span> <span class="n">bucket</span><span class="o">=</span><span class="n">bucket</span>
+    <span class="p">)</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="p">[</span><span class="n">StoredImage</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">m</span><span class="p">)</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">metadata_list</span><span class="p">]</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;get_images_metadata_by_field: returning </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span><span class="si">}</span><span class="s2"> &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;images for </span><span class="si">{</span><span class="n">field</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">results</span></div>
+
+
+<div class="viewcode-block" id="list_images"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.list_images">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">list_images</span><span class="p">(</span>
+        <span class="n">field</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;images&quot;</span><span class="p">],</span>
+        <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a list of StoredImage metadata objects.</span>
+
+<span class="sd">    If field and value are provided, filters by that field.</span>
+<span class="sd">    If neither is provided, returns all images.  Binary data</span>
+<span class="sd">    is not loaded; call load_data() on each object to retrieve bytes.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        field: Optional metadata field name to filter on.</span>
+<span class="sd">        value: Optional value to match.</span>
+<span class="sd">        bucket: GridFS bucket prefix.  Defaults to COLLECTIONS[&quot;images&quot;].</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        list of StoredImage objects.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;list_images: field=</span><span class="si">{</span><span class="n">field</span><span class="si">!r}</span><span class="s2">, value=</span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">, &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;bucket=</span><span class="si">{</span><span class="n">bucket</span><span class="si">!r}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">field</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">metadata_list</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">get_image_metadata_by_field</span><span class="p">(</span>
+            <span class="n">field</span><span class="o">=</span><span class="n">field</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">,</span> <span class="n">bucket</span><span class="o">=</span><span class="n">bucket</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># No filter: scan all files in the bucket.</span>
+        <span class="n">files_coll</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">db</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">.files&quot;</span><span class="p">]</span>
+        <span class="n">docs</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">files_coll</span><span class="o">.</span><span class="n">find</span><span class="p">({}))</span>
+        <span class="n">metadata_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="p">{})</span> <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">docs</span><span class="p">]</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="p">[</span><span class="n">StoredImage</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">m</span><span class="p">)</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">metadata_list</span><span class="p">]</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;list_images: returning </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span><span class="si">}</span><span class="s2"> images &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;from bucket=</span><span class="si">{</span><span class="n">bucket</span><span class="si">!r}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">results</span></div>
+
+
+<div class="viewcode-block" id="delete_images_by_field"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.delete_images_by_field">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">delete_images_by_field</span><span class="p">(</span>
+        <span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">value</span><span class="p">,</span>
+        <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;images&quot;</span><span class="p">],</span>
+        <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete stored images whose metadata matches field==value.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        field: Metadata field name to match on.</span>
+<span class="sd">        value: Value to match.</span>
+<span class="sd">        bucket: GridFS bucket prefix.  Defaults to COLLECTIONS[&quot;images&quot;].</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        int: Count of images deleted.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;delete_images_by_field: field=</span><span class="si">{</span><span class="n">field</span><span class="si">!r}</span><span class="s2">, value=</span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">, &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;bucket=</span><span class="si">{</span><span class="n">bucket</span><span class="si">!r}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="n">time_delete</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+    <span class="n">count</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">delete_images_by_field</span><span class="p">(</span>
+        <span class="n">field</span><span class="o">=</span><span class="n">field</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">,</span> <span class="n">bucket</span><span class="o">=</span><span class="n">bucket</span>
+    <span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;delete_images_by_field: delete elapsed &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">time_delete</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2">s&quot;</span>
+    <span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;delete_images_by_field: deleted </span><span class="si">{</span><span class="n">count</span><span class="si">}</span><span class="s2"> images &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;matching </span><span class="si">{</span><span class="n">field</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2"> from bucket=</span><span class="si">{</span><span class="n">bucket</span><span class="si">!r}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">count</span></div>
+
+
+<div class="viewcode-block" id="delete_images_by_image_id"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.delete_images_by_image_id">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">delete_images_by_image_id</span><span class="p">(</span>
+        <span class="n">image_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+        <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;images&quot;</span><span class="p">],</span>
+        <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete stored images by their image_id values.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        image_ids: List of image_id strings to delete.</span>
+<span class="sd">        bucket: GridFS bucket prefix.  Defaults to COLLECTIONS[&quot;images&quot;].</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        int: Count of images actually deleted.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;delete_images_by_image_id: count=</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">image_ids</span><span class="p">)</span><span class="si">}</span><span class="s2">, &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;bucket=</span><span class="si">{</span><span class="n">bucket</span><span class="si">!r}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="n">time_delete</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+    <span class="n">count</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">delete_images_by_image_id</span><span class="p">(</span>
+        <span class="n">image_ids</span><span class="o">=</span><span class="n">image_ids</span><span class="p">,</span> <span class="n">bucket</span><span class="o">=</span><span class="n">bucket</span>
+    <span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;delete_images_by_image_id: delete elapsed &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">time_delete</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2">s&quot;</span>
+    <span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;delete_images_by_image_id: deleted </span><span class="si">{</span><span class="n">count</span><span class="si">}</span><span class="s2"> images &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;from bucket=</span><span class="si">{</span><span class="n">bucket</span><span class="si">!r}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">count</span></div>
+
+
+<div class="viewcode-block" id="review_images"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.review_images">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">review_images</span><span class="p">(</span>
+        <span class="n">field</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span>
+        <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;images&quot;</span><span class="p">],</span>
+        <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Print a human-readable summary of stored image metadata.</span>
+
+<span class="sd">    Intended for interactive/CLI use.  Binary data is not loaded.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        field: Optional metadata field name to filter on.</span>
+<span class="sd">        value: Optional value to match.</span>
+<span class="sd">        limit: Maximum number of images to display.  0 means no limit.</span>
+<span class="sd">        bucket: GridFS bucket prefix.  Defaults to COLLECTIONS[&quot;images&quot;].</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;review_images: field=</span><span class="si">{</span><span class="n">field</span><span class="si">!r}</span><span class="s2">, value=</span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">, &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;limit=</span><span class="si">{</span><span class="n">limit</span><span class="si">}</span><span class="s2">, bucket=</span><span class="si">{</span><span class="n">bucket</span><span class="si">!r}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="n">images</span> <span class="o">=</span> <span class="n">list_images</span><span class="p">(</span><span class="n">field</span><span class="o">=</span><span class="n">field</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">,</span> <span class="n">bucket</span><span class="o">=</span><span class="n">bucket</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">limit</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">images</span> <span class="o">=</span> <span class="n">images</span><span class="p">[:</span><span class="n">limit</span><span class="p">]</span>
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">--- review_images: bucket=</span><span class="si">{</span><span class="n">bucket</span><span class="si">!r}</span><span class="s2"> &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">images</span><span class="p">)</span><span class="si">}</span><span class="s2"> images) ---&quot;</span>
+    <span class="p">)</span>
+    <span class="k">for</span> <span class="n">img</span> <span class="ow">in</span> <span class="n">images</span><span class="p">:</span>
+        <span class="n">display</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">to_clean_dict</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">display</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="nb">str</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;---</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;review_images: displayed </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">images</span><span class="p">)</span><span class="si">}</span><span class="s2"> images &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;from bucket=</span><span class="si">{</span><span class="n">bucket</span><span class="si">!r}</span><span class="s2">&quot;</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="store_image_from_path"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.store_image_from_path">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">store_image_from_path</span><span class="p">(</span>
+        <span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">content_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;image/jpeg&quot;</span><span class="p">,</span>
+        <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">parent_collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">parent_id_field</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">parent_id_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">tags</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;images&quot;</span><span class="p">],</span>
+        <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Read a file from disk and store it as a StoredImage in GridFS.</span>
+
+<span class="sd">    The filename stem (without extension) is used as the StoredImage</span>
+<span class="sd">    name, which is also used to build a deterministic image_id as</span>
+<span class="sd">    f&quot;{name}_{created_epoch}&quot; at object creation time.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        filepath: Path to the image file on disk.</span>
+<span class="sd">        content_type: MIME type string.  Defaults to &quot;image/jpeg&quot;.</span>
+<span class="sd">        description: Optional human-readable description.</span>
+<span class="sd">        parent_collection: Collection name of the parent document.</span>
+<span class="sd">        parent_id_field: Field name of the parent&#39;s unique ID.</span>
+<span class="sd">        parent_id_value: Value of the parent&#39;s unique ID.</span>
+<span class="sd">        tags: Optional list of string tags.</span>
+<span class="sd">        bucket: GridFS bucket prefix.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        str: The image_id assigned to the stored StoredImage object.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+    <span class="c1"># Use the filename stem as the descriptive name so image_id</span>
+    <span class="c1"># reflects the original file&#39;s role (e.g., chart name).</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">stem</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;store_image_from_path: filepath=</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="p">)</span><span class="si">!r}</span><span class="s2">, &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;name=</span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2">, bucket=</span><span class="si">{</span><span class="n">bucket</span><span class="si">!r}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="n">image</span> <span class="o">=</span> <span class="n">StoredImage</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+        <span class="n">content_type</span><span class="o">=</span><span class="n">content_type</span><span class="p">,</span>
+        <span class="n">filename</span><span class="o">=</span><span class="n">p</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+        <span class="n">parent_collection</span><span class="o">=</span><span class="n">parent_collection</span><span class="p">,</span>
+        <span class="n">parent_id_field</span><span class="o">=</span><span class="n">parent_id_field</span><span class="p">,</span>
+        <span class="n">parent_id_value</span><span class="o">=</span><span class="n">parent_id_value</span><span class="p">,</span>
+        <span class="n">tags</span><span class="o">=</span><span class="n">tags</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">()</span>
+    <span class="n">store_images</span><span class="p">([</span><span class="n">image</span><span class="p">],</span> <span class="p">[</span><span class="n">data</span><span class="p">],</span> <span class="n">bucket</span><span class="o">=</span><span class="n">bucket</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;store_image_from_path: stored image_id=</span><span class="si">{</span><span class="n">image</span><span class="o">.</span><span class="n">image_id</span><span class="si">!r}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">image</span><span class="o">.</span><span class="n">image_id</span></div>
+
+
+<span class="c1">##############################################################################</span>
 <span class="c1"># Cross-collection integrity checks</span>
 
 <span class="c1"># Collections to skip when checking for missing name attributes.</span>
 <span class="c1"># Populate with collection names that legitimately have no name field.</span>
-<span class="n">MISSING_NAME_IGNORE_COLLECTIONS</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="c1"># images.chunks stores raw binary GridFS chunk data and has no name</span>
+<span class="c1"># field at any level.  images.files stores StoredImage metadata where</span>
+<span class="c1"># name lives under metadata.name (not at root); it is checked via a</span>
+<span class="c1"># separate query branch in check_integrity_no_nameless_objects rather</span>
+<span class="c1"># than being skipped entirely.</span>
+<span class="n">MISSING_NAME_IGNORE_COLLECTIONS</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;images.chunks&quot;</span><span class="p">,</span>
+<span class="p">]</span>
 <span class="n">FUTURE_DATETIMES_IGNORE_COLLECTIONS</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;events_ES&#39;</span><span class="p">]</span>
 
 
@@ -167,7 +933,8 @@
                                                 <span class="n">limit</span><span class="o">=</span><span class="n">sample_limit</span><span class="p">)</span>
     <span class="n">dt_string_fields</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
     <span class="n">epoch_int_fields</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-
+    <span class="c1"># Infer field types from a small sample rather than hardcoding —</span>
+    <span class="c1"># different collections may store dates in different fields.</span>
     <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">samples</span><span class="p">:</span>
         <span class="k">for</span> <span class="n">field</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">doc</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="k">if</span> <span class="n">field</span> <span class="o">==</span> <span class="s2">&quot;_id&quot;</span><span class="p">:</span>
@@ -319,28 +1086,54 @@
     <span class="n">sample_issues_by_collection</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="n">skipped_collections</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">total_issues</span> <span class="o">=</span> <span class="mi">0</span>
-    <span class="n">query</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;$or&quot;</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">},</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">}]}</span>
 
     <span class="k">for</span> <span class="n">coll</span> <span class="ow">in</span> <span class="n">list_mongo_collections</span><span class="p">():</span>
         <span class="k">if</span> <span class="n">coll</span> <span class="ow">in</span> <span class="n">ignore</span><span class="p">:</span>
             <span class="n">skipped_collections</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">coll</span><span class="p">)</span>
             <span class="k">continue</span>
+        <span class="c1"># images.files stores name under metadata.name (GridFS layout);</span>
+        <span class="c1"># every other collection stores name at the document root.</span>
+        <span class="c1"># Check for blank &quot;&quot;, None, and missing name in either case.  None</span>
+        <span class="c1"># check will also return documents with no name field at all</span>
+        <span class="k">if</span> <span class="n">coll</span> <span class="o">==</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;images&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;.files&quot;</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;$or&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="p">{</span><span class="s2">&quot;metadata.name&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">},</span>
+                <span class="p">{</span><span class="s2">&quot;metadata.name&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">},</span>
+            <span class="p">]}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;$or&quot;</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">},</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">}]}</span>
         <span class="n">count</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">count_records</span><span class="p">(</span><span class="n">collection</span><span class="o">=</span><span class="n">coll</span><span class="p">,</span> <span class="n">query</span><span class="o">=</span><span class="n">query</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">issues_by_collection</span><span class="p">[</span><span class="n">coll</span><span class="p">]</span> <span class="o">=</span> <span class="n">count</span>
             <span class="n">docs</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">run_query</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="n">query</span><span class="p">,</span>
                                  <span class="n">collection</span><span class="o">=</span><span class="n">coll</span><span class="p">,</span>
                                  <span class="n">limit</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
-            <span class="n">sample_issues_by_collection</span><span class="p">[</span><span class="n">coll</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
-                <span class="p">{</span>
-                    <span class="s2">&quot;collection&quot;</span><span class="p">:</span> <span class="n">coll</span><span class="p">,</span>
-                    <span class="s2">&quot;_id&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;_id&quot;</span><span class="p">)),</span>
-                    <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">),</span>
-                    <span class="s2">&quot;ts_id&quot;</span><span class="p">:</span> <span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ts_id&quot;</span><span class="p">),</span>
-                    <span class="s2">&quot;bt_id&quot;</span><span class="p">:</span> <span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;bt_id&quot;</span><span class="p">),</span>
-                <span class="p">}</span>
-                <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">docs</span>
-            <span class="p">]</span>
+            <span class="k">if</span> <span class="n">coll</span> <span class="o">==</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;images&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;.files&quot;</span><span class="p">:</span>
+                <span class="c1"># Extract name from the metadata sub-document for image.files.</span>
+                <span class="n">sample_issues_by_collection</span><span class="p">[</span><span class="n">coll</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="p">{</span>
+                        <span class="s2">&quot;collection&quot;</span><span class="p">:</span> <span class="n">coll</span><span class="p">,</span>
+                        <span class="s2">&quot;_id&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;_id&quot;</span><span class="p">)),</span>
+                        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+                            <span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="p">{}</span>
+                        <span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">),</span>
+                        <span class="s2">&quot;ts_id&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+                        <span class="s2">&quot;bt_id&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+                    <span class="p">}</span>
+                    <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">docs</span>
+                <span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># For other collections, name is at the document root.</span>
+                <span class="n">sample_issues_by_collection</span><span class="p">[</span><span class="n">coll</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="p">{</span>
+                        <span class="s2">&quot;collection&quot;</span><span class="p">:</span> <span class="n">coll</span><span class="p">,</span>
+                        <span class="s2">&quot;_id&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;_id&quot;</span><span class="p">)),</span>
+                        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">),</span>
+                        <span class="s2">&quot;ts_id&quot;</span><span class="p">:</span> <span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ts_id&quot;</span><span class="p">),</span>
+                        <span class="s2">&quot;bt_id&quot;</span><span class="p">:</span> <span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;bt_id&quot;</span><span class="p">),</span>
+                    <span class="p">}</span>
+                    <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">docs</span>
+                <span class="p">]</span>
             <span class="n">total_issues</span> <span class="o">+=</span> <span class="n">count</span>
 
     <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;OK&quot;</span> <span class="k">if</span> <span class="n">total_issues</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="s2">&quot;ERRORS&quot;</span>
@@ -353,7 +1146,7 @@
     <span class="p">}</span></div>
 
 
-<div class="viewcode-block" id="check_integrity_trade_ids"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.check_integrity_trade_ids">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">check_integrity_trade_ids</span><span class="p">(</span><span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADES</span><span class="p">):</span>
+<div class="viewcode-block" id="check_integrity_trade_ids"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.check_integrity_trade_ids">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">check_integrity_trade_ids</span><span class="p">(</span><span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;trades&quot;</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Check all stored trades have non-empty, unique trade_id values.</span>
 
 <span class="sd">    Iterates every trade record in the collection once and checks two</span>
@@ -410,6 +1203,86 @@
     <span class="p">}</span></div>
 
 
+<div class="viewcode-block" id="check_integrity_orphaned_images"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.check_integrity_orphaned_images">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">check_integrity_orphaned_images</span><span class="p">(</span><span class="n">reference_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Find stored images not referenced by any parent document.</span>
+
+<span class="sd">    Uses COLLECTIONS[&quot;images&quot;] / GridFS internally.  The calling</span>
+<span class="sd">    code supplies the reference_map because dhtrader does not know</span>
+<span class="sd">    about AnalyzeBacktestResult or RefreshCycleResult collections.</span>
+
+<span class="sd">    Uses MongoDB distinct() on each field path so the query is</span>
+<span class="sd">    resolved from the multikey index on image_ids fields when those</span>
+<span class="sd">    indexes exist, avoiding full collection scans as data grows.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        reference_map: Dict mapping collection names to lists of</span>
+<span class="sd">            dotted field paths that contain image_id references.</span>
+<span class="sd">            Example::</span>
+
+<span class="sd">                {</span>
+<span class="sd">                    &quot;analyze_backtest_results&quot;: [</span>
+<span class="sd">                        &quot;image_ids&quot;,</span>
+<span class="sd">                        &quot;plans.image_ids&quot;,</span>
+<span class="sd">                    ],</span>
+<span class="sd">                }</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dict: Results with keys status, total_images,</span>
+<span class="sd">            orphaned_count, and orphaned_samples.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">func</span> <span class="o">=</span> <span class="s2">&quot;check_integrity_orphaned_images&quot;</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">func</span><span class="si">}</span><span class="s2">: starting orphaned image check&quot;</span><span class="p">)</span>
+    <span class="n">time_start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+
+    <span class="c1"># Collect all stored image_ids from GridFS metadata.</span>
+    <span class="n">bucket</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;images&quot;</span><span class="p">]</span>
+    <span class="n">files_coll</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">db</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">bucket</span><span class="si">}</span><span class="s2">.files&quot;</span><span class="p">]</span>
+    <span class="n">all_image_docs</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">files_coll</span><span class="o">.</span><span class="n">find</span><span class="p">({}))</span>
+    <span class="n">all_image_ids</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;image_id&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">all_image_docs</span>
+        <span class="k">if</span> <span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;image_id&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+    <span class="p">}</span>
+    <span class="n">total_images</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_image_ids</span><span class="p">)</span>
+
+    <span class="c1"># Use distinct() per field path so MongoDB can resolve the query</span>
+    <span class="c1"># from a multikey index on image_ids fields rather than scanning</span>
+    <span class="c1"># every document.  distinct() on a dotted path into an array of</span>
+    <span class="c1"># subdocuments (e.g. &quot;plans.image_ids&quot;) flattens and deduplicates</span>
+    <span class="c1"># automatically.</span>
+    <span class="n">referenced_ids</span><span class="p">:</span> <span class="nb">set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">coll</span><span class="p">,</span> <span class="n">field_paths</span> <span class="ow">in</span> <span class="n">reference_map</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">field_path</span> <span class="ow">in</span> <span class="n">field_paths</span><span class="p">:</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">db</span><span class="p">[</span><span class="n">coll</span><span class="p">]</span><span class="o">.</span><span class="n">distinct</span><span class="p">(</span><span class="n">field_path</span><span class="p">)</span>
+            <span class="n">referenced_ids</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+                <span class="n">v</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">values</span> <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="p">)</span>
+
+    <span class="c1"># Any stored image_id not referenced by a parent is an orphan.</span>
+    <span class="n">orphaned</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">all_image_ids</span> <span class="o">-</span> <span class="n">referenced_ids</span><span class="p">)</span>
+    <span class="n">orphaned_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">orphaned</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">orphaned_count</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">func</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">orphaned_count</span><span class="si">}</span><span class="s2"> orphaned image(s) found &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;out of </span><span class="si">{</span><span class="n">total_images</span><span class="si">}</span><span class="s2"> total&quot;</span>
+        <span class="p">)</span>
+
+    <span class="n">elapsed</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span> <span class="o">-</span> <span class="n">time_start</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">func</span><span class="si">}</span><span class="s2">: completed in </span><span class="si">{</span><span class="n">elapsed</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2">s; &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;total=</span><span class="si">{</span><span class="n">total_images</span><span class="si">}</span><span class="s2"> orphaned=</span><span class="si">{</span><span class="n">orphaned_count</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+
+    <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;OK&quot;</span> <span class="k">if</span> <span class="n">orphaned_count</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="s2">&quot;ERRORS&quot;</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="n">status</span><span class="p">,</span>
+        <span class="s2">&quot;total_images&quot;</span><span class="p">:</span> <span class="n">total_images</span><span class="p">,</span>
+        <span class="s2">&quot;orphaned_count&quot;</span><span class="p">:</span> <span class="n">orphaned_count</span><span class="p">,</span>
+        <span class="s2">&quot;orphaned_samples&quot;</span><span class="p">:</span> <span class="n">orphaned</span><span class="p">[:</span><span class="mi">10</span><span class="p">],</span>
+    <span class="p">}</span></div>
+
+
 <span class="c1">##############################################################################</span>
 <span class="c1"># Trades</span>
 <div class="viewcode-block" id="reconstruct_trade"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.reconstruct_trade">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">reconstruct_trade</span><span class="p">(</span><span class="n">t</span><span class="p">):</span>
@@ -457,7 +1330,7 @@
     <span class="k">return</span> <span class="n">result</span></div>
 
 
-<div class="viewcode-block" id="get_all_trades"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.get_all_trades">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_all_trades</span><span class="p">(</span><span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADES</span><span class="p">,</span>
+<div class="viewcode-block" id="get_all_trades"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.get_all_trades">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_all_trades</span><span class="p">(</span><span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;trades&quot;</span><span class="p">],</span>
                    <span class="n">limit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
                    <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                    <span class="p">):</span>
@@ -479,7 +1352,7 @@
 
 <div class="viewcode-block" id="get_trades_by_field"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.get_trades_by_field">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_trades_by_field</span><span class="p">(</span><span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                         <span class="n">value</span><span class="p">,</span>
-                        <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADES</span><span class="p">,</span>
+                        <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;trades&quot;</span><span class="p">],</span>
                         <span class="n">limit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
                         <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                         <span class="p">):</span>
@@ -515,7 +1388,7 @@
 
 <div class="viewcode-block" id="get_trades_by_field_in"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.get_trades_by_field_in">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_trades_by_field_in</span><span class="p">(</span><span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                            <span class="n">values</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
-                           <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADES</span><span class="p">,</span>
+                           <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;trades&quot;</span><span class="p">],</span>
                            <span class="n">limit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
                            <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                            <span class="p">):</span>
@@ -540,7 +1413,7 @@
 
 
 <div class="viewcode-block" id="store_trades"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.store_trades">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">store_trades</span><span class="p">(</span><span class="n">trades</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
-                 <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADES</span><span class="p">,</span>
+                 <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;trades&quot;</span><span class="p">],</span>
                  <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Store one or more Trade() objects in central storage.&quot;&quot;&quot;</span>
     <span class="c1"># Convert Trade objects to dictionaries for storage</span>
@@ -565,7 +1438,7 @@
 
 
 <div class="viewcode-block" id="review_trades"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.review_trades">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">review_trades</span><span class="p">(</span><span class="n">symbol</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;ES&quot;</span><span class="p">,</span>
-                  <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADES</span><span class="p">,</span>
+                  <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;trades&quot;</span><span class="p">],</span>
                   <span class="n">bt_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                   <span class="n">ts_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                   <span class="n">include_epochs</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
@@ -872,7 +1745,7 @@
 <div class="viewcode-block" id="delete_trades_by_field"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.delete_trades_by_field">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">delete_trades_by_field</span><span class="p">(</span><span class="n">symbol</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                            <span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                            <span class="n">value</span><span class="p">,</span>
-                           <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADES</span><span class="p">,</span>
+                           <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;trades&quot;</span><span class="p">],</span>
                            <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete all trade records with &#39;field&#39; matching &#39;value&#39;.</span>
 
@@ -892,7 +1765,7 @@
 
 
 <div class="viewcode-block" id="delete_trades"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.delete_trades">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">delete_trades</span><span class="p">(</span><span class="n">trades</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
-                  <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADES</span><span class="p">,</span>
+                  <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;trades&quot;</span><span class="p">],</span>
                   <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete Trade objects from central storage by open_dt, ts_id, and symbol.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -933,7 +1806,7 @@
                        <span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="get_all_tradeseries"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.get_all_tradeseries">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_all_tradeseries</span><span class="p">(</span><span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADESERIES</span><span class="p">,</span>
+<div class="viewcode-block" id="get_all_tradeseries"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.get_all_tradeseries">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_all_tradeseries</span><span class="p">(</span><span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;tradeseries&quot;</span><span class="p">],</span>
                         <span class="n">limit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
                         <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                         <span class="p">):</span>
@@ -955,8 +1828,8 @@
 
 <div class="viewcode-block" id="get_tradeseries_by_field"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.get_tradeseries_by_field">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_tradeseries_by_field</span><span class="p">(</span><span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                              <span class="n">value</span><span class="p">,</span>
-                             <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADESERIES</span><span class="p">,</span>
-                             <span class="n">collection_trades</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADES</span><span class="p">,</span>
+                             <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;tradeseries&quot;</span><span class="p">],</span>
+                             <span class="n">collection_trades</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;trades&quot;</span><span class="p">],</span>
                              <span class="n">limit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
                              <span class="n">include_trades</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
                              <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
@@ -998,7 +1871,7 @@
 
 
 <div class="viewcode-block" id="store_tradeseries"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.store_tradeseries">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">store_tradeseries</span><span class="p">(</span><span class="n">series</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
-                      <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADESERIES</span><span class="p">,</span>
+                      <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;tradeseries&quot;</span><span class="p">],</span>
                       <span class="n">include_trades</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                       <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Store a list of TradeSeries() objects in central storage.</span>
@@ -1040,7 +1913,7 @@
 
 
 <div class="viewcode-block" id="review_tradeseries"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.review_tradeseries">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">review_tradeseries</span><span class="p">(</span><span class="n">symbol</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;ES&quot;</span><span class="p">,</span>
-                       <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADESERIES</span><span class="p">,</span>
+                       <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;tradeseries&quot;</span><span class="p">],</span>
                        <span class="n">bt_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                        <span class="n">include_trades</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                        <span class="n">pretty</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
@@ -1132,8 +2005,8 @@
 <div class="viewcode-block" id="delete_tradeseries_by_field"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.delete_tradeseries_by_field">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">delete_tradeseries_by_field</span><span class="p">(</span><span class="n">symbol</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                                 <span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                                 <span class="n">value</span><span class="p">,</span>
-                                <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADESERIES</span><span class="p">,</span>
-                                <span class="n">coll_trades</span><span class="o">=</span><span class="n">COLL_TRADES</span><span class="p">,</span>
+                                <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;tradeseries&quot;</span><span class="p">],</span>
+                                <span class="n">coll_trades</span><span class="o">=</span><span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;trades&quot;</span><span class="p">],</span>
                                 <span class="n">include_trades</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                                 <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete all tradeseries records with &#39;field&#39; matching &#39;value&#39;.</span>
@@ -1158,7 +2031,7 @@
 
 
 <div class="viewcode-block" id="delete_tradeseries"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.delete_tradeseries">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">delete_tradeseries</span><span class="p">(</span><span class="n">tradeseries</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
-                       <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADESERIES</span><span class="p">,</span>
+                       <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;tradeseries&quot;</span><span class="p">],</span>
                        <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete TradeSeries objects from central storage using ts_id.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -1175,7 +2048,7 @@
 
 <span class="c1">##############################################################################</span>
 <span class="c1"># Backtests</span>
-<div class="viewcode-block" id="get_all_backtests"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.get_all_backtests">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_all_backtests</span><span class="p">(</span><span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_BACKTESTS</span><span class="p">,</span>
+<div class="viewcode-block" id="get_all_backtests"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.get_all_backtests">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_all_backtests</span><span class="p">(</span><span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;backtests&quot;</span><span class="p">],</span>
                       <span class="n">limit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
                       <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                       <span class="p">):</span>
@@ -1192,7 +2065,7 @@
 
 <div class="viewcode-block" id="get_backtests_by_field"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.get_backtests_by_field">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_backtests_by_field</span><span class="p">(</span><span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                            <span class="n">value</span><span class="p">,</span>
-                           <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_BACKTESTS</span><span class="p">,</span>
+                           <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;backtests&quot;</span><span class="p">],</span>
                            <span class="n">limit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
                            <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                            <span class="p">):</span>
@@ -1213,7 +2086,7 @@
 
 
 <div class="viewcode-block" id="store_backtests"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.store_backtests">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">store_backtests</span><span class="p">(</span><span class="n">backtests</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
-                    <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_BACKTESTS</span><span class="p">,</span>
+                    <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;backtests&quot;</span><span class="p">],</span>
                     <span class="n">include_tradeseries</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                     <span class="n">include_trades</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                     <span class="p">):</span>
@@ -1272,7 +2145,7 @@
 
 
 <div class="viewcode-block" id="review_backtests"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.review_backtests">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">review_backtests</span><span class="p">(</span><span class="n">symbol</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;ES&quot;</span><span class="p">,</span>
-                     <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_BACKTESTS</span><span class="p">,</span>
+                     <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;backtests&quot;</span><span class="p">],</span>
                      <span class="n">include_tradeseries</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                      <span class="n">include_trades</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                      <span class="n">pretty</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
@@ -1299,9 +2172,10 @@
 <div class="viewcode-block" id="delete_backtests_by_field"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.delete_backtests_by_field">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">delete_backtests_by_field</span><span class="p">(</span><span class="n">symbol</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                               <span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                               <span class="n">value</span><span class="p">,</span>
-                              <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_BACKTESTS</span><span class="p">,</span>
-                              <span class="n">coll_tradeseries</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADESERIES</span><span class="p">,</span>
-                              <span class="n">coll_trades</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADES</span><span class="p">,</span>
+                              <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;backtests&quot;</span><span class="p">],</span>
+                              <span class="n">coll_tradeseries</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="p">(</span>
+                                  <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;tradeseries&quot;</span><span class="p">]),</span>
+                              <span class="n">coll_trades</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;trades&quot;</span><span class="p">],</span>
                               <span class="n">include_tradeseries</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                               <span class="n">include_trades</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                               <span class="p">):</span>
@@ -1330,7 +2204,7 @@
 
 
 <div class="viewcode-block" id="delete_backtests"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.delete_backtests">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">delete_backtests</span><span class="p">(</span><span class="n">backtests</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
-                     <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_BACKTESTS</span><span class="p">,</span>
+                     <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;backtests&quot;</span><span class="p">],</span>
                      <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete Backtest objects from central storage using bt_id.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -1357,7 +2231,7 @@
 
 
 <div class="viewcode-block" id="reconstruct_tradeplan"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.reconstruct_tradeplan">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">reconstruct_tradeplan</span><span class="p">(</span><span class="n">tp</span><span class="p">,</span>
-                          <span class="n">collection_trades</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADES</span><span class="p">):</span>
+                          <span class="n">collection_trades</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;trades&quot;</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Take a dictionary and build a TradePlan object from it.</span>
 
 <span class="sd">    Reconstructs using constructor fields first, then reattaches any</span>
@@ -1416,8 +2290,8 @@
     <span class="k">return</span> <span class="n">obj</span></div>
 
 
-<div class="viewcode-block" id="get_all_tradeplans"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.get_all_tradeplans">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_all_tradeplans</span><span class="p">(</span><span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADEPLANS</span><span class="p">,</span>
-                       <span class="n">collection_trades</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADES</span><span class="p">,</span>
+<div class="viewcode-block" id="get_all_tradeplans"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.get_all_tradeplans">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_all_tradeplans</span><span class="p">(</span><span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;tradeplans&quot;</span><span class="p">],</span>
+                       <span class="n">collection_trades</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;trades&quot;</span><span class="p">],</span>
                        <span class="n">limit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
                        <span class="n">as_dict</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                        <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
@@ -1446,8 +2320,8 @@
 
 <div class="viewcode-block" id="get_tradeplans_by_field"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.get_tradeplans_by_field">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_tradeplans_by_field</span><span class="p">(</span><span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                             <span class="n">value</span><span class="p">,</span>
-                            <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADEPLANS</span><span class="p">,</span>
-                            <span class="n">collection_trades</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADES</span><span class="p">,</span>
+                            <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;tradeplans&quot;</span><span class="p">],</span>
+                            <span class="n">collection_trades</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;trades&quot;</span><span class="p">],</span>
                             <span class="n">as_dict</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                             <span class="n">limit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
                             <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
@@ -1478,7 +2352,7 @@
 
 
 <div class="viewcode-block" id="store_tradeplans"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.store_tradeplans">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">store_tradeplans</span><span class="p">(</span><span class="n">tradeplans</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
-                     <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADEPLANS</span><span class="p">,</span>
+                     <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;tradeplans&quot;</span><span class="p">],</span>
                      <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Store a list of TradePlan objects in central storage.&quot;&quot;&quot;</span>
     <span class="k">for</span> <span class="n">tp</span> <span class="ow">in</span> <span class="n">tradeplans</span><span class="p">:</span>
@@ -1512,7 +2386,7 @@
 
 <div class="viewcode-block" id="delete_tradeplans_by_field"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.delete_tradeplans_by_field">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">delete_tradeplans_by_field</span><span class="p">(</span><span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                                <span class="n">value</span><span class="p">,</span>
-                               <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADEPLANS</span><span class="p">,</span>
+                               <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;tradeplans&quot;</span><span class="p">],</span>
                                <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete all tradeplan records with &#39;field&#39; matching &#39;value&#39;.&quot;&quot;&quot;</span>
     <span class="n">result</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">delete_tradeplans_by_field</span><span class="p">(</span><span class="n">field</span><span class="o">=</span><span class="n">field</span><span class="p">,</span>
@@ -1524,7 +2398,7 @@
 
 
 <div class="viewcode-block" id="delete_tradeplans"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.delete_tradeplans">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">delete_tradeplans</span><span class="p">(</span><span class="n">tradeplans</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
-                      <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_TRADEPLANS</span><span class="p">,</span>
+                      <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;tradeplans&quot;</span><span class="p">],</span>
                       <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete TradePlan objects from central storage using tp_id.&quot;&quot;&quot;</span>
     <span class="n">tp_ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">tp</span><span class="o">.</span><span class="n">tp_id</span> <span class="k">for</span> <span class="n">tp</span> <span class="ow">in</span> <span class="n">tradeplans</span><span class="p">]</span>
@@ -1537,14 +2411,14 @@
 
 <span class="c1">##############################################################################</span>
 <span class="c1"># Indicators</span>
-<div class="viewcode-block" id="list_indicators"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.list_indicators">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">list_indicators</span><span class="p">(</span><span class="n">meta_collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_IND_META</span><span class="p">):</span>
+<div class="viewcode-block" id="list_indicators"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.list_indicators">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">list_indicators</span><span class="p">(</span><span class="n">meta_collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;ind_meta&quot;</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a simple list of indicators in storage.&quot;&quot;&quot;</span>
     <span class="n">result</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">list_indicators</span><span class="p">(</span><span class="n">meta_collection</span><span class="o">=</span><span class="n">meta_collection</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">result</span></div>
 
 
-<div class="viewcode-block" id="list_indicators_names"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.list_indicators_names">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">list_indicators_names</span><span class="p">(</span><span class="n">meta_collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_IND_META</span><span class="p">):</span>
+<div class="viewcode-block" id="list_indicators_names"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.list_indicators_names">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">list_indicators_names</span><span class="p">(</span><span class="n">meta_collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;ind_meta&quot;</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a simple list of indicators (ind_id only) in storage.&quot;&quot;&quot;</span>
     <span class="n">indicators</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">list_indicators</span><span class="p">(</span><span class="n">meta_collection</span><span class="o">=</span><span class="n">meta_collection</span><span class="p">)</span>
     <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
@@ -1554,8 +2428,8 @@
     <span class="k">return</span> <span class="n">result</span></div>
 
 
-<div class="viewcode-block" id="review_indicators"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.review_indicators">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">review_indicators</span><span class="p">(</span><span class="n">meta_collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_IND_META</span><span class="p">,</span>
-                      <span class="n">dp_collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_IND_DPS</span><span class="p">):</span>
+<div class="viewcode-block" id="review_indicators"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.review_indicators">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">review_indicators</span><span class="p">(</span><span class="n">meta_collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;ind_meta&quot;</span><span class="p">],</span>
+                      <span class="n">dp_collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;ind_dps&quot;</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a more detailed overview of indicators in storage.&quot;&quot;&quot;</span>
     <span class="n">result</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">review_indicators</span><span class="p">(</span><span class="n">meta_collection</span><span class="o">=</span><span class="n">meta_collection</span><span class="p">,</span>
                                    <span class="n">dp_collection</span><span class="o">=</span><span class="n">dp_collection</span><span class="p">,</span>
@@ -1565,7 +2439,7 @@
 
 
 <div class="viewcode-block" id="get_indicator"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.get_indicator">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_indicator</span><span class="p">(</span><span class="n">ind_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-                  <span class="n">meta_collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_IND_META</span><span class="p">,</span>
+                  <span class="n">meta_collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;ind_meta&quot;</span><span class="p">],</span>
                   <span class="n">autoload_chart</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                   <span class="n">autoload_datapoints</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                   <span class="p">):</span>
@@ -1619,7 +2493,7 @@
 
 
 <div class="viewcode-block" id="get_indicator_datapoints"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.get_indicator_datapoints">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_indicator_datapoints</span><span class="p">(</span><span class="n">ind_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-                             <span class="n">dp_collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_IND_DPS</span><span class="p">,</span>
+                             <span class="n">dp_collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;ind_dps&quot;</span><span class="p">],</span>
                              <span class="n">earliest_dt</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                              <span class="n">latest_dt</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                              <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
@@ -1662,7 +2536,7 @@
 
 
 <div class="viewcode-block" id="store_indicator_datapoints"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.store_indicator_datapoints">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">store_indicator_datapoints</span><span class="p">(</span><span class="n">datapoints</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
-                               <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_IND_DPS</span><span class="p">,</span>
+                               <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;ind_dps&quot;</span><span class="p">],</span>
                                <span class="n">skip_dupes</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
                                <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Store one or more IndicatorDatapoint() objects in central storage.&quot;&quot;&quot;</span>
@@ -1712,8 +2586,8 @@
 
 
 <div class="viewcode-block" id="store_indicator"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.store_indicator">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">store_indicator</span><span class="p">(</span><span class="n">indicator</span><span class="p">,</span>
-                    <span class="n">meta_collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_IND_META</span><span class="p">,</span>
-                    <span class="n">dp_collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_IND_DPS</span><span class="p">,</span>
+                    <span class="n">meta_collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;ind_meta&quot;</span><span class="p">],</span>
+                    <span class="n">dp_collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;ind_dps&quot;</span><span class="p">],</span>
                     <span class="n">store_datapoints</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
                     <span class="n">fast_dps_check</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                     <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
@@ -1840,8 +2714,8 @@
 
 
 <div class="viewcode-block" id="delete_indicator"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.delete_indicator">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">delete_indicator</span><span class="p">(</span><span class="n">ind_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-                     <span class="n">meta_collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_IND_META</span><span class="p">,</span>
-                     <span class="n">dp_collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_IND_DPS</span><span class="p">,</span>
+                     <span class="n">meta_collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;ind_meta&quot;</span><span class="p">],</span>
+                     <span class="n">dp_collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;ind_dps&quot;</span><span class="p">],</span>
                      <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Remove an indicator and all its datapoints from storage by ind_id.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -1852,7 +2726,7 @@
 
 
 <div class="viewcode-block" id="get_indicators_by_name"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.get_indicators_by_name">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_indicators_by_name</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-                           <span class="n">meta_collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_IND_META</span><span class="p">,</span>
+                           <span class="n">meta_collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;ind_meta&quot;</span><span class="p">],</span>
                            <span class="n">autoload_chart</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                            <span class="n">autoload_datapoints</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                            <span class="p">):</span>
@@ -1894,8 +2768,8 @@
 
 
 <div class="viewcode-block" id="delete_indicators_by_name"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.delete_indicators_by_name">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">delete_indicators_by_name</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-                              <span class="n">meta_collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_IND_META</span><span class="p">,</span>
-                              <span class="n">dp_collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLL_IND_DPS</span><span class="p">,</span>
+                              <span class="n">meta_collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;ind_meta&quot;</span><span class="p">],</span>
+                              <span class="n">dp_collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;ind_dps&quot;</span><span class="p">],</span>
                               <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete all indicators and their datapoints with the given name.&quot;&quot;&quot;</span>
     <span class="n">indicators</span> <span class="o">=</span> <span class="n">get_indicators_by_name</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>

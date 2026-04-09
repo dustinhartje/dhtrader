@@ -599,8 +599,7 @@ def get_image_by_id(
         ImageResponse: Named tuple with fields:
             data (bytes): Raw binary content ready to stream.
             content_type (str): MIME type for Content-Type header.
-            filename (str or None): Original filename for
-                Content-Disposition header.
+            filename (str or None): Filename for Content-Disposition.
             metadata (StoredImage): Full metadata object.
 
     Raises:
