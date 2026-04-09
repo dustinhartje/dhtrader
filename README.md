@@ -99,9 +99,9 @@ for images stored in MongoDB GridFS:
 
 | Field | Description |
 |---|---|
-| `image_id` | Unique ID, auto-generated as `"{name}_{created_epoch}"` |
+| `image_id` | Unique ID, auto-generated as `"{name}_{uuid4()}"` |
 | `name` | Required non-blank label; raises `ValueError` if blank or None |
-| `created_epoch` | Integer epoch timestamp at creation |
+| `created_epoch` | Integer epoch timestamp at creation; not used in `image_id` |
 
 Binary data is not held in the object.  Use `load_data()` to retrieve
 bytes from GridFS after construction.

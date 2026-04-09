@@ -493,13 +493,13 @@ def store_images(
     """Store StoredImage objects and their binary data in GridFS.
 
     image_id is set on each StoredImage at object creation time as
-    f"{name}_{created_epoch}" and is used as the stable retrieval key.
+    f"{name}_{uuid4()}" and is used as the stable retrieval key.
     Binary data is stored in GridFS; this function stores no binary
     attributes on the objects themselves.
 
     Args:
         images: List of StoredImage objects.  image_id must be set
-            before calling (set at creation as f"{name}_{created_epoch}").
+            before calling (set at creation as f"{name}_{uuid4()}").
         data_list: Parallel list of bytes, one per image in images.
         bucket: GridFS bucket prefix.  Defaults to COLLECTIONS["images"].
 
@@ -813,8 +813,8 @@ def store_image_from_path(
     """Read a file from disk and store it as a StoredImage in GridFS.
 
     The filename stem (without extension) is used as the StoredImage
-    name, which is also used to build a deterministic image_id as
-    f"{name}_{created_epoch}" at object creation time.
+    name, which is also used to build a unique image_id as
+    f"{name}_{uuid4()}" at object creation time.
 
     Args:
         filepath: Path to the image file on disk.

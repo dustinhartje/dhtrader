@@ -128,10 +128,14 @@ def test_StoredImage_construction_all_fields():
     assert img.tags == ["a", "b"]
 
 
-def test_StoredImage_image_id_generated_from_name_and_epoch():
-    """When image_id is not supplied it is built as name_epoch."""
-    img = StoredImage(name="test_DELETEME_id", created_epoch=12345)
-    assert img.image_id == "test_DELETEME_id_12345"
+def test_StoredImage_image_id_generated_from_name_with_uuid():
+    """When image_id is not supplied it is built as name_<uuid4>."""
+    img = StoredImage(name="test_DELETEME_id")
+    # image_id must start with the name prefix followed by underscore
+    assert img.image_id.startswith("test_DELETEME_id_")
+    # Two images with the same name must not share the same image_id
+    img2 = StoredImage(name="test_DELETEME_id")
+    assert img.image_id != img2.image_id
 
 
 def test_StoredImage_caller_supplied_image_id_preserved():
@@ -139,7 +143,6 @@ def test_StoredImage_caller_supplied_image_id_preserved():
     img = StoredImage(
         name="test_DELETEME_preset",
         image_id="custom-id-xyz",
-        created_epoch=11111,
     )
     assert img.image_id == "custom-id-xyz"
 
@@ -588,6 +591,32 @@ def test_StoredImage_store_mismatched_lengths_raises():
     img = StoredImage(name=_TEST_SENTINEL)
     with pytest.raises(ValueError, match="same length"):
         store_images([img], [])
+
+
+@pytest.mark.storage
+@pytest.mark.suppress_stdout
+def test_StoredImage_duplicate_image_id_rejected(
+        cleanup_stored_images):
+    """Storing an image with a duplicate image_id is rejected.
+
+    Builds a second StoredImage with the same image_id as the first
+    and asserts that the second store call raises an error, confirming
+    that the unique index on metadata.image_id is enforced.
+    """
+    from gridfs.errors import FileExists
+    img_first = StoredImage(
+        name=_TEST_SENTINEL,
+        description="original",
+    )
+    store_images([img_first], [_TEST_JPEG])
+    # Force the same image_id onto a new object to simulate a collision.
+    img_dup = StoredImage(
+        name=_TEST_SENTINEL,
+        image_id=img_first.image_id,
+        description="duplicate",
+    )
+    with pytest.raises(FileExists):
+        store_images([img_dup], [_TEST_JPEG])
 
 
 # ---------------------------------------------------------------------------

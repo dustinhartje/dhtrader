@@ -34,6 +34,7 @@ from statistics import fmean
 from copy import copy, deepcopy
 import logging
 from math import ceil, floor
+import uuid
 import numpy as np
 from .dhcommon import (
     dt_as_dt, dt_as_str, dt_as_time, dt_to_epoch, timeframe_delta,
@@ -4066,19 +4067,18 @@ class StoredImage():
             blank or None.  Defaults to DEFAULT_OBJ_NAME.  Test
             objects must include "DELETEME" in this field.
         image_id: Stable unique ID generated at object creation as
-            f"{name}_{created_epoch}".  Set before storage; never
+            f"{name}_{uuid4()}".  Set before storage; never
             changes after creation.  Used as the primary key for
             all retrieval and deletion operations through the
-            public API.  If None, generated automatically from
-            name and created_epoch.
+            public API.  If None, generated automatically.
         content_type: MIME type string (e.g., "image/jpeg").
         filename: Original filename string for reference.
         description: Optional human-readable description.
         parent_collection: Collection name of the parent document.
         parent_id_field: Field name of the parent's unique ID.
         parent_id_value: Value of the parent's unique ID.
-        created_epoch: Integer Unix timestamp set at creation;
-            included in image_id.  Defaults to now.
+        created_epoch: Integer Unix timestamp set at creation.
+            Defaults to now.  Not used in image_id generation.
         created_dt: ISO datetime string derived from created_epoch.
             Set automatically from created_epoch if not supplied.
         tags: Optional list of string tags.
@@ -4106,7 +4106,7 @@ class StoredImage():
                 f"got {name!r}"
             )
         self.name = name
-        # Record creation time; used to build a deterministic image_id.
+        # Record creation time for provenance; not used in image_id.
         if created_epoch is None:
             self.created_epoch = int(dt.datetime.now().timestamp())
         else:
@@ -4118,9 +4118,10 @@ class StoredImage():
             )
         else:
             self.created_dt = created_dt
-        # Build a stable, descriptive image_id if not supplied.
+        # Build a unique image_id using uuid4 so rapid construction of
+        # multiple images with the same name never produces a collision.
         if image_id is None:
-            self.image_id = f"{self.name}_{self.created_epoch}"
+            self.image_id = f"{self.name}_{uuid.uuid4()}"
         else:
             self.image_id = image_id
         self.content_type = content_type
