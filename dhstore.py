@@ -1169,6 +1169,86 @@ def check_integrity_trade_ids(collection: str = COLLECTIONS["trades"]):
     }
 
 
+def check_integrity_orphaned_images(reference_map: dict):
+    """Find stored images not referenced by any parent document.
+
+    Uses COLLECTIONS["images"] / GridFS internally.  The calling
+    code supplies the reference_map because dhtrader does not know
+    about AnalyzeBacktestResult or RefreshCycleResult collections.
+
+    Uses MongoDB distinct() on each field path so the query is
+    resolved from the multikey index on image_ids fields when those
+    indexes exist, avoiding full collection scans as data grows.
+
+    Args:
+        reference_map: Dict mapping collection names to lists of
+            dotted field paths that contain image_id references.
+            Example::
+
+                {
+                    "analyze_backtest_results": [
+                        "image_ids",
+                        "plans.image_ids",
+                    ],
+                }
+
+    Returns:
+        dict: Results with keys status, total_images,
+            orphaned_count, and orphaned_samples.
+    """
+    func = "check_integrity_orphaned_images"
+    log.info(f"{func}: starting orphaned image check")
+    time_start = time.perf_counter()
+
+    # Collect all stored image_ids from GridFS metadata.
+    bucket = COLLECTIONS["images"]
+    files_coll = dhm.db[f"{bucket}.files"]
+    all_image_docs = list(files_coll.find({}))
+    all_image_ids = {
+        doc.get("metadata", {}).get("image_id")
+        for doc in all_image_docs
+        if doc.get("metadata", {}).get("image_id") is not None
+    }
+    total_images = len(all_image_ids)
+
+    # Use distinct() per field path so MongoDB can resolve the query
+    # from a multikey index on image_ids fields rather than scanning
+    # every document.  distinct() on a dotted path into an array of
+    # subdocuments (e.g. "plans.image_ids") flattens and deduplicates
+    # automatically.
+    referenced_ids: set = set()
+    for coll, field_paths in reference_map.items():
+        for field_path in field_paths:
+            values = dhm.db[coll].distinct(field_path)
+            referenced_ids.update(
+                v for v in values if v is not None
+            )
+
+    # Any stored image_id not referenced by a parent is an orphan.
+    orphaned = sorted(all_image_ids - referenced_ids)
+    orphaned_count = len(orphaned)
+
+    if orphaned_count > 0:
+        log.error(
+            f"{func}: {orphaned_count} orphaned image(s) found "
+            f"out of {total_images} total"
+        )
+
+    elapsed = time.perf_counter() - time_start
+    log.info(
+        f"{func}: completed in {elapsed:.6f}s; "
+        f"total={total_images} orphaned={orphaned_count}"
+    )
+
+    status = "OK" if orphaned_count == 0 else "ERRORS"
+    return {
+        "status": status,
+        "total_images": total_images,
+        "orphaned_count": orphaned_count,
+        "orphaned_samples": orphaned[:10],
+    }
+
+
 ##############################################################################
 # Trades
 def reconstruct_trade(t):
