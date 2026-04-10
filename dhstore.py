@@ -1131,13 +1131,15 @@ def check_integrity_unique_fields(
 
     Returns:
         dict with keys:
-            status: "OK" or "ERRORS"
-            total_docs: total number of documents checked
-            fields: per-field results keyed by field name, each with:
-                missing_count: int
-                missing_samples: list of {"_id": ..., field: val} dicts
-                duplicate_count: int
-                duplicate_samples: list of {"value": ..., "count": int}
+
+        - ``status``: "OK" or "ERRORS"
+        - ``total_docs``: total number of documents checked
+        - ``fields``: per-field results keyed by field name, each with:
+
+          - ``missing_count``: int
+          - ``missing_samples``: list of {"_id": ..., field: val} dicts
+          - ``duplicate_count``: int
+          - ``duplicate_samples``: list of {"value": ..., "count": int}
     """
     if query is None:
         all_docs = dhm.get_all_records_by_collection(

@@ -528,13 +528,13 @@
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Store StoredImage objects and their binary data in GridFS.</span>
 
 <span class="sd">    image_id is set on each StoredImage at object creation time as</span>
-<span class="sd">    f&quot;{name}_{created_epoch}&quot; and is used as the stable retrieval key.</span>
-<span class="sd">    Binary data is stored in GridFS; this function stores no binary</span>
-<span class="sd">    attributes on the objects themselves.</span>
+<span class="sd">    f&quot;{name}_{uuid4_no_hyphens}&quot; and is used as the stable retrieval</span>
+<span class="sd">    key.  Binary data is stored in GridFS; this function stores no</span>
+<span class="sd">    binary attributes on the objects themselves.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        images: List of StoredImage objects.  image_id must be set</span>
-<span class="sd">            before calling (set at creation as f&quot;{name}_{created_epoch}&quot;).</span>
+<span class="sd">            before calling (set at creation without hyphens).</span>
 <span class="sd">        data_list: Parallel list of bytes, one per image in images.</span>
 <span class="sd">        bucket: GridFS bucket prefix.  Defaults to COLLECTIONS[&quot;images&quot;].</span>
 
@@ -848,8 +848,8 @@
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Read a file from disk and store it as a StoredImage in GridFS.</span>
 
 <span class="sd">    The filename stem (without extension) is used as the StoredImage</span>
-<span class="sd">    name, which is also used to build a deterministic image_id as</span>
-<span class="sd">    f&quot;{name}_{created_epoch}&quot; at object creation time.</span>
+<span class="sd">    name, which is also used to build a unique image_id as</span>
+<span class="sd">    f&quot;{name}_{uuid4()}&quot; at object creation time.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        filepath: Path to the image file on disk.</span>
@@ -1146,60 +1146,90 @@
     <span class="p">}</span></div>
 
 
-<div class="viewcode-block" id="check_integrity_trade_ids"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.check_integrity_trade_ids">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">check_integrity_trade_ids</span><span class="p">(</span><span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;trades&quot;</span><span class="p">]):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check all stored trades have non-empty, unique trade_id values.</span>
+<div class="viewcode-block" id="check_integrity_unique_fields"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.check_integrity_unique_fields">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">check_integrity_unique_fields</span><span class="p">(</span>
+        <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">fields</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+        <span class="n">query</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check that specified fields have non-empty, unique values.</span>
 
-<span class="sd">    Iterates every trade record in the collection once and checks two</span>
-<span class="sd">    conditions:</span>
-<span class="sd">    - trade_id is neither None nor blank (missing/backfill gap)</span>
-<span class="sd">    - trade_id is unique across the collection (no duplicates)</span>
+<span class="sd">    Fetches documents from collection (optionally filtered by query)</span>
+<span class="sd">    and checks each named field for missing values and duplicates.</span>
 
 <span class="sd">    Does not modify any data.</span>
 
+<span class="sd">    Args:</span>
+<span class="sd">        collection: Collection name to query.</span>
+<span class="sd">        fields: List of field name strings to check for uniqueness.</span>
+<span class="sd">        query: Optional MongoDB query dict to filter documents.</span>
+<span class="sd">            Defaults to None (all documents).</span>
+
 <span class="sd">    Returns:</span>
-<span class="sd">        dict: Results with keys status, total_trades, missing_count,</span>
-<span class="sd">        missing_samples, duplicate_count, and duplicate_samples.</span>
+<span class="sd">        dict with keys:</span>
+
+<span class="sd">        - ``status``: &quot;OK&quot; or &quot;ERRORS&quot;</span>
+<span class="sd">        - ``total_docs``: total number of documents checked</span>
+<span class="sd">        - ``fields``: per-field results keyed by field name, each with:</span>
+
+<span class="sd">          - ``missing_count``: int</span>
+<span class="sd">          - ``missing_samples``: list of {&quot;_id&quot;: ..., field: val} dicts</span>
+<span class="sd">          - ``duplicate_count``: int</span>
+<span class="sd">          - ``duplicate_samples``: list of {&quot;value&quot;: ..., &quot;count&quot;: int}</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">all_docs</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">get_all_records_by_collection</span><span class="p">(</span><span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">)</span>
-    <span class="n">total_trades</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_docs</span><span class="p">)</span>
-    <span class="n">missing</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="n">trade_id_counts</span> <span class="o">=</span> <span class="n">Counter</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">query</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">all_docs</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">get_all_records_by_collection</span><span class="p">(</span>
+            <span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">all_docs</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">run_query</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">)</span>
 
-    <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">all_docs</span><span class="p">:</span>
-        <span class="n">tid</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;trade_id&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">tid</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="p">(</span>
-            <span class="nb">isinstance</span><span class="p">(</span><span class="n">tid</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">tid</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span>
-        <span class="p">):</span>
-            <span class="n">missing</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
-                <span class="s2">&quot;_id&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;_id&quot;</span><span class="p">)),</span>
-                <span class="s2">&quot;ts_id&quot;</span><span class="p">:</span> <span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ts_id&quot;</span><span class="p">),</span>
-                <span class="s2">&quot;open_dt&quot;</span><span class="p">:</span> <span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;open_dt&quot;</span><span class="p">),</span>
-                <span class="s2">&quot;trade_id&quot;</span><span class="p">:</span> <span class="n">tid</span><span class="p">,</span>
-            <span class="p">})</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">trade_id_counts</span><span class="p">[</span><span class="n">tid</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="n">total_docs</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_docs</span><span class="p">)</span>
+    <span class="n">field_results</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">any_errors</span> <span class="o">=</span> <span class="kc">False</span>
 
-    <span class="n">duplicates</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="n">tid</span><span class="p">:</span> <span class="n">count</span>
-        <span class="k">for</span> <span class="n">tid</span><span class="p">,</span> <span class="n">count</span> <span class="ow">in</span> <span class="n">trade_id_counts</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
-        <span class="k">if</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="mi">1</span>
-    <span class="p">}</span>
+    <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">:</span>
+        <span class="n">missing</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">field_counts</span> <span class="o">=</span> <span class="n">Counter</span><span class="p">()</span>
 
-    <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;OK&quot;</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">missing</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">duplicates</span> <span class="k">else</span> <span class="s2">&quot;ERRORS&quot;</span>
+        <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">all_docs</span><span class="p">:</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">field</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">val</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="p">(</span>
+                <span class="nb">isinstance</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">val</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="p">):</span>
+                <span class="n">missing</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                    <span class="s2">&quot;_id&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;_id&quot;</span><span class="p">)),</span>
+                    <span class="n">field</span><span class="p">:</span> <span class="n">val</span><span class="p">,</span>
+                <span class="p">})</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">field_counts</span><span class="p">[</span><span class="n">val</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="n">duplicates</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">val</span><span class="p">:</span> <span class="n">count</span>
+            <span class="k">for</span> <span class="n">val</span><span class="p">,</span> <span class="n">count</span> <span class="ow">in</span> <span class="n">field_counts</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="mi">1</span>
+        <span class="p">}</span>
+
+        <span class="k">if</span> <span class="n">missing</span> <span class="ow">or</span> <span class="n">duplicates</span><span class="p">:</span>
+            <span class="n">any_errors</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="n">field_results</span><span class="p">[</span><span class="n">field</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;missing_count&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">missing</span><span class="p">),</span>
+            <span class="s2">&quot;missing_samples&quot;</span><span class="p">:</span> <span class="n">missing</span><span class="p">[:</span><span class="mi">10</span><span class="p">],</span>
+            <span class="s2">&quot;duplicate_count&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">duplicates</span><span class="p">),</span>
+            <span class="s2">&quot;duplicate_samples&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">val</span><span class="p">,</span> <span class="s2">&quot;count&quot;</span><span class="p">:</span> <span class="n">count</span><span class="p">}</span>
+                <span class="k">for</span> <span class="n">val</span><span class="p">,</span> <span class="n">count</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span>
+                    <span class="n">duplicates</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span>
+                    <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                    <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="p">)[:</span><span class="mi">10</span><span class="p">]</span>
+            <span class="p">],</span>
+        <span class="p">}</span>
+
     <span class="k">return</span> <span class="p">{</span>
-        <span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="n">status</span><span class="p">,</span>
-        <span class="s2">&quot;total_trades&quot;</span><span class="p">:</span> <span class="n">total_trades</span><span class="p">,</span>
-        <span class="s2">&quot;missing_count&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">missing</span><span class="p">),</span>
-        <span class="s2">&quot;missing_samples&quot;</span><span class="p">:</span> <span class="n">missing</span><span class="p">[:</span><span class="mi">10</span><span class="p">],</span>
-        <span class="s2">&quot;duplicate_count&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">duplicates</span><span class="p">),</span>
-        <span class="s2">&quot;duplicate_samples&quot;</span><span class="p">:</span> <span class="p">[</span>
-            <span class="p">{</span><span class="s2">&quot;trade_id&quot;</span><span class="p">:</span> <span class="n">tid</span><span class="p">,</span> <span class="s2">&quot;count&quot;</span><span class="p">:</span> <span class="n">count</span><span class="p">}</span>
-            <span class="k">for</span> <span class="n">tid</span><span class="p">,</span> <span class="n">count</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span>
-                <span class="n">duplicates</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span>
-                <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
-                <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-            <span class="p">)[:</span><span class="mi">10</span><span class="p">]</span>
-        <span class="p">],</span>
+        <span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="s2">&quot;ERRORS&quot;</span> <span class="k">if</span> <span class="n">any_errors</span> <span class="k">else</span> <span class="s2">&quot;OK&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;total_docs&quot;</span><span class="p">:</span> <span class="n">total_docs</span><span class="p">,</span>
+        <span class="s2">&quot;fields&quot;</span><span class="p">:</span> <span class="n">field_results</span><span class="p">,</span>
     <span class="p">}</span></div>
 
 
@@ -1319,6 +1349,7 @@
                    <span class="n">ts_id</span><span class="o">=</span><span class="n">t</span><span class="p">[</span><span class="s2">&quot;ts_id&quot;</span><span class="p">],</span>
                    <span class="n">bt_id</span><span class="o">=</span><span class="n">t</span><span class="p">[</span><span class="s2">&quot;bt_id&quot;</span><span class="p">],</span>
                    <span class="n">trade_id</span><span class="o">=</span><span class="n">t</span><span class="p">[</span><span class="s2">&quot;trade_id&quot;</span><span class="p">],</span>
+                   <span class="n">uniq_id</span><span class="o">=</span><span class="n">t</span><span class="p">[</span><span class="s2">&quot;uniq_id&quot;</span><span class="p">],</span>
                    <span class="n">tags</span><span class="o">=</span><span class="n">t</span><span class="p">[</span><span class="s2">&quot;tags&quot;</span><span class="p">],</span>
                    <span class="p">)</span>
     <span class="k">if</span> <span class="n">close_dt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -1423,7 +1454,7 @@
         <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">trade_id</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">str</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">trade_id</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">&quot;Cannot store Trade with empty trade_id </span><span class="si">{</span><span class="n">t</span><span class="o">.</span><span class="n">trade_id</span><span class="si">}</span><span class="s2">. &quot;</span>
-                <span class="s2">&quot;Bind ts_id first.&quot;</span>
+                <span class="s2">&quot;trade_id must be a non-empty string.&quot;</span>
             <span class="p">)</span>
         <span class="n">working_trades</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">to_clean_dict</span><span class="p">())</span>
 
@@ -2227,6 +2258,7 @@
     <span class="s2">&quot;profit_perc&quot;</span><span class="p">,</span> <span class="s2">&quot;start_dt&quot;</span><span class="p">,</span> <span class="s2">&quot;end_dt&quot;</span><span class="p">,</span> <span class="s2">&quot;drawdown_open&quot;</span><span class="p">,</span>
     <span class="s2">&quot;drawdown_limit&quot;</span><span class="p">,</span> <span class="s2">&quot;notes&quot;</span><span class="p">,</span> <span class="s2">&quot;thresholds&quot;</span><span class="p">,</span> <span class="s2">&quot;tradeseries&quot;</span><span class="p">,</span>
     <span class="s2">&quot;how_gl_heatmap_viz&quot;</span><span class="p">,</span> <span class="s2">&quot;weekly_price_overlay_visuals&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;created_dt&quot;</span><span class="p">,</span> <span class="s2">&quot;created_epoch&quot;</span><span class="p">,</span> <span class="s2">&quot;uniq_id&quot;</span><span class="p">,</span>
 <span class="p">})</span>
 
 
@@ -2267,20 +2299,23 @@
         <span class="n">tp_id</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;tp_id&quot;</span><span class="p">),</span>
         <span class="n">name</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">),</span>
         <span class="n">id_slug</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id_slug&quot;</span><span class="p">),</span>
-        <span class="n">tags</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;tags&quot;</span><span class="p">,</span> <span class="p">[]),</span>
+        <span class="n">tags</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;tags&quot;</span><span class="p">),</span>
         <span class="n">cfg_label</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;cfg_label&quot;</span><span class="p">),</span>
         <span class="n">profit_perc</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;profit_perc&quot;</span><span class="p">,</span> <span class="mi">100</span><span class="p">),</span>
         <span class="n">start_dt</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;start_dt&quot;</span><span class="p">),</span>
         <span class="n">end_dt</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;end_dt&quot;</span><span class="p">),</span>
         <span class="n">drawdown_open</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;drawdown_open&quot;</span><span class="p">),</span>
         <span class="n">drawdown_limit</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;drawdown_limit&quot;</span><span class="p">),</span>
-        <span class="n">notes</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;notes&quot;</span><span class="p">,</span> <span class="p">[]),</span>
-        <span class="n">thresholds</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;thresholds&quot;</span><span class="p">,</span> <span class="p">{}),</span>
+        <span class="n">notes</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;notes&quot;</span><span class="p">),</span>
+        <span class="n">thresholds</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;thresholds&quot;</span><span class="p">),</span>
         <span class="n">tradeseries</span><span class="o">=</span><span class="n">ts</span><span class="p">,</span>
         <span class="n">how_gl_heatmap_viz</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;how_gl_heatmap_viz&quot;</span><span class="p">),</span>
         <span class="n">weekly_price_overlay_visuals</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
             <span class="s2">&quot;weekly_price_overlay_visuals&quot;</span>
         <span class="p">),</span>
+        <span class="n">created_dt</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;created_dt&quot;</span><span class="p">),</span>
+        <span class="n">created_epoch</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;created_epoch&quot;</span><span class="p">),</span>
+        <span class="n">uniq_id</span><span class="o">=</span><span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;uniq_id&quot;</span><span class="p">),</span>
     <span class="p">)</span>
 
     <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">tp</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
