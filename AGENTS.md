@@ -57,10 +57,30 @@ or serialized), verify each item before presenting the code:
       replaces only the uuid suffix with its last 8 hex chars.
 - [ ] `created_epoch` (int) and `created_dt` (ISO string) both
       present; one derived from the other.
+- [ ] `_EQ_FIELDS` frozenset declared as a class variable listing
+      every attribute compared by `__eq__`.
+- [ ] `_EQ_EXCLUDE` frozenset declared as a class variable listing
+      every attribute intentionally excluded from `__eq__`, with an
+      inline comment per entry explaining why (derived, config, etc.).
+- [ ] `__eq__` uses `all(getattr(self, f) == getattr(other, f) for f
+      in self._EQ_FIELDS)` — not hand-rolled attribute chains.
+- [ ] `_EQ_FIELDS | _EQ_EXCLUDE` exactly covers `instance.__dict__`
+      with no gaps and no phantom entries.
 - [ ] Unit tests cover: construction defaults, all-fields construction,
       `to_json` returns valid JSON, `to_clean_dict` matches parsed
       `to_json`, mutation of the returned dict does not affect the
       instance, and `from_dict` round-trip.
+- [ ] A `test_ClassName_eq_covers_all_attributes()` test exists that
+      accepts `assert_eq_fields_cover_instance` as a fixture parameter
+      and calls it with the instance.
+- [ ] A `test_ClassName_eq_field_sensitivity()` test exists that
+      accepts `run_eq_field_sensitivity` as a fixture parameter and
+      verifies: (1) a deepcopy of the instance equals the original;
+      (2) setting each `_EQ_FIELDS` member to the sentinel causes
+      inequality; (3) setting each truly-excluded `_EQ_EXCLUDE` member
+      to the sentinel does not affect equality.  For classes using
+      `sub_eq()`, `parameters` is filtered from the truly-excluded loop
+      and tested separately to confirm it does cause inequality.
 
 ## Related Files
 

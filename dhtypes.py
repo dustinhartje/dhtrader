@@ -260,6 +260,18 @@ class Symbol():
     leverage_ratio, and tick_size.
     """
 
+    _EQ_FIELDS: frozenset = frozenset({
+        "ticker", "name", "leverage_ratio", "tick_size",
+    })
+    _EQ_EXCLUDE: frozenset = frozenset({
+        "_closed_hours_cache",  # runtime cache, not identity
+        # Timing data derived from ticker via set_times()
+        "eth_open_time", "eth_close_time",
+        "rth_open_time", "rth_close_time",
+        "eth_week_open", "eth_week_close",
+        "rth_week_open", "rth_week_close",
+    })
+
     def __init__(self,
                  ticker: str,
                  name: str,
@@ -275,11 +287,10 @@ class Symbol():
 
     def __eq__(self, other):
         """Return True if this symbol equals the other symbol."""
-        return (self.ticker == other.ticker
-                and self.name == other.name
-                and self.leverage_ratio == other.leverage_ratio
-                and self.tick_size == other.tick_size
-                )
+        return all(
+            getattr(self, f) == getattr(other, f)
+            for f in self._EQ_FIELDS
+        )
 
     def __ne__(self, other):
         """Return True if this symbol does not equal the other symbol."""
@@ -985,6 +996,23 @@ class Candle():
     on creation.
     """
 
+    _EQ_FIELDS: frozenset = frozenset({
+        "c_datetime", "c_timeframe", "c_open",
+        "c_high", "c_low", "c_close",
+        "c_volume", "c_symbol",
+        "c_tags", "name",
+        # Derived from c_datetime
+        "c_epoch", "c_date", "c_time",
+        # Derived from c_datetime + c_timeframe
+        "c_end_datetime",
+        # Computed from OHLC values
+        "c_size", "c_body_size",
+        "c_upper_wick_size", "c_lower_wick_size",
+        "c_body_perc", "c_upper_wick_perc",
+        "c_lower_wick_perc", "c_direction",
+    })
+    _EQ_EXCLUDE: frozenset = frozenset({})
+
     def __init__(self,
                  c_datetime,
                  c_timeframe: str,
@@ -1099,15 +1127,10 @@ class Candle():
 
     def __eq__(self, other):
         """Return True if this candle equals the other candle."""
-        return (self.c_datetime == other.c_datetime
-                and self.c_timeframe == other.c_timeframe
-                and self.c_open == other.c_open
-                and self.c_high == other.c_high
-                and self.c_low == other.c_low
-                and self.c_close == other.c_close
-                and self.c_volume == other.c_volume
-                and self.c_symbol == other.c_symbol
-                )
+        return all(
+            getattr(self, f) == getattr(other, f)
+            for f in self._EQ_FIELDS
+        )
 
     def __ne__(self, other):
         """Return True if this candle does not equal the other candle."""
@@ -1129,6 +1152,15 @@ class Chart():
 
     Supports both regular and extended trading hours.
     """
+
+    _EQ_FIELDS: frozenset = frozenset({
+        "c_timeframe", "c_symbol", "c_start", "c_end", "c_candles",
+        "c_trading_hours", "candles_count", "earliest_candle", "latest_candle",
+    })
+    _EQ_EXCLUDE: frozenset = frozenset({
+        # Config flags, not chart data identity
+        "autoload", "show_progress",
+    })
 
     def __init__(self,
                  c_timeframe: str,
@@ -1163,12 +1195,10 @@ class Chart():
 
     def __eq__(self, other):
         """Return True if this Chart equals the other Chart."""
-        return (self.c_timeframe == other.c_timeframe
-                and self.c_symbol == other.c_symbol
-                and self.c_start == other.c_start
-                and self.c_end == other.c_end
-                and self.c_candles == other.c_candles
-                )
+        return all(
+            getattr(self, f) == getattr(other, f)
+            for f in self._EQ_FIELDS
+        )
 
     def __ne__(self, other):
         """Return True if this Chart does not equal the other Chart."""
@@ -1618,6 +1648,11 @@ class IndicatorDataPoint():
     if I find more uses for time series beyond this.
     """
 
+    _EQ_FIELDS: frozenset = frozenset({
+        "dt", "value", "ind_id", "epoch", "name"
+    })
+    _EQ_EXCLUDE: frozenset = frozenset({})
+
     def __init__(self,
                  dt: str,
                  value: float,
@@ -1674,10 +1709,10 @@ class IndicatorDataPoint():
         # For example it gets an Exception when comparing to an empty list
         # which is returned from storage when there is no matching datapoint.
         try:
-            return (self.dt == other.dt and
-                    self.value == other.value and
-                    self.ind_id == other.ind_id and
-                    self.epoch == other.epoch)
+            return all(
+                getattr(self, f) == getattr(other, f)
+                for f in self._EQ_FIELDS
+            )
         except Exception:
             return False
 
@@ -1694,6 +1729,19 @@ class Indicator():
     directly; use its subclasses which provide indicator type-specific
     logic.
     """
+
+    _EQ_FIELDS: frozenset = frozenset({
+        "name", "description", "timeframe",
+        "trading_hours", "symbol", "calc_version",
+        "calc_details", "start_dt", "end_dt",
+        "ind_id", "candle_chart", "datapoints",
+        # Subclass-specific fields; compared via sub_eq()
+        "parameters",
+        "class_name",   # type tag, not business identity
+    })
+    _EQ_EXCLUDE: frozenset = frozenset({
+        "autoload_chart",  # config flag
+    })
 
     def __init__(self,
                  name: str,
@@ -1748,20 +1796,13 @@ class Indicator():
 
     def __eq__(self, other):
         """Return True if all indicator attributes and datapoints match."""
-        return (self.name == other.name
-                and self.description == other.description
-                and self.timeframe == other.timeframe
-                and self.trading_hours == other.trading_hours
-                and self.symbol == other.symbol
-                and self.calc_version == other.calc_version
-                and self.calc_details == other.calc_details
-                and self.start_dt == other.start_dt
-                and self.end_dt == other.end_dt
-                and self.ind_id == other.ind_id
-                and self.candle_chart == other.candle_chart
-                and self.datapoints == other.datapoints
-                and self.sub_eq(other)
-                )
+        return (
+            all(
+                getattr(self, f) == getattr(other, f)
+                for f in self._EQ_FIELDS
+            )
+            and self.sub_eq(other)
+        )
 
     def __ne__(self, other):
         """Return True if any indicator attribute or datapoint differs."""
@@ -2254,6 +2295,34 @@ class Trade():
         created_epoch (int): Unix timestamp derived from created_dt.
     """
 
+    _EQ_FIELDS: frozenset = frozenset({
+        "open_dt", "timeframe", "trading_hours",
+        "direction", "entry_price", "high_price",
+        "low_price", "stop_target", "prof_target",
+        "close_dt", "created_dt", "open_epoch",
+        "exit_price", "stop_ticks", "prof_ticks",
+        "offset_ticks", "symbol", "is_open",
+        "profitable", "name", "version",
+        "ts_id", "bt_id", "trade_id",
+        # Derived from open_dt via _sync_trade_identity()
+        "open_date", "open_time",
+        # Derived from close_dt
+        "close_date", "close_time",
+        # Derived from uniq_id
+        "trade_id_short",
+        # trade_id and uniq_id are always equal; uniq_id is redundant
+        "uniq_id",
+        # Derived from created_dt
+        "created_epoch",
+        # Derived from direction
+        "flipper",
+        # Derived from timeframe + open_dt
+        "first_min_open",
+        # Metadata; not currently part of equality
+        "tags",
+    })
+    _EQ_EXCLUDE: frozenset = frozenset({})
+
     @staticmethod
     def _normalize_ts_id(ts_id):
         """Return normalized ts_id, mapping None/blank to None."""
@@ -2531,31 +2600,10 @@ class Trade():
 
     def __eq__(self, other):
         """Return True if all Trade attributes are equal."""
-        return (self.open_dt == other.open_dt
-                and self.timeframe == other.timeframe
-                and self.trading_hours == other.trading_hours
-                and self.direction == other.direction
-                and self.entry_price == other.entry_price
-                and self.high_price == other.high_price
-                and self.low_price == other.low_price
-                and self.stop_target == other.stop_target
-                and self.prof_target == other.prof_target
-                and self.close_dt == other.close_dt
-                and self.created_dt == other.created_dt
-                and self.open_epoch == other.open_epoch
-                and self.exit_price == other.exit_price
-                and self.stop_ticks == other.stop_ticks
-                and self.prof_ticks == other.prof_ticks
-                and self.offset_ticks == other.offset_ticks
-                and self.symbol == other.symbol
-                and self.is_open == other.is_open
-                and self.profitable == other.profitable
-                and self.name == other.name
-                and self.version == other.version
-                and self.ts_id == other.ts_id
-                and self.bt_id == other.bt_id
-                and self.trade_id == other.trade_id
-                )
+        return all(
+            getattr(self, f) == getattr(other, f)
+            for f in self._EQ_FIELDS
+        )
 
     def __ne__(self, other):
         """Return True if any Trade attribute differs."""
@@ -2881,6 +2929,15 @@ class TradeSeries():
         trades (list): list of trades in the series
     """
 
+    _EQ_FIELDS: frozenset = frozenset({
+        "start_dt", "end_dt", "timeframe",
+        "symbol", "name", "params_str",
+        "ts_id", "bt_id", "trades",
+        "trading_hours",
+        "tags",
+    })
+    _EQ_EXCLUDE: frozenset = frozenset({})
+
     def __init__(self,
                  start_dt,
                  end_dt,
@@ -2927,16 +2984,10 @@ class TradeSeries():
 
     def __eq__(self, other):
         """Return True if all TradeSeries attributes are equal."""
-        return (self.start_dt == other.start_dt
-                and self.end_dt == other.end_dt
-                and self.timeframe == other.timeframe
-                and self.symbol == other.symbol
-                and self.name == other.name
-                and self.params_str == other.params_str
-                and self.ts_id == other.ts_id
-                and self.bt_id == other.bt_id
-                and self.trades == other.trades
-                )
+        return all(
+            getattr(self, f) == getattr(other, f)
+            for f in self._EQ_FIELDS
+        )
 
     def __ne__(self, other):
         """Return True if any TradeSeries attribute differs."""
@@ -3409,6 +3460,19 @@ class Backtest():
             created when the Backtest is run
     """
 
+    _EQ_FIELDS: frozenset = frozenset({
+        "start_dt", "end_dt", "timeframe",
+        "trading_hours", "symbol", "name",
+        "bt_id", "class_name", "chart_tf",
+        "chart_1m", "tradeseries",
+    })
+    _EQ_EXCLUDE: frozenset = frozenset({
+        # Subclass-specific fields; compared via sub_eq()
+        "parameters",
+        # Config flags, not identity
+        "prefer_stored", "autoload_charts",
+    })
+
     def __init__(self,
                  start_dt,
                  end_dt,
@@ -3464,19 +3528,13 @@ class Backtest():
 
     def __eq__(self, other):
         """Return True if all Backtest attributes are equal."""
-        return (self.start_dt == other.start_dt
-                and self.end_dt == other.end_dt
-                and self.timeframe == other.timeframe
-                and self.trading_hours == other.trading_hours
-                and self.symbol == other.symbol
-                and self.name == other.name
-                and self.bt_id == other.bt_id
-                and self.class_name == other.class_name
-                and self.chart_tf == other.chart_tf
-                and self.chart_1m == other.chart_1m
-                and self.tradeseries == other.tradeseries
-                and self.sub_eq(other)
-                )
+        return (
+            all(
+                getattr(self, f) == getattr(other, f)
+                for f in self._EQ_FIELDS
+            )
+            and self.sub_eq(other)
+        )
 
     def __ne__(self, other):
         """Return True if any Backtest attribute differs."""
@@ -4114,6 +4172,14 @@ class StoredImage():
         uniq_id: Raw 32-char hex uuid.  Generated if None.
     """
 
+    _EQ_FIELDS: frozenset = frozenset({
+        "image_id", "name", "content_type", "description", "tags",
+    })
+    _EQ_EXCLUDE: frozenset = frozenset({
+        "created_epoch", "created_dt", "uniq_id", "image_id_short", "filename",
+        "parent_collection", "parent_id_field", "parent_id_value",
+    })
+
     def __init__(
             self,
             name: str = DEFAULT_OBJ_NAME,
@@ -4181,10 +4247,9 @@ class StoredImage():
 
     def __eq__(self, other):
         """Return True if image_id and name match."""
-        return (
-            isinstance(other, StoredImage)
-            and self.image_id == other.image_id
-            and self.name == other.name
+        return isinstance(other, StoredImage) and all(
+            getattr(self, f) == getattr(other, f)
+            for f in self._EQ_FIELDS
         )
 
     def __repr__(self):

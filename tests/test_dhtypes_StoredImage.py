@@ -781,3 +781,15 @@ def test_StoredImage_review_images_with_data_does_not_raise(
     )
     store_images([img], [_TEST_JPEG])
     review_images(field="name", value=_TEST_MARKER)
+
+
+def test_StoredImage_eq_covers_all_attributes(assert_eq_fields_cover_instance):
+    """_EQ_FIELDS | _EQ_EXCLUDE must exactly match instance __dict__."""
+    img = StoredImage(name="DELETEME_eq_test")
+    assert_eq_fields_cover_instance(img)
+
+
+def test_StoredImage_eq_field_sensitivity(run_eq_field_sensitivity):
+    """Confirm _EQ_FIELDS drives inequality and _EQ_EXCLUDE does not."""
+    obj = StoredImage(name="DELETEME_eq_test")
+    run_eq_field_sensitivity(obj)

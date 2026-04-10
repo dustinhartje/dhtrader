@@ -6,7 +6,7 @@ from dhtrader import (
     delete_indicator, delete_indicators_by_name,
     get_indicator, get_indicator_datapoints,
     get_indicators_by_name, Indicator, IndicatorDataPoint,
-    IndicatorEMA, IndicatorSMA, store_indicator)
+    IndicatorEMA, IndicatorSMA, store_indicator, Symbol)
 
 
 @pytest.mark.storage
@@ -1180,3 +1180,73 @@ def test_IndicatorEMA_create_and_verify_common_methods():
     assert isinstance(p, str)
     assert "\n" in p
     assert "EMA" in p
+
+
+def test_IndicatorDataPoint_eq_covers_all_attributes(
+    assert_eq_fields_cover_instance,
+):
+    """_EQ_FIELDS | _EQ_EXCLUDE must exactly match instance __dict__."""
+    dp = IndicatorDataPoint(
+        dt="2025-01-01 00:00:00",
+        value=1.0,
+        ind_id="test_id",
+    )
+    assert_eq_fields_cover_instance(dp)
+
+
+def test_IndicatorDataPoint_eq_field_sensitivity(
+    run_eq_field_sensitivity,
+):
+    """Confirm _EQ_FIELDS drives inequality and _EQ_EXCLUDE does not."""
+    obj = IndicatorDataPoint(
+        dt="2025-01-01 00:00:00",
+        value=1.0,
+        ind_id="test_id",
+    )
+    run_eq_field_sensitivity(obj)
+
+
+def test_Indicator_eq_covers_all_attributes(assert_eq_fields_cover_instance):
+    """_EQ_FIELDS | _EQ_EXCLUDE must exactly match instance __dict__."""
+    sym = Symbol(
+        ticker="ES", name="ES", leverage_ratio=50.0, tick_size=0.25,
+    )
+    ind = Indicator(
+        name="DELETEME",
+        description="Coverage test",
+        timeframe="1m",
+        trading_hours="eth",
+        symbol=sym,
+        calc_version="1.0.0",
+        calc_details="test",
+        start_dt="2099-01-02 12:00:00",
+        end_dt="2099-01-02 12:10:00",
+        autoload_chart=False,
+        candle_chart=None,
+    )
+    assert_eq_fields_cover_instance(ind)
+
+
+def test_Indicator_eq_field_sensitivity(run_eq_field_sensitivity):
+    """Confirm _EQ_FIELDS drives inequality and _EQ_EXCLUDE does not.
+
+    'parameters' is in _EQ_EXCLUDE but compared via sub_eq(); it is
+    passed as sub_eq_fields so it is also verified.
+    """
+    sym = Symbol(
+        ticker="ES", name="ES", leverage_ratio=50.0, tick_size=0.25,
+    )
+    obj = Indicator(
+        name="DELETEME",
+        description="Coverage test",
+        timeframe="1m",
+        trading_hours="eth",
+        symbol=sym,
+        calc_version="1.0.0",
+        calc_details="test",
+        start_dt="2099-01-02 12:00:00",
+        end_dt="2099-01-02 12:10:00",
+        autoload_chart=False,
+        candle_chart=None,
+    )
+    run_eq_field_sensitivity(obj, sub_eq_fields={"parameters"})

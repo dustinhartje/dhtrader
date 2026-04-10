@@ -1779,3 +1779,25 @@ def test_Symbol_create_and_verify_common_methods(symbol):
     assert "\n" in p
     assert '"ticker"' in p
     assert '"ES"' in p
+
+
+def test_Symbol_eq_covers_all_attributes(assert_eq_fields_cover_instance):
+    """_EQ_FIELDS | _EQ_EXCLUDE must exactly match instance __dict__."""
+    sym = Symbol(
+        ticker="DELETEME",
+        name="test",
+        leverage_ratio=50.0,
+        tick_size=0.25,
+    )
+    assert_eq_fields_cover_instance(sym)
+
+
+def test_Symbol_eq_field_sensitivity(run_eq_field_sensitivity):
+    """Confirm _EQ_FIELDS drives inequality and _EQ_EXCLUDE does not."""
+    obj = Symbol(
+        ticker="DELETEME",
+        name="test",
+        leverage_ratio=50.0,
+        tick_size=0.25,
+    )
+    run_eq_field_sensitivity(obj)

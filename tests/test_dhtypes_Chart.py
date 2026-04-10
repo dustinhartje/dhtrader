@@ -157,3 +157,25 @@ def test_Chart_restrict_dates():
     with pytest.raises(ValueError):
         ch.restrict_dates(new_start_dt="2024-09-12 00:00:00",
                           new_end_dt="2024-09-27 12:00:00")
+
+
+def test_Chart_eq_covers_all_attributes(assert_eq_fields_cover_instance):
+    """_EQ_FIELDS | _EQ_EXCLUDE must exactly match instance __dict__."""
+    ch = Chart(
+        c_timeframe="15m",
+        c_trading_hours="eth",
+        c_symbol="ES",
+        autoload=False,
+    )
+    assert_eq_fields_cover_instance(ch)
+
+
+def test_Chart_eq_field_sensitivity(run_eq_field_sensitivity):
+    """Confirm _EQ_FIELDS drives inequality and _EQ_EXCLUDE does not."""
+    obj = Chart(
+        c_timeframe="15m",
+        c_trading_hours="eth",
+        c_symbol="ES",
+        autoload=False,
+    )
+    run_eq_field_sensitivity(obj)

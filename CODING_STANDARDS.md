@@ -187,6 +187,149 @@ log.info(
 
 ### No logging in unit tests
 
+## `__eq__` Methods
+
+### Structure
+
+Every class defines two class-level frozensets immediately before
+`__init__`:
+
+```python
+class MyClass:
+    _EQ_FIELDS: frozenset = frozenset({
+        "attr_a", "attr_b",  # fields actively compared in __eq__
+    })
+    _EQ_EXCLUDE: frozenset = frozenset({
+        "derived_attr",   # derived from attr_a; redundant
+        "config_flag",    # runtime config, not object identity
+    })
+```
+
+`_EQ_FIELDS` is the authoritative list of attributes that define
+equality.  `_EQ_EXCLUDE` documents every attribute that is intentionally
+*not* compared, with an inline comment explaining why.
+
+`_EQ_FIELDS | _EQ_EXCLUDE` must exactly equal `set(instance.__dict__)`
+— no gaps (unaccounted attributes), no phantom entries (attributes that
+no longer exist on the instance).
+
+### `__eq__` implementation
+
+Use `all()` over `_EQ_FIELDS`; never hand-roll `and`-chained
+comparisons:
+
+```python
+def __eq__(self, other):
+    """Return True if all MyClass attributes are equal."""
+    return all(
+        getattr(self, f) == getattr(other, f)
+        for f in self._EQ_FIELDS
+    )
+```
+
+When a subclass `sub_eq()` hook is needed (e.g. for subclass-specific
+`parameters` dicts), chain it after the `all()` call:
+
+```python
+def __eq__(self, other):
+    """Return True if all MyClass attributes are equal."""
+    return (
+        all(
+            getattr(self, f) == getattr(other, f)
+            for f in self._EQ_FIELDS
+        )
+        and self.sub_eq(other)
+    )
+```
+
+When type safety is needed (e.g. the class does not inherit from a
+common base), guard with `isinstance`:
+
+```python
+def __eq__(self, other):
+    """Return True if image_id and name match."""
+    return isinstance(other, MyClass) and all(
+        getattr(self, f) == getattr(other, f)
+        for f in self._EQ_FIELDS
+    )
+```
+
+### Coverage test
+
+Every class must have a `test_ClassName_eq_covers_all_attributes()`
+function in its test file.  This test constructs a minimal but fully
+initialised instance and passes it to the shared helper from
+`tests/conftest.py`:
+
+```python
+def test_MyClass_eq_covers_all_attributes(
+        assert_eq_fields_cover_instance):
+    """_EQ_FIELDS | _EQ_EXCLUDE must exactly match instance __dict__."""
+    obj = MyClass(...)  # minimal valid construction
+    assert_eq_fields_cover_instance(obj)
+```
+
+`assert_eq_fields_cover_instance` is a pytest fixture defined in
+`tests/conftest.py` and is injected automatically — no import is needed.
+
+### Field sensitivity test
+
+Each class must also have a `test_ClassName_eq_field_sensitivity()`
+test.  Use the `run_eq_field_sensitivity` fixture from
+`tests/conftest.py`; it takes the object and runs all assertions
+internally, so the test only needs to construct the instance:
+
+```python
+def test_MyClass_eq_field_sensitivity(run_eq_field_sensitivity):
+    """Confirm _EQ_FIELDS drives inequality and _EQ_EXCLUDE does not."""
+    obj = MyClass(...)
+    run_eq_field_sensitivity(obj)
+```
+
+The fixture (backed by the `run_eq_field_sensitivity` plain function in
+`conftest.py`) does the following, with clear inline comments:
+
+1. Makes a `deepcopy` of the instance — the two must start equal.
+2. For each `_EQ_FIELDS` field: drops in the sentinel (guaranteed
+   not-equal to anything), asserts the pair is now *not* equal, then
+   restores the original — proving `__eq__` actually checks that field.
+3. Asserts the pair is equal again after all fields are restored.
+4. For each truly-excluded `_EQ_EXCLUDE` field: does the same but
+   asserts the pair is *still* equal — proving the field is ignored.
+
+`object.__setattr__` is used throughout to bypass custom `__setattr__`
+hooks (e.g. Trade's sync logic) so only `__eq__` is under test.
+
+**Classes that use `sub_eq()`** (currently `Indicator` and `Backtest`)
+have `parameters` in `_EQ_EXCLUDE` because it is not part of the
+`_EQ_FIELDS` loop, but it IS compared via `sub_eq()`.  Pass it via
+`sub_eq_fields` so the fixture tests it separately:
+
+```python
+def test_Indicator_eq_field_sensitivity(run_eq_field_sensitivity):
+    """...
+
+    'parameters' is in _EQ_EXCLUDE but compared via sub_eq(); it is
+    passed as sub_eq_fields so it is also verified.
+    """
+    obj = Indicator(...)
+    run_eq_field_sensitivity(obj, sub_eq_fields={"parameters"})
+```
+
+The `_EqFieldSentinel` class (also in `conftest.py`) compares as
+not-equal to any value and returns itself for any attribute access,
+preventing `AttributeError` in `__eq__` methods that call
+`getattr(other, field)` on complex object-typed fields.
+
+### Why this matters
+
+A hand-rolled `__eq__` (e.g. `self.a == other.a and self.b == other.b`)
+silently ignores any attribute added later.  With `_EQ_FIELDS`, the
+coverage test catches the gap immediately; the developer is forced to
+make an explicit decision: add the new attribute to `_EQ_FIELDS`
+(equality matters) or to `_EQ_EXCLUDE` (intentionally ignored, with a
+comment).
+
 ## Class Serialization
 
 ### `to_json()` and `to_clean_dict()` patterns

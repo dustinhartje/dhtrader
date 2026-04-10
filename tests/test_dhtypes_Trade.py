@@ -1507,3 +1507,39 @@ def test_Trade_historical():
         if "open_dt" in expected:
             expected.pop("open_dt")
         assert actual_results == expected
+
+
+def test_Trade_eq_covers_all_attributes(assert_eq_fields_cover_instance):
+    """_EQ_FIELDS | _EQ_EXCLUDE must exactly match instance __dict__."""
+    sym = Symbol(
+        ticker="ES", name="ES", leverage_ratio=50.0, tick_size=0.25,
+    )
+    t = Trade(
+        open_dt="2099-01-08 12:00:00",
+        direction="long",
+        timeframe="5m",
+        trading_hours="rth",
+        entry_price=5000,
+        symbol=sym,
+        stop_ticks=500,
+        prof_ticks=500,
+    )
+    assert_eq_fields_cover_instance(t)
+
+
+def test_Trade_eq_field_sensitivity(run_eq_field_sensitivity):
+    """Confirm _EQ_FIELDS drives inequality and _EQ_EXCLUDE does not."""
+    sym = Symbol(
+        ticker="ES", name="ES", leverage_ratio=50.0, tick_size=0.25,
+    )
+    obj = Trade(
+        open_dt="2099-01-08 12:00:00",
+        direction="long",
+        timeframe="5m",
+        trading_hours="rth",
+        entry_price=5000,
+        symbol=sym,
+        stop_ticks=500,
+        prof_ticks=500,
+    )
+    run_eq_field_sensitivity(obj)

@@ -1042,3 +1042,45 @@ def test_delete_backtests(cleanup_backtest_storage):
     stored2 = get_trades_by_field(field="bt_id", value=test_name_2)
     assert len(stored1) == 0
     assert len(stored2) == 0
+
+
+def test_Backtest_eq_covers_all_attributes(assert_eq_fields_cover_instance):
+    """_EQ_FIELDS | _EQ_EXCLUDE must exactly match instance __dict__."""
+    sym = Symbol(
+        ticker="ES", name="ES", leverage_ratio=50.0, tick_size=0.25,
+    )
+    bt = Backtest(
+        start_dt="2099-01-01 00:00:00",
+        end_dt="2099-02-01 00:00:00",
+        timeframe="e1h",
+        trading_hours="eth",
+        symbol=sym,
+        name="DELETEME",
+        parameters={"a": 1},
+        autoload_charts=False,
+        prefer_stored=False,
+    )
+    assert_eq_fields_cover_instance(bt)
+
+
+def test_Backtest_eq_field_sensitivity(run_eq_field_sensitivity):
+    """Confirm _EQ_FIELDS drives inequality and _EQ_EXCLUDE does not.
+
+    'parameters' is in _EQ_EXCLUDE but compared via sub_eq(); it is
+    passed as sub_eq_fields so it is also verified.
+    """
+    sym = Symbol(
+        ticker="ES", name="ES", leverage_ratio=50.0, tick_size=0.25,
+    )
+    obj = Backtest(
+        start_dt="2099-01-01 00:00:00",
+        end_dt="2099-02-01 00:00:00",
+        timeframe="e1h",
+        trading_hours="eth",
+        symbol=sym,
+        name="DELETEME",
+        parameters={"a": 1},
+        autoload_charts=False,
+        prefer_stored=False,
+    )
+    run_eq_field_sensitivity(obj, sub_eq_fields={"parameters"})

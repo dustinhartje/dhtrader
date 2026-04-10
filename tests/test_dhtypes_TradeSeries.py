@@ -880,3 +880,37 @@ def test_delete_tradeseries(cleanup_tradeseries_storage):
                                   value=test_name_2)
     assert len(stored1) == 0
     assert len(stored2) == 0
+
+
+def test_TradeSeries_eq_covers_all_attributes(assert_eq_fields_cover_instance):
+    """_EQ_FIELDS | _EQ_EXCLUDE must exactly match instance __dict__."""
+    sym = Symbol(
+        ticker="ES", name="ES", leverage_ratio=50.0, tick_size=0.25,
+    )
+    ts = TradeSeries(
+        start_dt="2099-01-01 00:00:00",
+        end_dt="2099-02-01 00:00:00",
+        timeframe="5m",
+        trading_hours="rth",
+        symbol=sym,
+        name="DELETEME",
+        params_str="a1_b2_c3_p0",
+    )
+    assert_eq_fields_cover_instance(ts)
+
+
+def test_TradeSeries_eq_field_sensitivity(run_eq_field_sensitivity):
+    """Confirm _EQ_FIELDS drives inequality and _EQ_EXCLUDE does not."""
+    sym = Symbol(
+        ticker="ES", name="ES", leverage_ratio=50.0, tick_size=0.25,
+    )
+    obj = TradeSeries(
+        start_dt="2099-01-01 00:00:00",
+        end_dt="2099-02-01 00:00:00",
+        timeframe="5m",
+        trading_hours="rth",
+        symbol=sym,
+        name="DELETEME",
+        params_str="a1_b2_c3_p0",
+    )
+    run_eq_field_sensitivity(obj)

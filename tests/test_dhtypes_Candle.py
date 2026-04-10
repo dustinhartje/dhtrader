@@ -215,3 +215,33 @@ def test_Candle_contains_datetime(candle):
     assert not candle.contains_datetime("2099-01-02 12:01:00")
     # Before candle start is False
     assert not candle.contains_datetime("2099-01-02 11:59:00")
+
+
+def test_Candle_eq_covers_all_attributes(assert_eq_fields_cover_instance):
+    """_EQ_FIELDS | _EQ_EXCLUDE must exactly match instance __dict__."""
+    c = Candle(
+        c_datetime="2025-01-01 09:30:00",
+        c_timeframe="15m",
+        c_open=5000.0,
+        c_high=5010.0,
+        c_low=4990.0,
+        c_close=5005.0,
+        c_volume=100,
+        c_symbol="ES",
+    )
+    assert_eq_fields_cover_instance(c)
+
+
+def test_Candle_eq_field_sensitivity(run_eq_field_sensitivity):
+    """Confirm _EQ_FIELDS drives inequality and _EQ_EXCLUDE does not."""
+    obj = Candle(
+        c_datetime="2025-01-01 09:30:00",
+        c_timeframe="15m",
+        c_open=5000.0,
+        c_high=5010.0,
+        c_low=4990.0,
+        c_close=5005.0,
+        c_volume=100,
+        c_symbol="ES",
+    )
+    run_eq_field_sensitivity(obj)
