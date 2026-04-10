@@ -1111,60 +1111,88 @@ def check_integrity_no_nameless_objects(ignore=None):
     }
 
 
-def check_integrity_trade_ids(collection: str = COLLECTIONS["trades"]):
-    """Check all stored trades have non-empty, unique trade_id values.
+def check_integrity_unique_fields(
+        collection: str,
+        fields: list,
+        query: dict = None,
+        ):
+    """Check that specified fields have non-empty, unique values.
 
-    Iterates every trade record in the collection once and checks two
-    conditions:
-    - trade_id is neither None nor blank (missing/backfill gap)
-    - trade_id is unique across the collection (no duplicates)
+    Fetches documents from collection (optionally filtered by query)
+    and checks each named field for missing values and duplicates.
 
     Does not modify any data.
 
+    Args:
+        collection: Collection name to query.
+        fields: List of field name strings to check for uniqueness.
+        query: Optional MongoDB query dict to filter documents.
+            Defaults to None (all documents).
+
     Returns:
-        dict: Results with keys status, total_trades, missing_count,
-        missing_samples, duplicate_count, and duplicate_samples.
+        dict with keys:
+            status: "OK" or "ERRORS"
+            total_docs: total number of documents checked
+            fields: per-field results keyed by field name, each with:
+                missing_count: int
+                missing_samples: list of {"_id": ..., field: val} dicts
+                duplicate_count: int
+                duplicate_samples: list of {"value": ..., "count": int}
     """
-    all_docs = dhm.get_all_records_by_collection(collection=collection)
-    total_trades = len(all_docs)
-    missing = []
-    trade_id_counts = Counter()
+    if query is None:
+        all_docs = dhm.get_all_records_by_collection(
+            collection=collection,
+        )
+    else:
+        all_docs = dhm.run_query(query, collection=collection)
 
-    for doc in all_docs:
-        tid = doc.get("trade_id")
-        if tid is None or (
-            isinstance(tid, str) and tid.strip() == ""
-        ):
-            missing.append({
-                "_id": str(doc.get("_id")),
-                "ts_id": doc.get("ts_id"),
-                "open_dt": doc.get("open_dt"),
-                "trade_id": tid,
-            })
-        else:
-            trade_id_counts[tid] += 1
+    total_docs = len(all_docs)
+    field_results = {}
+    any_errors = False
 
-    duplicates = {
-        tid: count
-        for tid, count in trade_id_counts.items()
-        if count > 1
-    }
+    for field in fields:
+        missing = []
+        field_counts = Counter()
 
-    status = "OK" if not missing and not duplicates else "ERRORS"
+        for doc in all_docs:
+            val = doc.get(field)
+            if val is None or (
+                isinstance(val, str) and not val.strip()
+            ):
+                missing.append({
+                    "_id": str(doc.get("_id")),
+                    field: val,
+                })
+            else:
+                field_counts[val] += 1
+
+        duplicates = {
+            val: count
+            for val, count in field_counts.items()
+            if count > 1
+        }
+
+        if missing or duplicates:
+            any_errors = True
+
+        field_results[field] = {
+            "missing_count": len(missing),
+            "missing_samples": missing[:10],
+            "duplicate_count": len(duplicates),
+            "duplicate_samples": [
+                {"value": val, "count": count}
+                for val, count in sorted(
+                    duplicates.items(),
+                    key=lambda x: x[1],
+                    reverse=True,
+                )[:10]
+            ],
+        }
+
     return {
-        "status": status,
-        "total_trades": total_trades,
-        "missing_count": len(missing),
-        "missing_samples": missing[:10],
-        "duplicate_count": len(duplicates),
-        "duplicate_samples": [
-            {"trade_id": tid, "count": count}
-            for tid, count in sorted(
-                duplicates.items(),
-                key=lambda x: x[1],
-                reverse=True,
-            )[:10]
-        ],
+        "status": "ERRORS" if any_errors else "OK",
+        "total_docs": total_docs,
+        "fields": field_results,
     }
 
 

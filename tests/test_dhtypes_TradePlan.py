@@ -12,6 +12,8 @@ from dhtrader import (
     store_trades,
     delete_trades_by_field,
     get_trades_by_field,
+    COLLECTIONS,
+    check_integrity_unique_fields,
 )
 from dhtrader import dhstore
 
@@ -605,3 +607,66 @@ def test_reconstruct_tradeplan_always_hydrates_by_trade_id(monkeypatch):
             < tp.tradeseries.trades[1].open_epoch)
     assert tp.tradeseries.trades[0].trade_id == t_early.trade_id
     assert tp.tradeseries.trades[1].trade_id == t_late.trade_id
+
+
+# ---------------------------------------------------------------------------
+# Integrity: unique fields
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(scope="module")
+def tradeplan_unique_fields_result():
+    """Run tp_id/uniq_id uniqueness check once and cache result."""
+    return check_integrity_unique_fields(
+        collection=COLLECTIONS["tradeplans"],
+        fields=["tp_id", "uniq_id"],
+    )
+
+
+@pytest.mark.storage
+@pytest.mark.suppress_stdout
+def test_TradePlan_missing_unique_fields(tradeplan_unique_fields_result):
+    """Confirm all stored TradePlan docs have non-empty tp_id/uniq_id."""
+    result = tradeplan_unique_fields_result
+    assert result is not None, "check_integrity_unique_fields returned None"
+    assert "status" in result
+    assert "total_docs" in result
+    assert "fields" in result
+    for field_name in ["tp_id", "uniq_id"]:
+        field = result["fields"].get(field_name, {})
+        missing_count = field.get("missing_count", 0)
+        missing_samples = field.get("missing_samples", [])
+        if missing_count > 0:
+            samples = "\n".join(
+                f"  - _id={s['_id']}" for s in missing_samples
+            )
+            pytest.fail(
+                f"TradePlan docs with missing {field_name}: "
+                f"{missing_count} of {result['total_docs']}\n"
+                f"{samples}"
+            )
+
+
+@pytest.mark.storage
+@pytest.mark.suppress_stdout
+def test_TradePlan_duplicate_unique_fields(tradeplan_unique_fields_result):
+    """Confirm all stored TradePlan docs have unique tp_id/uniq_id."""
+    result = tradeplan_unique_fields_result
+    assert result is not None, "check_integrity_unique_fields returned None"
+    assert "status" in result
+    assert "total_docs" in result
+    assert "fields" in result
+    for field_name in ["tp_id", "uniq_id"]:
+        field = result["fields"].get(field_name, {})
+        duplicate_count = field.get("duplicate_count", 0)
+        duplicate_samples = field.get("duplicate_samples", [])
+        if duplicate_count > 0:
+            samples = "\n".join(
+                f"  - {field_name}={s['value']} count={s['count']}"
+                for s in duplicate_samples
+            )
+            pytest.fail(
+                f"Duplicate {field_name} in TradePlan: "
+                f"{duplicate_count} duplicate(s) among "
+                f"{result['total_docs']} doc(s)\n"
+                f"{samples}"
+            )
