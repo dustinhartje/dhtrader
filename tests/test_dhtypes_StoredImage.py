@@ -582,24 +582,31 @@ def test_StoredImage_delete_by_field_removes_only_matching(
     img_del = StoredImage(
         name=_TEST_SENTINEL,
         description="to_delete",
-        parent_collection="del_target",
+        parent_collection=f"{_TEST_SENTINEL}_del_target",
     )
     img_keep = StoredImage(
         name=_TEST_SENTINEL,
         description="to_keep",
-        parent_collection="keep_target",
+        parent_collection=f"{_TEST_SENTINEL}_keep_target",
     )
     store_images([img_del, img_keep], [_TEST_JPEG] * 2)
 
     deleted_count = delete_images_by_field(
-        field="parent_collection", value="del_target"
+        field="parent_collection",
+        value=f"{_TEST_SENTINEL}_del_target",
     )
     assert deleted_count == 1
 
-    gone = list_images(field="parent_collection", value="del_target")
+    gone = list_images(
+        field="parent_collection",
+        value=f"{_TEST_SENTINEL}_del_target",
+    )
     assert len(gone) == 0
 
-    kept = list_images(field="parent_collection", value="keep_target")
+    kept = list_images(
+        field="parent_collection",
+        value=f"{_TEST_SENTINEL}_keep_target",
+    )
     assert len(kept) == 1
     assert kept[0].description == "to_keep"
     assert kept[0].name == _TEST_SENTINEL
