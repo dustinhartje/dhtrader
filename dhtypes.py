@@ -4198,28 +4198,23 @@ class StoredImage():
         """Return string form of the clean metadata dict."""
         return str(self.to_clean_dict())
 
+    def to_json(self):
+        """Return a JSON representation with custom types normalized.
+
+        Converts non-serializable types to strings for portability.
+        All fields on this class are already JSON-compatible; this method
+        is provided to follow the standard to_json/to_clean_dict pattern.
+        Binary data is not included; call load_data() to retrieve bytes.
+        """
+        return json.dumps(deepcopy(self.__dict__))
+
     def to_clean_dict(self):
         """Return a plain dict of all metadata fields (no binary).
 
-        Suitable for JSON serialization and MongoDB storage via
-        store_custom_documents().  Binary data is not included;
-        call load_data() to retrieve bytes separately.
+        Suitable for JSON serialization and MongoDB storage.
+        Binary data is not included; call load_data() for bytes.
         """
-        return {
-            "name": self.name,
-            "uniq_id": self.uniq_id,
-            "image_id": self.image_id,
-            "image_id_short": self.image_id_short,
-            "content_type": self.content_type,
-            "filename": self.filename,
-            "description": self.description,
-            "parent_collection": self.parent_collection,
-            "parent_id_field": self.parent_id_field,
-            "parent_id_value": self.parent_id_value,
-            "created_epoch": self.created_epoch,
-            "created_dt": self.created_dt,
-            "tags": list(self.tags),
-        }
+        return json.loads(self.to_json())
 
     @classmethod
     def from_dict(cls, d: dict):

@@ -276,6 +276,50 @@ def test_StoredImage_to_clean_dict_tags_is_a_copy():
 
 
 # ---------------------------------------------------------------------------
+# to_json
+# ---------------------------------------------------------------------------
+
+def test_StoredImage_to_json_returns_valid_json_string():
+    """to_json returns a str that can be parsed by json.loads."""
+    import json
+    img = StoredImage(
+        name="test_DELETEME_tojson",
+        description="json test",
+        created_epoch=12345,
+    )
+    result = img.to_json()
+    assert isinstance(result, str)
+    parsed = json.loads(result)
+    assert isinstance(parsed, dict)
+
+
+def test_StoredImage_to_json_matches_to_clean_dict():
+    """Parsed to_json equals to_clean_dict for the same instance."""
+    import json
+    img = StoredImage(
+        name="test_DELETEME_tojson_match",
+        description="match test",
+        created_epoch=99999,
+        tags=["x"],
+    )
+    assert json.loads(img.to_json()) == img.to_clean_dict()
+
+
+def test_StoredImage_to_json_is_independent_of_instance():
+    """Mutating the parsed to_json dict does not affect the instance."""
+    import json
+    img = StoredImage(
+        name="test_DELETEME_tojson_iso",
+        tags=["a"],
+    )
+    parsed = json.loads(img.to_json())
+    parsed["tags"].append("b")
+    parsed["description"] = "mutated"
+    assert img.tags == ["a"]
+    assert img.description is None
+
+
+# ---------------------------------------------------------------------------
 # from_dict round-trip
 # ---------------------------------------------------------------------------
 

@@ -41,6 +41,27 @@ After editing:
 2. For all edited text files, run `validate-file-quality.sh <file>`.
 3. Fix violations before presenting changes.
 
+## New Data Class Checklist
+
+When creating any new data class (one that is stored, retrieved,
+or serialized), verify each item before presenting the code:
+
+- [ ] `to_json()` uses `deepcopy(self.__dict__)` as the base; only
+      adds inline conversions for fields that require normalization.
+- [ ] `to_clean_dict()` is simply `json.loads(self.to_json())`.
+- [ ] `from_dict()` uses `d["key"]` direct access (no `.get()` with
+      silent defaults) for every field.
+- [ ] `uniq_id` generated via `str(uuid.uuid4()).replace("-", "")`;
+      all other id fields derived from it, not generated separately.
+- [ ] `*_id_short` preserves the full human-readable prefix and
+      replaces only the uuid suffix with its last 8 hex chars.
+- [ ] `created_epoch` (int) and `created_dt` (ISO string) both
+      present; one derived from the other.
+- [ ] Unit tests cover: construction defaults, all-fields construction,
+      `to_json` returns valid JSON, `to_clean_dict` matches parsed
+      `to_json`, mutation of the returned dict does not affect the
+      instance, and `from_dict` round-trip.
+
 ## Related Files
 
 - `CODING_STANDARDS.md` - canonical rule definitions and validation commands

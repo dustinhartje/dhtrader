@@ -189,23 +189,45 @@ log.info(
 
 ## Class Serialization
 
-### `to_clean_dict()` pattern
+### `to_json()` and `to_clean_dict()` patterns
 
-Use `dict(self.__dict__)` as the base rather than enumerating
-every attribute by hand.  This keeps the method DRY — new
-attributes added to `__init__` are automatically present.
+Use a `to_json()` / `to_clean_dict()` pair.  `to_json()` starts with
+`deepcopy(self.__dict__)`, applies only the field-specific
+normalizations needed for JSON serialization, and returns
+`json.dumps(working)`.  `to_clean_dict()` simply returns
+`json.loads(self.to_json())`.
 
 ```python
-def to_clean_dict(self) -> dict:
-    working = dict(self.__dict__)
+def to_json(self):
+    """Return a JSON representation with custom types normalized."""
+    working = deepcopy(self.__dict__)
     # Add per-field conversions here only when needed,
-    # e.g. datetime → ISO string.
-    return working
+    # e.g. datetime → ISO string, time → str(time), etc.
+    return json.dumps(working)
+
+def to_clean_dict(self) -> dict:
+    """Return a plain dict suitable for storage and serialization."""
+    return json.loads(self.to_json())
 ```
 
-Do **not** return a hardcoded dict that lists every attribute.
-If a new attribute needs custom serialization, add an inline
-conversion immediately after `working = dict(self.__dict__)`.
+Do **not** return a hardcoded dict that lists every attribute — new
+attributes added to `__init__` must not require a matching edit here.
+If a new attribute needs custom serialization, add an inline conversion
+inside `to_json()` immediately after `working = deepcopy(self.__dict__)`.
+
+When all fields are already JSON-compatible (strings, ints, lists of
+plain types, dicts of plain types), `to_json()` still follows the same
+pattern but has no per-field conversions:
+
+```python
+def to_json(self):
+    """Return a JSON representation with custom types normalized.
+
+    All fields on this class are already JSON-compatible; this method
+    is provided to follow the standard to_json/to_clean_dict pattern.
+    """
+    return json.dumps(deepcopy(self.__dict__))
+```
 
 ### `from_dict()` pattern
 
@@ -295,9 +317,8 @@ Rules:
 - **Never** use `int(datetime.now().timestamp())` (epoch seconds) as the
   sole uniqueness guarantee; two objects created in the same second
   collide.
-- **Include `uuid` in `to_clean_dict()`** for classes with explicit
-  serialization dicts.  Classes that use `deepcopy(self.__dict__)` for
-  serialization include it automatically.
+- **`uuid` is included automatically** — `to_json()` uses
+  `deepcopy(self.__dict__)` so no explicit inclusion is needed.
 
 ### Short-form attribute (`*_id_short`)
 
@@ -341,7 +362,8 @@ log.info(
 
 ### Serialization
 
-Include both the full `*_id` and `*_id_short` in `to_clean_dict()`.
+Both the full `*_id` and `*_id_short` are included automatically via the
+`to_json()` / `to_clean_dict()` pattern (deepcopy of `__dict__`).
 When reconstructing from a stored dict via `from_dict()`, load the
 stored `*_id`; then recompute `*_id_short = stored_id[-8:]` rather than
 loading it from the dict (it is always derivable).
@@ -354,8 +376,8 @@ Every class with a `*_id` field must also carry:
 - `created_dt` — ISO datetime string derived from `created_epoch`
 
 If the class already has a `created_dt`, derive `created_epoch` from it
-(`int(datetime.fromisoformat(created_dt).timestamp())`).  Store both in
-`to_clean_dict()`.
+(`int(datetime.fromisoformat(created_dt).timestamp())`).  Both are
+included automatically via `to_json()` / `to_clean_dict()`.
 
 ### `time_tag()` and session identifiers
 
