@@ -246,7 +246,7 @@ def test_Backtest_create_and_verify_common_methods():
     bt.update_tradeseries(ts, clear_storage=False)
     # With TradeSeries and Trades shown
     assert len(bt.pretty(suppress_tradeseries=False,
-                         suppress_trades=False).splitlines()) == 67
+                         suppress_trades=False).splitlines()) == 70
 
 
 @pytest.mark.storage

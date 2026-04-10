@@ -2248,6 +2248,10 @@ class Trade():
         version (str): Version of trade (for future use)
         ts_id (str): unique id of associated TradeSeries this was created by
         bt_id (str): unique id of associated Backtest this was created by
+        trade_id (str): Stable unique ID, uuid4 (no hyphens), auto-generated
+            at construction.  A stored value may be passed to preserve it.
+        trade_id_short (str): Last 8 hex chars of trade_id; use in logs.
+        created_epoch (int): Unix timestamp derived from created_dt.
     """
 
     @staticmethod
@@ -2262,12 +2266,6 @@ class Trade():
             return None
         return normalized
 
-    def _expected_trade_id(self):
-        """Return expected trade_id or None for unbound trades."""
-        if self.ts_id is None:
-            return None
-        return f"{self.ts_id}_{self.open_epoch}"
-
     def _sync_trade_identity(self):
         """Sync identity-derived fields from open_dt and ts_id."""
         if "open_dt" not in self.__dict__:
@@ -2277,7 +2275,6 @@ class Trade():
         open_as_dt = dt_as_dt(self.open_dt)
         object.__setattr__(self, "open_date", str(open_as_dt.date()))
         object.__setattr__(self, "open_time", str(open_as_dt.time()))
-        object.__setattr__(self, "trade_id", self._expected_trade_id())
 
     def __setattr__(self, name, value):
         """Intercept identity field changes to keep derived values in sync."""
@@ -2315,6 +2312,7 @@ class Trade():
                  version: str = "1.0.0",
                  ts_id: str = None,
                  bt_id: str = None,
+                 uniq_id: str = None,
                  trade_id: str = None,
                  tags: list = None,
                  ):
@@ -2327,6 +2325,8 @@ class Trade():
             self.created_dt = dt_as_str(dt.datetime.now())
         else:
             self.created_dt = created_dt
+        # Derive epoch from the stored created_dt for provenance.
+        self.created_epoch = dt_to_epoch(self.created_dt)
         if direction in ['long', 'short']:
             self.direction = direction
         else:
@@ -2394,29 +2394,21 @@ class Trade():
                     f"{self.open_dt}"
                 )
 
-        # Validate trade_id if explicitly provided. _sync_trade_identity()
-        # already computed and stored the correct value. None/blank defers
-        # to that computed value. A non-blank value must match exactly;
-        # trade_id is derived from ts_id + open_epoch so there is no valid
-        # reason for the caller to supply a different value.
-        if not isinstance(trade_id, (str, type(None))):
-            raise ValueError(
-                "trade_id must be a string or None when provided, we got "
-                f"{str(trade_id)} which is a {type(trade_id)}"
-            )
-        provided_trade_id = (
-            trade_id.strip() if isinstance(trade_id, str) else None
+        # Assign a stable unique uniq_id.  uniq_id takes precedence;
+        # trade_id is accepted as an alias for loading from storage.
+        # Neither provided: generate a new uuid4.
+        self.uniq_id = (
+            uniq_id if uniq_id is not None
+            else str(uuid.uuid4()).replace("-", "")
         )
-        if provided_trade_id:
-            if self.ts_id is None:
-                raise ValueError(
-                    "trade_id cannot be set when ts_id is missing or empty"
-                )
-            if provided_trade_id != self.trade_id:
-                raise ValueError(
-                    f"trade_id `{provided_trade_id}` does not match "
-                    f"expected `{self.trade_id}`"
-                )
+        self.trade_id = trade_id if trade_id is not None else self.uniq_id
+        if self.trade_id != self.uniq_id:
+            raise ValueError(
+                "trade_id must match uniq_id if provided.  "
+                f"Got trade_id={trade_id} and uniq_id={uniq_id}"
+            )
+        # Short form: last 8 hex chars of uniq_id for log messages.
+        self.trade_id_short = self.uniq_id[-8:]
 
         del self._identity_sync_lock
 
@@ -3888,7 +3880,10 @@ class TradePlan():
     Args:
         contracts: Number of contracts this plan is calculated with.
         con_fee: Per-contract fee as a float.
-        tp_id: Optional unique trade plan identifier string.
+        tp_id: Optional unique trade plan identifier string.  If None,
+            generated from other attributes and a uuid4 suffix.
+        tp_id_short: Human-readable prefix of tp_id with the uuid shortened to
+            it's last 8 characters.
         name: Name string used for integrity checks and cleanup.
         id_slug: Short identifier string used in output labels.
         tags: Optional list of machine-oriented classifier tags.
@@ -3903,6 +3898,9 @@ class TradePlan():
         tradeseries: TradeSeries object attached to this plan.
         how_gl_heatmap_viz: Optional path to hour-of-week heatmap.
         weekly_price_overlay_visuals: Optional list of visual paths.
+        created_dt: ISO datetime string set at creation.  Defaults to now.
+        created_epoch: Integer Unix timestamp set at creation.
+        uniq_id: Raw 32-char hex uuid.  Generated if None.
     """
 
     def __init__(self,
@@ -3923,12 +3921,20 @@ class TradePlan():
                  tradeseries=None,
                  how_gl_heatmap_viz=None,
                  weekly_price_overlay_visuals=None,
+                 created_dt=None,
+                 created_epoch=None,
+                 uniq_id: str = None,
                  ):
         """Initialize a TradePlan instance."""
         self.contracts = contracts
         self.con_fee = con_fee
         self.tp_id = tp_id
         self.override_tp_id = False if self.tp_id is None else True
+        # Generate uniq_id first; all other ID fields derive from it.
+        self.uniq_id = (
+            uniq_id if uniq_id is not None
+            else str(uuid.uuid4()).replace("-", "")
+        )
         self.name = name
         self.id_slug = id_slug
         self.tags = self._normalize_str_list(tags, "tags")
@@ -3945,6 +3951,22 @@ class TradePlan():
         self.weekly_price_overlay_visuals = weekly_price_overlay_visuals
         if self.weekly_price_overlay_visuals is None:
             self.weekly_price_overlay_visuals = []
+        if created_dt is not None:
+            self.created_dt = created_dt
+        else:
+            self.created_dt = dt_as_str(dt.datetime.now())
+        if created_epoch is not None:
+            self.created_epoch = created_epoch
+        else:
+            self.created_epoch = dt_to_epoch(self.created_dt)
+        # If both tp_id and uuid are explicitly provided, tp_id must contain
+        # the uuid value.
+        if tp_id is not None and uniq_id is not None:
+            if self.uniq_id not in self.tp_id:
+                raise ValueError(
+                    f"TradePlan tp_id {self.tp_id!r} does not contain "
+                    f"uniq_id {self.uniq_id!r}"
+                )
 
     def _normalize_str_list(self, values, field_name):
         """Return list[str], converting values where possible."""
@@ -3961,27 +3983,30 @@ class TradePlan():
             ) from e
         return result
 
-    def _tp_id_epoch_suffix(self):
-        """Return existing _e<epoch> suffix or generate a new one."""
-        if isinstance(self.tp_id, str):
-            parts = self.tp_id.rsplit("_e", 1)
-            if len(parts) == 2 and parts[1].isdigit():
-                return f"_e{parts[1]}"
-        return f"_e{dt_to_epoch(dt.datetime.now())}"
-
     def replace_tradeseries(self, ts):
         """Replace attached TradeSeries and update tp_id accordingly."""
         self.tradeseries = deepcopy(ts)
         if not self.override_tp_id:
-            suffix = self._tp_id_epoch_suffix()
             if ts is None:
-                self.tp_id = (
-                    f"NoTradeSeries_{self.id_slug}_{self.cfg_label}{suffix}"
+                prefix = (
+                    f"NoTradeSeries_{self.id_slug}_{self.cfg_label}"
                 )
             else:
-                self.tp_id = (
-                    f"{ts.ts_id}_{self.id_slug}_{self.cfg_label}{suffix}"
+                prefix = (
+                    f"{ts.ts_id}_{self.id_slug}_{self.cfg_label}"
                 )
+            self.tp_id = f"{prefix}_{self.uniq_id}"
+            # Short form: preserve human-readable prefix, shorten uniq_id.
+            self.tp_id_short = f"{prefix}_{self.uniq_id[-8:]}"
+        else:
+            # override_tp_id: tp_id provided externally; build short form.
+            # Strip the uuid suffix to recover the human-readable prefix.
+            if (self.tp_id and self.uniq_id
+                    and self.tp_id.endswith(f"_{self.uniq_id}")):
+                prefix = self.tp_id[: -(len(self.uniq_id) + 1)]
+                self.tp_id_short = f"{prefix}_{self.uniq_id[-8:]}"
+            else:
+                self.tp_id_short = self.tp_id
 
     def source_ts_ids(self):
         """Return sorted unique source ts_ids from trades in real time."""
@@ -4067,10 +4092,14 @@ class StoredImage():
             blank or None.  Defaults to DEFAULT_OBJ_NAME.  Test
             objects must include "DELETEME" in this field.
         image_id: Stable unique ID generated at object creation as
-            f"{name}_{uuid4()}".  Set before storage; never
-            changes after creation.  Used as the primary key for
-            all retrieval and deletion operations through the
-            public API.  If None, generated automatically.
+            f"{name}_{uuid4_no_hyphens}".  Set before storage;
+            never changes after creation.  Used as the primary key
+            for all retrieval and deletion operations.  If None,
+            generated automatically.
+        image_id_short: Short form of image_id with the uuid
+            portion abbreviated to its last 8 hex chars, prefixed
+            by the name (e.g. ``f"{name}_{uuid[-8:]}"``).  Set
+            automatically; use in log messages for brevity.
         content_type: MIME type string (e.g., "image/jpeg").
         filename: Original filename string for reference.
         description: Optional human-readable description.
@@ -4082,6 +4111,7 @@ class StoredImage():
         created_dt: ISO datetime string derived from created_epoch.
             Set automatically from created_epoch if not supplied.
         tags: Optional list of string tags.
+        uniq_id: Raw 32-char hex uuid.  Generated if None.
     """
 
     def __init__(
@@ -4097,6 +4127,7 @@ class StoredImage():
             created_epoch: int = None,
             created_dt: str = None,
             tags: list = None,
+            uniq_id: str = None,
             ):
         """Initialize a StoredImage instance."""
         # Enforce non-blank name so integrity checks always identify it.
@@ -4118,12 +4149,25 @@ class StoredImage():
             )
         else:
             self.created_dt = created_dt
-        # Build a unique image_id using uuid4 so rapid construction of
-        # multiple images with the same name never produces a collision.
+        # Generate uniq_id first; all other ID fields derive from it.
+        self.uniq_id = (
+            uniq_id if uniq_id is not None
+            else str(uuid.uuid4()).replace("-", "")
+        )
         if image_id is None:
-            self.image_id = f"{self.name}_{uuid.uuid4()}"
+            self.image_id = f"{self.name}_{self.uniq_id}"
         else:
             self.image_id = image_id
+        # Short form: prefix + last 8 hex chars of uniq_id for log messages.
+        self.image_id_short = f"{self.name}_{self.uniq_id[-8:]}"
+        # Sanity: if both image_id and uniq_id are explicitly provided, they
+        # must be consistent — image_id must contain the uniq_id value.
+        if image_id is not None and uniq_id is not None:
+            if self.uniq_id not in self.image_id:
+                raise ValueError(
+                    f"StoredImage image_id {self.image_id!r} does not "
+                    f"contain uniq_id {self.uniq_id!r}"
+                )
         self.content_type = content_type
         self.filename = filename
         self.description = description
@@ -4163,7 +4207,9 @@ class StoredImage():
         """
         return {
             "name": self.name,
+            "uniq_id": self.uniq_id,
             "image_id": self.image_id,
+            "image_id_short": self.image_id_short,
             "content_type": self.content_type,
             "filename": self.filename,
             "description": self.description,
@@ -4200,6 +4246,7 @@ class StoredImage():
             created_epoch=d.get("created_epoch"),
             created_dt=d.get("created_dt"),
             tags=d.get("tags"),
+            uniq_id=d.get("uniq_id"),
         )
 
     def load_data(self) -> bytes:

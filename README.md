@@ -99,7 +99,8 @@ for images stored in MongoDB GridFS:
 
 | Field | Description |
 |---|---|
-| `image_id` | Unique ID, auto-generated as `"{name}_{uuid4()}"` |
+| `image_id` | Unique ID, auto-generated as `"{name}_{uuid4_no_hyphens}"` |
+| `image_id_short` | Last 8 hex chars of `image_id`; use in log messages |
 | `name` | Required non-blank label; raises `ValueError` if blank or None |
 | `created_epoch` | Integer epoch timestamp at creation; not used in `image_id` |
 

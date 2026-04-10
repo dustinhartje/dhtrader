@@ -129,13 +129,35 @@ def test_StoredImage_construction_all_fields():
 
 
 def test_StoredImage_image_id_generated_from_name_with_uuid():
-    """When image_id is not supplied it is built as name_<uuid4>."""
+    """When image_id is not supplied it is built as name_<uuid4_no_hyphens>."""
     img = StoredImage(name="test_DELETEME_id")
     # image_id must start with the name prefix followed by underscore
     assert img.image_id.startswith("test_DELETEME_id_")
+    # The uuid portion must contain no hyphens
+    uuid_part = img.image_id[len("test_DELETEME_id_"):]
+    assert "-" not in uuid_part
+    # It must be 32 hex chars (uuid4 stripped of hyphens)
+    assert len(uuid_part) == 32
     # Two images with the same name must not share the same image_id
     img2 = StoredImage(name="test_DELETEME_id")
     assert img.image_id != img2.image_id
+
+
+def test_StoredImage_image_id_short_is_last_8_chars():
+    """image_id_short is name + last 8 chars of uuid portion."""
+    img = StoredImage(name="test_DELETEME_short")
+    expected = f"test_DELETEME_short_{img.uniq_id[-8:]}"
+    assert img.image_id_short == expected
+    # uuid suffix portion is 8 chars, plus name + underscore
+    assert img.image_id_short.endswith(img.uniq_id[-8:])
+    assert img.image_id_short.startswith("test_DELETEME_short_")
+
+
+def test_StoredImage_image_id_short_in_to_clean_dict():
+    """image_id_short appears in to_clean_dict and matches the attribute."""
+    img = StoredImage(name="test_DELETEME_short_dict")
+    d = img.to_clean_dict()
+    assert d["image_id_short"] == img.image_id_short
 
 
 def test_StoredImage_caller_supplied_image_id_preserved():
@@ -208,9 +230,10 @@ def test_StoredImage_to_clean_dict_contains_all_keys():
     img = StoredImage(name="test_DELETEME_dict", created_epoch=55555)
     d = img.to_clean_dict()
     expected_keys = {
-        "name", "image_id", "content_type", "filename",
-        "description", "parent_collection", "parent_id_field",
-        "parent_id_value", "created_epoch", "created_dt", "tags",
+        "name", "uniq_id", "image_id", "image_id_short", "content_type",
+        "filename", "description", "parent_collection",
+        "parent_id_field", "parent_id_value", "created_epoch",
+        "created_dt", "tags",
     }
     assert expected_keys == set(d.keys())
 
@@ -258,9 +281,12 @@ def test_StoredImage_to_clean_dict_tags_is_a_copy():
 
 def test_StoredImage_from_dict_roundtrip():
     """from_dict(to_clean_dict()) reconstructs an equal instance."""
+    # Use a proper uuid-based image_id (the standard format).
+    _rt_uuid = "ab" * 16  # 32 hex chars
     original = StoredImage(
         name="test_DELETEME_roundtrip",
-        image_id="test_DELETEME_roundtrip_42",
+        image_id=f"test_DELETEME_roundtrip_{_rt_uuid}",
+        uniq_id=_rt_uuid,
         content_type="image/jpeg",
         filename="chart.jpg",
         description="Round-trip test",

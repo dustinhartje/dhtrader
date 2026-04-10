@@ -217,7 +217,7 @@ def test_TradeSeries_create_and_verify_common_methods():
     assert len(ts.pretty().splitlines()) == 15
     ts.add_trade(test_trade)
     # With trades shown
-    assert len(ts.pretty(suppress_trades=False).splitlines()) == 47
+    assert len(ts.pretty(suppress_trades=False).splitlines()) == 50
 
 
 @pytest.mark.suppress_stdout

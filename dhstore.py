@@ -493,13 +493,13 @@ def store_images(
     """Store StoredImage objects and their binary data in GridFS.
 
     image_id is set on each StoredImage at object creation time as
-    f"{name}_{uuid4()}" and is used as the stable retrieval key.
-    Binary data is stored in GridFS; this function stores no binary
-    attributes on the objects themselves.
+    f"{name}_{uuid4_no_hyphens}" and is used as the stable retrieval
+    key.  Binary data is stored in GridFS; this function stores no
+    binary attributes on the objects themselves.
 
     Args:
         images: List of StoredImage objects.  image_id must be set
-            before calling (set at creation as f"{name}_{uuid4()}").
+            before calling (set at creation without hyphens).
         data_list: Parallel list of bytes, one per image in images.
         bucket: GridFS bucket prefix.  Defaults to COLLECTIONS["images"].
 
@@ -1284,6 +1284,7 @@ def reconstruct_trade(t):
                    ts_id=t["ts_id"],
                    bt_id=t["bt_id"],
                    trade_id=t["trade_id"],
+                   uniq_id=t["uniq_id"],
                    tags=t["tags"],
                    )
     if close_dt is None:
@@ -1388,7 +1389,7 @@ def store_trades(trades: list,
         if t.trade_id is None or str(t.trade_id).strip() == "":
             raise ValueError(
                 f"Cannot store Trade with empty trade_id {t.trade_id}. "
-                "Bind ts_id first."
+                "trade_id must be a non-empty string."
             )
         working_trades.append(t.to_clean_dict())
 
@@ -2192,6 +2193,7 @@ _TRADEPLAN_CTOR_KEYS = frozenset({
     "profit_perc", "start_dt", "end_dt", "drawdown_open",
     "drawdown_limit", "notes", "thresholds", "tradeseries",
     "how_gl_heatmap_viz", "weekly_price_overlay_visuals",
+    "created_dt", "created_epoch", "uniq_id",
 })
 
 
@@ -2232,20 +2234,23 @@ def reconstruct_tradeplan(tp,
         tp_id=tp.get("tp_id"),
         name=tp.get("name"),
         id_slug=tp.get("id_slug"),
-        tags=tp.get("tags", []),
+        tags=tp.get("tags"),
         cfg_label=tp.get("cfg_label"),
         profit_perc=tp.get("profit_perc", 100),
         start_dt=tp.get("start_dt"),
         end_dt=tp.get("end_dt"),
         drawdown_open=tp.get("drawdown_open"),
         drawdown_limit=tp.get("drawdown_limit"),
-        notes=tp.get("notes", []),
-        thresholds=tp.get("thresholds", {}),
+        notes=tp.get("notes"),
+        thresholds=tp.get("thresholds"),
         tradeseries=ts,
         how_gl_heatmap_viz=tp.get("how_gl_heatmap_viz"),
         weekly_price_overlay_visuals=tp.get(
             "weekly_price_overlay_visuals"
         ),
+        created_dt=tp.get("created_dt"),
+        created_epoch=tp.get("created_epoch"),
+        uniq_id=tp.get("uniq_id"),
     )
 
     for k, v in tp.items():
