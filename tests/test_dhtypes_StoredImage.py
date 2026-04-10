@@ -23,11 +23,11 @@ from dhtrader import (
 
 
 # ---------------------------------------------------------------------------
-# Test sentinel, minimal JPEG bytes, and cleanup fixture
+# Test marker, minimal JPEG bytes, and cleanup fixture
 # ---------------------------------------------------------------------------
 
-# Sentinel value in the name field of all test images.
-_TEST_SENTINEL = "DELETEME_STORED_IMAGE_TESTS"
+# Marker value in the name field of all test images.
+_TEST_MARKER = "DELETEME_STORED_IMAGE_TESTS"
 
 # Minimal valid 1x1 white JPEG (331 bytes).  Embedded inline so tests
 # run without requiring a real image file on disk.
@@ -71,7 +71,7 @@ def cleanup_stored_images():
     the functions under test are themselves being exercised.
     """
     def _clean():
-        delete_images_by_field(field="name", value=_TEST_SENTINEL)
+        delete_images_by_field(field="name", value=_TEST_MARKER)
 
     _clean()
     yield
@@ -436,7 +436,7 @@ def test_StoredImage_store_and_get_image_data_roundtrip(
     by image_id returns the exact bytes that were stored.
     """
     img = StoredImage(
-        name=_TEST_SENTINEL,
+        name=_TEST_MARKER,
         content_type="image/jpeg",
         description="roundtrip test",
     )
@@ -458,7 +458,7 @@ def test_StoredImage_load_data_returns_stored_bytes(
     retrieves the same bytes that were stored.
     """
     img = StoredImage(
-        name=_TEST_SENTINEL,
+        name=_TEST_MARKER,
         description="load_data test",
     )
     store_images([img], [_TEST_JPEG])
@@ -482,19 +482,19 @@ def test_StoredImage_get_images_metadata_by_field_returns_metadata_objects(
     with the correct field values.
     """
     img_a = StoredImage(
-        name=_TEST_SENTINEL,
+        name=_TEST_MARKER,
         content_type="image/jpeg",
         parent_collection="test_parent",
         description="image_a",
     )
     img_b = StoredImage(
-        name=_TEST_SENTINEL,
+        name=_TEST_MARKER,
         content_type="image/jpeg",
         parent_collection="test_parent",
         description="image_b",
     )
     img_c = StoredImage(
-        name=_TEST_SENTINEL,
+        name=_TEST_MARKER,
         content_type="image/jpeg",
         parent_collection="other_parent",
         description="image_c",
@@ -507,7 +507,7 @@ def test_StoredImage_get_images_metadata_by_field_returns_metadata_objects(
     assert descriptions == {"image_a", "image_b"}
     for r in results:
         assert isinstance(r, StoredImage)
-        assert r.name == _TEST_SENTINEL
+        assert r.name == _TEST_MARKER
         assert r.parent_collection == "test_parent"
         assert r.content_type == "image/jpeg"
 
@@ -525,18 +525,18 @@ def test_StoredImage_list_images_with_filter(cleanup_stored_images):
     images appear in the results.
     """
     img_x = StoredImage(
-        name=_TEST_SENTINEL,
+        name=_TEST_MARKER,
         description="list_x",
         tags=["x"],
     )
     img_y = StoredImage(
-        name=_TEST_SENTINEL,
+        name=_TEST_MARKER,
         description="list_y",
         tags=["y"],
     )
     store_images([img_x, img_y], [_TEST_JPEG] * 2)
 
-    results = list_images(field="name", value=_TEST_SENTINEL)
+    results = list_images(field="name", value=_TEST_MARKER)
     assert len(results) >= 2
     descriptions = {r.description for r in results}
     assert "list_x" in descriptions
@@ -552,14 +552,14 @@ def test_StoredImage_list_images_without_filter_returns_all(
     """list_images with no filter returns at least all test images."""
     descriptions = [f"no_filter_{i}" for i in range(3)]
     imgs = [
-        StoredImage(name=_TEST_SENTINEL, description=d)
+        StoredImage(name=_TEST_MARKER, description=d)
         for d in descriptions
     ]
     store_images(imgs, [_TEST_JPEG] * 3)
 
     all_images = list_images()
     test_images = [
-        r for r in all_images if r.name == _TEST_SENTINEL
+        r for r in all_images if r.name == _TEST_MARKER
     ]
     assert len(test_images) >= 3
     found_descriptions = {r.description for r in test_images}
@@ -580,36 +580,36 @@ def test_StoredImage_delete_by_field_removes_only_matching(
     the kept image retains its original description.
     """
     img_del = StoredImage(
-        name=_TEST_SENTINEL,
+        name=_TEST_MARKER,
         description="to_delete",
-        parent_collection=f"{_TEST_SENTINEL}_del_target",
+        parent_collection=f"{_TEST_MARKER}_del_target",
     )
     img_keep = StoredImage(
-        name=_TEST_SENTINEL,
+        name=_TEST_MARKER,
         description="to_keep",
-        parent_collection=f"{_TEST_SENTINEL}_keep_target",
+        parent_collection=f"{_TEST_MARKER}_keep_target",
     )
     store_images([img_del, img_keep], [_TEST_JPEG] * 2)
 
     deleted_count = delete_images_by_field(
         field="parent_collection",
-        value=f"{_TEST_SENTINEL}_del_target",
+        value=f"{_TEST_MARKER}_del_target",
     )
     assert deleted_count == 1
 
     gone = list_images(
         field="parent_collection",
-        value=f"{_TEST_SENTINEL}_del_target",
+        value=f"{_TEST_MARKER}_del_target",
     )
     assert len(gone) == 0
 
     kept = list_images(
         field="parent_collection",
-        value=f"{_TEST_SENTINEL}_keep_target",
+        value=f"{_TEST_MARKER}_keep_target",
     )
     assert len(kept) == 1
     assert kept[0].description == "to_keep"
-    assert kept[0].name == _TEST_SENTINEL
+    assert kept[0].name == _TEST_MARKER
 
 
 # ---------------------------------------------------------------------------
@@ -626,13 +626,13 @@ def test_StoredImage_delete_by_image_id_removes_targeted(
     and that un-targeted images are still retrievable.
     """
     img_a = StoredImage(
-        name=_TEST_SENTINEL, description="del_by_id_a", created_epoch=10001
+        name=_TEST_MARKER, description="del_by_id_a", created_epoch=10001
     )
     img_b = StoredImage(
-        name=_TEST_SENTINEL, description="del_by_id_b", created_epoch=10002
+        name=_TEST_MARKER, description="del_by_id_b", created_epoch=10002
     )
     img_c = StoredImage(
-        name=_TEST_SENTINEL, description="del_by_id_c", created_epoch=10003
+        name=_TEST_MARKER, description="del_by_id_c", created_epoch=10003
     )
     store_images([img_a, img_b, img_c], [_TEST_JPEG] * 3)
 
@@ -665,7 +665,7 @@ def test_StoredImage_store_empty_images_raises():
 @pytest.mark.suppress_stdout
 def test_StoredImage_store_mismatched_lengths_raises():
     """store_images raises ValueError when list lengths do not match."""
-    img = StoredImage(name=_TEST_SENTINEL)
+    img = StoredImage(name=_TEST_MARKER)
     with pytest.raises(ValueError, match="same length"):
         store_images([img], [])
 
@@ -682,13 +682,13 @@ def test_StoredImage_duplicate_image_id_rejected(
     """
     from gridfs.errors import FileExists
     img_first = StoredImage(
-        name=_TEST_SENTINEL,
+        name=_TEST_MARKER,
         description="original",
     )
     store_images([img_first], [_TEST_JPEG])
     # Force the same image_id onto a new object to simulate a collision.
     img_dup = StoredImage(
-        name=_TEST_SENTINEL,
+        name=_TEST_MARKER,
         image_id=img_first.image_id,
         description="duplicate",
     )
@@ -711,7 +711,7 @@ def test_StoredImage_store_image_from_path_roundtrip(
     """
     with tempfile.NamedTemporaryFile(
         suffix=".jpg",
-        prefix=f"{_TEST_SENTINEL}_",
+        prefix=f"{_TEST_MARKER}_",
         delete=False,
     ) as f:
         tmp_path = f.name
@@ -745,7 +745,7 @@ def test_StoredImage_load_data_raises_after_deletion(
         cleanup_stored_images):
     """load_data() raises KeyError after the stored image is deleted."""
     img = StoredImage(
-        name=_TEST_SENTINEL,
+        name=_TEST_MARKER,
         description="deleted_then_load",
     )
     store_images([img], [_TEST_JPEG])
@@ -765,9 +765,9 @@ def test_StoredImage_review_images_empty_does_not_raise(
         cleanup_stored_images):
     """review_images on a filtered empty result does not raise."""
     # Ensure no test images are present.
-    delete_images_by_field(field="name", value=_TEST_SENTINEL)
+    delete_images_by_field(field="name", value=_TEST_MARKER)
     # Should print a header and no images without raising.
-    review_images(field="name", value=_TEST_SENTINEL)
+    review_images(field="name", value=_TEST_MARKER)
 
 
 @pytest.mark.storage
@@ -776,8 +776,8 @@ def test_StoredImage_review_images_with_data_does_not_raise(
         cleanup_stored_images):
     """review_images with stored images prints and does not raise."""
     img = StoredImage(
-        name=_TEST_SENTINEL,
+        name=_TEST_MARKER,
         description="review_test",
     )
     store_images([img], [_TEST_JPEG])
-    review_images(field="name", value=_TEST_SENTINEL)
+    review_images(field="name", value=_TEST_MARKER)

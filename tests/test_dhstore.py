@@ -443,16 +443,16 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
 # Non-managed collection name used for all write tests.
 _TEST_COLL = "custom_docs_DELETEME"
 
-# Sentinel stored in every test document's "name" field so the
+# Marker stored in every test document's "name" field so the
 # cleanup fixture can remove them without scanning the whole collection.
-_TEST_SENTINEL = "DELETEME_CUSTOM_DOC_TESTS"
+_TEST_MARKER = "DELETEME_CUSTOM_DOC_TESTS"
 
 
 @pytest.fixture
 def cleanup_custom_docs():
     """Remove all documents from _TEST_COLL before and after each test.
 
-    Drops the entire collection rather than filtering by sentinel so
+    Drops the entire collection rather than filtering by marker so
     that nameless orphans left by older code versions are also removed.
     The collection is named with DELETEME so a full drop is safe.
     """
@@ -571,7 +571,7 @@ def test_custom_document_store_unconvertible_element_raises():
     with pytest.raises(ValueError, match="cannot be converted to dict"):
         store_custom_documents(
             _TEST_COLL,
-            [{"name": _TEST_SENTINEL, "ok": 1}, "not_a_dict"],
+            [{"name": _TEST_MARKER, "ok": 1}, "not_a_dict"],
         )
 
 
@@ -582,7 +582,7 @@ def test_custom_document_store_non_json_serializable_raises():
     with pytest.raises(ValueError, match="JSON-serializable"):
         store_custom_documents(
             _TEST_COLL,
-            [{"name": _TEST_SENTINEL, "bad": object()}],
+            [{"name": _TEST_MARKER, "bad": object()}],
         )
 
 
@@ -624,7 +624,7 @@ def test_custom_document_store_object_with_dunder_dict_is_coerced(
     """
     class _Doc:
         def __init__(self):
-            self.name = _TEST_SENTINEL
+            self.name = _TEST_MARKER
             self.payload = "coerced_value"
             self.score = 77
 
@@ -634,11 +634,11 @@ def test_custom_document_store_object_with_dunder_dict_is_coerced(
 
     # Verify the document was actually stored with correct field values
     results = get_custom_documents_by_field(
-        _TEST_COLL, "name", _TEST_SENTINEL
+        _TEST_COLL, "name", _TEST_MARKER
     )
     assert len(results) == 1
     stored = results[0]
-    assert stored["name"] == _TEST_SENTINEL
+    assert stored["name"] == _TEST_MARKER
     assert stored["payload"] == "coerced_value"
     assert stored["score"] == 77
 
@@ -656,15 +656,15 @@ def test_custom_document_store_assigns_doc_id_prefixed_with_name(
     Verifies format, prefix, and that retrieval by doc_id returns the
     full original document.
     """
-    doc = {"name": _TEST_SENTINEL, "value": 42}
+    doc = {"name": _TEST_MARKER, "value": 42}
     assert "doc_id" not in doc
     store_custom_documents(_TEST_COLL, [doc])
 
     assert "doc_id" in doc
     assert isinstance(doc["doc_id"], str)
     # doc_id format is "{name}_{uuid4}"
-    assert doc["doc_id"].startswith(f"{_TEST_SENTINEL}_")
-    suffix = doc["doc_id"][len(_TEST_SENTINEL) + 1:]
+    assert doc["doc_id"].startswith(f"{_TEST_MARKER}_")
+    suffix = doc["doc_id"][len(_TEST_MARKER) + 1:]
     # UUID4 canonical form is 36 chars
     assert len(suffix) == 36
 
@@ -675,7 +675,7 @@ def test_custom_document_store_assigns_doc_id_prefixed_with_name(
     assert len(results) == 1
     stored = results[0]
     assert stored["doc_id"] == doc["doc_id"]
-    assert stored["name"] == _TEST_SENTINEL
+    assert stored["name"] == _TEST_MARKER
     assert stored["value"] == 42
 
 
@@ -702,7 +702,7 @@ def test_custom_document_store_and_get_by_field_roundtrip(
     """
     preset_id = "roundtrip-doc-id-001"
     doc = {
-        "name": _TEST_SENTINEL,
+        "name": _TEST_MARKER,
         "doc_id": preset_id,
         "color": "blue",
         "count": 5,
@@ -716,7 +716,7 @@ def test_custom_document_store_and_get_by_field_roundtrip(
     assert len(results) == 1
     stored = results[0]
     assert stored["doc_id"] == preset_id
-    assert stored["name"] == _TEST_SENTINEL
+    assert stored["name"] == _TEST_MARKER
     assert stored["color"] == "blue"
     assert stored["count"] == 5
     assert stored["tags"] == ["a", "b"]
@@ -732,7 +732,7 @@ def test_custom_document_store_preserves_caller_doc_id(
     """
     preset_id = "preserve-doc-id-12345"
     doc = {
-        "name": _TEST_SENTINEL,
+        "name": _TEST_MARKER,
         "doc_id": preset_id,
         "v": 1,
         "note": "original",
@@ -744,7 +744,7 @@ def test_custom_document_store_preserves_caller_doc_id(
     assert len(results) == 1
     stored = results[0]
     assert stored["doc_id"] == preset_id
-    assert stored["name"] == _TEST_SENTINEL
+    assert stored["name"] == _TEST_MARKER
     assert stored["v"] == 1
     assert stored["note"] == "original"
 
@@ -760,7 +760,7 @@ def test_custom_document_store_upserts_on_same_doc_id(
     """
     preset_id = "upsert-test-doc-id"
     doc = {
-        "name": _TEST_SENTINEL,
+        "name": _TEST_MARKER,
         "doc_id": preset_id,
         "v": 1,
     }
@@ -776,7 +776,7 @@ def test_custom_document_store_upserts_on_same_doc_id(
     assert stored["v"] == 2
     assert stored["extra"] == "added_on_upsert"
     assert stored["doc_id"] == preset_id
-    assert stored["name"] == _TEST_SENTINEL
+    assert stored["name"] == _TEST_MARKER
 
 
 # ---------------------------------------------------------------------------
@@ -792,9 +792,9 @@ def test_custom_document_list_with_field_filter(cleanup_custom_docs):
     from the original documents are present in results.
     """
     docs = [
-        {"name": _TEST_SENTINEL, "category": "alpha", "seq": 0},
-        {"name": _TEST_SENTINEL, "category": "alpha", "seq": 1},
-        {"name": _TEST_SENTINEL, "category": "beta", "seq": 2},
+        {"name": _TEST_MARKER, "category": "alpha", "seq": 0},
+        {"name": _TEST_MARKER, "category": "alpha", "seq": 1},
+        {"name": _TEST_MARKER, "category": "beta", "seq": 2},
     ]
     store_custom_documents(_TEST_COLL, docs)
 
@@ -803,7 +803,7 @@ def test_custom_document_list_with_field_filter(cleanup_custom_docs):
     seqs_found = set()
     for d in alpha_docs:
         assert d["category"] == "alpha"
-        assert d["name"] == _TEST_SENTINEL
+        assert d["name"] == _TEST_MARKER
         seqs_found.add(d["seq"])
     assert seqs_found == {0, 1}
 
@@ -817,13 +817,13 @@ def test_custom_document_list_without_filter_returns_all(
     Verifies that every originally stored seq value is present in results.
     """
     docs = [
-        {"name": _TEST_SENTINEL, "seq": i} for i in range(3)
+        {"name": _TEST_MARKER, "seq": i} for i in range(3)
     ]
     store_custom_documents(_TEST_COLL, docs)
 
     all_docs = list_custom_documents(_TEST_COLL)
     test_docs = [
-        d for d in all_docs if d.get("name") == _TEST_SENTINEL
+        d for d in all_docs if d.get("name") == _TEST_MARKER
     ]
     assert len(test_docs) >= 3
     seqs_found = {d["seq"] for d in test_docs}
@@ -844,9 +844,9 @@ def test_custom_document_get_by_field_returns_matching_with_values(
     from the original store call are present in results.
     """
     docs = [
-        {"name": _TEST_SENTINEL, "tag": "find_me", "payload": "x1"},
-        {"name": _TEST_SENTINEL, "tag": "find_me", "payload": "x2"},
-        {"name": _TEST_SENTINEL, "tag": "skip_me", "payload": "x3"},
+        {"name": _TEST_MARKER, "tag": "find_me", "payload": "x1"},
+        {"name": _TEST_MARKER, "tag": "find_me", "payload": "x2"},
+        {"name": _TEST_MARKER, "tag": "skip_me", "payload": "x3"},
     ]
     store_custom_documents(_TEST_COLL, docs)
 
@@ -857,7 +857,7 @@ def test_custom_document_get_by_field_returns_matching_with_values(
     payloads_found = set()
     for r in results:
         assert r["tag"] == "find_me"
-        assert r["name"] == _TEST_SENTINEL
+        assert r["name"] == _TEST_MARKER
         payloads_found.add(r["payload"])
     assert payloads_found == {"x1", "x2"}
 
@@ -872,14 +872,14 @@ def test_custom_document_get_all_returns_all_with_values(
     in the returned results.
     """
     docs = [
-        {"name": _TEST_SENTINEL, "seq": i, "label": f"item_{i}"}
+        {"name": _TEST_MARKER, "seq": i, "label": f"item_{i}"}
         for i in range(4)
     ]
     store_custom_documents(_TEST_COLL, docs)
 
     results = get_all_custom_documents(_TEST_COLL)
     test_results = [
-        r for r in results if r.get("name") == _TEST_SENTINEL
+        r for r in results if r.get("name") == _TEST_MARKER
     ]
     assert len(test_results) >= 4
     seqs_found = {r["seq"] for r in test_results}
@@ -905,17 +905,17 @@ def test_custom_document_delete_removes_only_matching_records(
     """
     docs = [
         {
-            "name": _TEST_SENTINEL,
+            "name": _TEST_MARKER,
             "tag": "to_delete",
             "payload": "gone_1",
         },
         {
-            "name": _TEST_SENTINEL,
+            "name": _TEST_MARKER,
             "tag": "to_delete",
             "payload": "gone_2",
         },
         {
-            "name": _TEST_SENTINEL,
+            "name": _TEST_MARKER,
             "tag": "to_keep",
             "payload": "kept_value",
         },
@@ -933,7 +933,7 @@ def test_custom_document_delete_removes_only_matching_records(
     kept = list_custom_documents(_TEST_COLL, "tag", "to_keep")
     assert len(kept) == 1
     assert kept[0]["payload"] == "kept_value"
-    assert kept[0]["name"] == _TEST_SENTINEL
+    assert kept[0]["name"] == _TEST_MARKER
     assert kept[0]["tag"] == "to_keep"
 
 
@@ -947,7 +947,7 @@ def test_custom_document_review_empty_collection_does_not_raise(
         cleanup_custom_docs):
     """review_custom_documents on an empty collection does not raise."""
     delete_custom_documents_by_field(
-        _TEST_COLL, "name", _TEST_SENTINEL
+        _TEST_COLL, "name", _TEST_MARKER
     )
     # Should print a summary header and no docs without raising.
-    review_custom_documents(_TEST_COLL, "name", _TEST_SENTINEL)
+    review_custom_documents(_TEST_COLL, "name", _TEST_MARKER)
