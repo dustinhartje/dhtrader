@@ -37,8 +37,8 @@ from dhtrader.dhcommon import dt_to_epoch
 _TEST_DELETEME_NAME = "DELETEME_DHMONGO_TESTS"
 _TEST_IND_ID = "DELETEME_DHMONGO_IND"
 _TEST_EVENT_SYMBOL = "ES"
-_TEST_DT = "2099-12-31 22:00:00"   # far-future marker used across tests
-_TEST_EVENT_DT = _TEST_DT
+_TEST_MARKER_DT = "2099-12-31 22:00:00"   # far-future marker used across tests
+_TEST_EVENT_DT = _TEST_MARKER_DT
 
 
 @pytest.fixture
@@ -152,7 +152,7 @@ def test_store_and_get_candle_roundtrip(cleanup_dhmongo_storage):
     Storage Usage: store_candle writes, get_candles reads,
     delete_candles_by_field cleans up.
     """
-    test_dt = _TEST_DT
+    test_dt = _TEST_MARKER_DT
     test_epoch = dt_to_epoch(test_dt)
     test_symbol = "ES"
     test_tf = "1m"
@@ -236,7 +236,7 @@ def test_store_and_get_trade_roundtrip(cleanup_dhmongo_storage):
     Storage Usage: store_trades writes, get_trades_by_field reads,
     delete_trades_by_field cleans up.
     """
-    test_dt = _TEST_DT
+    test_dt = _TEST_MARKER_DT
     test_open_epoch = dt_to_epoch(test_dt)
     trade_doc = {
         "open_dt": test_dt,
@@ -396,7 +396,7 @@ def test_store_and_get_indicator_roundtrip(cleanup_dhmongo_storage):
         "type": "EMA",
         "params": {"period": 9},
     }
-    dp_dt = _TEST_DT
+    dp_dt = _TEST_MARKER_DT
     dp_epoch = dt_to_epoch(dp_dt)
     dp_doc = {
         "ind_id": _TEST_IND_ID,
