@@ -41,7 +41,7 @@ from .dhcommon import (
     valid_timeframe, valid_trading_hours, log_say, this_candle_start,
     check_tf_th_compatibility, start_of_week_date, dict_of_weeks, bot,
     ProgBar, DEFAULT_OBJ_NAME, MARKET_ERAS,
-    normalize_list_of_strings)
+    normalize_list_of_strings, new_uuid)
 CANDLE_TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w']
 BEGINNING_OF_TIME = "2008-01-01 00:00:00"
 
@@ -2286,7 +2286,7 @@ class Trade():
         version (str): Version of trade (for future use)
         ts_id (str): unique id of associated TradeSeries this was created by
         bt_id (str): unique id of associated Backtest this was created by
-        trade_id (str): Stable unique ID, uuid4 (no hyphens), auto-generated
+        trade_id (str): Stable unique ID, uuid (no hyphens), auto-generated
             at construction.  A stored value may be passed to preserve it.
         trade_id_short (str): Last 8 hex chars of trade_id; use in logs.
         created_epoch (int): Unix timestamp derived from created_dt.
@@ -2459,10 +2459,10 @@ class Trade():
 
         # Assign a stable unique uniq_id.  uniq_id takes precedence;
         # trade_id is accepted as an alias for loading from storage.
-        # Neither provided: generate a new uuid4.
+        # Neither provided: generate a new uuid.
         self.uniq_id = (
             uniq_id if uniq_id is not None
-            else str(uuid.uuid4()).replace("-", "")
+            else new_uuid()
         )
         self.trade_id = trade_id if trade_id is not None else self.uniq_id
         if self.trade_id != self.uniq_id:
@@ -3930,7 +3930,7 @@ class TradePlan():
         contracts: Number of contracts this plan is calculated with.
         con_fee: Per-contract fee as a float.
         tp_id: Optional unique trade plan identifier string.  If None,
-            generated from other attributes and a uuid4 suffix.
+            generated from other attributes and a uuid suffix.
         tp_id_short: Human-readable prefix of tp_id with the uuid shortened to
             it's last 8 characters.
         name: Name string used for integrity checks and cleanup.
@@ -3982,7 +3982,7 @@ class TradePlan():
         # Generate uniq_id first; all other ID fields derive from it.
         self.uniq_id = (
             uniq_id if uniq_id is not None
-            else str(uuid.uuid4()).replace("-", "")
+            else new_uuid()
         )
         self.name = name
         self.id_slug = id_slug
@@ -4126,7 +4126,7 @@ class StoredImage():
             blank or None.  Defaults to DEFAULT_OBJ_NAME.  Test
             objects must include "DELETEME" in this field.
         image_id: Stable unique ID generated at object creation as
-            f"{name}_{uuid4_no_hyphens}".  Set before storage;
+            f"{name}_{uuid_no_hyphens}".  Set before storage;
             never changes after creation.  Used as the primary key
             for all retrieval and deletion operations.  If None,
             generated automatically.
@@ -4194,7 +4194,7 @@ class StoredImage():
         # Generate uniq_id first; all other ID fields derive from it.
         self.uniq_id = (
             uniq_id if uniq_id is not None
-            else str(uuid.uuid4()).replace("-", "")
+            else new_uuid()
         )
         if image_id is None:
             self.image_id = f"{self.name}_{self.uniq_id}"

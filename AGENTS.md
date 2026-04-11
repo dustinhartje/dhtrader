@@ -51,7 +51,7 @@ or serialized), verify each item before presenting the code:
 - [ ] `to_clean_dict()` is simply `json.loads(self.to_json())`.
 - [ ] `from_dict()` uses `d["key"]` direct access (no `.get()` with
       silent defaults) for every field.
-- [ ] `uniq_id` generated via `str(uuid.uuid4()).replace("-", "")`;
+- [ ] `uniq_id` generated via `new_uuid()` from `dhcommon`;
       all other id fields derived from it, not generated separately.
 - [ ] `*_id_short` preserves the full human-readable prefix and
       replaces only the uuid suffix with its last 8 hex chars.

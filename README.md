@@ -81,7 +81,7 @@ collections and raise `ValueError` if the target collection is managed.
 
 - **`store_custom_documents(collection, documents)`** — upserts a list
   of documents, one per dict.  Each document must have a non-blank
-  `name` field.  `doc_id` is auto-assigned as `"{name}_{uuid4}"` if
+  `name` field.  `doc_id` is auto-assigned as `"{name}_{new_uuid()}"` if
   not pre-set by the caller.  Non-dict objects are coerced via
   `vars()`/`dict()` before raising on failure.  Documents must be
   JSON-serializable.
@@ -99,7 +99,7 @@ for images stored in MongoDB GridFS:
 
 | Field | Description |
 |---|---|
-| `image_id` | Unique ID, auto-generated as `"{name}_{uuid4_no_hyphens}"` |
+| `image_id` | Unique ID, auto-generated as `"{name}_{new_uuid()}"` |
 | `image_id_short` | Last 8 hex chars of `image_id`; use in log messages |
 | `name` | Required non-blank label; raises `ValueError` if blank or None |
 | `created_epoch` | Integer epoch timestamp at creation; not used in `image_id` |

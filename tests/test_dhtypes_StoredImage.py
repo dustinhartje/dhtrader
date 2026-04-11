@@ -129,14 +129,14 @@ def test_StoredImage_construction_all_fields():
 
 
 def test_StoredImage_image_id_generated_from_name_with_uuid():
-    """When image_id is not supplied it is built as name_<uuid4_no_hyphens>."""
+    """When image_id is not supplied it is built using name."""
     img = StoredImage(name="test_DELETEME_id")
     # image_id must start with the name prefix followed by underscore
     assert img.image_id.startswith("test_DELETEME_id_")
     # The uuid portion must contain no hyphens
     uuid_part = img.image_id[len("test_DELETEME_id_"):]
     assert "-" not in uuid_part
-    # It must be 32 hex chars (uuid4 stripped of hyphens)
+    # It must be 32 hex chars (created with new_uuid())
     assert len(uuid_part) == 32
     # Two images with the same name must not share the same image_id
     img2 = StoredImage(name="test_DELETEME_id")

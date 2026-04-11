@@ -306,7 +306,7 @@ def test_TradePlan_tags_and_notes_normalization():
 
 @pytest.mark.suppress_stdout
 def test_TradePlan_tp_id_generation_with_uuid_suffix():
-    """tp_id should include id_slug, cfg_label, and a uuid4 suffix.
+    """tp_id should include id_slug, cfg_label, and a new_uuid() suffix.
 
     When replace_tradeseries is called, the existing uuid suffix should
     be preserved rather than regenerated.

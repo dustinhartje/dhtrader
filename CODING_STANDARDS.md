@@ -401,10 +401,10 @@ Classes that need a `notes` field should follow the
 `TradePlan`/`AnalyzeBacktestResult` pattern:
 
 - Declare `notes=None` in `__init__`
-- Normalize via `self._normalize_str_list(notes, "notes")`
-- Provide `_normalize_str_list(self, values, field_name)` as
-  an instance method: `None → []`; iterates elements and coerces
-  each to `str()`; raises `TypeError` if not iterable.
+- Normalize via
+  `normalize_list_of_strings(notes, "ClassName.notes")`
+  from `dhcommon`
+  (import: `from dhtrader import normalize_list_of_strings`)
 
 ## Unique ID Fields
 
@@ -418,20 +418,21 @@ short enough for readable log output.
 
 ### Generation pattern
 
-Use `uuid.uuid4()` with hyphens stripped.  Always assign the bare uuid
+Use `new_uuid()` from `dhcommon` (import:
+`from dhtrader import new_uuid`).  Always assign the bare uuid
 to `self.uuid` first, then derive the class-specific id and short id
 from it:
 
 ```python
-import uuid
+from dhtrader import new_uuid
 
 # Pure uuid (e.g. Trade.trade_id IS the uuid)
-self.uuid = str(uuid.uuid4()).replace("-", "")
+self.uuid = new_uuid()
 self.trade_id = self.uuid
 self.trade_id_short = self.uuid[-8:]
 
 # Prefix + uuid (e.g. StoredImage.image_id, TradePlan.tp_id suffix)
-self.uuid = str(uuid.uuid4()).replace("-", "")
+self.uuid = new_uuid()
 self.image_id = f"{self.name}_{self.uuid}"
 self.image_id_short = self.uuid[-8:]
 ```
@@ -454,7 +455,7 @@ self.uuid = parts[1]  # validated as all-hex before accepting
 
 Rules:
 - **Generate `self.uuid` first**, then derive all other id fields.
-- **No hyphens** in the uuid portion — use `.replace("-", "")`.
+- **No hyphens** in the uuid portion — `new_uuid()` strips them.
 - **Prefix** is optional and class-specific; use a meaningful string
   that identifies context (name, ts_id, etc.).
 - **Never** use `int(datetime.now().timestamp())` (epoch seconds) as the
@@ -472,12 +473,12 @@ This keeps log messages identifiable while remaining concise.
 
 ```python
 # Trade: trade_id IS the uuid (no prefix) — short form is just last 8
-self.uuid = str(uuid.uuid4()).replace("-", "")
+self.uuid = new_uuid()
 self.trade_id = self.uuid
 self.trade_id_short = self.uuid[-8:]
 
 # StoredImage: prefix is the name — preserved in full
-self.uuid = str(uuid.uuid4()).replace("-", "")
+self.uuid = new_uuid()
 self.image_id = f"{self.name}_{self.uuid}"
 self.image_id_short = f"{self.name}_{self.uuid[-8:]}"
 
@@ -534,7 +535,7 @@ matches `*_id_short` on the object that owns it.
 pass its last 8 chars:
 
 ```python
-run_id = time_tag(str(uuid.uuid4()).replace("-", "")[-8:])
+run_id = time_tag(new_uuid()[-8:])
 ```
 
 **Nested contexts** (e.g. a window analysis created inside a refresh

@@ -651,7 +651,7 @@ def test_custom_document_store_object_with_dunder_dict_is_coerced(
 @pytest.mark.suppress_stdout
 def test_custom_document_store_assigns_doc_id_prefixed_with_name(
         cleanup_custom_docs):
-    """doc_id is auto-assigned as '{name}_{uuid4}' when not supplied.
+    """doc_id is auto-assigned when not supplied.
 
     Verifies format, prefix, and that retrieval by doc_id returns the
     full original document.
@@ -662,10 +662,9 @@ def test_custom_document_store_assigns_doc_id_prefixed_with_name(
 
     assert "doc_id" in doc
     assert isinstance(doc["doc_id"], str)
-    # doc_id format is "{name}_{uuid4}"
     assert doc["doc_id"].startswith(f"{_TEST_MARKER}_")
     suffix = doc["doc_id"][len(_TEST_MARKER) + 1:]
-    # UUID4 canonical form is 36 chars
+    # new_uuid() canonical form is 36 chars
     assert len(suffix) == 36
 
     # Retrieve by doc_id and verify full document content

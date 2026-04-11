@@ -35,6 +35,7 @@ import re
 import logging
 import json
 import sys
+import uuid
 import progressbar
 
 TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', 'r1d', 'e1d', 'r1w', 'e1w',
@@ -1083,6 +1084,11 @@ MARKET_ERAS = [
         }
     }
 ]
+
+
+def new_uuid() -> str:
+    """Return a new UUID4 as a 32-character hex string (no hyphens)."""
+    return str(uuid.uuid4()).replace("-", "")
 
 
 def bot():

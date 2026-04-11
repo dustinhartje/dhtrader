@@ -26,8 +26,9 @@ from .dhtypes import (
 from .dhcommon import (
     dt_as_str, dt_as_dt, dt_from_epoch, dt_to_epoch, valid_timeframe,
     this_candle_start, summarize_candles, log_say, sort_dict,
-    rangify_candle_times, expected_candle_datetimes, MARKET_ERAS,
-    ProgBar, OperationTimer, DEFAULT_OBJ_NAME)
+    rangify_candle_times, expected_candle_datetimes, new_uuid,
+    ProgBar, OperationTimer,
+    DEFAULT_OBJ_NAME, MARKET_ERAS)
 from . import dhmongo as dhm
 
 # All collection names owned by dhtrader classes.  Custom document
@@ -247,7 +248,7 @@ def store_custom_documents(collection: str,
         if not doc.get("doc_id"):
             name_prefix = str(doc["name"]).strip()
             while True:
-                candidate = f"{name_prefix}_{str(uuid.uuid4())}"
+                candidate = f"{name_prefix}_{new_uuid()}"
                 existing = dhm.get_custom_documents_by_field(
                     collection=collection,
                     field="doc_id",
@@ -491,10 +492,9 @@ def store_images(
         ) -> list:
     """Store StoredImage objects and their binary data in GridFS.
 
-    image_id is set on each StoredImage at object creation time as
-    f"{name}_{uuid4_no_hyphens}" and is used as the stable retrieval
-    key.  Binary data is stored in GridFS; this function stores no
-    binary attributes on the objects themselves.
+    image_id is set on each StoredImage at object creation time and is used
+    as the stable retrieval key.  Binary data is stored in GridFS; this
+    function stores no binary attributes on the objects themselves.
 
     Args:
         images: List of (StoredImage, bytes) tuples, one per image.
@@ -844,9 +844,8 @@ def store_image_from_path(
         ) -> str:
     """Read a file from disk and store it as a StoredImage in GridFS.
 
-    The filename stem (without extension) is used as the StoredImage
-    name, which is also used to build a unique image_id as
-    f"{name}_{uuid4()}" at object creation time.
+    The filename stem (without extension) is used as the StoredImage name,
+    which is also used to build a unique image_id at object creation time.
 
     Args:
         filepath: Path to the image file on disk.

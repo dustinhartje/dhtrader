@@ -47,6 +47,7 @@ from .dhcommon import (
     valid_timeframe,
     valid_trading_hours,
     normalize_list_of_strings,
+    new_uuid,
 )
 
 from .dhutil import (

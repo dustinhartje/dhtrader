@@ -60,7 +60,7 @@ def create_trade(open_dt="2099-01-08 12:00:00",
     assert r.version == "1.0.0"
     assert r.ts_id == ts_id
     assert r.bt_id is None
-    # trade_id is uuid4 (no hyphens), 32 hex chars; not epoch-derived
+    # trade_id is from new_uuid(), 32 hex chars
     assert isinstance(r.uniq_id, str)
     assert len(r.uniq_id) == 32
     assert "-" not in r.uniq_id
@@ -84,8 +84,8 @@ def create_trade(open_dt="2099-01-08 12:00:00",
     return r
 
 
-def test_trade_id_is_uuid4_no_hyphens():
-    """Trade.trade_id is a 32-char hex string (uuid4 with hyphens stripped)."""
+def test_trade_id_is_uuid_no_hyphens():
+    """Trade.trade_id is a 32-char hex string (created with new_uuid())."""
     t = create_trade(open_dt="2099-01-08 12:05:00", ts_id="TS_ALPHA")
     assert isinstance(t.trade_id, str)
     assert len(t.trade_id) == 32
@@ -96,7 +96,7 @@ def test_trade_id_is_uuid4_no_hyphens():
 
 
 def test_trade_init_allows_unbound_trade_with_uuid_trade_id():
-    """Unbound trade (ts_id=None) still gets a unique uuid4 trade_id."""
+    """Unbound trade (ts_id=None) still gets a unique trade_id."""
     for unbound_id in [None, ""]:
         t = Trade(open_dt="2099-01-08 12:00:00",
                   close_dt=None,
@@ -693,7 +693,7 @@ def test_Trade_create_and_verify_common_methods():
     assert trade.version == "1.0.0"
     assert trade.ts_id == "DELETEME_TS"
     assert trade.bt_id is None
-    # trade_id is uuid4 (no hyphens), 32 hex chars
+    # trade_id is from new_uuid(), 32 hex chars
     assert isinstance(trade.trade_id, str)
     assert len(trade.trade_id) == 32
     assert "-" not in trade.trade_id
