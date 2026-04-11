@@ -3,7 +3,7 @@ import json
 import pytest
 from dhtrader import (
     Candle, Chart,
-    delete_indicator, delete_indicators_by_name,
+    delete_indicators_by_name,
     get_indicator, get_indicator_datapoints,
     get_indicators_by_name, Indicator, IndicatorDataPoint,
     IndicatorEMA, IndicatorSMA, store_indicator, Symbol)

@@ -12,10 +12,8 @@ REF: https://github.com/mongodb-university/atlas_starter_python/blob
      /master/atlas-starter.py
 """
 
-import json
 import os
 import sys
-import tempfile
 import pymongo
 from pymongo import ReplaceOne
 from pymongo.errors import BulkWriteError
@@ -24,7 +22,7 @@ from dotenv import load_dotenv, find_dotenv
 from datetime import datetime as dt
 from .dhcommon import (
     ProgBar, prompt_yn, valid_timeframe, dt_as_str, dt_from_epoch,
-    dt_to_epoch, DEFAULT_OBJ_NAME)
+    dt_to_epoch)
 
 log = logging.getLogger("dhmongo")
 log.addHandler(logging.NullHandler())

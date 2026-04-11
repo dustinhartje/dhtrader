@@ -13,10 +13,9 @@ utility layer with no storage dependencies.
 import json
 import re
 import time
-import uuid
 from collections import Counter, defaultdict, namedtuple
 from datetime import datetime as dt
-from datetime import date, timedelta
+from datetime import timedelta
 from copy import deepcopy
 import logging
 from pathlib import Path

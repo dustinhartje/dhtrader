@@ -34,7 +34,6 @@ from statistics import fmean
 from copy import copy, deepcopy
 import logging
 from math import ceil, floor
-import uuid
 import numpy as np
 from .dhcommon import (
     dt_as_dt, dt_as_str, dt_as_time, dt_to_epoch, timeframe_delta,

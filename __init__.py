@@ -34,7 +34,9 @@ from .dhcommon import (
     expected_candle_datetimes,
     log_say,
     MARKET_ERAS,
+    new_uuid,
     next_candle_start,
+    normalize_list_of_strings,
     OperationTimer,
     ProgBar,
     prompt_yn,
@@ -46,8 +48,6 @@ from .dhcommon import (
     timeframe_delta,
     valid_timeframe,
     valid_trading_hours,
-    normalize_list_of_strings,
-    new_uuid,
 )
 
 from .dhutil import (
@@ -203,10 +203,13 @@ __all__ = [
     'list_indicators_names',
     'log_say',
     'MARKET_ERAS',
+    'new_uuid',
     'next_candle_start',
+    'normalize_list_of_strings',
     'OperationTimer',
     'ProgBar',
     'prompt_yn',
+    'rangify_candle_times',
     'read_candles_from_csv',
     'remediate_candle_gaps',
     'review_backtests',

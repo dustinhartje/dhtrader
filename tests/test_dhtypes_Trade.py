@@ -5,7 +5,7 @@ import json
 import pytest
 from dhtrader import (
     Candle, delete_trades, delete_trades_by_field,
-    dt_as_dt, dt_to_epoch, get_trades_by_field, store_trades,
+    dt_as_dt, get_trades_by_field, store_trades,
     Symbol, Trade, TradeSeries)
 from dhtrader.testdata.testdata import Rebuilder
 

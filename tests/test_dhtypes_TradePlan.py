@@ -11,7 +11,6 @@ from dhtrader import (
     delete_tradeplans_by_field,
     store_trades,
     delete_trades_by_field,
-    get_trades_by_field,
     COLLECTIONS,
     check_integrity_unique_fields,
 )

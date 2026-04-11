@@ -8,7 +8,6 @@ from dhtrader import (
     get_backtests_by_field, get_trades_by_field, get_tradeseries_by_field,
     store_backtests, store_trades, store_tradeseries, Symbol, Trade,
     TradeSeries)
-from dhtrader.dhtypes import delete_tradeseries
 
 
 def create_trade(open_dt="2099-01-02 12:00:00",

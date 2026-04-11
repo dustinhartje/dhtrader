@@ -2,8 +2,6 @@
 import pytest
 from dhtrader.dhmongo import (
     delete_backtests,
-    delete_backtests_by_field,
-    delete_candles,
     delete_candles_by_field,
     delete_events_by_field,
     delete_indicator,
