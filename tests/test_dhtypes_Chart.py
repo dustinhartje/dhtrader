@@ -77,12 +77,23 @@ def test_Chart_create_and_verify_common_methods():
     # __ne__
     assert not (chart != chart2)
     assert chart != diff
-    # __str__
-    assert isinstance(str(chart), str)
-    assert len(str(chart)) > 0
-    # __repr__
-    assert isinstance(repr(chart), str)
-    assert str(chart) == repr(chart)
+    # __str__ and __repr__ match the exact expected serialization.
+    # Chart.to_clean_dict() suppresses candles; all other fields
+    # are fully deterministic for this fixture.
+    expected_chart_str = (
+        "{'c_timeframe': '1m', 'c_trading_hours': 'rth', "
+        "'c_symbol': 'ES', "
+        "'c_start': '2099-01-02 12:00:00', "
+        "'c_end': '2099-01-02 12:10:00', "
+        "'c_candles': "
+        "['1 Candles suppressed for output sanity'], "
+        "'autoload': False, 'show_progress': False, "
+        "'candles_count': 1, "
+        "'earliest_candle': '2099-01-02 12:00:00', "
+        "'latest_candle': '2099-01-02 12:00:00'}"
+    )
+    assert str(chart) == expected_chart_str
+    assert repr(chart) == expected_chart_str
     # to_clean_dict
     d = chart.to_clean_dict()
     assert isinstance(d, dict)

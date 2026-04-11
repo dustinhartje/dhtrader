@@ -792,12 +792,15 @@ def test_IndicatorDataPoint_create_and_verify_common_methods():
     assert not (dp != dp2)
     assert dp != diff
     assert dp != []
-    # __str__
-    assert isinstance(str(dp), str)
-    assert len(str(dp)) > 0
-    # __repr__
-    assert isinstance(repr(dp), str)
-    assert str(dp) == repr(dp)
+    # __str__ and __repr__ — exact format
+    expected_dp_str = (
+        "{'dt': '2099-01-15 10:30:00', 'value': 5123.75, "
+        "'ind_id': 'ES_eth_15m_EMA_close_l9_s2', "
+        f"'epoch': {dp.epoch}, "
+        "'name': 'DELETEME-test-dp'}"
+    )
+    assert str(dp) == expected_dp_str
+    assert repr(dp) == expected_dp_str
     # to_clean_dict
     d = dp.to_clean_dict()
     assert isinstance(d, dict)
@@ -928,12 +931,18 @@ def test_Indicator_create_and_verify_common_methods():
     # __ne__
     assert not (ind != ind2)
     assert ind != diff
-    # __str__
-    assert isinstance(str(ind), str)
-    assert len(str(ind)) > 0
-    # __repr__
-    assert isinstance(repr(ind), str)
-    assert str(ind) == repr(ind)
+    # __str__ and __repr__ — exact format (ind_id is deterministic)
+    expected_ind_str = (
+        "{'ind_id': 'ES_eth_1m_DELETEME', 'name': 'DELETEME', "
+        "'description': 'Test indicator', 'timeframe': '1m', "
+        "'trading_hours': 'eth', 'symbol': 'ES', "
+        "'calc_version': '1.0.0', 'calc_details': 'test', "
+        "'start_dt': '2099-01-02 12:00:00', "
+        "'end_dt': '2099-01-02 12:10:00', "
+        "'parameters': {}, 'datapoints_count': 0}"
+    )
+    assert str(ind) == expected_ind_str
+    assert repr(ind) == expected_ind_str
     # to_clean_dict
     d = ind.to_clean_dict()
     assert isinstance(d, dict)
@@ -1043,12 +1052,19 @@ def test_IndicatorSMA_create_and_verify_common_methods():
     # __ne__
     assert not (sma != sma2)
     assert sma != diff
-    # __str__
-    assert isinstance(str(sma), str)
-    assert len(str(sma)) > 0
-    # __repr__
-    assert isinstance(repr(sma), str)
-    assert str(sma) == repr(sma)
+    # __str__ and __repr__ — exact format (ind_id is deterministic)
+    expected_sma_str = (
+        "{'ind_id': 'ES_eth_1m_SMA_close_l3', 'name': 'SMA', "
+        "'description': 'Test SMA', 'timeframe': '1m', "
+        "'trading_hours': 'eth', 'symbol': 'ES', "
+        "'calc_version': '1.0.0', 'calc_details': 'test', "
+        "'start_dt': '2099-01-02 12:00:00', "
+        "'end_dt': '2099-01-02 12:10:00', "
+        "'parameters': {'length': 3, 'method': 'close'}, "
+        "'datapoints_count': 0}"
+    )
+    assert str(sma) == expected_sma_str
+    assert repr(sma) == expected_sma_str
     # to_clean_dict
     d = sma.to_clean_dict()
     assert isinstance(d, dict)
@@ -1158,12 +1174,20 @@ def test_IndicatorEMA_create_and_verify_common_methods():
     # __ne__
     assert not (ema != ema2)
     assert ema != diff
-    # __str__
-    assert isinstance(str(ema), str)
-    assert len(str(ema)) > 0
-    # __repr__
-    assert isinstance(repr(ema), str)
-    assert str(ema) == repr(ema)
+    # __str__ and __repr__ — exact format (ind_id is deterministic)
+    expected_ema_str = (
+        "{'ind_id': 'ES_eth_1m_EMA_close_l3_s2', 'name': 'EMA', "
+        "'description': 'Test EMA', 'timeframe': '1m', "
+        "'trading_hours': 'eth', 'symbol': 'ES', "
+        "'calc_version': '1.0.0', 'calc_details': 'test', "
+        "'start_dt': '2099-01-02 12:00:00', "
+        "'end_dt': '2099-01-02 12:10:00', "
+        "'parameters': {'length': 3, 'method': 'close', "
+        "'smoothing': 2}, "
+        "'datapoints_count': 0}"
+    )
+    assert str(ema) == expected_ema_str
+    assert repr(ema) == expected_ema_str
     # to_clean_dict
     d = ema.to_clean_dict()
     assert isinstance(d, dict)

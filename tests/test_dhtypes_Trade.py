@@ -737,12 +737,30 @@ def test_Trade_create_and_verify_common_methods():
     # __ne__
     assert not (trade != trade2)
     assert trade != diff
-    # __str__
-    assert isinstance(str(trade), str)
-    assert len(str(trade)) > 0
-    # __repr__
-    assert isinstance(repr(trade), str)
-    assert str(trade) == repr(trade)
+    # __str__ and __repr__ — exact format with f-string for dynamic fields
+    expected_trade_str = (
+        "{'open_dt': '2099-01-08 12:00:00', 'close_dt': None, "
+        f"'created_dt': '{trade.created_dt}', "
+        f"'created_epoch': {trade.created_epoch}, "
+        "'direction': 'long', 'timeframe': '5m', "
+        "'trading_hours': 'rth', "
+        "'entry_price': 5000, 'stop_target': 4875.0, "
+        "'prof_target': 5125.0, "
+        "'high_price': 5000, 'low_price': 5000, 'exit_price': None, "
+        "'stop_ticks': 500, 'prof_ticks': 500, 'offset_ticks': 0, "
+        "'symbol': 'ES', 'is_open': True, 'profitable': None, "
+        "'name': 'DELETEME', 'version': '1.0.0', "
+        "'ts_id': 'DELETEME_TS', 'bt_id': None, 'tags': [], 'flipper': 1, "
+        f"'open_epoch': {trade.open_epoch}, "
+        "'open_date': '2099-01-08', 'open_time': '12:00:00', "
+        f"'uniq_id': '{trade.uniq_id}', "
+        f"'trade_id': '{trade.trade_id}', "
+        f"'trade_id_short': '{trade.trade_id_short}', "
+        "'close_date': None, 'close_time': None, "
+        "'first_min_open': True}"
+    )
+    assert str(trade) == expected_trade_str
+    assert repr(trade) == expected_trade_str
     # to_clean_dict
     d = trade.to_clean_dict()
     assert isinstance(d, dict)

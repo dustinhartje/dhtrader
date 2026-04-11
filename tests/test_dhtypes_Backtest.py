@@ -218,12 +218,21 @@ def test_Backtest_create_and_verify_common_methods():
     # __ne__
     assert not (bt != bt2)
     assert bt != diff
-    # __str__
-    assert isinstance(str(bt), str)
-    assert len(str(bt)) > 0
-    # __repr__
-    assert isinstance(repr(bt), str)
-    assert str(bt) == repr(bt)
+    # __str__ and __repr__ — exact format (bt_id is deterministic)
+    expected_bt_str = (
+        "{'start_dt': '2099-01-01 00:00:00', "
+        "'end_dt': '2099-02-01 00:00:00', 'timeframe': 'e1h', "
+        "'trading_hours': 'eth', 'symbol': 'ES', 'name': 'DELETEME', "
+        "'bt_id': 'DELETEME', 'class_name': 'BacktestTestDeleteme', "
+        "'parameters': {'a': 1, 'b': 'two'}, "
+        "'chart_tf': 'Chart suppressed for output sanity', "
+        "'chart_1m': 'Chart suppressed for output sanity', "
+        "'tradeseries': "
+        "['0 Tradeseries suppressed for output sanity'], "
+        "'prefer_stored': False, 'autoload_charts': False}"
+    )
+    assert str(bt) == expected_bt_str
+    assert repr(bt) == expected_bt_str
     # to_clean_dict
     d = bt.to_clean_dict()
     assert isinstance(d, dict)

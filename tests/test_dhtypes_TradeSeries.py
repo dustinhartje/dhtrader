@@ -193,12 +193,19 @@ def test_TradeSeries_create_and_verify_common_methods():
     # __ne__
     assert not (ts != ts2)
     assert ts != diff
-    # __str__
-    assert isinstance(str(ts), str)
-    assert len(str(ts)) > 0
-    # __repr__
-    assert isinstance(repr(ts), str)
-    assert str(ts) == repr(ts)
+    # __str__ and __repr__ — exact format (ts_id is deterministic)
+    expected_ts_str = (
+        "{'start_dt': '2099-01-01 00:00:00', "
+        "'end_dt': '2099-02-01 00:00:00', 'timeframe': '5m', "
+        "'trading_hours': 'rth', 'symbol': 'ES', 'name': 'DELETEME', "
+        "'params_str': 'a1_b2_c3_p0', "
+        "'ts_id': 'DELETEME_a1_b2_c3_p0', "
+        "'bt_id': None, "
+        "'trades': ['0 Trades suppressed for output sanity'], "
+        "'tags': []}"
+    )
+    assert str(ts) == expected_ts_str
+    assert repr(ts) == expected_ts_str
     # to_clean_dict
     d = ts.to_clean_dict()
     assert isinstance(d, dict)

@@ -404,22 +404,36 @@ def test_StoredImage_not_equal_to_non_instance():
 # __repr__ and __str__
 # ---------------------------------------------------------------------------
 
-def test_StoredImage_repr_contains_name_and_image_id():
-    """repr() includes name and image_id."""
+def test_StoredImage_repr_is_exact_format():
+    """repr() matches the exact expected format."""
     img = StoredImage(
         name="test_DELETEME_repr",
         image_id="test_DELETEME_repr_1",
     )
-    r = repr(img)
-    assert "test_DELETEME_repr" in r
-    assert "test_DELETEME_repr_1" in r
+    assert repr(img) == (
+        "StoredImage(name='test_DELETEME_repr', "
+        "image_id='test_DELETEME_repr_1')"
+    )
 
 
-def test_StoredImage_str_is_string():
-    """str() returns a non-empty string."""
+def test_StoredImage_str_is_exact_format():
+    """str() matches exact to_clean_dict serialization."""
     img = StoredImage(name="test_DELETEME_str")
-    assert isinstance(str(img), str)
-    assert len(str(img)) > 0
+    expected = (
+        f"{{'name': 'test_DELETEME_str', "
+        f"'created_epoch': {img.created_epoch}, "
+        f"'created_dt': '{img.created_dt}', "
+        f"'uniq_id': '{img.uniq_id}', "
+        f"'image_id': '{img.image_id}', "
+        f"'image_id_short': '{img.image_id_short}', "
+        "'content_type': 'image/jpeg', 'filename': None, "
+        "'description': None, 'parent_collection': None, "
+        "'parent_id_field': None, 'parent_id_value': None, "
+        "'tags': []}"
+    )
+    print(str(img))
+    print(expected)
+    assert str(img) == expected
 
 
 # ---------------------------------------------------------------------------

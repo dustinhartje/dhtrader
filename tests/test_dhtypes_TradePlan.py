@@ -207,11 +207,41 @@ def test_TradePlan_create_and_verify_common_methods():
         f"Removed attrs: {sorted(removed)}."
     )
 
-    # __str__ and __repr__
-    assert isinstance(str(tp), str)
-    assert len(str(tp)) > 0
-    assert isinstance(repr(tp), str)
-    assert str(tp) == repr(tp)
+    # __str__ and __repr__ — exact format with f-string for dynamic fields
+    # TradeSeries embedded via TradeSeries.__repr__ = str(to_clean_dict())
+    _ts_str = (
+        "{'start_dt': '2099-01-01 00:00:00', "
+        "'end_dt': '2099-02-01 00:00:00', 'timeframe': '5m', "
+        "'trading_hours': 'rth', 'symbol': 'ES', "
+        "'name': 'DELETEME_tp_common', 'params_str': 's20-p40-o0', "
+        "'ts_id': 'DELETEME_tp_common_s20-p40-o0', "
+        "'bt_id': None, "
+        "'trades': ['2 Trades suppressed for output sanity'], "
+        "'tags': []}"
+    )
+    expected_tp_str = (
+        "{'contracts': 2, 'con_fee': 3.04, "
+        f"'tp_id': '{tp.tp_id}', "
+        "'override_tp_id': False, "
+        f"'uniq_id': '{tp.uniq_id}', "
+        "'name': 'DELETEME_tp_common', "
+        "'id_slug': 'DELETEME_tp_common_tag', "
+        "'tags': [], 'cfg_label': 'DELETEME_tp_common_lbl', "
+        "'profit_perc': 100, "
+        "'start_dt': '2099-01-01 00:00:00', "
+        "'end_dt': '2099-02-01 00:00:00', "
+        "'drawdown_open': 6000, 'drawdown_limit': 6500, "
+        "'notes': [], "
+        "'thresholds': {'label': 't1', 'mrr': 0.5, 'msp': 75}, "
+        f"'tradeseries': {_ts_str}, "
+        f"'tp_id_short': '{tp.tp_id_short}', "
+        "'how_gl_heatmap_viz': None, "
+        "'weekly_price_overlay_visuals': [], "
+        f"'created_dt': '{tp.created_dt}', "
+        f"'created_epoch': {tp.created_epoch}}}"
+    )
+    assert str(tp) == expected_tp_str
+    assert repr(tp) == expected_tp_str
 
     # to_clean_dict
     d = tp.to_clean_dict()

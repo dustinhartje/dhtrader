@@ -99,13 +99,27 @@ def test_Candle_create_and_verify_common_methods():
     # __ne__
     assert not (candle != other)
     assert candle != diff
-    # __str__
-    assert isinstance(str(candle), str)
-    assert len(str(candle)) > 0
-    # __repr__
-    assert isinstance(repr(candle), str)
-    assert len(repr(candle)) > 0
-    assert str(candle) == repr(candle)
+    # __str__ and __repr__ — exact format
+    sym_repr = str(candle.c_symbol)
+    expected_candle_str = (
+        "{'c_datetime': '2099-01-02 12:00:00', 'c_timeframe': '1m', "
+        "'c_open': 5000.0, 'c_high': 5007.75, 'c_low': 4995.5, "
+        "'c_close': 5002.0, 'c_volume': 1501, "
+        f"'c_symbol': {sym_repr}, "
+        "'c_tags': [], "
+        f"'c_epoch': {candle.c_epoch}, "
+        "'c_date': '2099-01-02', 'c_time': '12:00:00', "
+        "'name': 'nameless', "
+        "'c_end_datetime': '2099-01-02 12:01:00', "
+        "'c_size': 12.25, 'c_body_size': 2.0, "
+        "'c_upper_wick_size': 5.75, 'c_lower_wick_size': 4.5, "
+        "'c_body_perc': 0.16326530612244897, "
+        "'c_upper_wick_perc': 0.46938775510204084, "
+        "'c_lower_wick_perc': 0.3673469387755102, "
+        "'c_direction': 'bullish'}"
+    )
+    assert str(candle) == expected_candle_str
+    assert repr(candle) == expected_candle_str
     # to_clean_dict
     d = candle.to_clean_dict()
     assert isinstance(d, dict)
