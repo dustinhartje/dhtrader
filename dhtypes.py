@@ -40,7 +40,8 @@ from .dhcommon import (
     dt_as_dt, dt_as_str, dt_as_time, dt_to_epoch, timeframe_delta,
     valid_timeframe, valid_trading_hours, log_say, this_candle_start,
     check_tf_th_compatibility, start_of_week_date, dict_of_weeks, bot,
-    ProgBar, DEFAULT_OBJ_NAME, MARKET_ERAS)
+    ProgBar, DEFAULT_OBJ_NAME, MARKET_ERAS,
+    normalize_list_of_strings)
 CANDLE_TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w']
 BEGINNING_OF_TIME = "2008-01-01 00:00:00"
 
@@ -1044,9 +1045,7 @@ class Candle():
             self.c_symbol = c_symbol
         else:
             self.c_symbol = get_symbol_by_ticker(ticker=c_symbol)
-        if c_tags is None:
-            c_tags = []
-        self.c_tags = c_tags
+        self.c_tags = normalize_list_of_strings(c_tags, "Candle.c_tags")
         if c_epoch is None:
             c_epoch = dt_to_epoch(c_datetime_dt)
         self.c_epoch = c_epoch
@@ -1383,9 +1382,7 @@ class Event():
         else:
             self.symbol = get_symbol_by_ticker(ticker=symbol)
         self.category = category
-        self.tags = tags
-        if tags is None:
-            tags = []
+        self.tags = normalize_list_of_strings(tags, "Event.tags")
         self.notes = notes
         self.start_epoch = dt_to_epoch(self.start_dt)
         self.end_epoch = dt_to_epoch(self.end_dt)
@@ -2431,10 +2428,7 @@ class Trade():
         self.version = version
         self.ts_id = ts_id
         self.bt_id = bt_id
-        if tags is None:
-            self.tags = []
-        else:
-            self.tags = deepcopy(tags)
+        self.tags = normalize_list_of_strings(tags, "Trade.tags")
 
         # Calculated attributes
         if self.direction == "long":
@@ -2977,10 +2971,7 @@ class TradeSeries():
             for t in self.trades:
                 t.ts_id = self.ts_id
                 t.bt_id = self.bt_id
-        if tags is None:
-            self.tags = []
-        else:
-            self.tags = deepcopy(tags)
+        self.tags = normalize_list_of_strings(tags, "TradeSeries.tags")
 
     def __eq__(self, other):
         """Return True if all TradeSeries attributes are equal."""
@@ -3995,14 +3986,14 @@ class TradePlan():
         )
         self.name = name
         self.id_slug = id_slug
-        self.tags = self._normalize_str_list(tags, "tags")
+        self.tags = normalize_list_of_strings(tags, "TradePlan.tags")
         self.cfg_label = cfg_label
         self.profit_perc = profit_perc
         self.start_dt = start_dt
         self.end_dt = end_dt
         self.drawdown_open = drawdown_open
         self.drawdown_limit = drawdown_limit
-        self.notes = self._normalize_str_list(notes, "notes")
+        self.notes = normalize_list_of_strings(notes, "TradePlan.notes")
         self.thresholds = {} if thresholds is None else thresholds
         self.replace_tradeseries(tradeseries)
         self.how_gl_heatmap_viz = how_gl_heatmap_viz
@@ -4025,21 +4016,6 @@ class TradePlan():
                     f"TradePlan tp_id {self.tp_id!r} does not contain "
                     f"uniq_id {self.uniq_id!r}"
                 )
-
-    def _normalize_str_list(self, values, field_name):
-        """Return list[str], converting values where possible."""
-        if values is None:
-            return []
-        result = []
-        try:
-            for value in values:
-                result.append(str(value))
-        except Exception as e:
-            raise TypeError(
-                f"TradePlan.{field_name} must be list-like and "
-                "string-convertible"
-            ) from e
-        return result
 
     def replace_tradeseries(self, ts):
         """Replace attached TradeSeries and update tp_id accordingly."""
@@ -4240,10 +4216,7 @@ class StoredImage():
         self.parent_collection = parent_collection
         self.parent_id_field = parent_id_field
         self.parent_id_value = parent_id_value
-        if tags is None:
-            self.tags = []
-        else:
-            self.tags = list(tags)
+        self.tags = normalize_list_of_strings(tags, "StoredImage.tags")
 
     def __eq__(self, other):
         """Return True if image_id and name match."""

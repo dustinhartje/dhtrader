@@ -46,6 +46,7 @@ from .dhcommon import (
     timeframe_delta,
     valid_timeframe,
     valid_trading_hours,
+    normalize_list_of_strings,
 )
 
 from .dhutil import (

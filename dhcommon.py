@@ -1088,3 +1088,31 @@ MARKET_ERAS = [
 def bot():
     """Return universal beginning of time for this and other modules."""
     return BEGINNING_OF_TIME
+
+
+def normalize_list_of_strings(values, label: str) -> list:
+    """Return list[str], converting each element where possible.
+
+    Args:
+        values: A list-like of items to convert, or None.
+        label: Human-readable label used in error messages, e.g.
+            "TradePlan.tags".
+
+    Returns:
+        list: Each element coerced to str.  Returns [] if values is None.
+
+    Raises:
+        TypeError: If values is not iterable or an element cannot be
+            converted to str.
+    """
+    if values is None:
+        return []
+    result = []
+    try:
+        for value in values:
+            result.append(str(value))
+    except Exception as e:
+        raise TypeError(
+            f"{label} must be list-like and string-convertible"
+        ) from e
+    return result
