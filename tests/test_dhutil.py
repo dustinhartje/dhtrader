@@ -288,6 +288,7 @@ def test_store_candles_from_csv_and_compare(cleanup_2099_candles):
         symbol=TEST_2099_SYMBOL,
         start_dt=TEST_2099_START,
         end_dt=TEST_2099_END,
+        name=_TEST_CANDLE_NAME,
     )
     assert result is not None
     assert result["all_equal"] is True
