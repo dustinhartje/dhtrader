@@ -109,8 +109,8 @@ bytes from GridFS after construction.
 
 GridFS storage functions in `dhstore.py`:
 
-- **`store_images(images, data_list, bucket)`** — stores a list of
-  `StoredImage` objects and corresponding binary data to GridFS.
+- **`store_images(images, bucket)`** — stores a list of
+  `(StoredImage, bytes)` tuples to GridFS.
   `image_id` must already be set on each object before calling.
   Returns a list of `image_id` strings.
 - **`store_image_from_path(path, name, ...)`** — convenience wrapper;

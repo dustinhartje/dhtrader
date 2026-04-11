@@ -487,7 +487,6 @@ ImageResponse = namedtuple(
 
 def store_images(
         images: list,
-        data_list: list,
         bucket: str = COLLECTIONS["images"],
         ) -> list:
     """Store StoredImage objects and their binary data in GridFS.
@@ -498,17 +497,19 @@ def store_images(
     binary attributes on the objects themselves.
 
     Args:
-        images: List of StoredImage objects.  image_id must be set
-            before calling (set at creation without hyphens).
-        data_list: Parallel list of bytes, one per image in images.
+        images: List of (StoredImage, bytes) tuples, one per image.
+            image_id must be set before calling (set at creation
+            without hyphens).
         bucket: GridFS bucket prefix.  Defaults to COLLECTIONS["images"].
 
     Returns:
         list: image_id strings from the stored objects, one per image.
 
     Raises:
-        ValueError: If images or data_list is empty, or if their
-            lengths do not match.
+        ValueError: If images list is empty, any item is not a 2-tuple,
+            or any StoredImage.image_id is not set.
+        TypeError: If any tuple's first element is not a StoredImage
+            or second element is not bytes.
     """
     log.info(
         f"store_images: bucket={bucket!r}, count={len(images)}"
@@ -520,27 +521,58 @@ def store_images(
         raise ValueError(
             "store_images: images must be a non-empty list"
         )
-    if len(images) != len(data_list):
-        log.critical(
-            f"store_images: images length {len(images)} does not match "
-            f"data_list length {len(data_list)}"
-        )
-        raise ValueError(
-            "store_images: images and data_list must have the same length"
-        )
+    # Validate all tuples before any storage begins so no partial
+    # writes occur due to a bad entry later in the list.
+    for i, item in enumerate(images):
+        if not isinstance(item, tuple) or len(item) != 2:
+            log.critical(
+                f"store_images: item at index {i} is not a 2-tuple: "
+                f"{item!r}"
+            )
+            raise ValueError(
+                f"store_images: each item must be a (StoredImage, bytes) "
+                f"tuple; item at index {i} is invalid"
+            )
+        image, data = item
+        if not isinstance(image, StoredImage):
+            log.critical(
+                f"store_images: item[{i}][0] is not a StoredImage: "
+                f"{type(image)!r}"
+            )
+            raise TypeError(
+                f"store_images: item at index {i} first element must be "
+                f"a StoredImage instance"
+            )
+        if not isinstance(data, bytes):
+            log.critical(
+                f"store_images: item[{i}][1] is not bytes: "
+                f"{type(data)!r}"
+            )
+            raise TypeError(
+                f"store_images: item at index {i} second element must be "
+                f"bytes"
+            )
+        if not image.image_id:
+            log.critical(
+                f"store_images: item[{i}] StoredImage has no image_id"
+            )
+            raise ValueError(
+                f"store_images: item at index {i} StoredImage.image_id "
+                f"must be set before storing"
+            )
 
     results = []
     time_store = time.perf_counter()
-    for image, data in zip(images, data_list):
+    for image, data in images:
         metadata = image.to_clean_dict()
-        image_id = dhm.store_image(
+        returned_image_id = dhm.store_image(
             image_data=data,
             metadata=metadata,
             bucket=bucket,
         )
-        results.append(image_id)
+        results.append(returned_image_id)
         log.debug(
-            f"store_images: stored image_id={image_id!r}"
+            f"store_images: stored image_id={returned_image_id!r}"
         )
     log.debug(
         f"store_images: storage loop elapsed "
@@ -848,7 +880,7 @@ def store_image_from_path(
         tags=tags,
     )
     data = p.read_bytes()
-    store_images([image], [data], bucket=bucket)
+    store_images([(image, data)], bucket=bucket)
     log.info(
         f"store_image_from_path: stored image_id={image.image_id!r}"
     )

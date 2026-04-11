@@ -454,7 +454,7 @@ def test_StoredImage_store_and_get_image_data_roundtrip(
         content_type="image/jpeg",
         description="roundtrip test",
     )
-    image_ids = store_images([img], [_TEST_JPEG])
+    image_ids = store_images([(img, _TEST_JPEG)])
     assert len(image_ids) == 1
     assert image_ids[0] == img.image_id
 
@@ -475,7 +475,7 @@ def test_StoredImage_load_data_returns_stored_bytes(
         name=_TEST_MARKER,
         description="load_data test",
     )
-    store_images([img], [_TEST_JPEG])
+    store_images([(img, _TEST_JPEG)])
 
     loaded = img.load_data()
     assert loaded == _TEST_JPEG
@@ -513,7 +513,11 @@ def test_StoredImage_get_images_metadata_by_field_returns_metadata_objects(
         parent_collection="other_parent",
         description="image_c",
     )
-    store_images([img_a, img_b, img_c], [_TEST_JPEG] * 3)
+    store_images([
+        (img_a, _TEST_JPEG),
+        (img_b, _TEST_JPEG),
+        (img_c, _TEST_JPEG),
+    ])
 
     results = get_images_metadata_by_field("parent_collection", "test_parent")
     assert len(results) == 2
@@ -548,7 +552,7 @@ def test_StoredImage_list_images_with_filter(cleanup_stored_images):
         description="list_y",
         tags=["y"],
     )
-    store_images([img_x, img_y], [_TEST_JPEG] * 2)
+    store_images([(img_x, _TEST_JPEG), (img_y, _TEST_JPEG)])
 
     results = list_images(field="name", value=_TEST_MARKER)
     assert len(results) >= 2
@@ -569,7 +573,7 @@ def test_StoredImage_list_images_without_filter_returns_all(
         StoredImage(name=_TEST_MARKER, description=d)
         for d in descriptions
     ]
-    store_images(imgs, [_TEST_JPEG] * 3)
+    store_images([(img, _TEST_JPEG) for img in imgs])
 
     all_images = list_images()
     test_images = [
@@ -603,7 +607,7 @@ def test_StoredImage_delete_by_field_removes_only_matching(
         description="to_keep",
         parent_collection=f"{_TEST_MARKER}_keep_target",
     )
-    store_images([img_del, img_keep], [_TEST_JPEG] * 2)
+    store_images([(img_del, _TEST_JPEG), (img_keep, _TEST_JPEG)])
 
     deleted_count = delete_images_by_field(
         field="parent_collection",
@@ -648,7 +652,11 @@ def test_StoredImage_delete_by_image_id_removes_targeted(
     img_c = StoredImage(
         name=_TEST_MARKER, description="del_by_id_c", created_epoch=10003
     )
-    store_images([img_a, img_b, img_c], [_TEST_JPEG] * 3)
+    store_images([
+        (img_a, _TEST_JPEG),
+        (img_b, _TEST_JPEG),
+        (img_c, _TEST_JPEG),
+    ])
 
     deleted = delete_images_by_image_id([img_a.image_id, img_b.image_id])
     assert deleted == 2
@@ -672,16 +680,74 @@ def test_StoredImage_delete_by_image_id_removes_targeted(
 def test_StoredImage_store_empty_images_raises():
     """store_images raises ValueError when images list is empty."""
     with pytest.raises(ValueError, match="non-empty"):
-        store_images([], [])
+        store_images([])
 
 
 @pytest.mark.storage
 @pytest.mark.suppress_stdout
-def test_StoredImage_store_mismatched_lengths_raises():
-    """store_images raises ValueError when list lengths do not match."""
+def test_StoredImage_store_non_tuple_item_raises():
+    """store_images raises ValueError when an item is not a 2-tuple."""
     img = StoredImage(name=_TEST_MARKER)
-    with pytest.raises(ValueError, match="same length"):
-        store_images([img], [])
+    with pytest.raises(ValueError, match="2-tuple"):
+        store_images([(img, _TEST_JPEG), _TEST_JPEG])
+
+
+@pytest.mark.storage
+@pytest.mark.suppress_stdout
+def test_StoredImage_store_wrong_tuple_length_raises():
+    """store_images raises ValueError when a tuple has wrong length."""
+    img = StoredImage(name=_TEST_MARKER)
+    with pytest.raises(ValueError, match="2-tuple"):
+        store_images([(img, _TEST_JPEG, "extra")])
+
+
+@pytest.mark.storage
+@pytest.mark.suppress_stdout
+def test_StoredImage_store_non_stored_image_first_element_raises():
+    """store_images raises TypeError when first element is not StoredImage."""
+    with pytest.raises(TypeError, match="StoredImage"):
+        store_images([("not_an_image", _TEST_JPEG)])
+
+
+@pytest.mark.storage
+@pytest.mark.suppress_stdout
+def test_StoredImage_store_non_bytes_second_element_raises():
+    """store_images raises TypeError when second element is not bytes."""
+    img = StoredImage(name=_TEST_MARKER)
+    with pytest.raises(TypeError, match="bytes"):
+        store_images([(img, "not bytes")])
+
+
+@pytest.mark.storage
+@pytest.mark.suppress_stdout
+def test_StoredImage_store_missing_image_id_raises():
+    """store_images raises ValueError when StoredImage.image_id is not set."""
+    img = StoredImage(name=_TEST_MARKER)
+    object.__setattr__(img, "image_id", "")
+    with pytest.raises(ValueError, match="image_id"):
+        store_images([(img, _TEST_JPEG)])
+
+
+@pytest.mark.storage
+@pytest.mark.suppress_stdout
+def test_StoredImage_store_validates_all_before_storing():
+    """store_images validates all tuples before storing any.
+
+    If a later item is invalid, no images from the list should be
+    stored.
+    """
+    img_good = StoredImage(name=_TEST_MARKER)
+    # Second item is invalid (not bytes) — should prevent img_good from
+    # being stored.
+    with pytest.raises(TypeError, match="bytes"):
+        store_images([(img_good, _TEST_JPEG), (img_good, "bad")])
+    # img_good must not have been stored.
+    results = get_images_metadata_by_field(
+        "image_id", img_good.image_id
+    )
+    assert len(results) == 0, (
+        "store_images stored an image despite a later invalid tuple"
+    )
 
 
 @pytest.mark.storage
@@ -699,7 +765,7 @@ def test_StoredImage_duplicate_image_id_rejected(
         name=_TEST_MARKER,
         description="original",
     )
-    store_images([img_first], [_TEST_JPEG])
+    store_images([(img_first, _TEST_JPEG)])
     # Force the same image_id onto a new object to simulate a collision.
     img_dup = StoredImage(
         name=_TEST_MARKER,
@@ -707,7 +773,7 @@ def test_StoredImage_duplicate_image_id_rejected(
         description="duplicate",
     )
     with pytest.raises(FileExists):
-        store_images([img_dup], [_TEST_JPEG])
+        store_images([(img_dup, _TEST_JPEG)])
 
 
 # ---------------------------------------------------------------------------
@@ -762,7 +828,7 @@ def test_StoredImage_load_data_raises_after_deletion(
         name=_TEST_MARKER,
         description="deleted_then_load",
     )
-    store_images([img], [_TEST_JPEG])
+    store_images([(img, _TEST_JPEG)])
     delete_images_by_image_id([img.image_id])
 
     with pytest.raises(KeyError):
@@ -793,7 +859,7 @@ def test_StoredImage_review_images_with_data_does_not_raise(
         name=_TEST_MARKER,
         description="review_test",
     )
-    store_images([img], [_TEST_JPEG])
+    store_images([(img, _TEST_JPEG)])
     review_images(field="name", value=_TEST_MARKER)
 
 
