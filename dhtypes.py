@@ -36,7 +36,8 @@ import logging
 from math import ceil, floor
 import numpy as np
 from .dhcommon import (
-    dt_as_dt, dt_as_str, dt_as_time, dt_to_epoch, timeframe_delta,
+    dt_as_dt, dt_as_str, dt_as_time, dt_to_epoch, dt_from_epoch,
+    timeframe_delta,
     valid_timeframe, valid_trading_hours, log_say, this_candle_start,
     check_tf_th_compatibility, start_of_week_date, dict_of_weeks, bot,
     ProgBar, DEFAULT_OBJ_NAME, MARKET_ERAS,
@@ -559,8 +560,8 @@ class Symbol():
             if events:
                 start_epoch = min(dt_to_epoch(e.start_dt) for e in events)
                 end_epoch = max(dt_to_epoch(e.end_dt) for e in events)
-                start_bound = dt.datetime.fromtimestamp(start_epoch)
-                end_bound = dt.datetime.fromtimestamp(end_epoch)
+                start_bound = dt_from_epoch(start_epoch)
+                end_bound = dt_from_epoch(end_epoch)
             else:
                 now = dt_as_dt(dt.datetime.now())
                 start_bound = now
@@ -4184,7 +4185,7 @@ class StoredImage():
         # Derive ISO datetime string from the stored epoch.
         if created_dt is None:
             self.created_dt = dt_as_str(
-                dt.datetime.fromtimestamp(self.created_epoch)
+                dt_from_epoch(self.created_epoch)
             )
         else:
             self.created_dt = created_dt
