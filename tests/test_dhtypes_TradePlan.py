@@ -304,7 +304,7 @@ def test_TradePlan_tags_and_notes_normalization():
 
 
 @pytest.mark.suppress_stdout
-def test_TradePlan_tp_id_generation_with_uuid_suffix():
+def test_TradePlan_tp_id_generation_with_uuid_suffix(is_valid_uuid):
     """tp_id should include id_slug, cfg_label, and a new_uuid() suffix.
 
     When replace_tradeseries is called, the existing uuid suffix should
@@ -318,8 +318,7 @@ def test_TradePlan_tp_id_generation_with_uuid_suffix():
     # uuid suffix format: ends with _<32 hex chars>
     parts = tp.tp_id.rsplit("_", 1)
     assert len(parts) == 2, f"Expected uuid suffix in tp_id: {tp.tp_id}"
-    assert len(parts[1]) == 32
-    assert "-" not in parts[1]
+    assert is_valid_uuid(parts[1])
     # Verify tp_id_short preserves prefix and shortens uuid portion
     assert tp.tp_id_short.endswith(tp.uniq_id[-8:])
     assert "DELETEME_tp_id_tag" in tp.tp_id_short

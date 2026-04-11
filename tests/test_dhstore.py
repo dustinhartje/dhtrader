@@ -29,6 +29,7 @@ from dhtrader import (
     TradeSeries,
 )
 import dhtrader.dhmongo as _dhm
+from .conftest import is_valid_uuid
 
 
 def clear_storage_by_name(name: str):
@@ -665,7 +666,7 @@ def test_custom_document_store_assigns_doc_id_prefixed_with_name(
     assert doc["doc_id"].startswith(f"{_TEST_MARKER}_")
     suffix = doc["doc_id"][len(_TEST_MARKER) + 1:]
     # new_uuid() canonical form is 36 chars
-    assert len(suffix) == 32
+    assert is_valid_uuid(suffix)
 
     # Retrieve by doc_id and verify full document content
     results = get_custom_documents_by_field(

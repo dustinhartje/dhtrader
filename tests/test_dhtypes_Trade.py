@@ -8,6 +8,7 @@ from dhtrader import (
     dt_as_dt, get_trades_by_field, store_trades,
     Symbol, Trade, TradeSeries)
 from dhtrader.testdata.testdata import Rebuilder
+from .conftest import is_valid_uuid
 
 
 def create_trade(open_dt="2099-01-08 12:00:00",
@@ -61,9 +62,7 @@ def create_trade(open_dt="2099-01-08 12:00:00",
     assert r.ts_id == ts_id
     assert r.bt_id is None
     # trade_id is from new_uuid(), 32 hex chars
-    assert isinstance(r.uniq_id, str)
-    assert len(r.uniq_id) == 32
-    assert "-" not in r.uniq_id
+    assert is_valid_uuid(r.uniq_id)
     assert r.trade_id == r.uniq_id
     assert r.trade_id_short == r.uniq_id[-8:]
     # Validate calculated attributes
@@ -84,18 +83,16 @@ def create_trade(open_dt="2099-01-08 12:00:00",
     return r
 
 
-def test_trade_id_is_uuid_no_hyphens():
+def test_trade_id_is_uuid_no_hyphens(is_valid_uuid):
     """Trade.trade_id is a 32-char hex string (created with new_uuid())."""
     t = create_trade(open_dt="2099-01-08 12:05:00", ts_id="TS_ALPHA")
-    assert isinstance(t.trade_id, str)
-    assert len(t.trade_id) == 32
-    assert "-" not in t.trade_id
+    assert is_valid_uuid(t.trade_id)
     # Two trades with the same ts_id/open_dt must not share trade_id
     t2 = create_trade(open_dt="2099-01-08 12:05:00", ts_id="TS_ALPHA")
     assert t.trade_id != t2.trade_id
 
 
-def test_trade_init_allows_unbound_trade_with_uuid_trade_id():
+def test_trade_init_allows_unbound_trade_with_uuid_trade_id(is_valid_uuid):
     """Unbound trade (ts_id=None) still gets a unique trade_id."""
     for unbound_id in [None, ""]:
         t = Trade(open_dt="2099-01-08 12:00:00",
@@ -110,8 +107,7 @@ def test_trade_init_allows_unbound_trade_with_uuid_trade_id():
                   ts_id=unbound_id,
                   )
         assert t.ts_id is None
-        assert isinstance(t.trade_id, str)
-        assert len(t.trade_id) == 32
+        assert is_valid_uuid(t.trade_id)
 
 
 def test_trade_identity_updates_when_ts_id_or_open_dt_change():
@@ -663,7 +659,7 @@ def test_Trade_confirm_observed_results():
 
 
 @pytest.mark.suppress_stdout
-def test_Trade_create_and_verify_common_methods():
+def test_Trade_create_and_verify_common_methods(is_valid_uuid):
     """Test Trade __init__ values, __eq__, __ne__, __str__, __repr__,
     to_clean_dict, to_json, pretty, and brief.
     """
@@ -694,9 +690,7 @@ def test_Trade_create_and_verify_common_methods():
     assert trade.ts_id == "DELETEME_TS"
     assert trade.bt_id is None
     # trade_id is from new_uuid(), 32 hex chars
-    assert isinstance(trade.trade_id, str)
-    assert len(trade.trade_id) == 32
-    assert "-" not in trade.trade_id
+    assert is_valid_uuid(trade.trade_id)
     assert trade.uniq_id == trade.trade_id
     assert trade.trade_id_short == trade.uniq_id[-8:]
     assert isinstance(trade.created_epoch, int)

@@ -128,16 +128,14 @@ def test_StoredImage_construction_all_fields():
     assert img.tags == ["a", "b"]
 
 
-def test_StoredImage_image_id_generated_from_name_with_uuid():
+def test_StoredImage_image_id_generated_from_name_with_uuid(is_valid_uuid):
     """When image_id is not supplied it is built using name."""
     img = StoredImage(name="test_DELETEME_id")
     # image_id must start with the name prefix followed by underscore
     assert img.image_id.startswith("test_DELETEME_id_")
     # The uuid portion must contain no hyphens
     uuid_part = img.image_id[len("test_DELETEME_id_"):]
-    assert "-" not in uuid_part
-    # It must be 32 hex chars (created with new_uuid())
-    assert len(uuid_part) == 32
+    assert is_valid_uuid(uuid_part)
     # Two images with the same name must not share the same image_id
     img2 = StoredImage(name="test_DELETEME_id")
     assert img.image_id != img2.image_id

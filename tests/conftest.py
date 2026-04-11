@@ -137,6 +137,26 @@ def eq_field_sentinel_fixture():
     return _EQ_FIELD_SENTINEL
 
 
+def is_valid_uuid(value):
+    """Return True if value is a valid new_uuid() string.
+
+    A valid uuid is a str of exactly 32 lowercase hex characters with
+    no hyphens, as produced by new_uuid().
+    """
+    return (
+        isinstance(value, str)
+        and len(value) == 32
+        and "-" not in value
+        and all(c in "0123456789abcdef" for c in value)
+    )
+
+
+@pytest.fixture(name="is_valid_uuid")
+def is_valid_uuid_fixture():
+    """Fixture exposing is_valid_uuid to test functions."""
+    return is_valid_uuid
+
+
 @pytest.fixture(autouse=True)
 def suppress_stdout_for_marked_tests(request):
     """Suppress stdout only for tests marked with suppress_stdout."""
