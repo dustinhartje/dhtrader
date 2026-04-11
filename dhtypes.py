@@ -2391,7 +2391,6 @@ class Trade():
             self.created_dt = dt_as_str(dt.datetime.now())
         else:
             self.created_dt = created_dt
-        # Derive epoch from the stored created_dt for provenance.
         self.created_epoch = dt_to_epoch(self.created_dt)
         if direction in ['long', 'short']:
             self.direction = direction
@@ -4179,7 +4178,6 @@ class StoredImage():
                 f"got {name!r}"
             )
         self.name = name
-        # Record creation time for provenance; not used in image_id.
         if created_epoch is None:
             self.created_epoch = int(dt.datetime.now().timestamp())
         else:

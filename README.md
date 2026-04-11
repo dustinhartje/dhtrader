@@ -242,7 +242,7 @@ Each class should then determine, within it's own methods exclusively, whether a
 
 Exception for TradePlan: the TradePlan record may include lightweight
 metadata about nested items plus `trade_ids`/`tradeseries_ids` references as
-part of the TradePlan document itself for provenance and retrieval context.
+part of the TradePlan document itself for retrieval context.
 It does not embed full nested object payloads there; full Trade and
 TradeSeries objects remain stored/retrieved through their own collections.
 

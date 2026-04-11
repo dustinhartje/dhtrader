@@ -103,7 +103,7 @@ identifier fields:
 - `tp_id`: Derived plan identifier string
 
 TradePlan serialization may also include lightweight nested references such as
-`trade_ids` or `tradeseries_ids` for provenance and retrieval context.
+`trade_ids` or `tradeseries_ids` for retrieval context.
 These are reference fields only; full nested Trade and TradeSeries payloads
 remain stored in their own collections.
 
