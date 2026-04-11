@@ -688,7 +688,8 @@ def test_StoredImage_store_empty_images_raises():
 def test_StoredImage_store_non_tuple_item_raises():
     """store_images raises ValueError when an item is not a 2-tuple."""
     img = StoredImage(name=_TEST_MARKER)
-    with pytest.raises(ValueError, match="2-tuple"):
+    with pytest.raises(ValueError, match="store_images: each item must be a "
+                       "\\(StoredImage, bytes\\) tuple"):
         store_images([(img, _TEST_JPEG), _TEST_JPEG])
 
 
@@ -697,7 +698,8 @@ def test_StoredImage_store_non_tuple_item_raises():
 def test_StoredImage_store_wrong_tuple_length_raises():
     """store_images raises ValueError when a tuple has wrong length."""
     img = StoredImage(name=_TEST_MARKER)
-    with pytest.raises(ValueError, match="2-tuple"):
+    with pytest.raises(ValueError, match="store_images: each item must be a "
+                       "\\(StoredImage, bytes\\) tuple"):
         store_images([(img, _TEST_JPEG, "extra")])
 
 
