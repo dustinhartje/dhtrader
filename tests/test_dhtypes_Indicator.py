@@ -3,10 +3,10 @@ import json
 import pytest
 from dhtrader import (
     Candle, Chart,
-    delete_indicator, delete_indicators_by_name,
+    delete_indicators_by_name,
     get_indicator, get_indicator_datapoints,
     get_indicators_by_name, Indicator, IndicatorDataPoint,
-    IndicatorEMA, IndicatorSMA, store_indicator)
+    IndicatorEMA, IndicatorSMA, store_indicator, Symbol)
 
 
 @pytest.mark.storage
@@ -565,23 +565,28 @@ def test_Indicator_calculate():
     expected = [IndicatorDataPoint(dt='2025-01-10 15:00:00',
                                    value=5890.25,
                                    ind_id=expected_id,
-                                   epoch=1736539200),
+                                   epoch=1736539200,
+                                   name="TestEMA-DELETEME"),
                 IndicatorDataPoint(dt='2025-01-10 16:00:00',
                                    value=5884.5,
                                    ind_id=expected_id,
-                                   epoch=1736542800),
+                                   epoch=1736542800,
+                                   name="TestEMA-DELETEME"),
                 IndicatorDataPoint(dt='2025-01-12 18:00:00',
                                    value=5879.6,
                                    ind_id=expected_id,
-                                   epoch=1736722800),
+                                   epoch=1736722800,
+                                   name="TestEMA-DELETEME"),
                 IndicatorDataPoint(dt='2025-01-12 19:00:00',
                                    value=5875.38,
                                    ind_id=expected_id,
-                                   epoch=1736726400),
+                                   epoch=1736726400,
+                                   name="TestEMA-DELETEME"),
                 IndicatorDataPoint(dt='2025-01-12 20:00:00',
                                    value=5869.3,
                                    ind_id=expected_id,
-                                   epoch=1736730000),
+                                   epoch=1736730000,
+                                   name="TestEMA-DELETEME"),
                 ]
     calculated = itest.datapoints[-5:]
     for i in range(5):
@@ -792,12 +797,15 @@ def test_IndicatorDataPoint_create_and_verify_common_methods():
     assert not (dp != dp2)
     assert dp != diff
     assert dp != []
-    # __str__
-    assert isinstance(str(dp), str)
-    assert len(str(dp)) > 0
-    # __repr__
-    assert isinstance(repr(dp), str)
-    assert str(dp) == repr(dp)
+    # __str__ and __repr__ — exact format
+    expected_dp_str = (
+        "{'dt': '2099-01-15 10:30:00', 'value': 5123.75, "
+        "'ind_id': 'ES_eth_15m_EMA_close_l9_s2', "
+        f"'epoch': {dp.epoch}, "
+        "'name': 'DELETEME-test-dp'}"
+    )
+    assert str(dp) == expected_dp_str
+    assert repr(dp) == expected_dp_str
     # to_clean_dict
     d = dp.to_clean_dict()
     assert isinstance(d, dict)
@@ -928,12 +936,18 @@ def test_Indicator_create_and_verify_common_methods():
     # __ne__
     assert not (ind != ind2)
     assert ind != diff
-    # __str__
-    assert isinstance(str(ind), str)
-    assert len(str(ind)) > 0
-    # __repr__
-    assert isinstance(repr(ind), str)
-    assert str(ind) == repr(ind)
+    # __str__ and __repr__ — exact format (ind_id is deterministic)
+    expected_ind_str = (
+        "{'ind_id': 'ES_eth_1m_DELETEME', 'name': 'DELETEME', "
+        "'description': 'Test indicator', 'timeframe': '1m', "
+        "'trading_hours': 'eth', 'symbol': 'ES', "
+        "'calc_version': '1.0.0', 'calc_details': 'test', "
+        "'start_dt': '2099-01-02 12:00:00', "
+        "'end_dt': '2099-01-02 12:10:00', "
+        "'parameters': {}, 'datapoints_count': 0}"
+    )
+    assert str(ind) == expected_ind_str
+    assert repr(ind) == expected_ind_str
     # to_clean_dict
     d = ind.to_clean_dict()
     assert isinstance(d, dict)
@@ -1043,12 +1057,19 @@ def test_IndicatorSMA_create_and_verify_common_methods():
     # __ne__
     assert not (sma != sma2)
     assert sma != diff
-    # __str__
-    assert isinstance(str(sma), str)
-    assert len(str(sma)) > 0
-    # __repr__
-    assert isinstance(repr(sma), str)
-    assert str(sma) == repr(sma)
+    # __str__ and __repr__ — exact format (ind_id is deterministic)
+    expected_sma_str = (
+        "{'ind_id': 'ES_eth_1m_SMA_close_l3', 'name': 'SMA', "
+        "'description': 'Test SMA', 'timeframe': '1m', "
+        "'trading_hours': 'eth', 'symbol': 'ES', "
+        "'calc_version': '1.0.0', 'calc_details': 'test', "
+        "'start_dt': '2099-01-02 12:00:00', "
+        "'end_dt': '2099-01-02 12:10:00', "
+        "'parameters': {'length': 3, 'method': 'close'}, "
+        "'datapoints_count': 0}"
+    )
+    assert str(sma) == expected_sma_str
+    assert repr(sma) == expected_sma_str
     # to_clean_dict
     d = sma.to_clean_dict()
     assert isinstance(d, dict)
@@ -1158,12 +1179,20 @@ def test_IndicatorEMA_create_and_verify_common_methods():
     # __ne__
     assert not (ema != ema2)
     assert ema != diff
-    # __str__
-    assert isinstance(str(ema), str)
-    assert len(str(ema)) > 0
-    # __repr__
-    assert isinstance(repr(ema), str)
-    assert str(ema) == repr(ema)
+    # __str__ and __repr__ — exact format (ind_id is deterministic)
+    expected_ema_str = (
+        "{'ind_id': 'ES_eth_1m_EMA_close_l3_s2', 'name': 'EMA', "
+        "'description': 'Test EMA', 'timeframe': '1m', "
+        "'trading_hours': 'eth', 'symbol': 'ES', "
+        "'calc_version': '1.0.0', 'calc_details': 'test', "
+        "'start_dt': '2099-01-02 12:00:00', "
+        "'end_dt': '2099-01-02 12:10:00', "
+        "'parameters': {'length': 3, 'method': 'close', "
+        "'smoothing': 2}, "
+        "'datapoints_count': 0}"
+    )
+    assert str(ema) == expected_ema_str
+    assert repr(ema) == expected_ema_str
     # to_clean_dict
     d = ema.to_clean_dict()
     assert isinstance(d, dict)
@@ -1180,3 +1209,73 @@ def test_IndicatorEMA_create_and_verify_common_methods():
     assert isinstance(p, str)
     assert "\n" in p
     assert "EMA" in p
+
+
+def test_IndicatorDataPoint_eq_covers_all_attributes(
+    assert_eq_fields_cover_instance,
+):
+    """_EQ_FIELDS | _EQ_EXCLUDE must exactly match instance __dict__."""
+    dp = IndicatorDataPoint(
+        dt="2025-01-01 00:00:00",
+        value=1.0,
+        ind_id="test_id",
+    )
+    assert_eq_fields_cover_instance(dp)
+
+
+def test_IndicatorDataPoint_eq_field_sensitivity(
+    run_eq_field_sensitivity,
+):
+    """Confirm _EQ_FIELDS drives inequality and _EQ_EXCLUDE does not."""
+    obj = IndicatorDataPoint(
+        dt="2025-01-01 00:00:00",
+        value=1.0,
+        ind_id="test_id",
+    )
+    run_eq_field_sensitivity(obj)
+
+
+def test_Indicator_eq_covers_all_attributes(assert_eq_fields_cover_instance):
+    """_EQ_FIELDS | _EQ_EXCLUDE must exactly match instance __dict__."""
+    sym = Symbol(
+        ticker="ES", name="ES", leverage_ratio=50.0, tick_size=0.25,
+    )
+    ind = Indicator(
+        name="DELETEME",
+        description="Coverage test",
+        timeframe="1m",
+        trading_hours="eth",
+        symbol=sym,
+        calc_version="1.0.0",
+        calc_details="test",
+        start_dt="2099-01-02 12:00:00",
+        end_dt="2099-01-02 12:10:00",
+        autoload_chart=False,
+        candle_chart=None,
+    )
+    assert_eq_fields_cover_instance(ind)
+
+
+def test_Indicator_eq_field_sensitivity(run_eq_field_sensitivity):
+    """Confirm _EQ_FIELDS drives inequality and _EQ_EXCLUDE does not.
+
+    'parameters' is in _EQ_EXCLUDE but compared via sub_eq(); it is
+    passed as sub_eq_fields so it is also verified.
+    """
+    sym = Symbol(
+        ticker="ES", name="ES", leverage_ratio=50.0, tick_size=0.25,
+    )
+    obj = Indicator(
+        name="DELETEME",
+        description="Coverage test",
+        timeframe="1m",
+        trading_hours="eth",
+        symbol=sym,
+        calc_version="1.0.0",
+        calc_details="test",
+        start_dt="2099-01-02 12:00:00",
+        end_dt="2099-01-02 12:10:00",
+        autoload_chart=False,
+        candle_chart=None,
+    )
+    run_eq_field_sensitivity(obj, sub_eq_fields={"parameters"})

@@ -1610,20 +1610,28 @@ def test_Symbol_equality(symbol):
 def test_Symbol_string_representations(symbol):
     """Verify Symbol.__str__, __repr__, and pretty() methods."""
     sym = symbol
-
-    # Test __str__ returns a string
-    str_result = str(sym)
-    assert isinstance(str_result, str)
-    assert "ticker" in str_result
-    assert "ES" in str_result
-
-    # Test __repr__ returns a string
-    repr_result = repr(sym)
-    assert isinstance(repr_result, str)
-    assert "ticker" in repr_result
-
-    # Test __str__ and __repr__ are the same
-    assert str_result == repr_result
+    # __str__ and __repr__ must match this exact serialization.
+    # Both use str(self.__dict__) (minus _closed_hours_cache),
+    # so any field addition, removal, or default-value change
+    # will be caught here.
+    expected = (
+        "{'ticker': 'ES', 'name': 'ES', 'leverage_ratio': 50.0, "
+        "'tick_size': 0.25, "
+        "'eth_open_time': datetime.time(18, 0), "
+        "'eth_close_time': datetime.time(16, 59), "
+        "'rth_open_time': datetime.time(9, 30), "
+        "'rth_close_time': datetime.time(16, 0), "
+        "'eth_week_open': {'day_of_week': 6, "
+        "'time': datetime.time(18, 0)}, "
+        "'eth_week_close': {'day_of_week': 4, "
+        "'time': datetime.time(16, 59)}, "
+        "'rth_week_open': {'day_of_week': 0, "
+        "'time': datetime.time(9, 30)}, "
+        "'rth_week_close': {'day_of_week': 4, "
+        "'time': datetime.time(16, 0)}}"
+    )
+    assert str(sym) == expected
+    assert repr(sym) == expected
 
     # Test pretty() returns formatted JSON string
     pretty_result = sym.pretty()
@@ -1753,12 +1761,25 @@ def test_Symbol_create_and_verify_common_methods(symbol):
     # __ne__
     assert not (sym != sym2)
     assert sym != diff
-    # __str__
-    assert isinstance(str(sym), str)
-    assert len(str(sym)) > 0
-    # __repr__
-    assert isinstance(repr(sym), str)
-    assert str(sym) == repr(sym)
+    # __str__ and __repr__ match the exact expected serialization
+    expected_sym_str = (
+        "{'ticker': 'ES', 'name': 'ES', 'leverage_ratio': 50.0, "
+        "'tick_size': 0.25, "
+        "'eth_open_time': datetime.time(18, 0), "
+        "'eth_close_time': datetime.time(16, 59), "
+        "'rth_open_time': datetime.time(9, 30), "
+        "'rth_close_time': datetime.time(16, 0), "
+        "'eth_week_open': {'day_of_week': 6, "
+        "'time': datetime.time(18, 0)}, "
+        "'eth_week_close': {'day_of_week': 4, "
+        "'time': datetime.time(16, 59)}, "
+        "'rth_week_open': {'day_of_week': 0, "
+        "'time': datetime.time(9, 30)}, "
+        "'rth_week_close': {'day_of_week': 4, "
+        "'time': datetime.time(16, 0)}}"
+    )
+    assert str(sym) == expected_sym_str
+    assert repr(sym) == expected_sym_str
     # to_clean_dict
     d = sym.to_clean_dict()
     assert isinstance(d, dict)
@@ -1779,3 +1800,25 @@ def test_Symbol_create_and_verify_common_methods(symbol):
     assert "\n" in p
     assert '"ticker"' in p
     assert '"ES"' in p
+
+
+def test_Symbol_eq_covers_all_attributes(assert_eq_fields_cover_instance):
+    """_EQ_FIELDS | _EQ_EXCLUDE must exactly match instance __dict__."""
+    sym = Symbol(
+        ticker="DELETEME",
+        name="test",
+        leverage_ratio=50.0,
+        tick_size=0.25,
+    )
+    assert_eq_fields_cover_instance(sym)
+
+
+def test_Symbol_eq_field_sensitivity(run_eq_field_sensitivity):
+    """Confirm _EQ_FIELDS drives inequality and _EQ_EXCLUDE does not."""
+    obj = Symbol(
+        ticker="DELETEME",
+        name="test",
+        leverage_ratio=50.0,
+        tick_size=0.25,
+    )
+    run_eq_field_sensitivity(obj)

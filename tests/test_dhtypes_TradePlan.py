@@ -3,13 +3,16 @@ import json
 import pytest
 from dhtrader import (
     Trade, TradePlan, TradeSeries,
+    dt_as_dt,
+    dt_to_epoch,
     get_tradeplans_by_field,
     store_tradeplans,
     delete_tradeplans,
     delete_tradeplans_by_field,
     store_trades,
     delete_trades_by_field,
-    get_trades_by_field,
+    COLLECTIONS,
+    check_integrity_unique_fields,
 )
 from dhtrader import dhstore
 
@@ -178,14 +181,20 @@ def test_TradePlan_create_and_verify_common_methods():
     assert isinstance(tp.weekly_price_overlay_visuals, list)
     assert isinstance(tp.tp_id, str)
     assert len(tp.tp_id) > 0
+    assert tp.tp_id_short.endswith(tp.uniq_id[-8:])
+    assert isinstance(tp.created_epoch, int)
+    assert isinstance(tp.created_dt, str)
+    assert dt_as_dt(tp.created_dt) is not None
+    assert tp.created_epoch == dt_to_epoch(tp.created_dt)
     # Confirm no unexpected attributes were added or removed
     expected_attrs = {
-        "contracts", "con_fee", "tp_id", "override_tp_id",
-        "name",
+        "contracts", "con_fee", "tp_id", "tp_id_short", "uniq_id",
+        "override_tp_id", "name",
         "id_slug", "tags", "cfg_label", "profit_perc",
         "start_dt", "end_dt", "drawdown_open", "drawdown_limit",
         "notes", "thresholds", "tradeseries",
         "how_gl_heatmap_viz", "weekly_price_overlay_visuals",
+        "created_dt", "created_epoch",
     }
     actual_attrs = set(vars(tp).keys())
     added = actual_attrs - expected_attrs
@@ -197,11 +206,41 @@ def test_TradePlan_create_and_verify_common_methods():
         f"Removed attrs: {sorted(removed)}."
     )
 
-    # __str__ and __repr__
-    assert isinstance(str(tp), str)
-    assert len(str(tp)) > 0
-    assert isinstance(repr(tp), str)
-    assert str(tp) == repr(tp)
+    # __str__ and __repr__ — exact format with f-string for dynamic fields
+    # TradeSeries embedded via TradeSeries.__repr__ = str(to_clean_dict())
+    _ts_str = (
+        "{'start_dt': '2099-01-01 00:00:00', "
+        "'end_dt': '2099-02-01 00:00:00', 'timeframe': '5m', "
+        "'trading_hours': 'rth', 'symbol': 'ES', "
+        "'name': 'DELETEME_tp_common', 'params_str': 's20-p40-o0', "
+        "'ts_id': 'DELETEME_tp_common_s20-p40-o0', "
+        "'bt_id': None, "
+        "'trades': ['2 Trades suppressed for output sanity'], "
+        "'tags': []}"
+    )
+    expected_tp_str = (
+        "{'contracts': 2, 'con_fee': 3.04, "
+        f"'tp_id': '{tp.tp_id}', "
+        "'override_tp_id': False, "
+        f"'uniq_id': '{tp.uniq_id}', "
+        "'name': 'DELETEME_tp_common', "
+        "'id_slug': 'DELETEME_tp_common_tag', "
+        "'tags': [], 'cfg_label': 'DELETEME_tp_common_lbl', "
+        "'profit_perc': 100, "
+        "'start_dt': '2099-01-01 00:00:00', "
+        "'end_dt': '2099-02-01 00:00:00', "
+        "'drawdown_open': 6000, 'drawdown_limit': 6500, "
+        "'notes': [], "
+        "'thresholds': {'label': 't1', 'mrr': 0.5, 'msp': 75}, "
+        f"'tradeseries': {_ts_str}, "
+        f"'tp_id_short': '{tp.tp_id_short}', "
+        "'how_gl_heatmap_viz': None, "
+        "'weekly_price_overlay_visuals': [], "
+        f"'created_dt': '{tp.created_dt}', "
+        f"'created_epoch': {tp.created_epoch}}}"
+    )
+    assert str(tp) == expected_tp_str
+    assert repr(tp) == expected_tp_str
 
     # to_clean_dict
     d = tp.to_clean_dict()
@@ -229,7 +268,7 @@ def test_TradePlan_create_and_verify_common_methods():
     # pretty
     p = tp.pretty()
     assert isinstance(p, str)
-    assert len(p.splitlines()) == 42
+    assert len(p.splitlines()) == 46
     reparsed = json.loads(p)
     assert reparsed["name"] == "DELETEME_tp_common"
     assert reparsed["id_slug"] == "DELETEME_tp_common_tag"
@@ -265,10 +304,10 @@ def test_TradePlan_tags_and_notes_normalization():
 
 
 @pytest.mark.suppress_stdout
-def test_TradePlan_tp_id_generation_and_epoch_suffix():
-    """tp_id should include id_slug, cfg_label, and an _e<epoch> suffix.
+def test_TradePlan_tp_id_generation_with_uuid_suffix(is_valid_uuid):
+    """tp_id should include id_slug, cfg_label, and a new_uuid() suffix.
 
-    When replace_tradeseries is called, the existing epoch suffix should
+    When replace_tradeseries is called, the existing uuid suffix should
     be preserved rather than regenerated.
     """
     tp = create_tradeplan(name="DELETEME_tp_id",
@@ -276,20 +315,26 @@ def test_TradePlan_tp_id_generation_and_epoch_suffix():
                           cfg_label="DELETEME_tp_id_lbl")
     assert "DELETEME_tp_id_tag" in tp.tp_id
     assert "DELETEME_tp_id_lbl" in tp.tp_id
-    # Epoch suffix format: ends with _e<digits>
-    parts = tp.tp_id.rsplit("_e", 1)
-    assert len(parts) == 2, f"Expected _e suffix in tp_id: {tp.tp_id}"
-    assert parts[1].isdigit()
+    # uuid suffix format: ends with _<32 hex chars>
+    parts = tp.tp_id.rsplit("_", 1)
+    assert len(parts) == 2, f"Expected uuid suffix in tp_id: {tp.tp_id}"
+    assert is_valid_uuid(parts[1])
+    # Verify tp_id_short preserves prefix and shortens uuid portion
+    assert tp.tp_id_short.endswith(tp.uniq_id[-8:])
+    assert "DELETEME_tp_id_tag" in tp.tp_id_short
+    assert "DELETEME_tp_id_lbl" in tp.tp_id_short
+    assert len(tp.tp_id_short) < len(tp.tp_id)
 
     original_tp_id = tp.tp_id
+    original_uuid = parts[1]
 
-    # Replacing tradeseries should preserve the epoch suffix
+    # Replacing tradeseries should preserve the uuid suffix
     new_ts = create_tradeseries(name="DELETEME_tp_id_ts2")
     tp.replace_tradeseries(new_ts)
-    new_parts = tp.tp_id.rsplit("_e", 1)
+    new_parts = tp.tp_id.rsplit("_", 1)
     assert len(new_parts) == 2
-    assert new_parts[1] == parts[1], (
-        "Epoch suffix changed after replace_tradeseries; "
+    assert new_parts[1] == original_uuid, (
+        "UUID suffix changed after replace_tradeseries; "
         f"before={original_tp_id}, after={tp.tp_id}"
     )
 
@@ -299,30 +344,31 @@ def test_TradePlan_tp_id_generation_and_epoch_suffix():
         name="DELETEME_tp_id_explicit",
         id_slug="DELETEME_tp_id_ex_tag",
         cfg_label="DELETEME_tp_id_ex_lbl",
-        tp_id="EXPLICIT_ID_e99999",
+        tp_id="EXPLICIT_ID_abc123",
     )
-    assert tp_explicit.tp_id == "EXPLICIT_ID_e99999"
+    assert tp_explicit.tp_id == "EXPLICIT_ID_abc123"
     tp_explicit.replace_tradeseries(create_tradeseries())
-    assert tp_explicit.tp_id == "EXPLICIT_ID_e99999"
+    assert tp_explicit.tp_id == "EXPLICIT_ID_abc123"
 
 
 @pytest.mark.suppress_stdout
 def test_TradePlan_replace_tradeseries():
     """replace_tradeseries should swap the attached series and update tp_id
-    while preserving the epoch suffix.
+    while preserving the uuid suffix.
     """
     tp = create_tradeplan(name="DELETEME_tp_replace",
                           id_slug="DELETEME_tp_replace_tag",
                           cfg_label="DELETEME_tp_replace_lbl")
-    original_suffix = tp.tp_id.rsplit("_e", 1)[1]
+    original_uuid = tp.tp_id.rsplit("_", 1)[1]
+    assert len(original_uuid) == 32
 
     ts2 = create_tradeseries(name="DELETEME_tp_replace_b")
     tp.replace_tradeseries(ts2)
 
     assert tp.tradeseries is not None
     assert tp.tradeseries.name == "DELETEME_tp_replace_b"
-    new_suffix = tp.tp_id.rsplit("_e", 1)[1]
-    assert new_suffix == original_suffix
+    new_uuid = tp.tp_id.rsplit("_", 1)[1]
+    assert new_uuid == original_uuid
 
     # replace_tradeseries(None) should set tradeseries to None
     tp.replace_tradeseries(None)
@@ -589,3 +635,66 @@ def test_reconstruct_tradeplan_always_hydrates_by_trade_id(monkeypatch):
             < tp.tradeseries.trades[1].open_epoch)
     assert tp.tradeseries.trades[0].trade_id == t_early.trade_id
     assert tp.tradeseries.trades[1].trade_id == t_late.trade_id
+
+
+# ---------------------------------------------------------------------------
+# Integrity: unique fields
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(scope="module")
+def tradeplan_unique_fields_result():
+    """Run tp_id/uniq_id uniqueness check once and cache result."""
+    return check_integrity_unique_fields(
+        collection=COLLECTIONS["tradeplans"],
+        fields=["tp_id", "uniq_id"],
+    )
+
+
+@pytest.mark.storage
+@pytest.mark.suppress_stdout
+def test_TradePlan_missing_unique_fields(tradeplan_unique_fields_result):
+    """Confirm all stored TradePlan docs have non-empty tp_id/uniq_id."""
+    result = tradeplan_unique_fields_result
+    assert result is not None, "check_integrity_unique_fields returned None"
+    assert "status" in result
+    assert "total_docs" in result
+    assert "fields" in result
+    for field_name in ["tp_id", "uniq_id"]:
+        field = result["fields"].get(field_name, {})
+        missing_count = field.get("missing_count", 0)
+        missing_samples = field.get("missing_samples", [])
+        if missing_count > 0:
+            samples = "\n".join(
+                f"  - _id={s['_id']}" for s in missing_samples
+            )
+            pytest.fail(
+                f"TradePlan docs with missing {field_name}: "
+                f"{missing_count} of {result['total_docs']}\n"
+                f"{samples}"
+            )
+
+
+@pytest.mark.storage
+@pytest.mark.suppress_stdout
+def test_TradePlan_duplicate_unique_fields(tradeplan_unique_fields_result):
+    """Confirm all stored TradePlan docs have unique tp_id/uniq_id."""
+    result = tradeplan_unique_fields_result
+    assert result is not None, "check_integrity_unique_fields returned None"
+    assert "status" in result
+    assert "total_docs" in result
+    assert "fields" in result
+    for field_name in ["tp_id", "uniq_id"]:
+        field = result["fields"].get(field_name, {})
+        duplicate_count = field.get("duplicate_count", 0)
+        duplicate_samples = field.get("duplicate_samples", [])
+        if duplicate_count > 0:
+            samples = "\n".join(
+                f"  - {field_name}={s['value']} count={s['count']}"
+                for s in duplicate_samples
+            )
+            pytest.fail(
+                f"Duplicate {field_name} in TradePlan: "
+                f"{duplicate_count} duplicate(s) among "
+                f"{result['total_docs']} doc(s)\n"
+                f"{samples}"
+            )

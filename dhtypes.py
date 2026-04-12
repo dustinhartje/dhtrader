@@ -36,10 +36,12 @@ import logging
 from math import ceil, floor
 import numpy as np
 from .dhcommon import (
-    dt_as_dt, dt_as_str, dt_as_time, dt_to_epoch, timeframe_delta,
+    dt_as_dt, dt_as_str, dt_as_time, dt_to_epoch, dt_from_epoch,
+    timeframe_delta,
     valid_timeframe, valid_trading_hours, log_say, this_candle_start,
     check_tf_th_compatibility, start_of_week_date, dict_of_weeks, bot,
-    ProgBar, DEFAULT_OBJ_NAME, MARKET_ERAS)
+    ProgBar, DEFAULT_OBJ_NAME, MARKET_ERAS,
+    normalize_list_of_strings, new_uuid)
 CANDLE_TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w']
 BEGINNING_OF_TIME = "2008-01-01 00:00:00"
 
@@ -259,6 +261,18 @@ class Symbol():
     leverage_ratio, and tick_size.
     """
 
+    _EQ_FIELDS: frozenset = frozenset({
+        "ticker", "name", "leverage_ratio", "tick_size",
+    })
+    _EQ_EXCLUDE: frozenset = frozenset({
+        "_closed_hours_cache",  # runtime cache, not identity
+        # Timing data derived from ticker via set_times()
+        "eth_open_time", "eth_close_time",
+        "rth_open_time", "rth_close_time",
+        "eth_week_open", "eth_week_close",
+        "rth_week_open", "rth_week_close",
+    })
+
     def __init__(self,
                  ticker: str,
                  name: str,
@@ -274,11 +288,10 @@ class Symbol():
 
     def __eq__(self, other):
         """Return True if this symbol equals the other symbol."""
-        return (self.ticker == other.ticker
-                and self.name == other.name
-                and self.leverage_ratio == other.leverage_ratio
-                and self.tick_size == other.tick_size
-                )
+        return all(
+            getattr(self, f) == getattr(other, f)
+            for f in self._EQ_FIELDS
+        )
 
     def __ne__(self, other):
         """Return True if this symbol does not equal the other symbol."""
@@ -547,8 +560,8 @@ class Symbol():
             if events:
                 start_epoch = min(dt_to_epoch(e.start_dt) for e in events)
                 end_epoch = max(dt_to_epoch(e.end_dt) for e in events)
-                start_bound = dt.datetime.fromtimestamp(start_epoch)
-                end_bound = dt.datetime.fromtimestamp(end_epoch)
+                start_bound = dt_from_epoch(start_epoch)
+                end_bound = dt_from_epoch(end_epoch)
             else:
                 now = dt_as_dt(dt.datetime.now())
                 start_bound = now
@@ -984,6 +997,23 @@ class Candle():
     on creation.
     """
 
+    _EQ_FIELDS: frozenset = frozenset({
+        "c_datetime", "c_timeframe", "c_open",
+        "c_high", "c_low", "c_close",
+        "c_volume", "c_symbol",
+        "c_tags", "name",
+        # Derived from c_datetime
+        "c_epoch", "c_date", "c_time",
+        # Derived from c_datetime + c_timeframe
+        "c_end_datetime",
+        # Computed from OHLC values
+        "c_size", "c_body_size",
+        "c_upper_wick_size", "c_lower_wick_size",
+        "c_body_perc", "c_upper_wick_perc",
+        "c_lower_wick_perc", "c_direction",
+    })
+    _EQ_EXCLUDE: frozenset = frozenset({})
+
     def __init__(self,
                  c_datetime,
                  c_timeframe: str,
@@ -1015,9 +1045,7 @@ class Candle():
             self.c_symbol = c_symbol
         else:
             self.c_symbol = get_symbol_by_ticker(ticker=c_symbol)
-        if c_tags is None:
-            c_tags = []
-        self.c_tags = c_tags
+        self.c_tags = normalize_list_of_strings(c_tags, "Candle.c_tags")
         if c_epoch is None:
             c_epoch = dt_to_epoch(c_datetime_dt)
         self.c_epoch = c_epoch
@@ -1098,15 +1126,10 @@ class Candle():
 
     def __eq__(self, other):
         """Return True if this candle equals the other candle."""
-        return (self.c_datetime == other.c_datetime
-                and self.c_timeframe == other.c_timeframe
-                and self.c_open == other.c_open
-                and self.c_high == other.c_high
-                and self.c_low == other.c_low
-                and self.c_close == other.c_close
-                and self.c_volume == other.c_volume
-                and self.c_symbol == other.c_symbol
-                )
+        return all(
+            getattr(self, f) == getattr(other, f)
+            for f in self._EQ_FIELDS
+        )
 
     def __ne__(self, other):
         """Return True if this candle does not equal the other candle."""
@@ -1128,6 +1151,15 @@ class Chart():
 
     Supports both regular and extended trading hours.
     """
+
+    _EQ_FIELDS: frozenset = frozenset({
+        "c_timeframe", "c_symbol", "c_start", "c_end", "c_candles",
+        "c_trading_hours", "candles_count", "earliest_candle", "latest_candle",
+    })
+    _EQ_EXCLUDE: frozenset = frozenset({
+        # Config flags, not chart data identity
+        "autoload", "show_progress",
+    })
 
     def __init__(self,
                  c_timeframe: str,
@@ -1162,12 +1194,10 @@ class Chart():
 
     def __eq__(self, other):
         """Return True if this Chart equals the other Chart."""
-        return (self.c_timeframe == other.c_timeframe
-                and self.c_symbol == other.c_symbol
-                and self.c_start == other.c_start
-                and self.c_end == other.c_end
-                and self.c_candles == other.c_candles
-                )
+        return all(
+            getattr(self, f) == getattr(other, f)
+            for f in self._EQ_FIELDS
+        )
 
     def __ne__(self, other):
         """Return True if this Chart does not equal the other Chart."""
@@ -1352,9 +1382,7 @@ class Event():
         else:
             self.symbol = get_symbol_by_ticker(ticker=symbol)
         self.category = category
-        self.tags = tags
-        if tags is None:
-            tags = []
+        self.tags = normalize_list_of_strings(tags, "Event.tags")
         self.notes = notes
         self.start_epoch = dt_to_epoch(self.start_dt)
         self.end_epoch = dt_to_epoch(self.end_dt)
@@ -1617,6 +1645,11 @@ class IndicatorDataPoint():
     if I find more uses for time series beyond this.
     """
 
+    _EQ_FIELDS: frozenset = frozenset({
+        "dt", "value", "ind_id", "epoch", "name"
+    })
+    _EQ_EXCLUDE: frozenset = frozenset({})
+
     def __init__(self,
                  dt: str,
                  value: float,
@@ -1673,10 +1706,10 @@ class IndicatorDataPoint():
         # For example it gets an Exception when comparing to an empty list
         # which is returned from storage when there is no matching datapoint.
         try:
-            return (self.dt == other.dt and
-                    self.value == other.value and
-                    self.ind_id == other.ind_id and
-                    self.epoch == other.epoch)
+            return all(
+                getattr(self, f) == getattr(other, f)
+                for f in self._EQ_FIELDS
+            )
         except Exception:
             return False
 
@@ -1693,6 +1726,19 @@ class Indicator():
     directly; use its subclasses which provide indicator type-specific
     logic.
     """
+
+    _EQ_FIELDS: frozenset = frozenset({
+        "name", "description", "timeframe",
+        "trading_hours", "symbol", "calc_version",
+        "calc_details", "start_dt", "end_dt",
+        "ind_id", "candle_chart", "datapoints",
+        # Subclass-specific fields; compared via sub_eq()
+        "parameters",
+        "class_name",   # type tag, not business identity
+    })
+    _EQ_EXCLUDE: frozenset = frozenset({
+        "autoload_chart",  # config flag
+    })
 
     def __init__(self,
                  name: str,
@@ -1747,20 +1793,13 @@ class Indicator():
 
     def __eq__(self, other):
         """Return True if all indicator attributes and datapoints match."""
-        return (self.name == other.name
-                and self.description == other.description
-                and self.timeframe == other.timeframe
-                and self.trading_hours == other.trading_hours
-                and self.symbol == other.symbol
-                and self.calc_version == other.calc_version
-                and self.calc_details == other.calc_details
-                and self.start_dt == other.start_dt
-                and self.end_dt == other.end_dt
-                and self.ind_id == other.ind_id
-                and self.candle_chart == other.candle_chart
-                and self.datapoints == other.datapoints
-                and self.sub_eq(other)
-                )
+        return (
+            all(
+                getattr(self, f) == getattr(other, f)
+                for f in self._EQ_FIELDS
+            )
+            and self.sub_eq(other)
+        )
 
     def __ne__(self, other):
         """Return True if any indicator attribute or datapoint differs."""
@@ -2247,7 +2286,39 @@ class Trade():
         version (str): Version of trade (for future use)
         ts_id (str): unique id of associated TradeSeries this was created by
         bt_id (str): unique id of associated Backtest this was created by
+        trade_id (str): Stable unique ID, uuid (no hyphens), auto-generated
+            at construction.  A stored value may be passed to preserve it.
+        trade_id_short (str): Last 8 hex chars of trade_id; use in logs.
+        created_epoch (int): Unix timestamp derived from created_dt.
     """
+
+    _EQ_FIELDS: frozenset = frozenset({
+        "open_dt", "timeframe", "trading_hours",
+        "direction", "entry_price", "high_price",
+        "low_price", "stop_target", "prof_target",
+        "close_dt", "created_dt", "open_epoch",
+        "exit_price", "stop_ticks", "prof_ticks",
+        "offset_ticks", "symbol", "is_open",
+        "profitable", "name", "version",
+        "ts_id", "bt_id", "trade_id",
+        # Derived from open_dt via _sync_trade_identity()
+        "open_date", "open_time",
+        # Derived from close_dt
+        "close_date", "close_time",
+        # Derived from uniq_id
+        "trade_id_short",
+        # trade_id and uniq_id are always equal; uniq_id is redundant
+        "uniq_id",
+        # Derived from created_dt
+        "created_epoch",
+        # Derived from direction
+        "flipper",
+        # Derived from timeframe + open_dt
+        "first_min_open",
+        # Metadata; not currently part of equality
+        "tags",
+    })
+    _EQ_EXCLUDE: frozenset = frozenset({})
 
     @staticmethod
     def _normalize_ts_id(ts_id):
@@ -2261,12 +2332,6 @@ class Trade():
             return None
         return normalized
 
-    def _expected_trade_id(self):
-        """Return expected trade_id or None for unbound trades."""
-        if self.ts_id is None:
-            return None
-        return f"{self.ts_id}_{self.open_epoch}"
-
     def _sync_trade_identity(self):
         """Sync identity-derived fields from open_dt and ts_id."""
         if "open_dt" not in self.__dict__:
@@ -2276,7 +2341,6 @@ class Trade():
         open_as_dt = dt_as_dt(self.open_dt)
         object.__setattr__(self, "open_date", str(open_as_dt.date()))
         object.__setattr__(self, "open_time", str(open_as_dt.time()))
-        object.__setattr__(self, "trade_id", self._expected_trade_id())
 
     def __setattr__(self, name, value):
         """Intercept identity field changes to keep derived values in sync."""
@@ -2314,6 +2378,7 @@ class Trade():
                  version: str = "1.0.0",
                  ts_id: str = None,
                  bt_id: str = None,
+                 uniq_id: str = None,
                  trade_id: str = None,
                  tags: list = None,
                  ):
@@ -2326,6 +2391,7 @@ class Trade():
             self.created_dt = dt_as_str(dt.datetime.now())
         else:
             self.created_dt = created_dt
+        self.created_epoch = dt_to_epoch(self.created_dt)
         if direction in ['long', 'short']:
             self.direction = direction
         else:
@@ -2361,10 +2427,7 @@ class Trade():
         self.version = version
         self.ts_id = ts_id
         self.bt_id = bt_id
-        if tags is None:
-            self.tags = []
-        else:
-            self.tags = deepcopy(tags)
+        self.tags = normalize_list_of_strings(tags, "Trade.tags")
 
         # Calculated attributes
         if self.direction == "long":
@@ -2393,29 +2456,21 @@ class Trade():
                     f"{self.open_dt}"
                 )
 
-        # Validate trade_id if explicitly provided. _sync_trade_identity()
-        # already computed and stored the correct value. None/blank defers
-        # to that computed value. A non-blank value must match exactly;
-        # trade_id is derived from ts_id + open_epoch so there is no valid
-        # reason for the caller to supply a different value.
-        if not isinstance(trade_id, (str, type(None))):
-            raise ValueError(
-                "trade_id must be a string or None when provided, we got "
-                f"{str(trade_id)} which is a {type(trade_id)}"
-            )
-        provided_trade_id = (
-            trade_id.strip() if isinstance(trade_id, str) else None
+        # Assign a stable unique uniq_id.  uniq_id takes precedence;
+        # trade_id is accepted as an alias for loading from storage.
+        # Neither provided: generate a new uuid.
+        self.uniq_id = (
+            uniq_id if uniq_id is not None
+            else new_uuid()
         )
-        if provided_trade_id:
-            if self.ts_id is None:
-                raise ValueError(
-                    "trade_id cannot be set when ts_id is missing or empty"
-                )
-            if provided_trade_id != self.trade_id:
-                raise ValueError(
-                    f"trade_id `{provided_trade_id}` does not match "
-                    f"expected `{self.trade_id}`"
-                )
+        self.trade_id = trade_id if trade_id is not None else self.uniq_id
+        if self.trade_id != self.uniq_id:
+            raise ValueError(
+                "trade_id must match uniq_id if provided.  "
+                f"Got trade_id={trade_id} and uniq_id={uniq_id}"
+            )
+        # Short form: last 8 hex chars of uniq_id for log messages.
+        self.trade_id_short = self.uniq_id[-8:]
 
         del self._identity_sync_lock
 
@@ -2538,31 +2593,10 @@ class Trade():
 
     def __eq__(self, other):
         """Return True if all Trade attributes are equal."""
-        return (self.open_dt == other.open_dt
-                and self.timeframe == other.timeframe
-                and self.trading_hours == other.trading_hours
-                and self.direction == other.direction
-                and self.entry_price == other.entry_price
-                and self.high_price == other.high_price
-                and self.low_price == other.low_price
-                and self.stop_target == other.stop_target
-                and self.prof_target == other.prof_target
-                and self.close_dt == other.close_dt
-                and self.created_dt == other.created_dt
-                and self.open_epoch == other.open_epoch
-                and self.exit_price == other.exit_price
-                and self.stop_ticks == other.stop_ticks
-                and self.prof_ticks == other.prof_ticks
-                and self.offset_ticks == other.offset_ticks
-                and self.symbol == other.symbol
-                and self.is_open == other.is_open
-                and self.profitable == other.profitable
-                and self.name == other.name
-                and self.version == other.version
-                and self.ts_id == other.ts_id
-                and self.bt_id == other.bt_id
-                and self.trade_id == other.trade_id
-                )
+        return all(
+            getattr(self, f) == getattr(other, f)
+            for f in self._EQ_FIELDS
+        )
 
     def __ne__(self, other):
         """Return True if any Trade attribute differs."""
@@ -2888,6 +2922,15 @@ class TradeSeries():
         trades (list): list of trades in the series
     """
 
+    _EQ_FIELDS: frozenset = frozenset({
+        "start_dt", "end_dt", "timeframe",
+        "symbol", "name", "params_str",
+        "ts_id", "bt_id", "trades",
+        "trading_hours",
+        "tags",
+    })
+    _EQ_EXCLUDE: frozenset = frozenset({})
+
     def __init__(self,
                  start_dt,
                  end_dt,
@@ -2927,23 +2970,14 @@ class TradeSeries():
             for t in self.trades:
                 t.ts_id = self.ts_id
                 t.bt_id = self.bt_id
-        if tags is None:
-            self.tags = []
-        else:
-            self.tags = deepcopy(tags)
+        self.tags = normalize_list_of_strings(tags, "TradeSeries.tags")
 
     def __eq__(self, other):
         """Return True if all TradeSeries attributes are equal."""
-        return (self.start_dt == other.start_dt
-                and self.end_dt == other.end_dt
-                and self.timeframe == other.timeframe
-                and self.symbol == other.symbol
-                and self.name == other.name
-                and self.params_str == other.params_str
-                and self.ts_id == other.ts_id
-                and self.bt_id == other.bt_id
-                and self.trades == other.trades
-                )
+        return all(
+            getattr(self, f) == getattr(other, f)
+            for f in self._EQ_FIELDS
+        )
 
     def __ne__(self, other):
         """Return True if any TradeSeries attribute differs."""
@@ -3416,6 +3450,19 @@ class Backtest():
             created when the Backtest is run
     """
 
+    _EQ_FIELDS: frozenset = frozenset({
+        "start_dt", "end_dt", "timeframe",
+        "trading_hours", "symbol", "name",
+        "bt_id", "class_name", "chart_tf",
+        "chart_1m", "tradeseries",
+    })
+    _EQ_EXCLUDE: frozenset = frozenset({
+        # Subclass-specific fields; compared via sub_eq()
+        "parameters",
+        # Config flags, not identity
+        "prefer_stored", "autoload_charts",
+    })
+
     def __init__(self,
                  start_dt,
                  end_dt,
@@ -3471,19 +3518,13 @@ class Backtest():
 
     def __eq__(self, other):
         """Return True if all Backtest attributes are equal."""
-        return (self.start_dt == other.start_dt
-                and self.end_dt == other.end_dt
-                and self.timeframe == other.timeframe
-                and self.trading_hours == other.trading_hours
-                and self.symbol == other.symbol
-                and self.name == other.name
-                and self.bt_id == other.bt_id
-                and self.class_name == other.class_name
-                and self.chart_tf == other.chart_tf
-                and self.chart_1m == other.chart_1m
-                and self.tradeseries == other.tradeseries
-                and self.sub_eq(other)
-                )
+        return (
+            all(
+                getattr(self, f) == getattr(other, f)
+                for f in self._EQ_FIELDS
+            )
+            and self.sub_eq(other)
+        )
 
     def __ne__(self, other):
         """Return True if any Backtest attribute differs."""
@@ -3887,7 +3928,10 @@ class TradePlan():
     Args:
         contracts: Number of contracts this plan is calculated with.
         con_fee: Per-contract fee as a float.
-        tp_id: Optional unique trade plan identifier string.
+        tp_id: Optional unique trade plan identifier string.  If None,
+            generated from other attributes and a uuid suffix.
+        tp_id_short: Human-readable prefix of tp_id with the uuid shortened to
+            it's last 8 characters.
         name: Name string used for integrity checks and cleanup.
         id_slug: Short identifier string used in output labels.
         tags: Optional list of machine-oriented classifier tags.
@@ -3902,6 +3946,9 @@ class TradePlan():
         tradeseries: TradeSeries object attached to this plan.
         how_gl_heatmap_viz: Optional path to hour-of-week heatmap.
         weekly_price_overlay_visuals: Optional list of visual paths.
+        created_dt: ISO datetime string set at creation.  Defaults to now.
+        created_epoch: Integer Unix timestamp set at creation.
+        uniq_id: Raw 32-char hex uuid.  Generated if None.
     """
 
     def __init__(self,
@@ -3922,65 +3969,77 @@ class TradePlan():
                  tradeseries=None,
                  how_gl_heatmap_viz=None,
                  weekly_price_overlay_visuals=None,
+                 created_dt=None,
+                 created_epoch=None,
+                 uniq_id: str = None,
                  ):
         """Initialize a TradePlan instance."""
         self.contracts = contracts
         self.con_fee = con_fee
         self.tp_id = tp_id
         self.override_tp_id = False if self.tp_id is None else True
+        # Generate uniq_id first; all other ID fields derive from it.
+        self.uniq_id = (
+            uniq_id if uniq_id is not None
+            else new_uuid()
+        )
         self.name = name
         self.id_slug = id_slug
-        self.tags = self._normalize_str_list(tags, "tags")
+        self.tags = normalize_list_of_strings(tags, "TradePlan.tags")
         self.cfg_label = cfg_label
         self.profit_perc = profit_perc
         self.start_dt = start_dt
         self.end_dt = end_dt
         self.drawdown_open = drawdown_open
         self.drawdown_limit = drawdown_limit
-        self.notes = self._normalize_str_list(notes, "notes")
+        self.notes = normalize_list_of_strings(notes, "TradePlan.notes")
         self.thresholds = {} if thresholds is None else thresholds
         self.replace_tradeseries(tradeseries)
         self.how_gl_heatmap_viz = how_gl_heatmap_viz
         self.weekly_price_overlay_visuals = weekly_price_overlay_visuals
         if self.weekly_price_overlay_visuals is None:
             self.weekly_price_overlay_visuals = []
-
-    def _normalize_str_list(self, values, field_name):
-        """Return list[str], converting values where possible."""
-        if values is None:
-            return []
-        result = []
-        try:
-            for value in values:
-                result.append(str(value))
-        except Exception as e:
-            raise TypeError(
-                f"TradePlan.{field_name} must be list-like and "
-                "string-convertible"
-            ) from e
-        return result
-
-    def _tp_id_epoch_suffix(self):
-        """Return existing _e<epoch> suffix or generate a new one."""
-        if isinstance(self.tp_id, str):
-            parts = self.tp_id.rsplit("_e", 1)
-            if len(parts) == 2 and parts[1].isdigit():
-                return f"_e{parts[1]}"
-        return f"_e{dt_to_epoch(dt.datetime.now())}"
+        if created_dt is not None:
+            self.created_dt = created_dt
+        else:
+            self.created_dt = dt_as_str(dt.datetime.now())
+        if created_epoch is not None:
+            self.created_epoch = created_epoch
+        else:
+            self.created_epoch = dt_to_epoch(self.created_dt)
+        # If both tp_id and uuid are explicitly provided, tp_id must contain
+        # the uuid value.
+        if tp_id is not None and uniq_id is not None:
+            if self.uniq_id not in self.tp_id:
+                raise ValueError(
+                    f"TradePlan tp_id {self.tp_id!r} does not contain "
+                    f"uniq_id {self.uniq_id!r}"
+                )
 
     def replace_tradeseries(self, ts):
         """Replace attached TradeSeries and update tp_id accordingly."""
         self.tradeseries = deepcopy(ts)
         if not self.override_tp_id:
-            suffix = self._tp_id_epoch_suffix()
             if ts is None:
-                self.tp_id = (
-                    f"NoTradeSeries_{self.id_slug}_{self.cfg_label}{suffix}"
+                prefix = (
+                    f"NoTradeSeries_{self.id_slug}_{self.cfg_label}"
                 )
             else:
-                self.tp_id = (
-                    f"{ts.ts_id}_{self.id_slug}_{self.cfg_label}{suffix}"
+                prefix = (
+                    f"{ts.ts_id}_{self.id_slug}_{self.cfg_label}"
                 )
+            self.tp_id = f"{prefix}_{self.uniq_id}"
+            # Short form: preserve human-readable prefix, shorten uniq_id.
+            self.tp_id_short = f"{prefix}_{self.uniq_id[-8:]}"
+        else:
+            # override_tp_id: tp_id provided externally; build short form.
+            # Strip the uuid suffix to recover the human-readable prefix.
+            if (self.tp_id and self.uniq_id
+                    and self.tp_id.endswith(f"_{self.uniq_id}")):
+                prefix = self.tp_id[: -(len(self.uniq_id) + 1)]
+                self.tp_id_short = f"{prefix}_{self.uniq_id[-8:]}"
+            else:
+                self.tp_id_short = self.tp_id
 
     def source_ts_ids(self):
         """Return sorted unique source ts_ids from trades in real time."""
@@ -4052,6 +4111,189 @@ class TradePlan():
         return results
 
 
+class StoredImage():
+    """Image stored in MongoDB GridFS with a metadata record.
+
+    Binary data lives in GridFS and is retrieved on demand via
+    load_data() or dhstore.get_image_data(image_id).  This class
+    holds metadata only; no binary attribute is stored here.
+
+    Args:
+        name: Descriptive name matching the role of the image
+            (e.g., the chart filename stem).  Must be a non-blank,
+            non-None string; raises ValueError at construction if
+            blank or None.  Defaults to DEFAULT_OBJ_NAME.  Test
+            objects must include "DELETEME" in this field.
+        image_id: Stable unique ID generated at object creation as
+            f"{name}_{uuid_no_hyphens}".  Set before storage;
+            never changes after creation.  Used as the primary key
+            for all retrieval and deletion operations.  If None,
+            generated automatically.
+        image_id_short: Short form of image_id with the uuid
+            portion abbreviated to its last 8 hex chars, prefixed
+            by the name (e.g. ``f"{name}_{uuid[-8:]}"``).  Set
+            automatically; use in log messages for brevity.
+        content_type: MIME type string (e.g., "image/jpeg").
+        filename: Original filename string for reference.
+        description: Optional human-readable description.
+        parent_collection: Collection name of the parent document.
+        parent_id_field: Field name of the parent's unique ID.
+        parent_id_value: Value of the parent's unique ID.
+        created_epoch: Integer Unix timestamp set at creation.
+            Defaults to now.  Not used in image_id generation.
+        created_dt: ISO datetime string derived from created_epoch.
+            Set automatically from created_epoch if not supplied.
+        tags: Optional list of string tags.
+        uniq_id: Raw 32-char hex uuid.  Generated if None.
+    """
+
+    _EQ_FIELDS: frozenset = frozenset({
+        "image_id", "name", "content_type", "description", "tags",
+    })
+    _EQ_EXCLUDE: frozenset = frozenset({
+        "created_epoch", "created_dt", "uniq_id", "image_id_short", "filename",
+        "parent_collection", "parent_id_field", "parent_id_value",
+    })
+
+    def __init__(
+            self,
+            name: str = DEFAULT_OBJ_NAME,
+            image_id: str = None,
+            content_type: str = "image/jpeg",
+            filename: str = None,
+            description: str = None,
+            parent_collection: str = None,
+            parent_id_field: str = None,
+            parent_id_value=None,
+            created_epoch: int = None,
+            created_dt: str = None,
+            tags: list = None,
+            uniq_id: str = None,
+            ):
+        """Initialize a StoredImage instance."""
+        # Enforce non-blank name so integrity checks always identify it.
+        if not name or not str(name).strip():
+            raise ValueError(
+                "StoredImage name must be a non-blank, non-None string; "
+                f"got {name!r}"
+            )
+        self.name = name
+        if created_epoch is None:
+            self.created_epoch = int(dt.datetime.now().timestamp())
+        else:
+            self.created_epoch = created_epoch
+        # Derive ISO datetime string from the stored epoch.
+        if created_dt is None:
+            self.created_dt = dt_as_str(
+                dt_from_epoch(self.created_epoch)
+            )
+        else:
+            self.created_dt = created_dt
+        # Generate uniq_id first; all other ID fields derive from it.
+        self.uniq_id = (
+            uniq_id if uniq_id is not None
+            else new_uuid()
+        )
+        if image_id is None:
+            self.image_id = f"{self.name}_{self.uniq_id}"
+        else:
+            self.image_id = image_id
+        # Short form: prefix + last 8 hex chars of uniq_id for log messages.
+        self.image_id_short = f"{self.name}_{self.uniq_id[-8:]}"
+        # Sanity: if both image_id and uniq_id are explicitly provided, they
+        # must be consistent — image_id must contain the uniq_id value.
+        if image_id is not None and uniq_id is not None:
+            if self.uniq_id not in self.image_id:
+                raise ValueError(
+                    f"StoredImage image_id {self.image_id!r} does not "
+                    f"contain uniq_id {self.uniq_id!r}"
+                )
+        self.content_type = content_type
+        self.filename = filename
+        self.description = description
+        self.parent_collection = parent_collection
+        self.parent_id_field = parent_id_field
+        self.parent_id_value = parent_id_value
+        self.tags = normalize_list_of_strings(tags, "StoredImage.tags")
+
+    def __eq__(self, other):
+        """Return True if image_id and name match."""
+        return isinstance(other, StoredImage) and all(
+            getattr(self, f) == getattr(other, f)
+            for f in self._EQ_FIELDS
+        )
+
+    def __repr__(self):
+        """Return a concise developer-facing representation."""
+        return (
+            f"StoredImage(name={self.name!r}, "
+            f"image_id={self.image_id!r})"
+        )
+
+    def __str__(self):
+        """Return string form of the clean metadata dict."""
+        return str(self.to_clean_dict())
+
+    def to_json(self):
+        """Return a JSON representation with custom types normalized.
+
+        Converts non-serializable types to strings for portability.
+        All fields on this class are already JSON-compatible; this method
+        is provided to follow the standard to_json/to_clean_dict pattern.
+        Binary data is not included; call load_data() to retrieve bytes.
+        """
+        return json.dumps(deepcopy(self.__dict__))
+
+    def to_clean_dict(self):
+        """Return a plain dict of all metadata fields (no binary).
+
+        Suitable for JSON serialization and MongoDB storage.
+        Binary data is not included; call load_data() for bytes.
+        """
+        return json.loads(self.to_json())
+
+    @classmethod
+    def from_dict(cls, d: dict):
+        """Reconstruct a StoredImage from a metadata dict.
+
+        Suitable for rebuilding from MongoDB documents returned by
+        dhstore.get_images_metadata_by_field() or list_images().
+
+        Args:
+            d: Dict with StoredImage metadata keys.
+
+        Returns:
+            StoredImage instance.
+        """
+        return cls(
+            name=d.get("name", DEFAULT_OBJ_NAME),
+            image_id=d.get("image_id"),
+            content_type=d.get("content_type", "image/jpeg"),
+            filename=d.get("filename"),
+            description=d.get("description"),
+            parent_collection=d.get("parent_collection"),
+            parent_id_field=d.get("parent_id_field"),
+            parent_id_value=d.get("parent_id_value"),
+            created_epoch=d.get("created_epoch"),
+            created_dt=d.get("created_dt"),
+            tags=d.get("tags"),
+            uniq_id=d.get("uniq_id"),
+        )
+
+    def load_data(self) -> bytes:
+        """Return the raw binary data for this image from GridFS.
+
+        Delegates to dhstore.get_image_data() via the lazy import
+        wrapper to avoid circular imports.
+
+        Returns:
+            bytes: Raw binary content of the stored image.
+        """
+        # Import dhstore lazily to avoid circular import at module load.
+        import dhtrader.dhstore as dhstore
+        return dhstore.get_image_data(self.image_id)
+
+
 __all__ = [
     "CANDLE_TIMEFRAMES",
     "BEGINNING_OF_TIME",
@@ -4084,4 +4326,5 @@ __all__ = [
     "TradePlan",
     "TradeSeries",
     "Backtest",
+    "StoredImage",
 ]

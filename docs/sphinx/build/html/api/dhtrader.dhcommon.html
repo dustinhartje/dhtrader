@@ -412,9 +412,82 @@ era-aware and eliminating static per-timeframe hardcoded lists.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.new_uuid">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">new_uuid</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#new_uuid"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.new_uuid" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a new UUID4 as a 32-character hex string (no hyphens).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.find_repo_root">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">find_repo_root</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">git_config_pattern</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'url</span> <span class="pre">=</span> <span class="pre">.+dustinhartje/dhtrader\\.git'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#find_repo_root"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.find_repo_root" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the repository root by searching upward for a .git directory.</p>
+<p>Searches upward from both the current working directory and the provided
+start path (if given), de-duplicating directories that appear in both
+chains.  The first ancestor directory whose .git/config content matches
+git_config_pattern is returned.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start</strong> (<a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>Path</em></a><em> | </em><em>None</em>) – Optional Path to begin the upward search from.  Defaults
+to Path.cwd().resolve().  Pass Path(__file__).resolve().parent
+from the calling module to anchor the search to the script
+location rather than the working directory.</p></li>
+<li><p><strong>git_config_pattern</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Regex pattern (re.search) matched against the
+text of .git/config to confirm the correct repository was found.
+Defaults to the dhtrader repo URL pattern.  Callers in other
+repos should pass the appropriate pattern, e.g.
+<code class="docutils literal notranslate"><span class="pre">r&quot;url</span> <span class="pre">=</span> <span class="pre">.+dustinhartje/backtesting\.git&quot;</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The resolved path to the repository root.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Path</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#RuntimeError" title="(in Python v3.14)"><strong>RuntimeError</strong></a> – If no .git directory is found before reaching the
+    filesystem root, if .git/config is missing, or if the
+    .git/config content does not match git_config_pattern (meaning
+    a git repo was found but it is not the expected one).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhcommon.bot">
 <span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">bot</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#bot"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.bot" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return universal beginning of time for this and other modules.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.normalize_list_of_strings">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">normalize_list_of_strings</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#normalize_list_of_strings"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.normalize_list_of_strings" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return list[str], converting each element where possible.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>values</strong> – A list-like of items to convert, or None.</p></li>
+<li><p><strong>label</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Human-readable label used in error messages, e.g.
+“TradePlan.tags”.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Each element coerced to str.  Returns [] if values is None.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.14)"><strong>TypeError</strong></a> – If values is not iterable or an element cannot be
+    converted to str.</p>
+</dd>
+</dl>
 </dd></dl>
 
 </section>
@@ -495,7 +568,10 @@ era-aware and eliminating static per-timeframe hardcoded lists.</p>
 <li><a class="reference internal" href="#dhtrader.dhcommon.expected_candle_datetimes"><code class="docutils literal notranslate"><span class="pre">expected_candle_datetimes()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhcommon.rangify_candle_times"><code class="docutils literal notranslate"><span class="pre">rangify_candle_times()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhcommon.summarize_candles"><code class="docutils literal notranslate"><span class="pre">summarize_candles()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.new_uuid"><code class="docutils literal notranslate"><span class="pre">new_uuid()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.find_repo_root"><code class="docutils literal notranslate"><span class="pre">find_repo_root()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhcommon.bot"><code class="docutils literal notranslate"><span class="pre">bot()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.normalize_list_of_strings"><code class="docutils literal notranslate"><span class="pre">normalize_list_of_strings()</span></code></a></li>
 </ul>
 </li>
 </ul>

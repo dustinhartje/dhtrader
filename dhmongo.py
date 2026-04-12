@@ -12,10 +12,8 @@ REF: https://github.com/mongodb-university/atlas_starter_python/blob
      /master/atlas-starter.py
 """
 
-import json
 import os
 import sys
-import tempfile
 import pymongo
 from pymongo import ReplaceOne
 from pymongo.errors import BulkWriteError
@@ -24,7 +22,7 @@ from dotenv import load_dotenv, find_dotenv
 from datetime import datetime as dt
 from .dhcommon import (
     ProgBar, prompt_yn, valid_timeframe, dt_as_str, dt_from_epoch,
-    dt_to_epoch, DEFAULT_OBJ_NAME)
+    dt_to_epoch)
 
 log = logging.getLogger("dhmongo")
 log.addHandler(logging.NullHandler())
@@ -286,6 +284,285 @@ def delete_one_document(query: dict,
     result = c.delete_one(query)
 
     return result
+
+
+def store_custom_document(document: dict,
+                          collection: str,
+                          ):
+    """Upsert a single custom document by doc_id.
+
+    doc_id is guaranteed present by store_custom_documents() before
+    this is called.
+
+    Args:
+        document: Dict with a pre-assigned doc_id field.
+        collection: Target collection name.
+
+    Returns:
+        The stored document dict as returned by MongoDB.
+    """
+    c = db[collection]
+    result = c.find_one_and_replace(
+        {"doc_id": document["doc_id"]},
+        document,
+        upsert=True,
+        return_document=pymongo.ReturnDocument.AFTER,
+    )
+    return result
+
+
+def get_custom_documents_by_field(collection: str,
+                                  field: str,
+                                  value,
+                                  limit: int = 0,
+                                  ):
+    """Return documents matching field==value from collection.
+
+    Args:
+        collection: Source collection name.
+        field: Field name to filter on.
+        value: Value to match.
+        limit: Maximum documents to return; 0 means no limit.
+
+    Returns:
+        list of dicts, insertion order preserved.
+    """
+    c = db[collection]
+    cursor = c.find({field: value})
+    if limit > 0:
+        cursor = cursor.limit(limit)
+    return list(cursor)
+
+
+def get_all_custom_documents(collection: str,
+                             limit: int = 0,
+                             ):
+    """Return all documents from collection.
+
+    Args:
+        collection: Source collection name.
+        limit: Maximum documents to return; 0 means no limit.
+
+    Returns:
+        list of dicts, insertion order preserved.
+    """
+    c = db[collection]
+    cursor = c.find({})
+    if limit > 0:
+        cursor = cursor.limit(limit)
+    return list(cursor)
+
+
+def delete_custom_documents_by_field(collection: str,
+                                     field: str,
+                                     value,
+                                     ):
+    """Delete all documents matching field==value from collection.
+
+    Args:
+        collection: Target collection name.
+        field: Field name to match on.
+        value: Value to match.
+
+    Returns:
+        pymongo DeleteResult.
+    """
+    c = db[collection]
+    return c.delete_many({field: value})
+
+##############################################################################
+# GridFS image storage
+
+
+def store_image(
+        image_data: bytes,
+        metadata: dict,
+        bucket: str,
+        ) -> str:
+    """Write binary image data and metadata to GridFS.
+
+    Uses GridFSBucket with the given bucket prefix.  The metadata
+    dict must include image_id (the stable human-readable key built
+    from name and created_epoch); it is stored as GridFS file metadata
+    so subsequent queries by image_id can resolve the internal ObjectId.
+
+    Args:
+        image_data: Raw bytes of the image.
+        metadata: Dict of metadata fields to embed in the GridFS file
+            document.  Must contain image_id and name.
+        bucket: GridFS bucket prefix (e.g., "images").
+
+    Returns:
+        str: The image_id from the metadata dict.
+    """
+    from gridfs import GridFSBucket
+    fs = GridFSBucket(db, bucket_name=bucket)
+    filename = metadata.get("filename") or metadata.get("image_id", "image")
+    with fs.open_upload_stream(
+        filename,
+        metadata=metadata,
+    ) as grid_in:
+        grid_in.write(image_data)
+    return metadata["image_id"]
+
+
+def get_image_data(image_id: str, bucket: str) -> bytes:
+    """Return raw binary data for the image identified by image_id.
+
+    The internal GridFS ObjectId (_id) is resolved by querying the
+    files sub-collection for image_id rather than used directly;
+    the public API always accepts image_id as the primary key
+    so callers never need to manage ObjectIds.
+
+    Args:
+        image_id: The stable image_id string assigned at creation.
+        bucket: GridFS bucket prefix.
+
+    Returns:
+        bytes: Raw binary content.
+
+    Raises:
+        KeyError: If no image with the given image_id is found.
+    """
+    from gridfs import GridFSBucket
+    fs = GridFSBucket(db, bucket_name=bucket)
+    # Resolve the internal ObjectId from the image_id metadata field.
+    files_coll = db[f"{bucket}.files"]
+    doc = files_coll.find_one({"metadata.image_id": image_id})
+    if doc is None:
+        raise KeyError(
+            f"get_image_data: no image found with image_id={image_id!r}"
+        )
+    with fs.open_download_stream(doc["_id"]) as grid_out:
+        return grid_out.read()
+
+
+def get_image_by_id(image_id: str, bucket: str) -> tuple:
+    """Return binary data and metadata dict for the image.
+
+    Performs a single round-trip: resolves the internal ObjectId
+    from the files sub-collection, streams the binary data, and
+    returns both the raw bytes and metadata dict in one call.
+
+    Args:
+        image_id: The stable image_id string assigned at creation.
+        bucket: GridFS bucket prefix.
+
+    Returns:
+        tuple: (data: bytes, metadata: dict)
+
+    Raises:
+        KeyError: If no image with the given image_id is found.
+    """
+    from gridfs import GridFSBucket
+    fs = GridFSBucket(db, bucket_name=bucket)
+    # Resolve ObjectId and metadata in one query.
+    files_coll = db[f"{bucket}.files"]
+    doc = files_coll.find_one({"metadata.image_id": image_id})
+    if doc is None:
+        raise KeyError(
+            "get_image_by_id: no image found with "
+            f"image_id={image_id!r}"
+        )
+    with fs.open_download_stream(doc["_id"]) as grid_out:
+        data = grid_out.read()
+    return (data, doc.get("metadata", {}))
+
+
+def get_image_metadata_by_field(
+        field: str,
+        value,
+        bucket: str,
+        ) -> list:
+    """Return metadata dicts for images matching metadata.field==value.
+
+    Args:
+        field: Metadata field name to filter on.
+        value: Value to match.
+        bucket: GridFS bucket prefix.
+
+    Returns:
+        list of metadata dicts extracted from matching GridFS documents.
+    """
+    files_coll = db[f"{bucket}.files"]
+    docs = list(files_coll.find({f"metadata.{field}": value}))
+    return [doc.get("metadata", {}) for doc in docs]
+
+
+def delete_image(image_id: str, bucket: str):
+    """Delete the GridFS image identified by image_id.
+
+    The internal ObjectId is resolved from the image_id metadata field
+    rather than used directly; the public API always uses image_id.
+
+    Args:
+        image_id: The stable image_id string assigned at creation.
+        bucket: GridFS bucket prefix.
+
+    Raises:
+        KeyError: If no image with the given image_id is found.
+    """
+    from gridfs import GridFSBucket
+    fs = GridFSBucket(db, bucket_name=bucket)
+    # Resolve internal ObjectId from image_id metadata field.
+    files_coll = db[f"{bucket}.files"]
+    doc = files_coll.find_one({"metadata.image_id": image_id})
+    if doc is None:
+        raise KeyError(
+            f"delete_image: no image found with image_id={image_id!r}"
+        )
+    fs.delete(doc["_id"])
+
+
+def delete_images_by_field(
+        field: str,
+        value,
+        bucket: str,
+        ) -> int:
+    """Delete all GridFS images whose metadata.field matches value.
+
+    Args:
+        field: Metadata field name to match on.
+        value: Value to match.
+        bucket: GridFS bucket prefix.
+
+    Returns:
+        int: Count of images deleted.
+    """
+    from gridfs import GridFSBucket
+    fs = GridFSBucket(db, bucket_name=bucket)
+    files_coll = db[f"{bucket}.files"]
+    # Collect all matching internal ObjectIds before deletion.
+    docs = list(files_coll.find({f"metadata.{field}": value}))
+    for doc in docs:
+        fs.delete(doc["_id"])
+    return len(docs)
+
+
+def delete_images_by_image_id(
+        image_ids: list,
+        bucket: str,
+        ) -> int:
+    """Delete GridFS images for each image_id in the list.
+
+    Args:
+        image_ids: List of image_id strings to delete.
+        bucket: GridFS bucket prefix.
+
+    Returns:
+        int: Count of images actually deleted (may be less than
+            len(image_ids) if some were not found).
+    """
+    from gridfs import GridFSBucket
+    fs = GridFSBucket(db, bucket_name=bucket)
+    files_coll = db[f"{bucket}.files"]
+    deleted = 0
+    for image_id in image_ids:
+        doc = files_coll.find_one({"metadata.image_id": image_id})
+        if doc is not None:
+            fs.delete(doc["_id"])
+            deleted += 1
+    return deleted
 
 ##############################################################################
 # Trades

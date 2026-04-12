@@ -8,7 +8,6 @@ from dhtrader import (
     get_backtests_by_field, get_trades_by_field, get_tradeseries_by_field,
     store_backtests, store_trades, store_tradeseries, Symbol, Trade,
     TradeSeries)
-from dhtrader.dhtypes import delete_tradeseries
 
 
 def create_trade(open_dt="2099-01-02 12:00:00",
@@ -218,12 +217,21 @@ def test_Backtest_create_and_verify_common_methods():
     # __ne__
     assert not (bt != bt2)
     assert bt != diff
-    # __str__
-    assert isinstance(str(bt), str)
-    assert len(str(bt)) > 0
-    # __repr__
-    assert isinstance(repr(bt), str)
-    assert str(bt) == repr(bt)
+    # __str__ and __repr__ — exact format (bt_id is deterministic)
+    expected_bt_str = (
+        "{'start_dt': '2099-01-01 00:00:00', "
+        "'end_dt': '2099-02-01 00:00:00', 'timeframe': 'e1h', "
+        "'trading_hours': 'eth', 'symbol': 'ES', 'name': 'DELETEME', "
+        "'bt_id': 'DELETEME', 'class_name': 'BacktestTestDeleteme', "
+        "'parameters': {'a': 1, 'b': 'two'}, "
+        "'chart_tf': 'Chart suppressed for output sanity', "
+        "'chart_1m': 'Chart suppressed for output sanity', "
+        "'tradeseries': "
+        "['0 Tradeseries suppressed for output sanity'], "
+        "'prefer_stored': False, 'autoload_charts': False}"
+    )
+    assert str(bt) == expected_bt_str
+    assert repr(bt) == expected_bt_str
     # to_clean_dict
     d = bt.to_clean_dict()
     assert isinstance(d, dict)
@@ -246,7 +254,7 @@ def test_Backtest_create_and_verify_common_methods():
     bt.update_tradeseries(ts, clear_storage=False)
     # With TradeSeries and Trades shown
     assert len(bt.pretty(suppress_tradeseries=False,
-                         suppress_trades=False).splitlines()) == 67
+                         suppress_trades=False).splitlines()) == 70
 
 
 @pytest.mark.storage
@@ -1042,3 +1050,45 @@ def test_delete_backtests(cleanup_backtest_storage):
     stored2 = get_trades_by_field(field="bt_id", value=test_name_2)
     assert len(stored1) == 0
     assert len(stored2) == 0
+
+
+def test_Backtest_eq_covers_all_attributes(assert_eq_fields_cover_instance):
+    """_EQ_FIELDS | _EQ_EXCLUDE must exactly match instance __dict__."""
+    sym = Symbol(
+        ticker="ES", name="ES", leverage_ratio=50.0, tick_size=0.25,
+    )
+    bt = Backtest(
+        start_dt="2099-01-01 00:00:00",
+        end_dt="2099-02-01 00:00:00",
+        timeframe="e1h",
+        trading_hours="eth",
+        symbol=sym,
+        name="DELETEME",
+        parameters={"a": 1},
+        autoload_charts=False,
+        prefer_stored=False,
+    )
+    assert_eq_fields_cover_instance(bt)
+
+
+def test_Backtest_eq_field_sensitivity(run_eq_field_sensitivity):
+    """Confirm _EQ_FIELDS drives inequality and _EQ_EXCLUDE does not.
+
+    'parameters' is in _EQ_EXCLUDE but compared via sub_eq(); it is
+    passed as sub_eq_fields so it is also verified.
+    """
+    sym = Symbol(
+        ticker="ES", name="ES", leverage_ratio=50.0, tick_size=0.25,
+    )
+    obj = Backtest(
+        start_dt="2099-01-01 00:00:00",
+        end_dt="2099-02-01 00:00:00",
+        timeframe="e1h",
+        trading_hours="eth",
+        symbol=sym,
+        name="DELETEME",
+        parameters={"a": 1},
+        autoload_charts=False,
+        prefer_stored=False,
+    )
+    run_eq_field_sensitivity(obj, sub_eq_fields={"parameters"})

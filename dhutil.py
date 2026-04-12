@@ -360,6 +360,7 @@ def read_candles_from_csv(start_dt,
                           filepath: str,
                           symbol: str = 'ES',
                           timeframe: str = '1m',
+                          name: str = None,
                           ):
     """Read lines from a CSV file and return them as a list of Candle objects.
 
@@ -375,6 +376,9 @@ def read_candles_from_csv(start_dt,
         for r in rows:
             this_dt = dt.strptime(r[0], '%Y-%m-%d %H:%M:%S')
             if start_dt <= this_dt <= end_dt:
+                kwargs = {}
+                if name is not None:
+                    kwargs["name"] = name
                 c = Candle(c_datetime=this_dt,
                            c_timeframe=timeframe,
                            c_symbol=symbol,
@@ -383,6 +387,7 @@ def read_candles_from_csv(start_dt,
                            c_low=r[3],
                            c_close=r[4],
                            c_volume=r[5],
+                           **kwargs,
                            )
                 candles.append(c)
 
@@ -430,7 +435,9 @@ def compare_candles_vs_csv(filepath,
                            vol_diff_threshold_perc: int = 10,
                            start_dt=None,
                            end_dt=None,
-                           expect_missing_from_storage: list = None):
+                           expect_missing_from_storage: list = None,
+                           name: str = None,
+                           ):
     """Check stored candles against a CSV source file.
 
     Primarily used to confirm calculated higher timeframes against data
@@ -469,11 +476,15 @@ def compare_candles_vs_csv(filepath,
                               symbol=symbol,
                               )
     # Get candles from CSV
+    csv_kwargs = {}
+    if name is not None:
+        csv_kwargs["name"] = name
     csv_cans = read_candles_from_csv(start_dt=start_dt,
                                      end_dt=end_dt,
                                      filepath=filepath,
                                      symbol=symbol,
                                      timeframe=timeframe,
+                                     **csv_kwargs,
                                      )
     # Compare sets to find any diffs
     all_equal = True

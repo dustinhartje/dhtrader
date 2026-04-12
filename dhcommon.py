@@ -31,10 +31,12 @@ including dhstore, dhutil, and dhtypes.
 from datetime import datetime as dt
 from datetime import timedelta, date, time
 from copy import deepcopy
+from pathlib import Path
 import re
 import logging
 import json
 import sys
+import uuid
 import progressbar
 
 TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', 'r1d', 'e1d', 'r1w', 'e1w',
@@ -1085,6 +1087,105 @@ MARKET_ERAS = [
 ]
 
 
+def new_uuid() -> str:
+    """Return a new UUID4 as a 32-character hex string (no hyphens)."""
+    return str(uuid.uuid4()).replace("-", "")
+
+
+def find_repo_root(
+    start: Path = None,
+    git_config_pattern: str = r"url = .+dustinhartje/dhtrader\.git",
+) -> Path:
+    """Return the repository root by searching upward for a .git directory.
+
+    Searches upward from both the current working directory and the provided
+    start path (if given), de-duplicating directories that appear in both
+    chains.  The first ancestor directory whose .git/config content matches
+    git_config_pattern is returned.
+
+    Args:
+        start: Optional Path to begin the upward search from.  Defaults
+            to Path.cwd().resolve().  Pass Path(__file__).resolve().parent
+            from the calling module to anchor the search to the script
+            location rather than the working directory.
+        git_config_pattern: Regex pattern (re.search) matched against the
+            text of .git/config to confirm the correct repository was found.
+            Defaults to the dhtrader repo URL pattern.  Callers in other
+            repos should pass the appropriate pattern, e.g.
+            ``r"url = .+dustinhartje/backtesting\\.git"``.
+
+    Returns:
+        Path: The resolved path to the repository root.
+
+    Raises:
+        RuntimeError: If no .git directory is found before reaching the
+            filesystem root, if .git/config is missing, or if the
+            .git/config content does not match git_config_pattern (meaning
+            a git repo was found but it is not the expected one).
+    """
+    candidates = [Path.cwd().resolve()]
+    if start is not None:
+        candidates.append(start.resolve())
+    seen = set()
+    for seed in candidates:
+        current = seed
+        while True:
+            if current in seen:
+                break
+            seen.add(current)
+            git_dir = current / ".git"
+            if git_dir.exists():
+                git_config = git_dir / "config"
+                if not git_config.exists():
+                    raise RuntimeError(
+                        f"find_repo_root: found .git at {current!r} "
+                        "but .git/config is missing"
+                    )
+                config_text = git_config.read_text(encoding="utf-8")
+                if re.search(git_config_pattern, config_text):
+                    return current
+                raise RuntimeError(
+                    f"find_repo_root: found .git at {current!r} but "
+                    ".git/config did not match the expected pattern "
+                    f"({git_config_pattern!r}); wrong repository?"
+                )
+            if current.parent == current:
+                break
+            current = current.parent
+    raise RuntimeError(
+        "find_repo_root: could not locate repository root (.git directory) "
+        f"searching upward from {[str(c) for c in candidates]}"
+    )
+
+
 def bot():
     """Return universal beginning of time for this and other modules."""
     return BEGINNING_OF_TIME
+
+
+def normalize_list_of_strings(values, label: str) -> list:
+    """Return list[str], converting each element where possible.
+
+    Args:
+        values: A list-like of items to convert, or None.
+        label: Human-readable label used in error messages, e.g.
+            "TradePlan.tags".
+
+    Returns:
+        list: Each element coerced to str.  Returns [] if values is None.
+
+    Raises:
+        TypeError: If values is not iterable or an element cannot be
+            converted to str.
+    """
+    if values is None:
+        return []
+    result = []
+    try:
+        for value in values:
+            result.append(str(value))
+    except Exception as e:
+        raise TypeError(
+            f"{label} must be list-like and string-convertible"
+        ) from e
+    return result

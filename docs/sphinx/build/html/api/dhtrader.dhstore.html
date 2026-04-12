@@ -125,6 +125,391 @@ utility layer with no storage dependencies.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhstore.store_custom_documents">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">store_custom_documents</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">collection</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">documents</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#store_custom_documents"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.store_custom_documents" title="Permalink to this definition">¶</a></dt>
+<dd><p>Store a list of plain dicts in a non-managed collection.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>collection</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Target collection name.  Must not be a
+managed (class-owned) collection.</p></li>
+<li><p><strong>documents</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a>) – Non-empty list of dicts to store.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If collection is managed, documents is
+    empty, any element is not a dict, or any element
+    cannot be serialized to JSON.</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Mongo result dicts, one per document stored.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhstore.delete_custom_documents_by_field">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">delete_custom_documents_by_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">collection</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#delete_custom_documents_by_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.delete_custom_documents_by_field" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete documents matching field==value from a non-managed collection.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>collection</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Target collection name.</p></li>
+<li><p><strong>field</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Document field to match on.</p></li>
+<li><p><strong>value</strong> – Value to match.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If collection is managed.</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pymongo DeleteResult.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhstore.list_custom_documents">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">list_custom_documents</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">collection</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#list_custom_documents"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.list_custom_documents" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a list of dicts from a non-managed collection.</p>
+<p>If field and value are provided, filters by that field.
+If neither is provided, returns all documents.  limit=0
+means no limit.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If collection is managed.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>list of dicts.</p>
+</dd>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>collection</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>field</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><em>None</em>) – </p></li>
+<li><p><strong>limit</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhstore.get_custom_documents_by_field">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">get_custom_documents_by_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">collection</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#get_custom_documents_by_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.get_custom_documents_by_field" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return documents matching field==value from a non-managed collection.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>collection</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Source collection name.</p></li>
+<li><p><strong>field</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Document field to filter on.</p></li>
+<li><p><strong>value</strong> – Value to match.</p></li>
+<li><p><strong>limit</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Maximum number of results (0 = no limit).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If collection is managed.</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list of dicts.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhstore.get_all_custom_documents">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">get_all_custom_documents</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">collection</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#get_all_custom_documents"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.get_all_custom_documents" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return all documents from a non-managed collection.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>collection</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Source collection name.</p></li>
+<li><p><strong>limit</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Maximum number of results (0 = no limit).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If collection is managed.</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list of dicts.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhstore.review_custom_documents">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">review_custom_documents</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">collection</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#review_custom_documents"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.review_custom_documents" title="Permalink to this definition">¶</a></dt>
+<dd><p>Print a human-readable summary of documents from a non-managed
+collection.  Intended for interactive/CLI use.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If collection is managed.</p>
+</dd>
+<dt class="field-even">Parameters<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>collection</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p></li>
+<li><p><strong>field</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><em>None</em>) – </p></li>
+<li><p><strong>limit</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="dhtrader.dhstore.ImageResponse">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">ImageResponse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">content_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dhtrader.dhstore.ImageResponse" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code></a></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="dhtrader.dhstore.ImageResponse.content_type">
+<span class="sig-name descname"><span class="pre">content_type</span></span><a class="headerlink" href="#dhtrader.dhstore.ImageResponse.content_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 1</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="dhtrader.dhstore.ImageResponse.data">
+<span class="sig-name descname"><span class="pre">data</span></span><a class="headerlink" href="#dhtrader.dhstore.ImageResponse.data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 0</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="dhtrader.dhstore.ImageResponse.filename">
+<span class="sig-name descname"><span class="pre">filename</span></span><a class="headerlink" href="#dhtrader.dhstore.ImageResponse.filename" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 2</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="dhtrader.dhstore.ImageResponse.metadata">
+<span class="sig-name descname"><span class="pre">metadata</span></span><a class="headerlink" href="#dhtrader.dhstore.ImageResponse.metadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 3</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhstore.store_images">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">store_images</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">images</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bucket</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['images']</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#store_images"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.store_images" title="Permalink to this definition">¶</a></dt>
+<dd><p>Store StoredImage objects and their binary data in GridFS.</p>
+<p>image_id is set on each StoredImage at object creation time and is used
+as the stable retrieval key.  Binary data is stored in GridFS; this
+function stores no binary attributes on the objects themselves.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>images</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a>) – List of (StoredImage, bytes) tuples, one per image.
+image_id must be set before calling (set at creation
+without hyphens).</p></li>
+<li><p><strong>bucket</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – GridFS bucket prefix.  Defaults to COLLECTIONS[“images”].</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>image_id strings from the stored objects, one per image.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If images list is empty, any item is not a 2-tuple,
+    or any StoredImage.image_id is not set.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.14)"><strong>TypeError</strong></a> – If any tuple’s first element is not a StoredImage
+    or second element is not bytes.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhstore.get_image_data">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">get_image_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bucket</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['images']</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#get_image_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.get_image_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieve raw binary data for a stored image by image_id.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image_id</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The stable image_id assigned at object creation.</p></li>
+<li><p><strong>bucket</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – GridFS bucket prefix.  Defaults to COLLECTIONS[“images”].</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Raw binary content of the stored image.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#bytes" title="(in Python v3.14)">bytes</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#KeyError" title="(in Python v3.14)"><strong>KeyError</strong></a> – If no image with the given image_id is found.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhstore.get_image_by_id">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">get_image_by_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bucket</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['images']</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#get_image_by_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.get_image_by_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieve everything needed to serve an image via a web endpoint.</p>
+<p>Performs a single round-trip to GridFS, returning binary data,
+content type, filename, and full metadata in one ImageResponse.
+The calling web server only needs image_id; no further lookups
+are required.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image_id</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – The stable image_id assigned at object creation.</p></li>
+<li><p><strong>bucket</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – GridFS bucket prefix.  Defaults to COLLECTIONS[“images”].</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>Named tuple with fields:</dt><dd><p>data (bytes): Raw binary content ready to stream.
+content_type (str): MIME type for Content-Type header.
+filename (str or None): Filename for Content-Disposition.
+metadata (StoredImage): Full metadata object.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#dhtrader.dhstore.ImageResponse" title="dhtrader.dhstore.ImageResponse">ImageResponse</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#KeyError" title="(in Python v3.14)"><strong>KeyError</strong></a> – If no image with the given image_id is found.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhstore.get_images_metadata_by_field">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">get_images_metadata_by_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bucket</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['images']</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#get_images_metadata_by_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.get_images_metadata_by_field" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieve StoredImage metadata objects matching field==value.</p>
+<p>Binary data is not loaded; call load_data() on each returned
+object to retrieve bytes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>field</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Metadata field name to filter on.</p></li>
+<li><p><strong>value</strong> – Value to match.</p></li>
+<li><p><strong>bucket</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – GridFS bucket prefix.  Defaults to COLLECTIONS[“images”].</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>list of StoredImage objects (metadata only, no binary data).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhstore.list_images">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">list_images</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">field</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bucket</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['images']</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#list_images"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.list_images" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a list of StoredImage metadata objects.</p>
+<p>If field and value are provided, filters by that field.
+If neither is provided, returns all images.  Binary data
+is not loaded; call load_data() on each object to retrieve bytes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>field</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><em>None</em>) – Optional metadata field name to filter on.</p></li>
+<li><p><strong>value</strong> – Optional value to match.</p></li>
+<li><p><strong>bucket</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – GridFS bucket prefix.  Defaults to COLLECTIONS[“images”].</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>list of StoredImage objects.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhstore.delete_images_by_field">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">delete_images_by_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bucket</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['images']</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#delete_images_by_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.delete_images_by_field" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete stored images whose metadata matches field==value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>field</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Metadata field name to match on.</p></li>
+<li><p><strong>value</strong> – Value to match.</p></li>
+<li><p><strong>bucket</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – GridFS bucket prefix.  Defaults to COLLECTIONS[“images”].</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Count of images deleted.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhstore.delete_images_by_image_id">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">delete_images_by_image_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image_ids</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bucket</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['images']</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#delete_images_by_image_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.delete_images_by_image_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete stored images by their image_id values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image_ids</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a>) – List of image_id strings to delete.</p></li>
+<li><p><strong>bucket</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – GridFS bucket prefix.  Defaults to COLLECTIONS[“images”].</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Count of images actually deleted.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhstore.review_images">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">review_images</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">field</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bucket</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['images']</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#review_images"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.review_images" title="Permalink to this definition">¶</a></dt>
+<dd><p>Print a human-readable summary of stored image metadata.</p>
+<p>Intended for interactive/CLI use.  Binary data is not loaded.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>field</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><em>None</em>) – Optional metadata field name to filter on.</p></li>
+<li><p><strong>value</strong> – Optional value to match.</p></li>
+<li><p><strong>limit</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Maximum number of images to display.  0 means no limit.</p></li>
+<li><p><strong>bucket</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – GridFS bucket prefix.  Defaults to COLLECTIONS[“images”].</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhstore.store_image_from_path">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">store_image_from_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filepath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">content_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'image/jpeg'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">description</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parent_collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parent_id_field</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parent_id_value</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tags</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bucket</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['images']</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#store_image_from_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.store_image_from_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read a file from disk and store it as a StoredImage in GridFS.</p>
+<p>The filename stem (without extension) is used as the StoredImage name,
+which is also used to build a unique image_id at object creation time.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filepath</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Path to the image file on disk.</p></li>
+<li><p><strong>content_type</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – MIME type string.  Defaults to “image/jpeg”.</p></li>
+<li><p><strong>description</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><em>None</em>) – Optional human-readable description.</p></li>
+<li><p><strong>parent_collection</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><em>None</em>) – Collection name of the parent document.</p></li>
+<li><p><strong>parent_id_field</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><em>None</em>) – Field name of the parent’s unique ID.</p></li>
+<li><p><strong>parent_id_value</strong> – Value of the parent’s unique ID.</p></li>
+<li><p><strong>tags</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em> | </em><em>None</em>) – Optional list of string tags.</p></li>
+<li><p><strong>bucket</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – GridFS bucket prefix.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The image_id assigned to the stored StoredImage object.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.check_integrity_future_datetimes">
 <span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">check_integrity_future_datetimes</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#check_integrity_future_datetimes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.check_integrity_future_datetimes" title="Permalink to this definition">¶</a></dt>
 <dd><p>Identify documents with datetime attributes set in the future.</p>
@@ -186,24 +571,76 @@ and skipped_collections.</p>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="dhtrader.dhstore.check_integrity_trade_ids">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">check_integrity_trade_ids</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_TRADES</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#check_integrity_trade_ids"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.check_integrity_trade_ids" title="Permalink to this definition">¶</a></dt>
-<dd><p>Check all stored trades have non-empty, unique trade_id values.</p>
-<p>Iterates every trade record in the collection once and checks two
-conditions:
-- trade_id is neither None nor blank (missing/backfill gap)
-- trade_id is unique across the collection (no duplicates)</p>
+<dt class="sig sig-object py" id="dhtrader.dhstore.check_integrity_unique_fields">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">check_integrity_unique_fields</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">collection</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fields</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">query</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#check_integrity_unique_fields"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.check_integrity_unique_fields" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check that specified fields have non-empty, unique values.</p>
+<p>Fetches documents from collection (optionally filtered by query)
+and checks each named field for missing values and duplicates.</p>
 <p>Does not modify any data.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Results with keys status, total_trades, missing_count,
-missing_samples, duplicate_count, and duplicate_samples.</p>
-</dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
-</dd>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>collection</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – </p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>collection</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Collection name to query.</p></li>
+<li><p><strong>fields</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a>) – List of field name strings to check for uniqueness.</p></li>
+<li><p><strong>query</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em> | </em><em>None</em>) – Optional MongoDB query dict to filter documents.
+Defaults to None (all documents).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">status</span></code>: “OK” or “ERRORS”</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">total_docs</span></code>: total number of documents checked</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">fields</span></code>: per-field results keyed by field name, each with:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">missing_count</span></code>: int</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">missing_samples</span></code>: list of {“_id”: …, field: val} dicts</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">duplicate_count</span></code>: int</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">duplicate_samples</span></code>: list of {“value”: …, “count”: int}</p></li>
+</ul>
+</li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict with keys</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhstore.check_integrity_orphaned_images">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">check_integrity_orphaned_images</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reference_map</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#check_integrity_orphaned_images"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.check_integrity_orphaned_images" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find stored images not referenced by any parent document.</p>
+<p>Uses COLLECTIONS[“images”] / GridFS internally.  The calling
+code supplies the reference_map because dhtrader does not know
+about AnalyzeBacktestResult or RefreshCycleResult collections.</p>
+<p>Uses MongoDB distinct() on each field path so the query is
+resolved from the multikey index on image_ids fields when those
+indexes exist, avoiding full collection scans as data grows.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>reference_map</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – <p>Dict mapping collection names to lists of
+dotted field paths that contain image_id references.
+Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="s2">&quot;analyze_backtest_results&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="s2">&quot;image_ids&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;plans.image_ids&quot;</span><span class="p">,</span>
+    <span class="p">],</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>Results with keys status, total_images,</dt><dd><p>orphaned_count, and orphaned_samples.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -218,7 +655,7 @@ storage.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.get_all_trades">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">get_all_trades</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_TRADES</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#get_all_trades"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.get_all_trades" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">get_all_trades</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['trades']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#get_all_trades"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.get_all_trades" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get &lt;limit&gt; (default 0 == all) stored trades and return as a list.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -232,7 +669,7 @@ storage.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.get_trades_by_field">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">get_trades_by_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_TRADES</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#get_trades_by_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.get_trades_by_field" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">get_trades_by_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['trades']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#get_trades_by_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.get_trades_by_field" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns Trade() objects matching the field=value provided.</p>
 <p>Default limit=0 returns all objects, or set to return only top X.</p>
 <dl class="field-list simple">
@@ -248,7 +685,7 @@ storage.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.get_trades_by_field_in">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">get_trades_by_field_in</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_TRADES</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#get_trades_by_field_in"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.get_trades_by_field_in" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">get_trades_by_field_in</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">values</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['trades']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#get_trades_by_field_in"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.get_trades_by_field_in" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return Trade objects where field is in values.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -264,7 +701,7 @@ storage.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.store_trades">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">store_trades</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">trades</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_TRADES</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#store_trades"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.store_trades" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">store_trades</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">trades</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['trades']</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#store_trades"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.store_trades" title="Permalink to this definition">¶</a></dt>
 <dd><p>Store one or more Trade() objects in central storage.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -278,7 +715,7 @@ storage.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.review_trades">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">review_trades</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">symbol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ES'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_TRADES</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bt_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ts_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_epochs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">check_integrity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">multi_ok</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">orphan_ok</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">list_issues</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'backtests_integrity_results.json'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pretty</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#review_trades"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.review_trades" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">review_trades</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">symbol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ES'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['trades']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bt_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ts_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_epochs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">check_integrity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">multi_ok</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">orphan_ok</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">list_issues</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'backtests_integrity_results.json'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pretty</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#review_trades"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.review_trades" title="Permalink to this definition">¶</a></dt>
 <dd><p>Provide aggregate summary data about trades in central storage.</p>
 <p>Optionally filters by bt_id and/or ts_id.  Earliest and latest dates
 are returned as strings; include_epochs can also provide them as epochs.</p>
@@ -311,7 +748,7 @@ format.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.delete_trades_by_field">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">delete_trades_by_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">symbol</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_TRADES</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#delete_trades_by_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.delete_trades_by_field" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">delete_trades_by_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">symbol</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['trades']</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#delete_trades_by_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.delete_trades_by_field" title="Permalink to this definition">¶</a></dt>
 <dd><p>Delete all trade records with ‘field’ matching ‘value’.</p>
 <p>Typically used to delete by name, ts_id, or bt_id fields.</p>
 <p>Example to delete all trade records with name==”DELETEME”:
@@ -330,7 +767,7 @@ value=”DELETEME”)</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.delete_trades">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">delete_trades</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">trades</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_TRADES</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#delete_trades"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.delete_trades" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">delete_trades</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">trades</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['trades']</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#delete_trades"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.delete_trades" title="Permalink to this definition">¶</a></dt>
 <dd><p>Delete Trade objects from central storage by open_dt, ts_id, and symbol.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -352,7 +789,7 @@ storage.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.get_all_tradeseries">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">get_all_tradeseries</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_TRADESERIES</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#get_all_tradeseries"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.get_all_tradeseries" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">get_all_tradeseries</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['tradeseries']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#get_all_tradeseries"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.get_all_tradeseries" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get &lt;limit&gt; (default 0 == all) stored tradeseries returned as a list.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -366,7 +803,7 @@ storage.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.get_tradeseries_by_field">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">get_tradeseries_by_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_TRADESERIES</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection_trades</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_TRADES</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_trades</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#get_tradeseries_by_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.get_tradeseries_by_field" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">get_tradeseries_by_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['tradeseries']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection_trades</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['trades']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_trades</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#get_tradeseries_by_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.get_tradeseries_by_field" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns a list of all TradeSeries matching the bt_id provided.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -383,7 +820,7 @@ storage.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.store_tradeseries">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">store_tradeseries</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_TRADESERIES</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_trades</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#store_tradeseries"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.store_tradeseries" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">store_tradeseries</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['tradeseries']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_trades</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#store_tradeseries"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.store_tradeseries" title="Permalink to this definition">¶</a></dt>
 <dd><p>Store a list of TradeSeries() objects in central storage.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -401,7 +838,7 @@ storage.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.review_tradeseries">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">review_tradeseries</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">symbol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ES'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_TRADESERIES</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bt_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_trades</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pretty</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">check_integrity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#review_tradeseries"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.review_tradeseries" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">review_tradeseries</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">symbol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ES'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['tradeseries']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bt_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_trades</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pretty</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">check_integrity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#review_tradeseries"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.review_tradeseries" title="Permalink to this definition">¶</a></dt>
 <dd><p>Provide aggregate summary data about tradeseries in central storage.</p>
 <p>Optionally filters by bt_id.  Earliest start_dt and latest end_dt
 are returned as strings.  pretty=True returns a formatted string.</p>
@@ -421,7 +858,7 @@ are returned as strings.  pretty=True returns a formatted string.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.delete_tradeseries_by_field">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">delete_tradeseries_by_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">symbol</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_TRADESERIES</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coll_trades</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_TRADES</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_trades</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#delete_tradeseries_by_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.delete_tradeseries_by_field" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">delete_tradeseries_by_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">symbol</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['tradeseries']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coll_trades</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['trades']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_trades</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#delete_tradeseries_by_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.delete_tradeseries_by_field" title="Permalink to this definition">¶</a></dt>
 <dd><p>Delete all tradeseries records with ‘field’ matching ‘value’.</p>
 <p>Typically used to delete by ts_id or bt_id fields.</p>
 <dl class="field-list simple">
@@ -438,7 +875,7 @@ are returned as strings.  pretty=True returns a formatted string.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.delete_tradeseries">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">delete_tradeseries</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tradeseries</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_TRADESERIES</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#delete_tradeseries"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.delete_tradeseries" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">delete_tradeseries</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tradeseries</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['tradeseries']</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#delete_tradeseries"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.delete_tradeseries" title="Permalink to this definition">¶</a></dt>
 <dd><p>Delete TradeSeries objects from central storage using ts_id.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -452,7 +889,7 @@ are returned as strings.  pretty=True returns a formatted string.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.get_all_backtests">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">get_all_backtests</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_BACKTESTS</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#get_all_backtests"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.get_all_backtests" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">get_all_backtests</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['backtests']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#get_all_backtests"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.get_all_backtests" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return stored backtests as a list of dicts.</p>
 <p>limit defaults to 0 which returns all records.  Because Backtest() is
 meant to be subclassed, dicts are returned so subclass implementations
@@ -469,7 +906,7 @@ can convert them into their specific object types as needed.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.get_backtests_by_field">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">get_backtests_by_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_BACKTESTS</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#get_backtests_by_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.get_backtests_by_field" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">get_backtests_by_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['backtests']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#get_backtests_by_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.get_backtests_by_field" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return a list of Backtest dicts matching the given field=value.</p>
 <p>Because Backtest() is meant to be subclassed, dicts are returned so
 subclass implementations can convert them into their specific object
@@ -487,7 +924,7 @@ types as needed.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.store_backtests">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">store_backtests</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">backtests</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_BACKTESTS</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_tradeseries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_trades</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#store_backtests"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.store_backtests" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">store_backtests</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">backtests</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['backtests']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_tradeseries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_trades</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#store_backtests"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.store_backtests" title="Permalink to this definition">¶</a></dt>
 <dd><p>Store one or more Backtest() objects in central storage.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -512,7 +949,7 @@ include_tradeseries=True</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.review_backtests">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">review_backtests</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">symbol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ES'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_BACKTESTS</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_tradeseries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_trades</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pretty</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#review_backtests"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.review_backtests" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">review_backtests</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">symbol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ES'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['backtests']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_tradeseries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_trades</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pretty</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#review_backtests"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.review_backtests" title="Permalink to this definition">¶</a></dt>
 <dd><p>Provides aggregate summary data about backtests in central storage.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -529,7 +966,7 @@ include_tradeseries=True</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.delete_backtests_by_field">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">delete_backtests_by_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">symbol</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_BACKTESTS</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coll_tradeseries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_TRADESERIES</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coll_trades</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_TRADES</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_tradeseries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_trades</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#delete_backtests_by_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.delete_backtests_by_field" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">delete_backtests_by_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">symbol</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['backtests']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coll_tradeseries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['tradeseries']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coll_trades</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['trades']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_tradeseries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_trades</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#delete_backtests_by_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.delete_backtests_by_field" title="Permalink to this definition">¶</a></dt>
 <dd><p>Delete all backtests records with ‘field’ matching ‘value’.</p>
 <p>Typically used to delete by bt_id field.</p>
 <dl class="field-list simple">
@@ -549,7 +986,7 @@ include_tradeseries=True</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.delete_backtests">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">delete_backtests</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">backtests</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_BACKTESTS</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#delete_backtests"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.delete_backtests" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">delete_backtests</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">backtests</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['backtests']</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#delete_backtests"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.delete_backtests" title="Permalink to this definition">¶</a></dt>
 <dd><p>Delete Backtest objects from central storage using bt_id.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -563,7 +1000,7 @@ include_tradeseries=True</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.reconstruct_tradeplan">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">reconstruct_tradeplan</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection_trades</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_TRADES</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#reconstruct_tradeplan"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.reconstruct_tradeplan" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">reconstruct_tradeplan</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection_trades</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['trades']</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#reconstruct_tradeplan"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.reconstruct_tradeplan" title="Permalink to this definition">¶</a></dt>
 <dd><p>Take a dictionary and build a TradePlan object from it.</p>
 <p>Reconstructs using constructor fields first, then reattaches any
 remaining stored keys via setattr to preserve post-init state.</p>
@@ -576,7 +1013,7 @@ remaining stored keys via setattr to preserve post-init state.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.get_all_tradeplans">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">get_all_tradeplans</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_TRADEPLANS</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection_trades</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_TRADES</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">as_dict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#get_all_tradeplans"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.get_all_tradeplans" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">get_all_tradeplans</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['tradeplans']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection_trades</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['trades']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">as_dict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#get_all_tradeplans"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.get_all_tradeplans" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get stored tradeplans as TradePlan objects or raw dicts.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -592,7 +1029,7 @@ remaining stored keys via setattr to preserve post-init state.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.get_tradeplans_by_field">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">get_tradeplans_by_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_TRADEPLANS</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection_trades</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_TRADES</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">as_dict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#get_tradeplans_by_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.get_tradeplans_by_field" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">get_tradeplans_by_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['tradeplans']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection_trades</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['trades']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">as_dict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#get_tradeplans_by_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.get_tradeplans_by_field" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return TradePlan objects or dicts matching given field=value.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -609,7 +1046,7 @@ remaining stored keys via setattr to preserve post-init state.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.store_tradeplans">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">store_tradeplans</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tradeplans</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_TRADEPLANS</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#store_tradeplans"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.store_tradeplans" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">store_tradeplans</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tradeplans</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['tradeplans']</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#store_tradeplans"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.store_tradeplans" title="Permalink to this definition">¶</a></dt>
 <dd><p>Store a list of TradePlan objects in central storage.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -623,7 +1060,7 @@ remaining stored keys via setattr to preserve post-init state.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.delete_tradeplans_by_field">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">delete_tradeplans_by_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_TRADEPLANS</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#delete_tradeplans_by_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.delete_tradeplans_by_field" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">delete_tradeplans_by_field</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['tradeplans']</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#delete_tradeplans_by_field"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.delete_tradeplans_by_field" title="Permalink to this definition">¶</a></dt>
 <dd><p>Delete all tradeplan records with ‘field’ matching ‘value’.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -637,7 +1074,7 @@ remaining stored keys via setattr to preserve post-init state.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.delete_tradeplans">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">delete_tradeplans</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tradeplans</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_TRADEPLANS</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#delete_tradeplans"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.delete_tradeplans" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">delete_tradeplans</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tradeplans</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['tradeplans']</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#delete_tradeplans"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.delete_tradeplans" title="Permalink to this definition">¶</a></dt>
 <dd><p>Delete TradePlan objects from central storage using tp_id.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -651,7 +1088,7 @@ remaining stored keys via setattr to preserve post-init state.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.list_indicators">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">list_indicators</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">meta_collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_IND_META</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#list_indicators"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.list_indicators" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">list_indicators</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">meta_collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['ind_meta']</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#list_indicators"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.list_indicators" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return a simple list of indicators in storage.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -662,7 +1099,7 @@ remaining stored keys via setattr to preserve post-init state.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.list_indicators_names">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">list_indicators_names</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">meta_collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_IND_META</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#list_indicators_names"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.list_indicators_names" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">list_indicators_names</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">meta_collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['ind_meta']</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#list_indicators_names"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.list_indicators_names" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return a simple list of indicators (ind_id only) in storage.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -673,7 +1110,7 @@ remaining stored keys via setattr to preserve post-init state.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.review_indicators">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">review_indicators</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">meta_collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_IND_META</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dp_collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_IND_DPS</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#review_indicators"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.review_indicators" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">review_indicators</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">meta_collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['ind_meta']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dp_collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['ind_dps']</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#review_indicators"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.review_indicators" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return a more detailed overview of indicators in storage.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -687,7 +1124,7 @@ remaining stored keys via setattr to preserve post-init state.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.get_indicator">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">get_indicator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ind_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">meta_collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_IND_META</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">autoload_chart</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">autoload_datapoints</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#get_indicator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.get_indicator" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">get_indicator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ind_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">meta_collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['ind_meta']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">autoload_chart</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">autoload_datapoints</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#get_indicator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.get_indicator" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return an indicator by ind_id, optionally loading chart and datapoints.</p>
 <p>autoload_chart and autoload_datapoints both default to False for
 performance.  When enabled they load for the earliest_dt to latest_dt
@@ -706,7 +1143,7 @@ range.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.get_indicator_datapoints">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">get_indicator_datapoints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ind_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dp_collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_IND_DPS</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">earliest_dt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">latest_dt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#get_indicator_datapoints"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.get_indicator_datapoints" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">get_indicator_datapoints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ind_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dp_collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['ind_dps']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">earliest_dt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">latest_dt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#get_indicator_datapoints"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.get_indicator_datapoints" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return IndicatorDatapoint objects for the given timeframe and ind_id.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -723,7 +1160,7 @@ range.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.store_indicator_datapoints">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">store_indicator_datapoints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapoints</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_IND_DPS</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skip_dupes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#store_indicator_datapoints"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.store_indicator_datapoints" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">store_indicator_datapoints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datapoints</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['ind_dps']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skip_dupes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#store_indicator_datapoints"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.store_indicator_datapoints" title="Permalink to this definition">¶</a></dt>
 <dd><p>Store one or more IndicatorDatapoint() objects in central storage.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -738,7 +1175,7 @@ range.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.store_indicator">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">store_indicator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indicator</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">meta_collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_IND_META</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dp_collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_IND_DPS</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">store_datapoints</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fast_dps_check</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#store_indicator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.store_indicator" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">store_indicator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indicator</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">meta_collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['ind_meta']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dp_collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['ind_dps']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">store_datapoints</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fast_dps_check</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#store_indicator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.store_indicator" title="Permalink to this definition">¶</a></dt>
 <dd><p>Store indicator meta and datapoints in central storage.</p>
 <p>Does not overwrite existing datapoints unless overwrite_dp is True</p>
 <dl class="field-list simple">
@@ -756,7 +1193,7 @@ range.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.delete_indicator">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">delete_indicator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ind_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">meta_collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_IND_META</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dp_collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_IND_DPS</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#delete_indicator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.delete_indicator" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">delete_indicator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ind_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">meta_collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['ind_meta']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dp_collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['ind_dps']</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#delete_indicator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.delete_indicator" title="Permalink to this definition">¶</a></dt>
 <dd><p>Remove an indicator and all its datapoints from storage by ind_id.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -771,7 +1208,7 @@ range.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.get_indicators_by_name">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">get_indicators_by_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">meta_collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_IND_META</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">autoload_chart</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">autoload_datapoints</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#get_indicators_by_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.get_indicators_by_name" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">get_indicators_by_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">meta_collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['ind_meta']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">autoload_chart</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">autoload_datapoints</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#get_indicators_by_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.get_indicators_by_name" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return a list of Indicator objects for all indicators with the name.</p>
 <p>autoload_chart and autoload_datapoints both default to False for
 performance.  When enabled they load for the earliest_dt to latest_dt
@@ -790,7 +1227,7 @@ range.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.delete_indicators_by_name">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">delete_indicators_by_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">meta_collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_IND_META</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dp_collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLL_IND_DPS</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#delete_indicators_by_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.delete_indicators_by_name" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">delete_indicators_by_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">meta_collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['ind_meta']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dp_collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['ind_dps']</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#delete_indicators_by_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.delete_indicators_by_name" title="Permalink to this definition">¶</a></dt>
 <dd><p>Delete all indicators and their datapoints with the given name.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -1001,10 +1438,33 @@ delete_events_by_field(symbol=”ES”, field=”name”, value=”DELETEME”)<
 <li><a class="reference internal" href="#dhtrader.dhstore.list_mongo_collections"><code class="docutils literal notranslate"><span class="pre">list_mongo_collections()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhstore.drop_mongo_collection"><code class="docutils literal notranslate"><span class="pre">drop_mongo_collection()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhstore.get_all_records_by_collection"><code class="docutils literal notranslate"><span class="pre">get_all_records_by_collection()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhstore.store_custom_documents"><code class="docutils literal notranslate"><span class="pre">store_custom_documents()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhstore.delete_custom_documents_by_field"><code class="docutils literal notranslate"><span class="pre">delete_custom_documents_by_field()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhstore.list_custom_documents"><code class="docutils literal notranslate"><span class="pre">list_custom_documents()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhstore.get_custom_documents_by_field"><code class="docutils literal notranslate"><span class="pre">get_custom_documents_by_field()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhstore.get_all_custom_documents"><code class="docutils literal notranslate"><span class="pre">get_all_custom_documents()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhstore.review_custom_documents"><code class="docutils literal notranslate"><span class="pre">review_custom_documents()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhstore.ImageResponse"><code class="docutils literal notranslate"><span class="pre">ImageResponse</span></code></a><ul>
+<li><a class="reference internal" href="#dhtrader.dhstore.ImageResponse.content_type"><code class="docutils literal notranslate"><span class="pre">content_type</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhstore.ImageResponse.data"><code class="docutils literal notranslate"><span class="pre">data</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhstore.ImageResponse.filename"><code class="docutils literal notranslate"><span class="pre">filename</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhstore.ImageResponse.metadata"><code class="docutils literal notranslate"><span class="pre">metadata</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#dhtrader.dhstore.store_images"><code class="docutils literal notranslate"><span class="pre">store_images()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhstore.get_image_data"><code class="docutils literal notranslate"><span class="pre">get_image_data()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhstore.get_image_by_id"><code class="docutils literal notranslate"><span class="pre">get_image_by_id()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhstore.get_images_metadata_by_field"><code class="docutils literal notranslate"><span class="pre">get_images_metadata_by_field()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhstore.list_images"><code class="docutils literal notranslate"><span class="pre">list_images()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhstore.delete_images_by_field"><code class="docutils literal notranslate"><span class="pre">delete_images_by_field()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhstore.delete_images_by_image_id"><code class="docutils literal notranslate"><span class="pre">delete_images_by_image_id()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhstore.review_images"><code class="docutils literal notranslate"><span class="pre">review_images()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhstore.store_image_from_path"><code class="docutils literal notranslate"><span class="pre">store_image_from_path()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhstore.check_integrity_future_datetimes"><code class="docutils literal notranslate"><span class="pre">check_integrity_future_datetimes()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhstore.check_integrity_no_test_orphans"><code class="docutils literal notranslate"><span class="pre">check_integrity_no_test_orphans()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhstore.check_integrity_no_nameless_objects"><code class="docutils literal notranslate"><span class="pre">check_integrity_no_nameless_objects()</span></code></a></li>
-<li><a class="reference internal" href="#dhtrader.dhstore.check_integrity_trade_ids"><code class="docutils literal notranslate"><span class="pre">check_integrity_trade_ids()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhstore.check_integrity_unique_fields"><code class="docutils literal notranslate"><span class="pre">check_integrity_unique_fields()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhstore.check_integrity_orphaned_images"><code class="docutils literal notranslate"><span class="pre">check_integrity_orphaned_images()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhstore.reconstruct_trade"><code class="docutils literal notranslate"><span class="pre">reconstruct_trade()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhstore.get_all_trades"><code class="docutils literal notranslate"><span class="pre">get_all_trades()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhstore.get_trades_by_field"><code class="docutils literal notranslate"><span class="pre">get_trades_by_field()</span></code></a></li>

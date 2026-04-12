@@ -57,12 +57,18 @@ def test_Event_create_and_verify_common_methods():
         f"New attrs needing assertions: {sorted(added)}. "
         f"Removed attrs: {sorted(removed)}."
     )
-    # __str__
-    assert isinstance(str(event), str)
-    assert len(str(event)) > 0
-    # __repr__
-    assert isinstance(repr(event), str)
-    assert str(event) == repr(event)
+    # __str__ and __repr__ — exact format
+    expected_event_str = (
+        "{'start_dt': '2099-01-02 12:00:00', "
+        "'end_dt': '2099-01-02 18:00:00', "
+        "'symbol': 'ES', 'category': 'Closed', "
+        "'tags': ['holiday'], 'notes': 'Test Holiday', "
+        f"'start_epoch': {event.start_epoch}, "
+        f"'end_epoch': {event.end_epoch}, "
+        "'name': 'nameless'}"
+    )
+    assert str(event) == expected_event_str
+    assert repr(event) == expected_event_str
     # to_clean_dict
     d = event.to_clean_dict()
     assert isinstance(d, dict)

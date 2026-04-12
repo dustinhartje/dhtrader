@@ -11,28 +11,50 @@ utility layer with no storage dependencies.
 """
 
 import json
-from collections import Counter, defaultdict
+import re
+import time
+from collections import Counter, defaultdict, namedtuple
 from datetime import datetime as dt
-from datetime import date, timedelta
+from datetime import timedelta
 from copy import deepcopy
 import logging
 from pathlib import Path
 from .dhtypes import (
     Candle, Event, IndicatorDataPoint, Symbol, IndicatorSMA, IndicatorEMA,
-    Trade, TradeSeries, TradePlan)
+    Trade, TradeSeries, TradePlan, StoredImage)
 from .dhcommon import (
     dt_as_str, dt_as_dt, dt_from_epoch, dt_to_epoch, valid_timeframe,
     this_candle_start, summarize_candles, log_say, sort_dict,
-    rangify_candle_times, expected_candle_datetimes, MARKET_ERAS,
-    ProgBar, OperationTimer, DEFAULT_OBJ_NAME)
+    rangify_candle_times, expected_candle_datetimes, new_uuid,
+    ProgBar, OperationTimer,
+    DEFAULT_OBJ_NAME, MARKET_ERAS)
 from . import dhmongo as dhm
 
-COLL_TRADES = "trades"
-COLL_TRADESERIES = "tradeseries"
-COLL_BACKTESTS = "backtests"
-COLL_TRADEPLANS = "tradeplans"
-COLL_IND_META = "indicators_meta"
-COLL_IND_DPS = "indicators_datapoints"
+# All collection names owned by dhtrader classes.  Custom document
+# functions refuse to operate on any collection listed here.
+# Add new managed collections here when new classes are introduced.
+COLLECTIONS: dict = {
+    "trades": "trades",
+    "tradeseries": "tradeseries",
+    "backtests": "backtests",
+    "tradeplans": "tradeplans",
+    "ind_meta": "indicators_meta",
+    "ind_dps": "indicators_datapoints",
+    "images": "images",
+}
+
+# Regex patterns for dynamically named managed collections.
+# Add new patterns here when new dynamic collections are introduced.
+# gridfs pattern is scoped to the images bucket prefix so other
+# collections with 'files' or 'chunks' in the name are not blocked.
+COLL_PATTERNS: dict = {
+    "candles": re.compile(r"candles_.+_.+"),
+    "events": re.compile(r"events_.+"),
+    "gridfs": re.compile(
+        rf"^{re.escape(COLLECTIONS['images'])}\.("
+        r"files|chunks)$"
+    ),
+}
 
 # Cache for Symbol instances to avoid repeated creation
 SYMBOL_CACHE = {}
@@ -97,11 +119,785 @@ def get_all_records_by_collection(collection: str,
 
 
 ##############################################################################
+# Custom document functions (non-class-specific collections)
+
+def _guard_managed_collection(collection: str, func_name: str):
+    """Raise ValueError if collection is managed by a dhtrader class.
+
+    Guards against accidental writes or deletes to class-owned collections
+    (COLLECTIONS dict) or dynamically named managed collections
+    (COLL_PATTERNS dict).
+    """
+    if collection in COLLECTIONS.values():
+        log.critical(
+            f"{func_name}: collection {collection!r} is a managed "
+            "collection and cannot be used with custom document functions"
+        )
+        raise ValueError(
+            f"collection {collection!r} is managed by a dhtrader class "
+            "and cannot be used with custom document functions"
+        )
+    for pattern_name, pattern in COLL_PATTERNS.items():
+        if pattern.search(collection):
+            log.critical(
+                f"{func_name}: collection {collection!r} matches managed "
+                f"pattern {pattern_name!r} and cannot be used with "
+                "custom document functions"
+            )
+            raise ValueError(
+                f"collection {collection!r} matches managed pattern "
+                f"{pattern_name!r} and cannot be used with custom "
+                "document functions"
+            )
+
+
+def store_custom_documents(collection: str,
+                           documents: list,
+                           ):
+    """Store a list of plain dicts in a non-managed collection.
+
+    Args:
+        collection: Target collection name.  Must not be a
+            managed (class-owned) collection.
+        documents: Non-empty list of dicts to store.
+
+    Raises:
+        ValueError: If collection is managed, documents is
+            empty, any element is not a dict, or any element
+            cannot be serialized to JSON.
+
+    Returns:
+        list: Mongo result dicts, one per document stored.
+    """
+    log.info(
+        f"store_custom_documents: collection={collection!r}, "
+        f"count={len(documents)}"
+    )
+    # Guard against writes to managed (class-owned) collections.
+    _guard_managed_collection(collection, "store_custom_documents")
+
+    # Validate inputs before touching storage.
+    if not documents:
+        log.critical(
+            "store_custom_documents: documents list is empty"
+        )
+        raise ValueError(
+            "store_custom_documents: documents must be a non-empty list"
+        )
+    for i, doc in enumerate(documents):
+        if not isinstance(doc, dict):
+            # Attempt to coerce the object to a dict before failing.
+            # Try vars() for objects with __dict__, then dict() for
+            # mappings and iterables of (key, value) pairs.
+            converted = None
+            try:
+                converted = dict(vars(doc))
+            except TypeError:
+                pass
+            if converted is None:
+                try:
+                    converted = dict(doc)
+                except (TypeError, ValueError):
+                    pass
+            if converted is None:
+                log.critical(
+                    f"store_custom_documents: element {i} cannot be "
+                    f"converted to dict: {type(doc)}"
+                )
+                raise ValueError(
+                    f"store_custom_documents: element {i} cannot be "
+                    f"converted to dict, got {type(doc)}"
+                )
+            log.debug(
+                f"store_custom_documents: element {i} coerced from "
+                f"{type(doc)} to dict"
+            )
+            documents[i] = converted
+            doc = documents[i]
+        try:
+            json.dumps(doc)
+        except (TypeError, ValueError) as exc:
+            log.critical(
+                f"store_custom_documents: element {i} is not "
+                f"JSON-serializable: {exc}"
+            )
+            raise ValueError(
+                f"store_custom_documents: element {i} is not "
+                f"JSON-serializable: {exc}"
+            ) from exc
+        # Require a non-blank 'name' field on every document so
+        # doc_id can be prefixed meaningfully and records are
+        # always identifiable by name in storage.
+        name_val = doc.get("name")
+        if not name_val or not str(name_val).strip():
+            log.critical(
+                f"store_custom_documents: element {i} has no "
+                "valid 'name' field"
+            )
+            raise ValueError(
+                f"store_custom_documents: element {i} must have "
+                "a non-blank 'name' field"
+            )
+
+    # Assign a unique doc_id to each document that does not already have
+    # one.  doc_id is generated here (not in dhmongo) so the caller can
+    # reference it before storage completes.  The doc_id is prefixed
+    # with the document's name attribute (if present) to aid debugging.
+    for doc in documents:
+        if not doc.get("doc_id"):
+            name_prefix = str(doc["name"]).strip()
+            while True:
+                candidate = f"{name_prefix}_{new_uuid()}"
+                existing = dhm.get_custom_documents_by_field(
+                    collection=collection,
+                    field="doc_id",
+                    value=candidate,
+                    limit=1,
+                )
+                if not existing:
+                    break
+            doc["doc_id"] = candidate
+
+    # Store each document via upsert and collect results.
+    time_store = time.perf_counter()
+    results = []
+    for doc in documents:
+        result = dhm.store_custom_document(
+            document=doc,
+            collection=collection,
+        )
+        results.append(result)
+    log.debug(
+        f"store_custom_documents: storage loop elapsed "
+        f"{time.perf_counter() - time_store:.6f}s"
+    )
+
+    log.info(
+        f"store_custom_documents: stored {len(results)} documents "
+        f"to {collection!r}"
+    )
+    return results
+
+
+def delete_custom_documents_by_field(collection: str,
+                                     field: str,
+                                     value,
+                                     ):
+    """Delete documents matching field==value from a non-managed collection.
+
+    Args:
+        collection: Target collection name.
+        field: Document field to match on.
+        value: Value to match.
+
+    Raises:
+        ValueError: If collection is managed.
+
+    Returns:
+        pymongo DeleteResult.
+    """
+    log.info(
+        f"delete_custom_documents_by_field: collection={collection!r}, "
+        f"field={field!r}, value={value!r}"
+    )
+    # Guard against deletes from managed (class-owned) collections.
+    _guard_managed_collection(
+        collection, "delete_custom_documents_by_field"
+    )
+
+    time_delete = time.perf_counter()
+    result = dhm.delete_custom_documents_by_field(
+        collection=collection,
+        field=field,
+        value=value,
+    )
+    log.debug(
+        f"delete_custom_documents_by_field: delete elapsed "
+        f"{time.perf_counter() - time_delete:.6f}s"
+    )
+
+    log.info(
+        f"delete_custom_documents_by_field: deleted "
+        f"{result.deleted_count} documents from {collection!r}"
+    )
+    return result
+
+
+def list_custom_documents(collection: str,
+                          field: str = None,
+                          value=None,
+                          limit: int = 0,
+                          ):
+    """Return a list of dicts from a non-managed collection.
+
+    If field and value are provided, filters by that field.
+    If neither is provided, returns all documents.  limit=0
+    means no limit.
+
+    Raises:
+        ValueError: If collection is managed.
+
+    Returns:
+        list of dicts.
+    """
+    log.info(
+        f"list_custom_documents: collection={collection!r}, "
+        f"field={field!r}, value={value!r}, limit={limit}"
+    )
+    _guard_managed_collection(collection, "list_custom_documents")
+
+    if field is not None:
+        results = dhm.get_custom_documents_by_field(
+            collection=collection,
+            field=field,
+            value=value,
+            limit=limit,
+        )
+    else:
+        results = dhm.get_all_custom_documents(
+            collection=collection,
+            limit=limit,
+        )
+
+    log.info(
+        f"list_custom_documents: returning {len(results)} documents "
+        f"from {collection!r}"
+    )
+    return results
+
+
+def get_custom_documents_by_field(collection: str,
+                                  field: str,
+                                  value,
+                                  limit: int = 0,
+                                  ):
+    """Return documents matching field==value from a non-managed collection.
+
+    Args:
+        collection: Source collection name.
+        field: Document field to filter on.
+        value: Value to match.
+        limit: Maximum number of results (0 = no limit).
+
+    Raises:
+        ValueError: If collection is managed.
+
+    Returns:
+        list of dicts.
+    """
+    log.info(
+        f"get_custom_documents_by_field: collection={collection!r}, "
+        f"field={field!r}, value={value!r}, limit={limit}"
+    )
+    _guard_managed_collection(
+        collection, "get_custom_documents_by_field"
+    )
+    results = dhm.get_custom_documents_by_field(
+        collection=collection,
+        field=field,
+        value=value,
+        limit=limit,
+    )
+    log.info(
+        f"get_custom_documents_by_field: returning {len(results)} "
+        f"documents from {collection!r}"
+    )
+    return results
+
+
+def get_all_custom_documents(collection: str,
+                             limit: int = 0,
+                             ):
+    """Return all documents from a non-managed collection.
+
+    Args:
+        collection: Source collection name.
+        limit: Maximum number of results (0 = no limit).
+
+    Raises:
+        ValueError: If collection is managed.
+
+    Returns:
+        list of dicts.
+    """
+    log.info(
+        f"get_all_custom_documents: collection={collection!r}, "
+        f"limit={limit}"
+    )
+    _guard_managed_collection(collection, "get_all_custom_documents")
+    results = dhm.get_all_custom_documents(
+        collection=collection,
+        limit=limit,
+    )
+    log.info(
+        f"get_all_custom_documents: returning {len(results)} documents "
+        f"from {collection!r}"
+    )
+    return results
+
+
+def review_custom_documents(collection: str,
+                            field: str = None,
+                            value=None,
+                            limit: int = 20,
+                            ):
+    """Print a human-readable summary of documents from a non-managed
+    collection.  Intended for interactive/CLI use.
+
+    Raises:
+        ValueError: If collection is managed.
+    """
+    log.info(
+        f"review_custom_documents: collection={collection!r}, "
+        f"field={field!r}, value={value!r}, limit={limit}"
+    )
+    _guard_managed_collection(collection, "review_custom_documents")
+
+    docs = list_custom_documents(
+        collection=collection,
+        field=field,
+        value=value,
+        limit=limit,
+    )
+
+    print(f"\n--- review_custom_documents: {collection!r} "
+          f"({len(docs)} documents) ---")
+    for doc in docs:
+        # Strip the internal MongoDB _id from display output.
+        display = {k: v for k, v in doc.items() if k != "_id"}
+        print(json.dumps(display, indent=2, default=str))
+    print("---\n")
+
+    log.info(
+        f"review_custom_documents: displayed {len(docs)} documents "
+        f"from {collection!r}"
+    )
+
+
+##############################################################################
+# Image storage (GridFS)
+
+# Named tuple returned by get_image_by_id; contains everything a web
+# server needs to serve an image without any further lookups.
+ImageResponse = namedtuple(
+    "ImageResponse",
+    ["data", "content_type", "filename", "metadata"],
+)
+
+
+def store_images(
+        images: list,
+        bucket: str = COLLECTIONS["images"],
+        ) -> list:
+    """Store StoredImage objects and their binary data in GridFS.
+
+    image_id is set on each StoredImage at object creation time and is used
+    as the stable retrieval key.  Binary data is stored in GridFS; this
+    function stores no binary attributes on the objects themselves.
+
+    Args:
+        images: List of (StoredImage, bytes) tuples, one per image.
+            image_id must be set before calling (set at creation
+            without hyphens).
+        bucket: GridFS bucket prefix.  Defaults to COLLECTIONS["images"].
+
+    Returns:
+        list: image_id strings from the stored objects, one per image.
+
+    Raises:
+        ValueError: If images list is empty, any item is not a 2-tuple,
+            or any StoredImage.image_id is not set.
+        TypeError: If any tuple's first element is not a StoredImage
+            or second element is not bytes.
+    """
+    log.info(
+        f"store_images: bucket={bucket!r}, count={len(images)}"
+    )
+    if not images:
+        log.critical(
+            "store_images: images list is empty"
+        )
+        raise ValueError(
+            "store_images: images must be a non-empty list"
+        )
+    # Validate all tuples before any storage begins so no partial
+    # writes occur due to a bad entry later in the list.
+    for i, item in enumerate(images):
+        if not isinstance(item, tuple) or len(item) != 2:
+            log.critical(
+                f"store_images: item at index {i} is not a 2-tuple: "
+                f"{item!r}"
+            )
+            raise ValueError(
+                f"store_images: each item must be a (StoredImage, bytes) "
+                f"tuple; item at index {i} is invalid"
+            )
+        image, data = item
+        if not isinstance(image, StoredImage):
+            log.critical(
+                f"store_images: item[{i}][0] is not a StoredImage: "
+                f"{type(image)!r}"
+            )
+            raise TypeError(
+                f"store_images: item at index {i} first element must be "
+                f"a StoredImage instance"
+            )
+        if not isinstance(data, bytes):
+            log.critical(
+                f"store_images: item[{i}][1] is not bytes: "
+                f"{type(data)!r}"
+            )
+            raise TypeError(
+                f"store_images: item at index {i} second element must be "
+                f"bytes"
+            )
+        if not image.image_id:
+            log.critical(
+                f"store_images: item[{i}] StoredImage has no image_id"
+            )
+            raise ValueError(
+                f"store_images: item at index {i} StoredImage.image_id "
+                f"must be set before storing"
+            )
+
+    results = []
+    time_store = time.perf_counter()
+    for image, data in images:
+        metadata = image.to_clean_dict()
+        returned_image_id = dhm.store_image(
+            image_data=data,
+            metadata=metadata,
+            bucket=bucket,
+        )
+        results.append(returned_image_id)
+        log.debug(
+            f"store_images: stored image_id={returned_image_id!r}"
+        )
+    log.debug(
+        f"store_images: storage loop elapsed "
+        f"{time.perf_counter() - time_store:.6f}s"
+    )
+    log.info(
+        f"store_images: stored {len(results)} images "
+        f"in bucket={bucket!r}"
+    )
+    return results
+
+
+def get_image_data(
+        image_id: str,
+        bucket: str = COLLECTIONS["images"],
+        ) -> bytes:
+    """Retrieve raw binary data for a stored image by image_id.
+
+    Args:
+        image_id: The stable image_id assigned at object creation.
+        bucket: GridFS bucket prefix.  Defaults to COLLECTIONS["images"].
+
+    Returns:
+        bytes: Raw binary content of the stored image.
+
+    Raises:
+        KeyError: If no image with the given image_id is found.
+    """
+    log.info(
+        f"get_image_data: image_id={image_id!r}, bucket={bucket!r}"
+    )
+    result = dhm.get_image_data(image_id=image_id, bucket=bucket)
+    log.info(
+        f"get_image_data: returned {len(result)} bytes "
+        f"for image_id={image_id!r}"
+    )
+    return result
+
+
+def get_image_by_id(
+        image_id: str,
+        bucket: str = COLLECTIONS["images"],
+        ) -> ImageResponse:
+    """Retrieve everything needed to serve an image via a web endpoint.
+
+    Performs a single round-trip to GridFS, returning binary data,
+    content type, filename, and full metadata in one ImageResponse.
+    The calling web server only needs image_id; no further lookups
+    are required.
+
+    Args:
+        image_id: The stable image_id assigned at object creation.
+        bucket: GridFS bucket prefix.  Defaults to COLLECTIONS["images"].
+
+    Returns:
+        ImageResponse: Named tuple with fields:
+            data (bytes): Raw binary content ready to stream.
+            content_type (str): MIME type for Content-Type header.
+            filename (str or None): Filename for Content-Disposition.
+            metadata (StoredImage): Full metadata object.
+
+    Raises:
+        KeyError: If no image with the given image_id is found.
+    """
+    log.info(
+        f"get_image_by_id: image_id={image_id!r}, bucket={bucket!r}"
+    )
+    data, meta_dict = dhm.get_image_by_id(
+        image_id=image_id, bucket=bucket
+    )
+    stored_image = StoredImage.from_dict(meta_dict)
+    log.info(
+        f"get_image_by_id: returned {len(data)} bytes "
+        f"for image_id={image_id!r}"
+    )
+    return ImageResponse(
+        data=data,
+        content_type=stored_image.content_type,
+        filename=stored_image.filename,
+        metadata=stored_image,
+    )
+
+
+def get_images_metadata_by_field(
+        field: str,
+        value,
+        bucket: str = COLLECTIONS["images"],
+        ) -> list:
+    """Retrieve StoredImage metadata objects matching field==value.
+
+    Binary data is not loaded; call load_data() on each returned
+    object to retrieve bytes.
+
+    Args:
+        field: Metadata field name to filter on.
+        value: Value to match.
+        bucket: GridFS bucket prefix.  Defaults to COLLECTIONS["images"].
+
+    Returns:
+        list of StoredImage objects (metadata only, no binary data).
+    """
+    log.info(
+        f"get_images_metadata_by_field: field={field!r}, "
+        f"value={value!r}, bucket={bucket!r}"
+    )
+    metadata_list = dhm.get_image_metadata_by_field(
+        field=field, value=value, bucket=bucket
+    )
+    results = [StoredImage.from_dict(m) for m in metadata_list]
+    log.info(
+        f"get_images_metadata_by_field: returning {len(results)} "
+        f"images for {field}={value!r}"
+    )
+    return results
+
+
+def list_images(
+        field: str = None,
+        value=None,
+        bucket: str = COLLECTIONS["images"],
+        ) -> list:
+    """Return a list of StoredImage metadata objects.
+
+    If field and value are provided, filters by that field.
+    If neither is provided, returns all images.  Binary data
+    is not loaded; call load_data() on each object to retrieve bytes.
+
+    Args:
+        field: Optional metadata field name to filter on.
+        value: Optional value to match.
+        bucket: GridFS bucket prefix.  Defaults to COLLECTIONS["images"].
+
+    Returns:
+        list of StoredImage objects.
+    """
+    log.info(
+        f"list_images: field={field!r}, value={value!r}, "
+        f"bucket={bucket!r}"
+    )
+    if field is not None and value is not None:
+        metadata_list = dhm.get_image_metadata_by_field(
+            field=field, value=value, bucket=bucket
+        )
+    else:
+        # No filter: scan all files in the bucket.
+        files_coll = dhm.db[f"{bucket}.files"]
+        docs = list(files_coll.find({}))
+        metadata_list = [doc.get("metadata", {}) for doc in docs]
+    results = [StoredImage.from_dict(m) for m in metadata_list]
+    log.info(
+        f"list_images: returning {len(results)} images "
+        f"from bucket={bucket!r}"
+    )
+    return results
+
+
+def delete_images_by_field(
+        field: str,
+        value,
+        bucket: str = COLLECTIONS["images"],
+        ) -> int:
+    """Delete stored images whose metadata matches field==value.
+
+    Args:
+        field: Metadata field name to match on.
+        value: Value to match.
+        bucket: GridFS bucket prefix.  Defaults to COLLECTIONS["images"].
+
+    Returns:
+        int: Count of images deleted.
+    """
+    log.info(
+        f"delete_images_by_field: field={field!r}, value={value!r}, "
+        f"bucket={bucket!r}"
+    )
+    time_delete = time.perf_counter()
+    count = dhm.delete_images_by_field(
+        field=field, value=value, bucket=bucket
+    )
+    log.debug(
+        f"delete_images_by_field: delete elapsed "
+        f"{time.perf_counter() - time_delete:.6f}s"
+    )
+    log.info(
+        f"delete_images_by_field: deleted {count} images "
+        f"matching {field}={value!r} from bucket={bucket!r}"
+    )
+    return count
+
+
+def delete_images_by_image_id(
+        image_ids: list,
+        bucket: str = COLLECTIONS["images"],
+        ) -> int:
+    """Delete stored images by their image_id values.
+
+    Args:
+        image_ids: List of image_id strings to delete.
+        bucket: GridFS bucket prefix.  Defaults to COLLECTIONS["images"].
+
+    Returns:
+        int: Count of images actually deleted.
+    """
+    log.info(
+        f"delete_images_by_image_id: count={len(image_ids)}, "
+        f"bucket={bucket!r}"
+    )
+    time_delete = time.perf_counter()
+    count = dhm.delete_images_by_image_id(
+        image_ids=image_ids, bucket=bucket
+    )
+    log.debug(
+        f"delete_images_by_image_id: delete elapsed "
+        f"{time.perf_counter() - time_delete:.6f}s"
+    )
+    log.info(
+        f"delete_images_by_image_id: deleted {count} images "
+        f"from bucket={bucket!r}"
+    )
+    return count
+
+
+def review_images(
+        field: str = None,
+        value=None,
+        limit: int = 20,
+        bucket: str = COLLECTIONS["images"],
+        ):
+    """Print a human-readable summary of stored image metadata.
+
+    Intended for interactive/CLI use.  Binary data is not loaded.
+
+    Args:
+        field: Optional metadata field name to filter on.
+        value: Optional value to match.
+        limit: Maximum number of images to display.  0 means no limit.
+        bucket: GridFS bucket prefix.  Defaults to COLLECTIONS["images"].
+    """
+    log.info(
+        f"review_images: field={field!r}, value={value!r}, "
+        f"limit={limit}, bucket={bucket!r}"
+    )
+    images = list_images(field=field, value=value, bucket=bucket)
+    if limit > 0:
+        images = images[:limit]
+    print(
+        f"\n--- review_images: bucket={bucket!r} "
+        f"({len(images)} images) ---"
+    )
+    for img in images:
+        display = img.to_clean_dict()
+        print(json.dumps(display, indent=2, default=str))
+    print("---\n")
+    log.info(
+        f"review_images: displayed {len(images)} images "
+        f"from bucket={bucket!r}"
+    )
+
+
+def store_image_from_path(
+        filepath: str,
+        content_type: str = "image/jpeg",
+        description: str = None,
+        parent_collection: str = None,
+        parent_id_field: str = None,
+        parent_id_value=None,
+        tags: list = None,
+        bucket: str = COLLECTIONS["images"],
+        ) -> str:
+    """Read a file from disk and store it as a StoredImage in GridFS.
+
+    The filename stem (without extension) is used as the StoredImage name,
+    which is also used to build a unique image_id at object creation time.
+
+    Args:
+        filepath: Path to the image file on disk.
+        content_type: MIME type string.  Defaults to "image/jpeg".
+        description: Optional human-readable description.
+        parent_collection: Collection name of the parent document.
+        parent_id_field: Field name of the parent's unique ID.
+        parent_id_value: Value of the parent's unique ID.
+        tags: Optional list of string tags.
+        bucket: GridFS bucket prefix.
+
+    Returns:
+        str: The image_id assigned to the stored StoredImage object.
+    """
+    p = Path(filepath)
+    # Use the filename stem as the descriptive name so image_id
+    # reflects the original file's role (e.g., chart name).
+    name = p.stem
+    log.info(
+        f"store_image_from_path: filepath={str(p)!r}, "
+        f"name={name!r}, bucket={bucket!r}"
+    )
+    image = StoredImage(
+        name=name,
+        content_type=content_type,
+        filename=p.name,
+        description=description,
+        parent_collection=parent_collection,
+        parent_id_field=parent_id_field,
+        parent_id_value=parent_id_value,
+        tags=tags,
+    )
+    data = p.read_bytes()
+    store_images([(image, data)], bucket=bucket)
+    log.info(
+        f"store_image_from_path: stored image_id={image.image_id!r}"
+    )
+    return image.image_id
+
+
+##############################################################################
 # Cross-collection integrity checks
 
 # Collections to skip when checking for missing name attributes.
 # Populate with collection names that legitimately have no name field.
-MISSING_NAME_IGNORE_COLLECTIONS: list = []
+# images.chunks stores raw binary GridFS chunk data and has no name
+# field at any level.  images.files stores StoredImage metadata where
+# name lives under metadata.name (not at root); it is checked via a
+# separate query branch in check_integrity_no_nameless_objects rather
+# than being skipped entirely.
+MISSING_NAME_IGNORE_COLLECTIONS: list = [
+    "images.chunks",
+]
 FUTURE_DATETIMES_IGNORE_COLLECTIONS: list = ['events_ES']
 
 
@@ -285,28 +1081,54 @@ def check_integrity_no_nameless_objects(ignore=None):
     sample_issues_by_collection = {}
     skipped_collections = []
     total_issues = 0
-    query = {"$or": [{"name": None}, {"name": ""}]}
 
     for coll in list_mongo_collections():
         if coll in ignore:
             skipped_collections.append(coll)
             continue
+        # images.files stores name under metadata.name (GridFS layout);
+        # every other collection stores name at the document root.
+        # Check for blank "", None, and missing name in either case.  None
+        # check will also return documents with no name field at all
+        if coll == COLLECTIONS["images"] + ".files":
+            query = {"$or": [
+                {"metadata.name": None},
+                {"metadata.name": ""},
+            ]}
+        else:
+            query = {"$or": [{"name": None}, {"name": ""}]}
         count = dhm.count_records(collection=coll, query=query)
         if count > 0:
             issues_by_collection[coll] = count
             docs = dhm.run_query(query=query,
                                  collection=coll,
                                  limit=10)
-            sample_issues_by_collection[coll] = [
-                {
-                    "collection": coll,
-                    "_id": str(doc.get("_id")),
-                    "name": doc.get("name"),
-                    "ts_id": doc.get("ts_id"),
-                    "bt_id": doc.get("bt_id"),
-                }
-                for doc in docs
-            ]
+            if coll == COLLECTIONS["images"] + ".files":
+                # Extract name from the metadata sub-document for image.files.
+                sample_issues_by_collection[coll] = [
+                    {
+                        "collection": coll,
+                        "_id": str(doc.get("_id")),
+                        "name": doc.get(
+                            "metadata", {}
+                        ).get("name"),
+                        "ts_id": None,
+                        "bt_id": None,
+                    }
+                    for doc in docs
+                ]
+            else:
+                # For other collections, name is at the document root.
+                sample_issues_by_collection[coll] = [
+                    {
+                        "collection": coll,
+                        "_id": str(doc.get("_id")),
+                        "name": doc.get("name"),
+                        "ts_id": doc.get("ts_id"),
+                        "bt_id": doc.get("bt_id"),
+                    }
+                    for doc in docs
+                ]
             total_issues += count
 
     status = "OK" if total_issues == 0 else "ERRORS"
@@ -319,60 +1141,170 @@ def check_integrity_no_nameless_objects(ignore=None):
     }
 
 
-def check_integrity_trade_ids(collection: str = COLL_TRADES):
-    """Check all stored trades have non-empty, unique trade_id values.
+def check_integrity_unique_fields(
+        collection: str,
+        fields: list,
+        query: dict = None,
+        ):
+    """Check that specified fields have non-empty, unique values.
 
-    Iterates every trade record in the collection once and checks two
-    conditions:
-    - trade_id is neither None nor blank (missing/backfill gap)
-    - trade_id is unique across the collection (no duplicates)
+    Fetches documents from collection (optionally filtered by query)
+    and checks each named field for missing values and duplicates.
 
     Does not modify any data.
 
+    Args:
+        collection: Collection name to query.
+        fields: List of field name strings to check for uniqueness.
+        query: Optional MongoDB query dict to filter documents.
+            Defaults to None (all documents).
+
     Returns:
-        dict: Results with keys status, total_trades, missing_count,
-        missing_samples, duplicate_count, and duplicate_samples.
+        dict with keys:
+
+        - ``status``: "OK" or "ERRORS"
+        - ``total_docs``: total number of documents checked
+        - ``fields``: per-field results keyed by field name, each with:
+
+          - ``missing_count``: int
+          - ``missing_samples``: list of {"_id": ..., field: val} dicts
+          - ``duplicate_count``: int
+          - ``duplicate_samples``: list of {"value": ..., "count": int}
     """
-    all_docs = dhm.get_all_records_by_collection(collection=collection)
-    total_trades = len(all_docs)
-    missing = []
-    trade_id_counts = Counter()
+    if query is None:
+        all_docs = dhm.get_all_records_by_collection(
+            collection=collection,
+        )
+    else:
+        all_docs = dhm.run_query(query, collection=collection)
 
-    for doc in all_docs:
-        tid = doc.get("trade_id")
-        if tid is None or (
-            isinstance(tid, str) and tid.strip() == ""
-        ):
-            missing.append({
-                "_id": str(doc.get("_id")),
-                "ts_id": doc.get("ts_id"),
-                "open_dt": doc.get("open_dt"),
-                "trade_id": tid,
-            })
-        else:
-            trade_id_counts[tid] += 1
+    total_docs = len(all_docs)
+    field_results = {}
+    any_errors = False
 
-    duplicates = {
-        tid: count
-        for tid, count in trade_id_counts.items()
-        if count > 1
+    for field in fields:
+        missing = []
+        field_counts = Counter()
+
+        for doc in all_docs:
+            val = doc.get(field)
+            if val is None or (
+                isinstance(val, str) and not val.strip()
+            ):
+                missing.append({
+                    "_id": str(doc.get("_id")),
+                    field: val,
+                })
+            else:
+                field_counts[val] += 1
+
+        duplicates = {
+            val: count
+            for val, count in field_counts.items()
+            if count > 1
+        }
+
+        if missing or duplicates:
+            any_errors = True
+
+        field_results[field] = {
+            "missing_count": len(missing),
+            "missing_samples": missing[:10],
+            "duplicate_count": len(duplicates),
+            "duplicate_samples": [
+                {"value": val, "count": count}
+                for val, count in sorted(
+                    duplicates.items(),
+                    key=lambda x: x[1],
+                    reverse=True,
+                )[:10]
+            ],
+        }
+
+    return {
+        "status": "ERRORS" if any_errors else "OK",
+        "total_docs": total_docs,
+        "fields": field_results,
     }
 
-    status = "OK" if not missing and not duplicates else "ERRORS"
+
+def check_integrity_orphaned_images(reference_map: dict):
+    """Find stored images not referenced by any parent document.
+
+    Uses COLLECTIONS["images"] / GridFS internally.  The calling
+    code supplies the reference_map because dhtrader does not know
+    about AnalyzeBacktestResult or RefreshCycleResult collections.
+
+    Uses MongoDB distinct() on each field path so the query is
+    resolved from the multikey index on image_ids fields when those
+    indexes exist, avoiding full collection scans as data grows.
+
+    Args:
+        reference_map: Dict mapping collection names to lists of
+            dotted field paths that contain image_id references.
+            Example::
+
+                {
+                    "analyze_backtest_results": [
+                        "image_ids",
+                        "plans.image_ids",
+                    ],
+                }
+
+    Returns:
+        dict: Results with keys status, total_images,
+            orphaned_count, and orphaned_samples.
+    """
+    func = "check_integrity_orphaned_images"
+    log.info(f"{func}: starting orphaned image check")
+    time_start = time.perf_counter()
+
+    # Collect all stored image_ids from GridFS metadata.
+    bucket = COLLECTIONS["images"]
+    files_coll = dhm.db[f"{bucket}.files"]
+    all_image_docs = list(files_coll.find({}))
+    all_image_ids = {
+        doc.get("metadata", {}).get("image_id")
+        for doc in all_image_docs
+        if doc.get("metadata", {}).get("image_id") is not None
+    }
+    total_images = len(all_image_ids)
+
+    # Use distinct() per field path so MongoDB can resolve the query
+    # from a multikey index on image_ids fields rather than scanning
+    # every document.  distinct() on a dotted path into an array of
+    # subdocuments (e.g. "plans.image_ids") flattens and deduplicates
+    # automatically.
+    referenced_ids: set = set()
+    for coll, field_paths in reference_map.items():
+        for field_path in field_paths:
+            values = dhm.db[coll].distinct(field_path)
+            referenced_ids.update(
+                v for v in values if v is not None
+            )
+
+    # Any stored image_id not referenced by a parent is an orphan.
+    orphaned = sorted(all_image_ids - referenced_ids)
+    orphaned_count = len(orphaned)
+
+    if orphaned_count > 0:
+        log.error(
+            f"{func}: {orphaned_count} orphaned image(s) found "
+            f"out of {total_images} total"
+        )
+
+    elapsed = time.perf_counter() - time_start
+    log.info(
+        f"{func}: completed in {elapsed:.6f}s; "
+        f"total={total_images} orphaned={orphaned_count}"
+    )
+
+    status = "OK" if orphaned_count == 0 else "ERRORS"
     return {
         "status": status,
-        "total_trades": total_trades,
-        "missing_count": len(missing),
-        "missing_samples": missing[:10],
-        "duplicate_count": len(duplicates),
-        "duplicate_samples": [
-            {"trade_id": tid, "count": count}
-            for tid, count in sorted(
-                duplicates.items(),
-                key=lambda x: x[1],
-                reverse=True,
-            )[:10]
-        ],
+        "total_images": total_images,
+        "orphaned_count": orphaned_count,
+        "orphaned_samples": orphaned[:10],
     }
 
 
@@ -412,6 +1344,7 @@ def reconstruct_trade(t):
                    ts_id=t["ts_id"],
                    bt_id=t["bt_id"],
                    trade_id=t["trade_id"],
+                   uniq_id=t["uniq_id"],
                    tags=t["tags"],
                    )
     if close_dt is None:
@@ -423,7 +1356,7 @@ def reconstruct_trade(t):
     return result
 
 
-def get_all_trades(collection: str = COLL_TRADES,
+def get_all_trades(collection: str = COLLECTIONS["trades"],
                    limit=0,
                    show_progress: bool = False,
                    ):
@@ -445,7 +1378,7 @@ def get_all_trades(collection: str = COLL_TRADES,
 
 def get_trades_by_field(field: str,
                         value,
-                        collection: str = COLL_TRADES,
+                        collection: str = COLLECTIONS["trades"],
                         limit=0,
                         show_progress: bool = False,
                         ):
@@ -481,7 +1414,7 @@ def get_trades_by_field(field: str,
 
 def get_trades_by_field_in(field: str,
                            values: list,
-                           collection: str = COLL_TRADES,
+                           collection: str = COLLECTIONS["trades"],
                            limit=0,
                            show_progress: bool = False,
                            ):
@@ -506,7 +1439,7 @@ def get_trades_by_field_in(field: str,
 
 
 def store_trades(trades: list,
-                 collection: str = COLL_TRADES,
+                 collection: str = COLLECTIONS["trades"],
                  ):
     """Store one or more Trade() objects in central storage."""
     # Convert Trade objects to dictionaries for storage
@@ -516,7 +1449,7 @@ def store_trades(trades: list,
         if t.trade_id is None or str(t.trade_id).strip() == "":
             raise ValueError(
                 f"Cannot store Trade with empty trade_id {t.trade_id}. "
-                "Bind ts_id first."
+                "trade_id must be a non-empty string."
             )
         working_trades.append(t.to_clean_dict())
 
@@ -531,7 +1464,7 @@ def store_trades(trades: list,
 
 
 def review_trades(symbol: str = "ES",
-                  collection: str = COLL_TRADES,
+                  collection: str = COLLECTIONS["trades"],
                   bt_id: str = None,
                   ts_id: str = None,
                   include_epochs: bool = False,
@@ -838,7 +1771,7 @@ def review_trades(symbol: str = "ES",
 def delete_trades_by_field(symbol: str,
                            field: str,
                            value,
-                           collection: str = COLL_TRADES,
+                           collection: str = COLLECTIONS["trades"],
                            ):
     """Delete all trade records with 'field' matching 'value'.
 
@@ -858,7 +1791,7 @@ def delete_trades_by_field(symbol: str,
 
 
 def delete_trades(trades: list,
-                  collection: str = COLL_TRADES,
+                  collection: str = COLLECTIONS["trades"],
                   ):
     """Delete Trade objects from central storage by open_dt, ts_id, and symbol.
     """
@@ -899,7 +1832,7 @@ def reconstruct_tradeseries(ts):
                        )
 
 
-def get_all_tradeseries(collection: str = COLL_TRADESERIES,
+def get_all_tradeseries(collection: str = COLLECTIONS["tradeseries"],
                         limit=0,
                         show_progress: bool = False,
                         ):
@@ -921,8 +1854,8 @@ def get_all_tradeseries(collection: str = COLL_TRADESERIES,
 
 def get_tradeseries_by_field(field: str,
                              value,
-                             collection: str = COLL_TRADESERIES,
-                             collection_trades: str = COLL_TRADES,
+                             collection: str = COLLECTIONS["tradeseries"],
+                             collection_trades: str = COLLECTIONS["trades"],
                              limit=0,
                              include_trades: bool = True,
                              show_progress: bool = False,
@@ -964,7 +1897,7 @@ def get_tradeseries_by_field(field: str,
 
 
 def store_tradeseries(series: list,
-                      collection: str = COLL_TRADESERIES,
+                      collection: str = COLLECTIONS["tradeseries"],
                       include_trades: bool = False,
                       ):
     """Store a list of TradeSeries() objects in central storage.
@@ -1006,7 +1939,7 @@ def store_tradeseries(series: list,
 
 
 def review_tradeseries(symbol: str = "ES",
-                       collection: str = COLL_TRADESERIES,
+                       collection: str = COLLECTIONS["tradeseries"],
                        bt_id: str = None,
                        include_trades: bool = False,
                        pretty: bool = False,
@@ -1098,8 +2031,8 @@ def review_tradeseries(symbol: str = "ES",
 def delete_tradeseries_by_field(symbol: str,
                                 field: str,
                                 value,
-                                collection: str = COLL_TRADESERIES,
-                                coll_trades=COLL_TRADES,
+                                collection: str = COLLECTIONS["tradeseries"],
+                                coll_trades=COLLECTIONS["trades"],
                                 include_trades: bool = False,
                                 ):
     """Delete all tradeseries records with 'field' matching 'value'.
@@ -1124,7 +2057,7 @@ def delete_tradeseries_by_field(symbol: str,
 
 
 def delete_tradeseries(tradeseries: list,
-                       collection: str = COLL_TRADESERIES,
+                       collection: str = COLLECTIONS["tradeseries"],
                        ):
     """Delete TradeSeries objects from central storage using ts_id.
     """
@@ -1141,7 +2074,7 @@ def delete_tradeseries(tradeseries: list,
 
 ##############################################################################
 # Backtests
-def get_all_backtests(collection: str = COLL_BACKTESTS,
+def get_all_backtests(collection: str = COLLECTIONS["backtests"],
                       limit=0,
                       show_progress: bool = False,
                       ):
@@ -1158,7 +2091,7 @@ def get_all_backtests(collection: str = COLL_BACKTESTS,
 
 def get_backtests_by_field(field: str,
                            value,
-                           collection: str = COLL_BACKTESTS,
+                           collection: str = COLLECTIONS["backtests"],
                            limit=0,
                            show_progress: bool = False,
                            ):
@@ -1179,7 +2112,7 @@ def get_backtests_by_field(field: str,
 
 
 def store_backtests(backtests: list,
-                    collection: str = COLL_BACKTESTS,
+                    collection: str = COLLECTIONS["backtests"],
                     include_tradeseries: bool = False,
                     include_trades: bool = False,
                     ):
@@ -1238,7 +2171,7 @@ def store_backtests(backtests: list,
 
 
 def review_backtests(symbol: str = "ES",
-                     collection: str = COLL_BACKTESTS,
+                     collection: str = COLLECTIONS["backtests"],
                      include_tradeseries: bool = False,
                      include_trades: bool = False,
                      pretty: bool = False,
@@ -1265,9 +2198,10 @@ def review_backtests(symbol: str = "ES",
 def delete_backtests_by_field(symbol: str,
                               field: str,
                               value,
-                              collection: str = COLL_BACKTESTS,
-                              coll_tradeseries: str = COLL_TRADESERIES,
-                              coll_trades: str = COLL_TRADES,
+                              collection: str = COLLECTIONS["backtests"],
+                              coll_tradeseries: str = (
+                                  COLLECTIONS["tradeseries"]),
+                              coll_trades: str = COLLECTIONS["trades"],
                               include_tradeseries: bool = False,
                               include_trades: bool = False,
                               ):
@@ -1296,7 +2230,7 @@ def delete_backtests_by_field(symbol: str,
 
 
 def delete_backtests(backtests: list,
-                     collection: str = COLL_BACKTESTS,
+                     collection: str = COLLECTIONS["backtests"],
                      ):
     """Delete Backtest objects from central storage using bt_id.
     """
@@ -1319,11 +2253,12 @@ _TRADEPLAN_CTOR_KEYS = frozenset({
     "profit_perc", "start_dt", "end_dt", "drawdown_open",
     "drawdown_limit", "notes", "thresholds", "tradeseries",
     "how_gl_heatmap_viz", "weekly_price_overlay_visuals",
+    "created_dt", "created_epoch", "uniq_id",
 })
 
 
 def reconstruct_tradeplan(tp,
-                          collection_trades: str = COLL_TRADES):
+                          collection_trades: str = COLLECTIONS["trades"]):
     """Take a dictionary and build a TradePlan object from it.
 
     Reconstructs using constructor fields first, then reattaches any
@@ -1359,20 +2294,23 @@ def reconstruct_tradeplan(tp,
         tp_id=tp.get("tp_id"),
         name=tp.get("name"),
         id_slug=tp.get("id_slug"),
-        tags=tp.get("tags", []),
+        tags=tp.get("tags"),
         cfg_label=tp.get("cfg_label"),
         profit_perc=tp.get("profit_perc", 100),
         start_dt=tp.get("start_dt"),
         end_dt=tp.get("end_dt"),
         drawdown_open=tp.get("drawdown_open"),
         drawdown_limit=tp.get("drawdown_limit"),
-        notes=tp.get("notes", []),
-        thresholds=tp.get("thresholds", {}),
+        notes=tp.get("notes"),
+        thresholds=tp.get("thresholds"),
         tradeseries=ts,
         how_gl_heatmap_viz=tp.get("how_gl_heatmap_viz"),
         weekly_price_overlay_visuals=tp.get(
             "weekly_price_overlay_visuals"
         ),
+        created_dt=tp.get("created_dt"),
+        created_epoch=tp.get("created_epoch"),
+        uniq_id=tp.get("uniq_id"),
     )
 
     for k, v in tp.items():
@@ -1382,8 +2320,8 @@ def reconstruct_tradeplan(tp,
     return obj
 
 
-def get_all_tradeplans(collection: str = COLL_TRADEPLANS,
-                       collection_trades: str = COLL_TRADES,
+def get_all_tradeplans(collection: str = COLLECTIONS["tradeplans"],
+                       collection_trades: str = COLLECTIONS["trades"],
                        limit=0,
                        as_dict: bool = False,
                        show_progress: bool = False,
@@ -1412,8 +2350,8 @@ def get_all_tradeplans(collection: str = COLL_TRADEPLANS,
 
 def get_tradeplans_by_field(field: str,
                             value,
-                            collection: str = COLL_TRADEPLANS,
-                            collection_trades: str = COLL_TRADES,
+                            collection: str = COLLECTIONS["tradeplans"],
+                            collection_trades: str = COLLECTIONS["trades"],
                             as_dict: bool = False,
                             limit=0,
                             show_progress: bool = False,
@@ -1444,7 +2382,7 @@ def get_tradeplans_by_field(field: str,
 
 
 def store_tradeplans(tradeplans: list,
-                     collection: str = COLL_TRADEPLANS,
+                     collection: str = COLLECTIONS["tradeplans"],
                      ):
     """Store a list of TradePlan objects in central storage."""
     for tp in tradeplans:
@@ -1478,7 +2416,7 @@ def store_tradeplans(tradeplans: list,
 
 def delete_tradeplans_by_field(field: str,
                                value,
-                               collection: str = COLL_TRADEPLANS,
+                               collection: str = COLLECTIONS["tradeplans"],
                                ):
     """Delete all tradeplan records with 'field' matching 'value'."""
     result = dhm.delete_tradeplans_by_field(field=field,
@@ -1490,7 +2428,7 @@ def delete_tradeplans_by_field(field: str,
 
 
 def delete_tradeplans(tradeplans: list,
-                      collection: str = COLL_TRADEPLANS,
+                      collection: str = COLLECTIONS["tradeplans"],
                       ):
     """Delete TradePlan objects from central storage using tp_id."""
     tp_ids = [tp.tp_id for tp in tradeplans]
@@ -1503,14 +2441,14 @@ def delete_tradeplans(tradeplans: list,
 
 ##############################################################################
 # Indicators
-def list_indicators(meta_collection: str = COLL_IND_META):
+def list_indicators(meta_collection: str = COLLECTIONS["ind_meta"]):
     """Return a simple list of indicators in storage."""
     result = dhm.list_indicators(meta_collection=meta_collection)
 
     return result
 
 
-def list_indicators_names(meta_collection: str = COLL_IND_META):
+def list_indicators_names(meta_collection: str = COLLECTIONS["ind_meta"]):
     """Return a simple list of indicators (ind_id only) in storage."""
     indicators = dhm.list_indicators(meta_collection=meta_collection)
     result = []
@@ -1520,8 +2458,8 @@ def list_indicators_names(meta_collection: str = COLL_IND_META):
     return result
 
 
-def review_indicators(meta_collection: str = COLL_IND_META,
-                      dp_collection: str = COLL_IND_DPS):
+def review_indicators(meta_collection: str = COLLECTIONS["ind_meta"],
+                      dp_collection: str = COLLECTIONS["ind_dps"]):
     """Return a more detailed overview of indicators in storage."""
     result = dhm.review_indicators(meta_collection=meta_collection,
                                    dp_collection=dp_collection,
@@ -1531,7 +2469,7 @@ def review_indicators(meta_collection: str = COLL_IND_META,
 
 
 def get_indicator(ind_id: str,
-                  meta_collection: str = COLL_IND_META,
+                  meta_collection: str = COLLECTIONS["ind_meta"],
                   autoload_chart: bool = False,
                   autoload_datapoints: bool = False,
                   ):
@@ -1585,7 +2523,7 @@ def get_indicator(ind_id: str,
 
 
 def get_indicator_datapoints(ind_id: str,
-                             dp_collection: str = COLL_IND_DPS,
+                             dp_collection: str = COLLECTIONS["ind_dps"],
                              earliest_dt: str = None,
                              latest_dt: str = None,
                              show_progress: bool = False,
@@ -1628,7 +2566,7 @@ def get_indicator_datapoints(ind_id: str,
 
 
 def store_indicator_datapoints(datapoints: list,
-                               collection: str = COLL_IND_DPS,
+                               collection: str = COLLECTIONS["ind_dps"],
                                skip_dupes: bool = True,
                                ):
     """Store one or more IndicatorDatapoint() objects in central storage."""
@@ -1678,8 +2616,8 @@ def store_indicator_datapoints(datapoints: list,
 
 
 def store_indicator(indicator,
-                    meta_collection: str = COLL_IND_META,
-                    dp_collection: str = COLL_IND_DPS,
+                    meta_collection: str = COLLECTIONS["ind_meta"],
+                    dp_collection: str = COLLECTIONS["ind_dps"],
                     store_datapoints: bool = True,
                     fast_dps_check: bool = False,
                     show_progress: bool = False,
@@ -1806,8 +2744,8 @@ def store_indicator(indicator,
 
 
 def delete_indicator(ind_id: str,
-                     meta_collection: str = COLL_IND_META,
-                     dp_collection: str = COLL_IND_DPS,
+                     meta_collection: str = COLLECTIONS["ind_meta"],
+                     dp_collection: str = COLLECTIONS["ind_dps"],
                      ):
     """Remove an indicator and all its datapoints from storage by ind_id.
     """
@@ -1818,7 +2756,7 @@ def delete_indicator(ind_id: str,
 
 
 def get_indicators_by_name(name: str,
-                           meta_collection: str = COLL_IND_META,
+                           meta_collection: str = COLLECTIONS["ind_meta"],
                            autoload_chart: bool = False,
                            autoload_datapoints: bool = False,
                            ):
@@ -1860,8 +2798,8 @@ def get_indicators_by_name(name: str,
 
 
 def delete_indicators_by_name(name: str,
-                              meta_collection: str = COLL_IND_META,
-                              dp_collection: str = COLL_IND_DPS,
+                              meta_collection: str = COLLECTIONS["ind_meta"],
+                              dp_collection: str = COLLECTIONS["ind_dps"],
                               ):
     """Delete all indicators and their datapoints with the given name."""
     indicators = get_indicators_by_name(name=name,

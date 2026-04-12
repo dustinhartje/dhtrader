@@ -99,13 +99,27 @@ def test_Candle_create_and_verify_common_methods():
     # __ne__
     assert not (candle != other)
     assert candle != diff
-    # __str__
-    assert isinstance(str(candle), str)
-    assert len(str(candle)) > 0
-    # __repr__
-    assert isinstance(repr(candle), str)
-    assert len(repr(candle)) > 0
-    assert str(candle) == repr(candle)
+    # __str__ and __repr__ — exact format
+    sym_repr = str(candle.c_symbol)
+    expected_candle_str = (
+        "{'c_datetime': '2099-01-02 12:00:00', 'c_timeframe': '1m', "
+        "'c_open': 5000.0, 'c_high': 5007.75, 'c_low': 4995.5, "
+        "'c_close': 5002.0, 'c_volume': 1501, "
+        f"'c_symbol': {sym_repr}, "
+        "'c_tags': [], "
+        f"'c_epoch': {candle.c_epoch}, "
+        "'c_date': '2099-01-02', 'c_time': '12:00:00', "
+        "'name': 'nameless', "
+        "'c_end_datetime': '2099-01-02 12:01:00', "
+        "'c_size': 12.25, 'c_body_size': 2.0, "
+        "'c_upper_wick_size': 5.75, 'c_lower_wick_size': 4.5, "
+        "'c_body_perc': 0.16326530612244897, "
+        "'c_upper_wick_perc': 0.46938775510204084, "
+        "'c_lower_wick_perc': 0.3673469387755102, "
+        "'c_direction': 'bullish'}"
+    )
+    assert str(candle) == expected_candle_str
+    assert repr(candle) == expected_candle_str
     # to_clean_dict
     d = candle.to_clean_dict()
     assert isinstance(d, dict)
@@ -215,3 +229,33 @@ def test_Candle_contains_datetime(candle):
     assert not candle.contains_datetime("2099-01-02 12:01:00")
     # Before candle start is False
     assert not candle.contains_datetime("2099-01-02 11:59:00")
+
+
+def test_Candle_eq_covers_all_attributes(assert_eq_fields_cover_instance):
+    """_EQ_FIELDS | _EQ_EXCLUDE must exactly match instance __dict__."""
+    c = Candle(
+        c_datetime="2025-01-01 09:30:00",
+        c_timeframe="15m",
+        c_open=5000.0,
+        c_high=5010.0,
+        c_low=4990.0,
+        c_close=5005.0,
+        c_volume=100,
+        c_symbol="ES",
+    )
+    assert_eq_fields_cover_instance(c)
+
+
+def test_Candle_eq_field_sensitivity(run_eq_field_sensitivity):
+    """Confirm _EQ_FIELDS drives inequality and _EQ_EXCLUDE does not."""
+    obj = Candle(
+        c_datetime="2025-01-01 09:30:00",
+        c_timeframe="15m",
+        c_open=5000.0,
+        c_high=5010.0,
+        c_low=4990.0,
+        c_close=5005.0,
+        c_volume=100,
+        c_symbol="ES",
+    )
+    run_eq_field_sensitivity(obj)

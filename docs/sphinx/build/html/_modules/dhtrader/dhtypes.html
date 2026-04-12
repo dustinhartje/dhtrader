@@ -71,10 +71,12 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">math</span><span class="w"> </span><span class="kn">import</span> <span class="n">ceil</span><span class="p">,</span> <span class="n">floor</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.dhcommon</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-    <span class="n">dt_as_dt</span><span class="p">,</span> <span class="n">dt_as_str</span><span class="p">,</span> <span class="n">dt_as_time</span><span class="p">,</span> <span class="n">dt_to_epoch</span><span class="p">,</span> <span class="n">timeframe_delta</span><span class="p">,</span>
+    <span class="n">dt_as_dt</span><span class="p">,</span> <span class="n">dt_as_str</span><span class="p">,</span> <span class="n">dt_as_time</span><span class="p">,</span> <span class="n">dt_to_epoch</span><span class="p">,</span> <span class="n">dt_from_epoch</span><span class="p">,</span>
+    <span class="n">timeframe_delta</span><span class="p">,</span>
     <span class="n">valid_timeframe</span><span class="p">,</span> <span class="n">valid_trading_hours</span><span class="p">,</span> <span class="n">log_say</span><span class="p">,</span> <span class="n">this_candle_start</span><span class="p">,</span>
     <span class="n">check_tf_th_compatibility</span><span class="p">,</span> <span class="n">start_of_week_date</span><span class="p">,</span> <span class="n">dict_of_weeks</span><span class="p">,</span> <span class="n">bot</span><span class="p">,</span>
-    <span class="n">ProgBar</span><span class="p">,</span> <span class="n">DEFAULT_OBJ_NAME</span><span class="p">,</span> <span class="n">MARKET_ERAS</span><span class="p">)</span>
+    <span class="n">ProgBar</span><span class="p">,</span> <span class="n">DEFAULT_OBJ_NAME</span><span class="p">,</span> <span class="n">MARKET_ERAS</span><span class="p">,</span>
+    <span class="n">normalize_list_of_strings</span><span class="p">,</span> <span class="n">new_uuid</span><span class="p">)</span>
 <span class="n">CANDLE_TIMEFRAMES</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;1m&#39;</span><span class="p">,</span> <span class="s1">&#39;5m&#39;</span><span class="p">,</span> <span class="s1">&#39;15m&#39;</span><span class="p">,</span> <span class="s1">&#39;r1h&#39;</span><span class="p">,</span> <span class="s1">&#39;e1h&#39;</span><span class="p">,</span> <span class="s1">&#39;1d&#39;</span><span class="p">,</span> <span class="s1">&#39;1w&#39;</span><span class="p">]</span>
 <span class="n">BEGINNING_OF_TIME</span> <span class="o">=</span> <span class="s2">&quot;2008-01-01 00:00:00&quot;</span>
 
@@ -294,6 +296,18 @@
 <span class="sd">    leverage_ratio, and tick_size.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
+    <span class="n">_EQ_FIELDS</span><span class="p">:</span> <span class="nb">frozenset</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span>
+        <span class="s2">&quot;ticker&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="s2">&quot;leverage_ratio&quot;</span><span class="p">,</span> <span class="s2">&quot;tick_size&quot;</span><span class="p">,</span>
+    <span class="p">})</span>
+    <span class="n">_EQ_EXCLUDE</span><span class="p">:</span> <span class="nb">frozenset</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span>
+        <span class="s2">&quot;_closed_hours_cache&quot;</span><span class="p">,</span>  <span class="c1"># runtime cache, not identity</span>
+        <span class="c1"># Timing data derived from ticker via set_times()</span>
+        <span class="s2">&quot;eth_open_time&quot;</span><span class="p">,</span> <span class="s2">&quot;eth_close_time&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;rth_open_time&quot;</span><span class="p">,</span> <span class="s2">&quot;rth_close_time&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;eth_week_open&quot;</span><span class="p">,</span> <span class="s2">&quot;eth_week_close&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;rth_week_open&quot;</span><span class="p">,</span> <span class="s2">&quot;rth_week_close&quot;</span><span class="p">,</span>
+    <span class="p">})</span>
+
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">ticker</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                  <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -309,11 +323,10 @@
 
 <div class="viewcode-block" id="Symbol.__eq__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Symbol.__eq__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return True if this symbol equals the other symbol.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ticker</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">ticker</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">name</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">leverage_ratio</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">leverage_ratio</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">tick_size</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">tick_size</span>
-                <span class="p">)</span></div>
+        <span class="k">return</span> <span class="nb">all</span><span class="p">(</span>
+            <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="o">==</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_EQ_FIELDS</span>
+        <span class="p">)</span></div>
 
 <div class="viewcode-block" id="Symbol.__ne__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Symbol.__ne__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__ne__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return True if this symbol does not equal the other symbol.&quot;&quot;&quot;</span>
@@ -582,8 +595,8 @@
             <span class="k">if</span> <span class="n">events</span><span class="p">:</span>
                 <span class="n">start_epoch</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">dt_to_epoch</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">start_dt</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">events</span><span class="p">)</span>
                 <span class="n">end_epoch</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">dt_to_epoch</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">end_dt</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">events</span><span class="p">)</span>
-                <span class="n">start_bound</span> <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">fromtimestamp</span><span class="p">(</span><span class="n">start_epoch</span><span class="p">)</span>
-                <span class="n">end_bound</span> <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">fromtimestamp</span><span class="p">(</span><span class="n">end_epoch</span><span class="p">)</span>
+                <span class="n">start_bound</span> <span class="o">=</span> <span class="n">dt_from_epoch</span><span class="p">(</span><span class="n">start_epoch</span><span class="p">)</span>
+                <span class="n">end_bound</span> <span class="o">=</span> <span class="n">dt_from_epoch</span><span class="p">(</span><span class="n">end_epoch</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">now</span> <span class="o">=</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">())</span>
                 <span class="n">start_bound</span> <span class="o">=</span> <span class="n">now</span>
@@ -1019,6 +1032,23 @@
 <span class="sd">    on creation.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
+    <span class="n">_EQ_FIELDS</span><span class="p">:</span> <span class="nb">frozenset</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span>
+        <span class="s2">&quot;c_datetime&quot;</span><span class="p">,</span> <span class="s2">&quot;c_timeframe&quot;</span><span class="p">,</span> <span class="s2">&quot;c_open&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;c_high&quot;</span><span class="p">,</span> <span class="s2">&quot;c_low&quot;</span><span class="p">,</span> <span class="s2">&quot;c_close&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;c_volume&quot;</span><span class="p">,</span> <span class="s2">&quot;c_symbol&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;c_tags&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">,</span>
+        <span class="c1"># Derived from c_datetime</span>
+        <span class="s2">&quot;c_epoch&quot;</span><span class="p">,</span> <span class="s2">&quot;c_date&quot;</span><span class="p">,</span> <span class="s2">&quot;c_time&quot;</span><span class="p">,</span>
+        <span class="c1"># Derived from c_datetime + c_timeframe</span>
+        <span class="s2">&quot;c_end_datetime&quot;</span><span class="p">,</span>
+        <span class="c1"># Computed from OHLC values</span>
+        <span class="s2">&quot;c_size&quot;</span><span class="p">,</span> <span class="s2">&quot;c_body_size&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;c_upper_wick_size&quot;</span><span class="p">,</span> <span class="s2">&quot;c_lower_wick_size&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;c_body_perc&quot;</span><span class="p">,</span> <span class="s2">&quot;c_upper_wick_perc&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;c_lower_wick_perc&quot;</span><span class="p">,</span> <span class="s2">&quot;c_direction&quot;</span><span class="p">,</span>
+    <span class="p">})</span>
+    <span class="n">_EQ_EXCLUDE</span><span class="p">:</span> <span class="nb">frozenset</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({})</span>
+
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">c_datetime</span><span class="p">,</span>
                  <span class="n">c_timeframe</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -1050,9 +1080,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">c_symbol</span> <span class="o">=</span> <span class="n">c_symbol</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">c_symbol</span> <span class="o">=</span> <span class="n">get_symbol_by_ticker</span><span class="p">(</span><span class="n">ticker</span><span class="o">=</span><span class="n">c_symbol</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">c_tags</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">c_tags</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">c_tags</span> <span class="o">=</span> <span class="n">c_tags</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">c_tags</span> <span class="o">=</span> <span class="n">normalize_list_of_strings</span><span class="p">(</span><span class="n">c_tags</span><span class="p">,</span> <span class="s2">&quot;Candle.c_tags&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">c_epoch</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">c_epoch</span> <span class="o">=</span> <span class="n">dt_to_epoch</span><span class="p">(</span><span class="n">c_datetime_dt</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">c_epoch</span> <span class="o">=</span> <span class="n">c_epoch</span>
@@ -1133,15 +1161,10 @@
 
 <div class="viewcode-block" id="Candle.__eq__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Candle.__eq__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return True if this candle equals the other candle.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">c_datetime</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">c_datetime</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_timeframe</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">c_timeframe</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_open</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">c_open</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_high</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">c_high</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_low</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">c_low</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_close</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">c_close</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_volume</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">c_volume</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_symbol</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">c_symbol</span>
-                <span class="p">)</span></div>
+        <span class="k">return</span> <span class="nb">all</span><span class="p">(</span>
+            <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="o">==</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_EQ_FIELDS</span>
+        <span class="p">)</span></div>
 
 <div class="viewcode-block" id="Candle.__ne__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Candle.__ne__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__ne__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return True if this candle does not equal the other candle.&quot;&quot;&quot;</span>
@@ -1163,6 +1186,15 @@
 
 <span class="sd">    Supports both regular and extended trading hours.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_EQ_FIELDS</span><span class="p">:</span> <span class="nb">frozenset</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span>
+        <span class="s2">&quot;c_timeframe&quot;</span><span class="p">,</span> <span class="s2">&quot;c_symbol&quot;</span><span class="p">,</span> <span class="s2">&quot;c_start&quot;</span><span class="p">,</span> <span class="s2">&quot;c_end&quot;</span><span class="p">,</span> <span class="s2">&quot;c_candles&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;c_trading_hours&quot;</span><span class="p">,</span> <span class="s2">&quot;candles_count&quot;</span><span class="p">,</span> <span class="s2">&quot;earliest_candle&quot;</span><span class="p">,</span> <span class="s2">&quot;latest_candle&quot;</span><span class="p">,</span>
+    <span class="p">})</span>
+    <span class="n">_EQ_EXCLUDE</span><span class="p">:</span> <span class="nb">frozenset</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span>
+        <span class="c1"># Config flags, not chart data identity</span>
+        <span class="s2">&quot;autoload&quot;</span><span class="p">,</span> <span class="s2">&quot;show_progress&quot;</span><span class="p">,</span>
+    <span class="p">})</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">c_timeframe</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -1197,12 +1229,10 @@
 
 <div class="viewcode-block" id="Chart.__eq__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Chart.__eq__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return True if this Chart equals the other Chart.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">c_timeframe</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">c_timeframe</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_symbol</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">c_symbol</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_start</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">c_start</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_end</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">c_end</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_candles</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">c_candles</span>
-                <span class="p">)</span></div>
+        <span class="k">return</span> <span class="nb">all</span><span class="p">(</span>
+            <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="o">==</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_EQ_FIELDS</span>
+        <span class="p">)</span></div>
 
 <div class="viewcode-block" id="Chart.__ne__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Chart.__ne__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__ne__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return True if this Chart does not equal the other Chart.&quot;&quot;&quot;</span>
@@ -1387,9 +1417,7 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">symbol</span> <span class="o">=</span> <span class="n">get_symbol_by_ticker</span><span class="p">(</span><span class="n">ticker</span><span class="o">=</span><span class="n">symbol</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">category</span> <span class="o">=</span> <span class="n">category</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">tags</span> <span class="o">=</span> <span class="n">tags</span>
-        <span class="k">if</span> <span class="n">tags</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">tags</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tags</span> <span class="o">=</span> <span class="n">normalize_list_of_strings</span><span class="p">(</span><span class="n">tags</span><span class="p">,</span> <span class="s2">&quot;Event.tags&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">notes</span> <span class="o">=</span> <span class="n">notes</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">start_epoch</span> <span class="o">=</span> <span class="n">dt_to_epoch</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_dt</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">end_epoch</span> <span class="o">=</span> <span class="n">dt_to_epoch</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">end_dt</span><span class="p">)</span>
@@ -1652,6 +1680,11 @@
 <span class="sd">    if I find more uses for time series beyond this.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
+    <span class="n">_EQ_FIELDS</span><span class="p">:</span> <span class="nb">frozenset</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span>
+        <span class="s2">&quot;dt&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">,</span> <span class="s2">&quot;ind_id&quot;</span><span class="p">,</span> <span class="s2">&quot;epoch&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span>
+    <span class="p">})</span>
+    <span class="n">_EQ_EXCLUDE</span><span class="p">:</span> <span class="nb">frozenset</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({})</span>
+
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">dt</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                  <span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
@@ -1708,10 +1741,10 @@
         <span class="c1"># For example it gets an Exception when comparing to an empty list</span>
         <span class="c1"># which is returned from storage when there is no matching datapoint.</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dt</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">dt</span> <span class="ow">and</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">value</span> <span class="ow">and</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">ind_id</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">ind_id</span> <span class="ow">and</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">epoch</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">epoch</span><span class="p">)</span>
+            <span class="k">return</span> <span class="nb">all</span><span class="p">(</span>
+                <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="o">==</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_EQ_FIELDS</span>
+            <span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">False</span></div>
 
@@ -1728,6 +1761,19 @@
 <span class="sd">    directly; use its subclasses which provide indicator type-specific</span>
 <span class="sd">    logic.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_EQ_FIELDS</span><span class="p">:</span> <span class="nb">frozenset</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span>
+        <span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">,</span> <span class="s2">&quot;timeframe&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;trading_hours&quot;</span><span class="p">,</span> <span class="s2">&quot;symbol&quot;</span><span class="p">,</span> <span class="s2">&quot;calc_version&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;calc_details&quot;</span><span class="p">,</span> <span class="s2">&quot;start_dt&quot;</span><span class="p">,</span> <span class="s2">&quot;end_dt&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;ind_id&quot;</span><span class="p">,</span> <span class="s2">&quot;candle_chart&quot;</span><span class="p">,</span> <span class="s2">&quot;datapoints&quot;</span><span class="p">,</span>
+        <span class="c1"># Subclass-specific fields; compared via sub_eq()</span>
+        <span class="s2">&quot;parameters&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;class_name&quot;</span><span class="p">,</span>   <span class="c1"># type tag, not business identity</span>
+    <span class="p">})</span>
+    <span class="n">_EQ_EXCLUDE</span><span class="p">:</span> <span class="nb">frozenset</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span>
+        <span class="s2">&quot;autoload_chart&quot;</span><span class="p">,</span>  <span class="c1"># config flag</span>
+    <span class="p">})</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -1782,20 +1828,13 @@
 
 <div class="viewcode-block" id="Indicator.__eq__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Indicator.__eq__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return True if all indicator attributes and datapoints match.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">name</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">description</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">timeframe</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">timeframe</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">trading_hours</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">trading_hours</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">symbol</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">symbol</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_version</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">calc_version</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_details</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">calc_details</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_dt</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">start_dt</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_dt</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">end_dt</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">ind_id</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">ind_id</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">candle_chart</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">candle_chart</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">datapoints</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">sub_eq</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
-                <span class="p">)</span></div>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="nb">all</span><span class="p">(</span>
+                <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="o">==</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_EQ_FIELDS</span>
+            <span class="p">)</span>
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">sub_eq</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+        <span class="p">)</span></div>
 
 <div class="viewcode-block" id="Indicator.__ne__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Indicator.__ne__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__ne__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return True if any indicator attribute or datapoint differs.&quot;&quot;&quot;</span>
@@ -2282,7 +2321,39 @@
 <span class="sd">        version (str): Version of trade (for future use)</span>
 <span class="sd">        ts_id (str): unique id of associated TradeSeries this was created by</span>
 <span class="sd">        bt_id (str): unique id of associated Backtest this was created by</span>
+<span class="sd">        trade_id (str): Stable unique ID, uuid (no hyphens), auto-generated</span>
+<span class="sd">            at construction.  A stored value may be passed to preserve it.</span>
+<span class="sd">        trade_id_short (str): Last 8 hex chars of trade_id; use in logs.</span>
+<span class="sd">        created_epoch (int): Unix timestamp derived from created_dt.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_EQ_FIELDS</span><span class="p">:</span> <span class="nb">frozenset</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span>
+        <span class="s2">&quot;open_dt&quot;</span><span class="p">,</span> <span class="s2">&quot;timeframe&quot;</span><span class="p">,</span> <span class="s2">&quot;trading_hours&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;direction&quot;</span><span class="p">,</span> <span class="s2">&quot;entry_price&quot;</span><span class="p">,</span> <span class="s2">&quot;high_price&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;low_price&quot;</span><span class="p">,</span> <span class="s2">&quot;stop_target&quot;</span><span class="p">,</span> <span class="s2">&quot;prof_target&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;close_dt&quot;</span><span class="p">,</span> <span class="s2">&quot;created_dt&quot;</span><span class="p">,</span> <span class="s2">&quot;open_epoch&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;exit_price&quot;</span><span class="p">,</span> <span class="s2">&quot;stop_ticks&quot;</span><span class="p">,</span> <span class="s2">&quot;prof_ticks&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;offset_ticks&quot;</span><span class="p">,</span> <span class="s2">&quot;symbol&quot;</span><span class="p">,</span> <span class="s2">&quot;is_open&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;profitable&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="s2">&quot;version&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;ts_id&quot;</span><span class="p">,</span> <span class="s2">&quot;bt_id&quot;</span><span class="p">,</span> <span class="s2">&quot;trade_id&quot;</span><span class="p">,</span>
+        <span class="c1"># Derived from open_dt via _sync_trade_identity()</span>
+        <span class="s2">&quot;open_date&quot;</span><span class="p">,</span> <span class="s2">&quot;open_time&quot;</span><span class="p">,</span>
+        <span class="c1"># Derived from close_dt</span>
+        <span class="s2">&quot;close_date&quot;</span><span class="p">,</span> <span class="s2">&quot;close_time&quot;</span><span class="p">,</span>
+        <span class="c1"># Derived from uniq_id</span>
+        <span class="s2">&quot;trade_id_short&quot;</span><span class="p">,</span>
+        <span class="c1"># trade_id and uniq_id are always equal; uniq_id is redundant</span>
+        <span class="s2">&quot;uniq_id&quot;</span><span class="p">,</span>
+        <span class="c1"># Derived from created_dt</span>
+        <span class="s2">&quot;created_epoch&quot;</span><span class="p">,</span>
+        <span class="c1"># Derived from direction</span>
+        <span class="s2">&quot;flipper&quot;</span><span class="p">,</span>
+        <span class="c1"># Derived from timeframe + open_dt</span>
+        <span class="s2">&quot;first_min_open&quot;</span><span class="p">,</span>
+        <span class="c1"># Metadata; not currently part of equality</span>
+        <span class="s2">&quot;tags&quot;</span><span class="p">,</span>
+    <span class="p">})</span>
+    <span class="n">_EQ_EXCLUDE</span><span class="p">:</span> <span class="nb">frozenset</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({})</span>
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_normalize_ts_id</span><span class="p">(</span><span class="n">ts_id</span><span class="p">):</span>
@@ -2296,12 +2367,6 @@
             <span class="k">return</span> <span class="kc">None</span>
         <span class="k">return</span> <span class="n">normalized</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_expected_trade_id</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return expected trade_id or None for unbound trades.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ts_id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">return</span> <span class="kc">None</span>
-        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">ts_id</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">open_epoch</span><span class="si">}</span><span class="s2">&quot;</span>
-
     <span class="k">def</span><span class="w"> </span><span class="nf">_sync_trade_identity</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Sync identity-derived fields from open_dt and ts_id.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="s2">&quot;open_dt&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">:</span>
@@ -2311,7 +2376,6 @@
         <span class="n">open_as_dt</span> <span class="o">=</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">open_dt</span><span class="p">)</span>
         <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;open_date&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">open_as_dt</span><span class="o">.</span><span class="n">date</span><span class="p">()))</span>
         <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;open_time&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">open_as_dt</span><span class="o">.</span><span class="n">time</span><span class="p">()))</span>
-        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;trade_id&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_expected_trade_id</span><span class="p">())</span>
 
 <div class="viewcode-block" id="Trade.__setattr__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Trade.__setattr__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Intercept identity field changes to keep derived values in sync.&quot;&quot;&quot;</span>
@@ -2349,6 +2413,7 @@
                  <span class="n">version</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;1.0.0&quot;</span><span class="p">,</span>
                  <span class="n">ts_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">bt_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">uniq_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">trade_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">tags</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="p">):</span>
@@ -2361,6 +2426,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">created_dt</span> <span class="o">=</span> <span class="n">dt_as_str</span><span class="p">(</span><span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">())</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">created_dt</span> <span class="o">=</span> <span class="n">created_dt</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">created_epoch</span> <span class="o">=</span> <span class="n">dt_to_epoch</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">created_dt</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">direction</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;long&#39;</span><span class="p">,</span> <span class="s1">&#39;short&#39;</span><span class="p">]:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">direction</span> <span class="o">=</span> <span class="n">direction</span>
         <span class="k">else</span><span class="p">:</span>
@@ -2396,10 +2462,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">=</span> <span class="n">version</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ts_id</span> <span class="o">=</span> <span class="n">ts_id</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">bt_id</span> <span class="o">=</span> <span class="n">bt_id</span>
-        <span class="k">if</span> <span class="n">tags</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">tags</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">tags</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tags</span> <span class="o">=</span> <span class="n">normalize_list_of_strings</span><span class="p">(</span><span class="n">tags</span><span class="p">,</span> <span class="s2">&quot;Trade.tags&quot;</span><span class="p">)</span>
 
         <span class="c1"># Calculated attributes</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">direction</span> <span class="o">==</span> <span class="s2">&quot;long&quot;</span><span class="p">:</span>
@@ -2428,29 +2491,21 @@
                     <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">open_dt</span><span class="si">}</span><span class="s2">&quot;</span>
                 <span class="p">)</span>
 
-        <span class="c1"># Validate trade_id if explicitly provided. _sync_trade_identity()</span>
-        <span class="c1"># already computed and stored the correct value. None/blank defers</span>
-        <span class="c1"># to that computed value. A non-blank value must match exactly;</span>
-        <span class="c1"># trade_id is derived from ts_id + open_epoch so there is no valid</span>
-        <span class="c1"># reason for the caller to supply a different value.</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">trade_id</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="kc">None</span><span class="p">))):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">&quot;trade_id must be a string or None when provided, we got &quot;</span>
-                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">trade_id</span><span class="p">)</span><span class="si">}</span><span class="s2"> which is a </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">trade_id</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
-            <span class="p">)</span>
-        <span class="n">provided_trade_id</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">trade_id</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">trade_id</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="c1"># Assign a stable unique uniq_id.  uniq_id takes precedence;</span>
+        <span class="c1"># trade_id is accepted as an alias for loading from storage.</span>
+        <span class="c1"># Neither provided: generate a new uuid.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">uniq_id</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">uniq_id</span> <span class="k">if</span> <span class="n">uniq_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="k">else</span> <span class="n">new_uuid</span><span class="p">()</span>
         <span class="p">)</span>
-        <span class="k">if</span> <span class="n">provided_trade_id</span><span class="p">:</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ts_id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                    <span class="s2">&quot;trade_id cannot be set when ts_id is missing or empty&quot;</span>
-                <span class="p">)</span>
-            <span class="k">if</span> <span class="n">provided_trade_id</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trade_id</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;trade_id `</span><span class="si">{</span><span class="n">provided_trade_id</span><span class="si">}</span><span class="s2">` does not match &quot;</span>
-                    <span class="sa">f</span><span class="s2">&quot;expected `</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">trade_id</span><span class="si">}</span><span class="s2">`&quot;</span>
-                <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trade_id</span> <span class="o">=</span> <span class="n">trade_id</span> <span class="k">if</span> <span class="n">trade_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">uniq_id</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">trade_id</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">uniq_id</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;trade_id must match uniq_id if provided.  &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Got trade_id=</span><span class="si">{</span><span class="n">trade_id</span><span class="si">}</span><span class="s2"> and uniq_id=</span><span class="si">{</span><span class="n">uniq_id</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="c1"># Short form: last 8 hex chars of uniq_id for log messages.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trade_id_short</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">uniq_id</span><span class="p">[</span><span class="o">-</span><span class="mi">8</span><span class="p">:]</span>
 
         <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_identity_sync_lock</span>
 
@@ -2573,31 +2628,10 @@
 
 <div class="viewcode-block" id="Trade.__eq__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Trade.__eq__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return True if all Trade attributes are equal.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">open_dt</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">open_dt</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">timeframe</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">timeframe</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">trading_hours</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">trading_hours</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">direction</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">direction</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">entry_price</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">entry_price</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">high_price</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">high_price</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">low_price</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">low_price</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">stop_target</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">stop_target</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">prof_target</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">prof_target</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">close_dt</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">close_dt</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">created_dt</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">created_dt</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">open_epoch</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">open_epoch</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">exit_price</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">exit_price</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">stop_ticks</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">stop_ticks</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">prof_ticks</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">prof_ticks</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">offset_ticks</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">offset_ticks</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">symbol</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">symbol</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_open</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">is_open</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">profitable</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">profitable</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">name</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">version</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">ts_id</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">ts_id</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">bt_id</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">bt_id</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">trade_id</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">trade_id</span>
-                <span class="p">)</span></div>
+        <span class="k">return</span> <span class="nb">all</span><span class="p">(</span>
+            <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="o">==</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_EQ_FIELDS</span>
+        <span class="p">)</span></div>
 
 <div class="viewcode-block" id="Trade.__ne__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Trade.__ne__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__ne__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return True if any Trade attribute differs.&quot;&quot;&quot;</span>
@@ -2923,6 +2957,15 @@
 <span class="sd">        trades (list): list of trades in the series</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
+    <span class="n">_EQ_FIELDS</span><span class="p">:</span> <span class="nb">frozenset</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span>
+        <span class="s2">&quot;start_dt&quot;</span><span class="p">,</span> <span class="s2">&quot;end_dt&quot;</span><span class="p">,</span> <span class="s2">&quot;timeframe&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;symbol&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="s2">&quot;params_str&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;ts_id&quot;</span><span class="p">,</span> <span class="s2">&quot;bt_id&quot;</span><span class="p">,</span> <span class="s2">&quot;trades&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;trading_hours&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;tags&quot;</span><span class="p">,</span>
+    <span class="p">})</span>
+    <span class="n">_EQ_EXCLUDE</span><span class="p">:</span> <span class="nb">frozenset</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({})</span>
+
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">start_dt</span><span class="p">,</span>
                  <span class="n">end_dt</span><span class="p">,</span>
@@ -2962,23 +3005,14 @@
             <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">trades</span><span class="p">:</span>
                 <span class="n">t</span><span class="o">.</span><span class="n">ts_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ts_id</span>
                 <span class="n">t</span><span class="o">.</span><span class="n">bt_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bt_id</span>
-        <span class="k">if</span> <span class="n">tags</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">tags</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">tags</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tags</span> <span class="o">=</span> <span class="n">normalize_list_of_strings</span><span class="p">(</span><span class="n">tags</span><span class="p">,</span> <span class="s2">&quot;TradeSeries.tags&quot;</span><span class="p">)</span>
 
 <div class="viewcode-block" id="TradeSeries.__eq__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradeSeries.__eq__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return True if all TradeSeries attributes are equal.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_dt</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">start_dt</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_dt</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">end_dt</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">timeframe</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">timeframe</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">symbol</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">symbol</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">name</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">params_str</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">params_str</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">ts_id</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">ts_id</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">bt_id</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">bt_id</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">trades</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">trades</span>
-                <span class="p">)</span></div>
+        <span class="k">return</span> <span class="nb">all</span><span class="p">(</span>
+            <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="o">==</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_EQ_FIELDS</span>
+        <span class="p">)</span></div>
 
 <div class="viewcode-block" id="TradeSeries.__ne__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradeSeries.__ne__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__ne__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return True if any TradeSeries attribute differs.&quot;&quot;&quot;</span>
@@ -3451,6 +3485,19 @@
 <span class="sd">            created when the Backtest is run</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
+    <span class="n">_EQ_FIELDS</span><span class="p">:</span> <span class="nb">frozenset</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span>
+        <span class="s2">&quot;start_dt&quot;</span><span class="p">,</span> <span class="s2">&quot;end_dt&quot;</span><span class="p">,</span> <span class="s2">&quot;timeframe&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;trading_hours&quot;</span><span class="p">,</span> <span class="s2">&quot;symbol&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;bt_id&quot;</span><span class="p">,</span> <span class="s2">&quot;class_name&quot;</span><span class="p">,</span> <span class="s2">&quot;chart_tf&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;chart_1m&quot;</span><span class="p">,</span> <span class="s2">&quot;tradeseries&quot;</span><span class="p">,</span>
+    <span class="p">})</span>
+    <span class="n">_EQ_EXCLUDE</span><span class="p">:</span> <span class="nb">frozenset</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span>
+        <span class="c1"># Subclass-specific fields; compared via sub_eq()</span>
+        <span class="s2">&quot;parameters&quot;</span><span class="p">,</span>
+        <span class="c1"># Config flags, not identity</span>
+        <span class="s2">&quot;prefer_stored&quot;</span><span class="p">,</span> <span class="s2">&quot;autoload_charts&quot;</span><span class="p">,</span>
+    <span class="p">})</span>
+
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">start_dt</span><span class="p">,</span>
                  <span class="n">end_dt</span><span class="p">,</span>
@@ -3506,19 +3553,13 @@
 
 <div class="viewcode-block" id="Backtest.__eq__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Backtest.__eq__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return True if all Backtest attributes are equal.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_dt</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">start_dt</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_dt</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">end_dt</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">timeframe</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">timeframe</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">trading_hours</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">trading_hours</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">symbol</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">symbol</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">name</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">bt_id</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">bt_id</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_name</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">class_name</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">chart_tf</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">chart_tf</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">chart_1m</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">chart_1m</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">tradeseries</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">tradeseries</span>
-                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">sub_eq</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
-                <span class="p">)</span></div>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="nb">all</span><span class="p">(</span>
+                <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="o">==</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_EQ_FIELDS</span>
+            <span class="p">)</span>
+            <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">sub_eq</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+        <span class="p">)</span></div>
 
 <div class="viewcode-block" id="Backtest.__ne__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Backtest.__ne__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__ne__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return True if any Backtest attribute differs.&quot;&quot;&quot;</span>
@@ -3922,7 +3963,10 @@
 <span class="sd">    Args:</span>
 <span class="sd">        contracts: Number of contracts this plan is calculated with.</span>
 <span class="sd">        con_fee: Per-contract fee as a float.</span>
-<span class="sd">        tp_id: Optional unique trade plan identifier string.</span>
+<span class="sd">        tp_id: Optional unique trade plan identifier string.  If None,</span>
+<span class="sd">            generated from other attributes and a uuid suffix.</span>
+<span class="sd">        tp_id_short: Human-readable prefix of tp_id with the uuid shortened to</span>
+<span class="sd">            it&#39;s last 8 characters.</span>
 <span class="sd">        name: Name string used for integrity checks and cleanup.</span>
 <span class="sd">        id_slug: Short identifier string used in output labels.</span>
 <span class="sd">        tags: Optional list of machine-oriented classifier tags.</span>
@@ -3937,6 +3981,9 @@
 <span class="sd">        tradeseries: TradeSeries object attached to this plan.</span>
 <span class="sd">        how_gl_heatmap_viz: Optional path to hour-of-week heatmap.</span>
 <span class="sd">        weekly_price_overlay_visuals: Optional list of visual paths.</span>
+<span class="sd">        created_dt: ISO datetime string set at creation.  Defaults to now.</span>
+<span class="sd">        created_epoch: Integer Unix timestamp set at creation.</span>
+<span class="sd">        uniq_id: Raw 32-char hex uuid.  Generated if None.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
@@ -3957,65 +4004,77 @@
                  <span class="n">tradeseries</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                  <span class="n">how_gl_heatmap_viz</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                  <span class="n">weekly_price_overlay_visuals</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">created_dt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">created_epoch</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">uniq_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize a TradePlan instance.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">contracts</span> <span class="o">=</span> <span class="n">contracts</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">con_fee</span> <span class="o">=</span> <span class="n">con_fee</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">tp_id</span> <span class="o">=</span> <span class="n">tp_id</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">override_tp_id</span> <span class="o">=</span> <span class="kc">False</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tp_id</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">True</span>
+        <span class="c1"># Generate uniq_id first; all other ID fields derive from it.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">uniq_id</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">uniq_id</span> <span class="k">if</span> <span class="n">uniq_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="k">else</span> <span class="n">new_uuid</span><span class="p">()</span>
+        <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">id_slug</span> <span class="o">=</span> <span class="n">id_slug</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">tags</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_normalize_str_list</span><span class="p">(</span><span class="n">tags</span><span class="p">,</span> <span class="s2">&quot;tags&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tags</span> <span class="o">=</span> <span class="n">normalize_list_of_strings</span><span class="p">(</span><span class="n">tags</span><span class="p">,</span> <span class="s2">&quot;TradePlan.tags&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">cfg_label</span> <span class="o">=</span> <span class="n">cfg_label</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">profit_perc</span> <span class="o">=</span> <span class="n">profit_perc</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">start_dt</span> <span class="o">=</span> <span class="n">start_dt</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">end_dt</span> <span class="o">=</span> <span class="n">end_dt</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">drawdown_open</span> <span class="o">=</span> <span class="n">drawdown_open</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">drawdown_limit</span> <span class="o">=</span> <span class="n">drawdown_limit</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">notes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_normalize_str_list</span><span class="p">(</span><span class="n">notes</span><span class="p">,</span> <span class="s2">&quot;notes&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">notes</span> <span class="o">=</span> <span class="n">normalize_list_of_strings</span><span class="p">(</span><span class="n">notes</span><span class="p">,</span> <span class="s2">&quot;TradePlan.notes&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">thresholds</span> <span class="o">=</span> <span class="p">{}</span> <span class="k">if</span> <span class="n">thresholds</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">thresholds</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">replace_tradeseries</span><span class="p">(</span><span class="n">tradeseries</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">how_gl_heatmap_viz</span> <span class="o">=</span> <span class="n">how_gl_heatmap_viz</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">weekly_price_overlay_visuals</span> <span class="o">=</span> <span class="n">weekly_price_overlay_visuals</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">weekly_price_overlay_visuals</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">weekly_price_overlay_visuals</span> <span class="o">=</span> <span class="p">[]</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">_normalize_str_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">values</span><span class="p">,</span> <span class="n">field_name</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return list[str], converting values where possible.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">values</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">return</span> <span class="p">[]</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">values</span><span class="p">:</span>
-                <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
-        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;TradePlan.</span><span class="si">{</span><span class="n">field_name</span><span class="si">}</span><span class="s2"> must be list-like and &quot;</span>
-                <span class="s2">&quot;string-convertible&quot;</span>
-            <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
-        <span class="k">return</span> <span class="n">result</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">_tp_id_epoch_suffix</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return existing _e&lt;epoch&gt; suffix or generate a new one.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tp_id</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-            <span class="n">parts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tp_id</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">&quot;_e&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
-                <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;_e</span><span class="si">{</span><span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
-        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;_e</span><span class="si">{</span><span class="n">dt_to_epoch</span><span class="p">(</span><span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">if</span> <span class="n">created_dt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">created_dt</span> <span class="o">=</span> <span class="n">created_dt</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">created_dt</span> <span class="o">=</span> <span class="n">dt_as_str</span><span class="p">(</span><span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">created_epoch</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">created_epoch</span> <span class="o">=</span> <span class="n">created_epoch</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">created_epoch</span> <span class="o">=</span> <span class="n">dt_to_epoch</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">created_dt</span><span class="p">)</span>
+        <span class="c1"># If both tp_id and uuid are explicitly provided, tp_id must contain</span>
+        <span class="c1"># the uuid value.</span>
+        <span class="k">if</span> <span class="n">tp_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">uniq_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">uniq_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tp_id</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;TradePlan tp_id </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">tp_id</span><span class="si">!r}</span><span class="s2"> does not contain &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;uniq_id </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">uniq_id</span><span class="si">!r}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
 
 <div class="viewcode-block" id="TradePlan.replace_tradeseries"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradePlan.replace_tradeseries">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">replace_tradeseries</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ts</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Replace attached TradeSeries and update tp_id accordingly.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">tradeseries</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">ts</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">override_tp_id</span><span class="p">:</span>
-            <span class="n">suffix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tp_id_epoch_suffix</span><span class="p">()</span>
             <span class="k">if</span> <span class="n">ts</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">tp_id</span> <span class="o">=</span> <span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;NoTradeSeries_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">id_slug</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg_label</span><span class="si">}{</span><span class="n">suffix</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="n">prefix</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;NoTradeSeries_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">id_slug</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg_label</span><span class="si">}</span><span class="s2">&quot;</span>
                 <span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">tp_id</span> <span class="o">=</span> <span class="p">(</span>
-                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">ts</span><span class="o">.</span><span class="n">ts_id</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">id_slug</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg_label</span><span class="si">}{</span><span class="n">suffix</span><span class="si">}</span><span class="s2">&quot;</span>
-                <span class="p">)</span></div>
+                <span class="n">prefix</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">ts</span><span class="o">.</span><span class="n">ts_id</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">id_slug</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg_label</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tp_id</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">prefix</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">uniq_id</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="c1"># Short form: preserve human-readable prefix, shorten uniq_id.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tp_id_short</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">prefix</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">uniq_id</span><span class="p">[</span><span class="o">-</span><span class="mi">8</span><span class="p">:]</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># override_tp_id: tp_id provided externally; build short form.</span>
+            <span class="c1"># Strip the uuid suffix to recover the human-readable prefix.</span>
+            <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tp_id</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">uniq_id</span>
+                    <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">tp_id</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">uniq_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)):</span>
+                <span class="n">prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tp_id</span><span class="p">[:</span> <span class="o">-</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">uniq_id</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">tp_id_short</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">prefix</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">uniq_id</span><span class="p">[</span><span class="o">-</span><span class="mi">8</span><span class="p">:]</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">tp_id_short</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tp_id</span></div>
 
 <div class="viewcode-block" id="TradePlan.source_ts_ids"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradePlan.source_ts_ids">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">source_ts_ids</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return sorted unique source ts_ids from trades in real time.&quot;&quot;&quot;</span>
@@ -4087,6 +4146,189 @@
         <span class="k">return</span> <span class="n">results</span></div></div>
 
 
+<div class="viewcode-block" id="StoredImage"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.StoredImage">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">StoredImage</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Image stored in MongoDB GridFS with a metadata record.</span>
+
+<span class="sd">    Binary data lives in GridFS and is retrieved on demand via</span>
+<span class="sd">    load_data() or dhstore.get_image_data(image_id).  This class</span>
+<span class="sd">    holds metadata only; no binary attribute is stored here.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name: Descriptive name matching the role of the image</span>
+<span class="sd">            (e.g., the chart filename stem).  Must be a non-blank,</span>
+<span class="sd">            non-None string; raises ValueError at construction if</span>
+<span class="sd">            blank or None.  Defaults to DEFAULT_OBJ_NAME.  Test</span>
+<span class="sd">            objects must include &quot;DELETEME&quot; in this field.</span>
+<span class="sd">        image_id: Stable unique ID generated at object creation as</span>
+<span class="sd">            f&quot;{name}_{uuid_no_hyphens}&quot;.  Set before storage;</span>
+<span class="sd">            never changes after creation.  Used as the primary key</span>
+<span class="sd">            for all retrieval and deletion operations.  If None,</span>
+<span class="sd">            generated automatically.</span>
+<span class="sd">        image_id_short: Short form of image_id with the uuid</span>
+<span class="sd">            portion abbreviated to its last 8 hex chars, prefixed</span>
+<span class="sd">            by the name (e.g. ``f&quot;{name}_{uuid[-8:]}&quot;``).  Set</span>
+<span class="sd">            automatically; use in log messages for brevity.</span>
+<span class="sd">        content_type: MIME type string (e.g., &quot;image/jpeg&quot;).</span>
+<span class="sd">        filename: Original filename string for reference.</span>
+<span class="sd">        description: Optional human-readable description.</span>
+<span class="sd">        parent_collection: Collection name of the parent document.</span>
+<span class="sd">        parent_id_field: Field name of the parent&#39;s unique ID.</span>
+<span class="sd">        parent_id_value: Value of the parent&#39;s unique ID.</span>
+<span class="sd">        created_epoch: Integer Unix timestamp set at creation.</span>
+<span class="sd">            Defaults to now.  Not used in image_id generation.</span>
+<span class="sd">        created_dt: ISO datetime string derived from created_epoch.</span>
+<span class="sd">            Set automatically from created_epoch if not supplied.</span>
+<span class="sd">        tags: Optional list of string tags.</span>
+<span class="sd">        uniq_id: Raw 32-char hex uuid.  Generated if None.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_EQ_FIELDS</span><span class="p">:</span> <span class="nb">frozenset</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span>
+        <span class="s2">&quot;image_id&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="s2">&quot;content_type&quot;</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">,</span> <span class="s2">&quot;tags&quot;</span><span class="p">,</span>
+    <span class="p">})</span>
+    <span class="n">_EQ_EXCLUDE</span><span class="p">:</span> <span class="nb">frozenset</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span>
+        <span class="s2">&quot;created_epoch&quot;</span><span class="p">,</span> <span class="s2">&quot;created_dt&quot;</span><span class="p">,</span> <span class="s2">&quot;uniq_id&quot;</span><span class="p">,</span> <span class="s2">&quot;image_id_short&quot;</span><span class="p">,</span> <span class="s2">&quot;filename&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;parent_collection&quot;</span><span class="p">,</span> <span class="s2">&quot;parent_id_field&quot;</span><span class="p">,</span> <span class="s2">&quot;parent_id_value&quot;</span><span class="p">,</span>
+    <span class="p">})</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DEFAULT_OBJ_NAME</span><span class="p">,</span>
+            <span class="n">image_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">content_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;image/jpeg&quot;</span><span class="p">,</span>
+            <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">parent_collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">parent_id_field</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">parent_id_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">created_epoch</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">created_dt</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">tags</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">uniq_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize a StoredImage instance.&quot;&quot;&quot;</span>
+        <span class="c1"># Enforce non-blank name so integrity checks always identify it.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">name</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;StoredImage name must be a non-blank, non-None string; &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;got </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="k">if</span> <span class="n">created_epoch</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">created_epoch</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">timestamp</span><span class="p">())</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">created_epoch</span> <span class="o">=</span> <span class="n">created_epoch</span>
+        <span class="c1"># Derive ISO datetime string from the stored epoch.</span>
+        <span class="k">if</span> <span class="n">created_dt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">created_dt</span> <span class="o">=</span> <span class="n">dt_as_str</span><span class="p">(</span>
+                <span class="n">dt_from_epoch</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">created_epoch</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">created_dt</span> <span class="o">=</span> <span class="n">created_dt</span>
+        <span class="c1"># Generate uniq_id first; all other ID fields derive from it.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">uniq_id</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">uniq_id</span> <span class="k">if</span> <span class="n">uniq_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="k">else</span> <span class="n">new_uuid</span><span class="p">()</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">image_id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">image_id</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">uniq_id</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">image_id</span> <span class="o">=</span> <span class="n">image_id</span>
+        <span class="c1"># Short form: prefix + last 8 hex chars of uniq_id for log messages.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">image_id_short</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">uniq_id</span><span class="p">[</span><span class="o">-</span><span class="mi">8</span><span class="p">:]</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="c1"># Sanity: if both image_id and uniq_id are explicitly provided, they</span>
+        <span class="c1"># must be consistent — image_id must contain the uniq_id value.</span>
+        <span class="k">if</span> <span class="n">image_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">uniq_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">uniq_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">image_id</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;StoredImage image_id </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">image_id</span><span class="si">!r}</span><span class="s2"> does not &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;contain uniq_id </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">uniq_id</span><span class="si">!r}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">content_type</span> <span class="o">=</span> <span class="n">content_type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filename</span> <span class="o">=</span> <span class="n">filename</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="n">description</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent_collection</span> <span class="o">=</span> <span class="n">parent_collection</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent_id_field</span> <span class="o">=</span> <span class="n">parent_id_field</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent_id_value</span> <span class="o">=</span> <span class="n">parent_id_value</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tags</span> <span class="o">=</span> <span class="n">normalize_list_of_strings</span><span class="p">(</span><span class="n">tags</span><span class="p">,</span> <span class="s2">&quot;StoredImage.tags&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="StoredImage.__eq__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.StoredImage.__eq__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return True if image_id and name match.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">StoredImage</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span>
+            <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="o">==</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_EQ_FIELDS</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="StoredImage.__repr__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.StoredImage.__repr__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a concise developer-facing representation.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;StoredImage(name=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2">, &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;image_id=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">image_id</span><span class="si">!r}</span><span class="s2">)&quot;</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="StoredImage.__str__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.StoredImage.__str__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return string form of the clean metadata dict.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">to_clean_dict</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="StoredImage.to_json"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.StoredImage.to_json">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a JSON representation with custom types normalized.</span>
+
+<span class="sd">        Converts non-serializable types to strings for portability.</span>
+<span class="sd">        All fields on this class are already JSON-compatible; this method</span>
+<span class="sd">        is provided to follow the standard to_json/to_clean_dict pattern.</span>
+<span class="sd">        Binary data is not included; call load_data() to retrieve bytes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="StoredImage.to_clean_dict"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.StoredImage.to_clean_dict">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">to_clean_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a plain dict of all metadata fields (no binary).</span>
+
+<span class="sd">        Suitable for JSON serialization and MongoDB storage.</span>
+<span class="sd">        Binary data is not included; call load_data() for bytes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">to_json</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="StoredImage.from_dict"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.StoredImage.from_dict">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">d</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Reconstruct a StoredImage from a metadata dict.</span>
+
+<span class="sd">        Suitable for rebuilding from MongoDB documents returned by</span>
+<span class="sd">        dhstore.get_images_metadata_by_field() or list_images().</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            d: Dict with StoredImage metadata keys.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            StoredImage instance.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="n">DEFAULT_OBJ_NAME</span><span class="p">),</span>
+            <span class="n">image_id</span><span class="o">=</span><span class="n">d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;image_id&quot;</span><span class="p">),</span>
+            <span class="n">content_type</span><span class="o">=</span><span class="n">d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content_type&quot;</span><span class="p">,</span> <span class="s2">&quot;image/jpeg&quot;</span><span class="p">),</span>
+            <span class="n">filename</span><span class="o">=</span><span class="n">d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;filename&quot;</span><span class="p">),</span>
+            <span class="n">description</span><span class="o">=</span><span class="n">d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;description&quot;</span><span class="p">),</span>
+            <span class="n">parent_collection</span><span class="o">=</span><span class="n">d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;parent_collection&quot;</span><span class="p">),</span>
+            <span class="n">parent_id_field</span><span class="o">=</span><span class="n">d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;parent_id_field&quot;</span><span class="p">),</span>
+            <span class="n">parent_id_value</span><span class="o">=</span><span class="n">d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;parent_id_value&quot;</span><span class="p">),</span>
+            <span class="n">created_epoch</span><span class="o">=</span><span class="n">d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;created_epoch&quot;</span><span class="p">),</span>
+            <span class="n">created_dt</span><span class="o">=</span><span class="n">d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;created_dt&quot;</span><span class="p">),</span>
+            <span class="n">tags</span><span class="o">=</span><span class="n">d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;tags&quot;</span><span class="p">),</span>
+            <span class="n">uniq_id</span><span class="o">=</span><span class="n">d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;uniq_id&quot;</span><span class="p">),</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="StoredImage.load_data"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.StoredImage.load_data">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">load_data</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the raw binary data for this image from GridFS.</span>
+
+<span class="sd">        Delegates to dhstore.get_image_data() via the lazy import</span>
+<span class="sd">        wrapper to avoid circular imports.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bytes: Raw binary content of the stored image.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Import dhstore lazily to avoid circular import at module load.</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">dhtrader.dhstore</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">dhstore</span>
+        <span class="k">return</span> <span class="n">dhstore</span><span class="o">.</span><span class="n">get_image_data</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">image_id</span><span class="p">)</span></div></div>
+
+
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
     <span class="s2">&quot;CANDLE_TIMEFRAMES&quot;</span><span class="p">,</span>
     <span class="s2">&quot;BEGINNING_OF_TIME&quot;</span><span class="p">,</span>
@@ -4119,6 +4361,7 @@
     <span class="s2">&quot;TradePlan&quot;</span><span class="p">,</span>
     <span class="s2">&quot;TradeSeries&quot;</span><span class="p">,</span>
     <span class="s2">&quot;Backtest&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;StoredImage&quot;</span><span class="p">,</span>
 <span class="p">]</span>
 </pre></div>
 

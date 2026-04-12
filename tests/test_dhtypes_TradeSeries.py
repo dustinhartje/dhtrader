@@ -5,7 +5,7 @@ import json
 from dhtrader import (
     Candle, delete_trades_by_field,
     delete_tradeseries, delete_tradeseries_by_field, dt_as_dt,
-    get_trades_by_field, get_tradeseries_by_field, store_trades,
+    get_trades_by_field, get_tradeseries_by_field,
     store_tradeseries, Symbol, Trade, TradeSeries)
 from dhtrader.testdata.testdata import Rebuilder
 
@@ -193,12 +193,19 @@ def test_TradeSeries_create_and_verify_common_methods():
     # __ne__
     assert not (ts != ts2)
     assert ts != diff
-    # __str__
-    assert isinstance(str(ts), str)
-    assert len(str(ts)) > 0
-    # __repr__
-    assert isinstance(repr(ts), str)
-    assert str(ts) == repr(ts)
+    # __str__ and __repr__ — exact format (ts_id is deterministic)
+    expected_ts_str = (
+        "{'start_dt': '2099-01-01 00:00:00', "
+        "'end_dt': '2099-02-01 00:00:00', 'timeframe': '5m', "
+        "'trading_hours': 'rth', 'symbol': 'ES', 'name': 'DELETEME', "
+        "'params_str': 'a1_b2_c3_p0', "
+        "'ts_id': 'DELETEME_a1_b2_c3_p0', "
+        "'bt_id': None, "
+        "'trades': ['0 Trades suppressed for output sanity'], "
+        "'tags': []}"
+    )
+    assert str(ts) == expected_ts_str
+    assert repr(ts) == expected_ts_str
     # to_clean_dict
     d = ts.to_clean_dict()
     assert isinstance(d, dict)
@@ -217,7 +224,7 @@ def test_TradeSeries_create_and_verify_common_methods():
     assert len(ts.pretty().splitlines()) == 15
     ts.add_trade(test_trade)
     # With trades shown
-    assert len(ts.pretty(suppress_trades=False).splitlines()) == 47
+    assert len(ts.pretty(suppress_trades=False).splitlines()) == 50
 
 
 @pytest.mark.suppress_stdout
@@ -880,3 +887,37 @@ def test_delete_tradeseries(cleanup_tradeseries_storage):
                                   value=test_name_2)
     assert len(stored1) == 0
     assert len(stored2) == 0
+
+
+def test_TradeSeries_eq_covers_all_attributes(assert_eq_fields_cover_instance):
+    """_EQ_FIELDS | _EQ_EXCLUDE must exactly match instance __dict__."""
+    sym = Symbol(
+        ticker="ES", name="ES", leverage_ratio=50.0, tick_size=0.25,
+    )
+    ts = TradeSeries(
+        start_dt="2099-01-01 00:00:00",
+        end_dt="2099-02-01 00:00:00",
+        timeframe="5m",
+        trading_hours="rth",
+        symbol=sym,
+        name="DELETEME",
+        params_str="a1_b2_c3_p0",
+    )
+    assert_eq_fields_cover_instance(ts)
+
+
+def test_TradeSeries_eq_field_sensitivity(run_eq_field_sensitivity):
+    """Confirm _EQ_FIELDS drives inequality and _EQ_EXCLUDE does not."""
+    sym = Symbol(
+        ticker="ES", name="ES", leverage_ratio=50.0, tick_size=0.25,
+    )
+    obj = TradeSeries(
+        start_dt="2099-01-01 00:00:00",
+        end_dt="2099-02-01 00:00:00",
+        timeframe="5m",
+        trading_hours="rth",
+        symbol=sym,
+        name="DELETEME",
+        params_str="a1_b2_c3_p0",
+    )
+    run_eq_field_sensitivity(obj)
