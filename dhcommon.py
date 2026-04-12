@@ -31,6 +31,7 @@ including dhstore, dhutil, and dhtypes.
 from datetime import datetime as dt
 from datetime import timedelta, date, time
 from copy import deepcopy
+from pathlib import Path
 import re
 import logging
 import json
@@ -1089,6 +1090,72 @@ MARKET_ERAS = [
 def new_uuid() -> str:
     """Return a new UUID4 as a 32-character hex string (no hyphens)."""
     return str(uuid.uuid4()).replace("-", "")
+
+
+def find_repo_root(
+    start: Path = None,
+    git_config_pattern: str = r"url = .+dustinhartje/dhtrader\.git",
+) -> Path:
+    """Return the repository root by searching upward for a .git directory.
+
+    Searches upward from both the current working directory and the provided
+    start path (if given), de-duplicating directories that appear in both
+    chains.  The first ancestor directory whose .git/config content matches
+    git_config_pattern is returned.
+
+    Args:
+        start: Optional Path to begin the upward search from.  Defaults
+            to Path.cwd().resolve().  Pass Path(__file__).resolve().parent
+            from the calling module to anchor the search to the script
+            location rather than the working directory.
+        git_config_pattern: Regex pattern (re.search) matched against the
+            text of .git/config to confirm the correct repository was found.
+            Defaults to the dhtrader repo URL pattern.  Callers in other
+            repos should pass the appropriate pattern, e.g.
+            ``r"url = .+dustinhartje/backtesting\\.git"``.
+
+    Returns:
+        Path: The resolved path to the repository root.
+
+    Raises:
+        RuntimeError: If no .git directory is found before reaching the
+            filesystem root, if .git/config is missing, or if the
+            .git/config content does not match git_config_pattern (meaning
+            a git repo was found but it is not the expected one).
+    """
+    candidates = [Path.cwd().resolve()]
+    if start is not None:
+        candidates.append(start.resolve())
+    seen = set()
+    for seed in candidates:
+        current = seed
+        while True:
+            if current in seen:
+                break
+            seen.add(current)
+            git_dir = current / ".git"
+            if git_dir.exists():
+                git_config = git_dir / "config"
+                if not git_config.exists():
+                    raise RuntimeError(
+                        f"find_repo_root: found .git at {current!r} "
+                        "but .git/config is missing"
+                    )
+                config_text = git_config.read_text(encoding="utf-8")
+                if re.search(git_config_pattern, config_text):
+                    return current
+                raise RuntimeError(
+                    f"find_repo_root: found .git at {current!r} but "
+                    ".git/config did not match the expected pattern "
+                    f"({git_config_pattern!r}); wrong repository?"
+                )
+            if current.parent == current:
+                break
+            current = current.parent
+    raise RuntimeError(
+        "find_repo_root: could not locate repository root (.git directory) "
+        f"searching upward from {[str(c) for c in candidates]}"
+    )
 
 
 def bot():
