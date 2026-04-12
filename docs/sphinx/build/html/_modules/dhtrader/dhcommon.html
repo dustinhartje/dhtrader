@@ -66,10 +66,12 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span> <span class="k">as</span> <span class="n">dt</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">timedelta</span><span class="p">,</span> <span class="n">date</span><span class="p">,</span> <span class="n">time</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">copy</span><span class="w"> </span><span class="kn">import</span> <span class="n">deepcopy</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">uuid</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">progressbar</span>
 
 <span class="n">TIMEFRAMES</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;1m&#39;</span><span class="p">,</span> <span class="s1">&#39;5m&#39;</span><span class="p">,</span> <span class="s1">&#39;15m&#39;</span><span class="p">,</span> <span class="s1">&#39;r1h&#39;</span><span class="p">,</span> <span class="s1">&#39;e1h&#39;</span><span class="p">,</span> <span class="s1">&#39;r1d&#39;</span><span class="p">,</span> <span class="s1">&#39;e1d&#39;</span><span class="p">,</span> <span class="s1">&#39;r1w&#39;</span><span class="p">,</span> <span class="s1">&#39;e1w&#39;</span><span class="p">,</span>
@@ -1120,9 +1122,108 @@
 <span class="p">]</span>
 
 
+<div class="viewcode-block" id="new_uuid"><a class="viewcode-back" href="../../api/dhtrader.dhcommon.html#dhtrader.dhcommon.new_uuid">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">new_uuid</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a new UUID4 as a 32-character hex string (no hyphens).&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="find_repo_root"><a class="viewcode-back" href="../../api/dhtrader.dhcommon.html#dhtrader.dhcommon.find_repo_root">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">find_repo_root</span><span class="p">(</span>
+    <span class="n">start</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">git_config_pattern</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">&quot;url = .+dustinhartje/dhtrader\.git&quot;</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the repository root by searching upward for a .git directory.</span>
+
+<span class="sd">    Searches upward from both the current working directory and the provided</span>
+<span class="sd">    start path (if given), de-duplicating directories that appear in both</span>
+<span class="sd">    chains.  The first ancestor directory whose .git/config content matches</span>
+<span class="sd">    git_config_pattern is returned.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        start: Optional Path to begin the upward search from.  Defaults</span>
+<span class="sd">            to Path.cwd().resolve().  Pass Path(__file__).resolve().parent</span>
+<span class="sd">            from the calling module to anchor the search to the script</span>
+<span class="sd">            location rather than the working directory.</span>
+<span class="sd">        git_config_pattern: Regex pattern (re.search) matched against the</span>
+<span class="sd">            text of .git/config to confirm the correct repository was found.</span>
+<span class="sd">            Defaults to the dhtrader repo URL pattern.  Callers in other</span>
+<span class="sd">            repos should pass the appropriate pattern, e.g.</span>
+<span class="sd">            ``r&quot;url = .+dustinhartje/backtesting\\.git&quot;``.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Path: The resolved path to the repository root.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        RuntimeError: If no .git directory is found before reaching the</span>
+<span class="sd">            filesystem root, if .git/config is missing, or if the</span>
+<span class="sd">            .git/config content does not match git_config_pattern (meaning</span>
+<span class="sd">            a git repo was found but it is not the expected one).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">candidates</span> <span class="o">=</span> <span class="p">[</span><span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">()</span><span class="o">.</span><span class="n">resolve</span><span class="p">()]</span>
+    <span class="k">if</span> <span class="n">start</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">candidates</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">start</span><span class="o">.</span><span class="n">resolve</span><span class="p">())</span>
+    <span class="n">seen</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">seed</span> <span class="ow">in</span> <span class="n">candidates</span><span class="p">:</span>
+        <span class="n">current</span> <span class="o">=</span> <span class="n">seed</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">current</span> <span class="ow">in</span> <span class="n">seen</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="n">seen</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">current</span><span class="p">)</span>
+            <span class="n">git_dir</span> <span class="o">=</span> <span class="n">current</span> <span class="o">/</span> <span class="s2">&quot;.git&quot;</span>
+            <span class="k">if</span> <span class="n">git_dir</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+                <span class="n">git_config</span> <span class="o">=</span> <span class="n">git_dir</span> <span class="o">/</span> <span class="s2">&quot;config&quot;</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">git_config</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+                    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;find_repo_root: found .git at </span><span class="si">{</span><span class="n">current</span><span class="si">!r}</span><span class="s2"> &quot;</span>
+                        <span class="s2">&quot;but .git/config is missing&quot;</span>
+                    <span class="p">)</span>
+                <span class="n">config_text</span> <span class="o">=</span> <span class="n">git_config</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">git_config_pattern</span><span class="p">,</span> <span class="n">config_text</span><span class="p">):</span>
+                    <span class="k">return</span> <span class="n">current</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;find_repo_root: found .git at </span><span class="si">{</span><span class="n">current</span><span class="si">!r}</span><span class="s2"> but &quot;</span>
+                    <span class="s2">&quot;.git/config did not match the expected pattern &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">git_config_pattern</span><span class="si">!r}</span><span class="s2">); wrong repository?&quot;</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="n">current</span><span class="o">.</span><span class="n">parent</span> <span class="o">==</span> <span class="n">current</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="n">current</span> <span class="o">=</span> <span class="n">current</span><span class="o">.</span><span class="n">parent</span>
+    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+        <span class="s2">&quot;find_repo_root: could not locate repository root (.git directory) &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;searching upward from </span><span class="si">{</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">candidates</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span></div>
+
+
 <div class="viewcode-block" id="bot"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhcommon.bot">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">bot</span><span class="p">():</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Return universal beginning of time for this and other modules.&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">BEGINNING_OF_TIME</span></div>
+
+
+<div class="viewcode-block" id="normalize_list_of_strings"><a class="viewcode-back" href="../../api/dhtrader.dhcommon.html#dhtrader.dhcommon.normalize_list_of_strings">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">normalize_list_of_strings</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return list[str], converting each element where possible.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        values: A list-like of items to convert, or None.</span>
+<span class="sd">        label: Human-readable label used in error messages, e.g.</span>
+<span class="sd">            &quot;TradePlan.tags&quot;.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        list: Each element coerced to str.  Returns [] if values is None.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        TypeError: If values is not iterable or an element cannot be</span>
+<span class="sd">            converted to str.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">values</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">values</span><span class="p">:</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> must be list-like and string-convertible&quot;</span>
+        <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+    <span class="k">return</span> <span class="n">result</span></div>
 </pre></div>
 
           </div>

@@ -288,18 +288,17 @@ collection.  Intended for interactive/CLI use.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhstore.store_images">
-<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">store_images</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">images</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bucket</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['images']</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#store_images"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.store_images" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">store_images</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">images</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bucket</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['images']</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#store_images"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.store_images" title="Permalink to this definition">¶</a></dt>
 <dd><p>Store StoredImage objects and their binary data in GridFS.</p>
-<p>image_id is set on each StoredImage at object creation time as
-f”{name}_{uuid4_no_hyphens}” and is used as the stable retrieval
-key.  Binary data is stored in GridFS; this function stores no
-binary attributes on the objects themselves.</p>
+<p>image_id is set on each StoredImage at object creation time and is used
+as the stable retrieval key.  Binary data is stored in GridFS; this
+function stores no binary attributes on the objects themselves.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>images</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a>) – List of StoredImage objects.  image_id must be set
-before calling (set at creation without hyphens).</p></li>
-<li><p><strong>data_list</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a>) – Parallel list of bytes, one per image in images.</p></li>
+<li><p><strong>images</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a>) – List of (StoredImage, bytes) tuples, one per image.
+image_id must be set before calling (set at creation
+without hyphens).</p></li>
 <li><p><strong>bucket</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – GridFS bucket prefix.  Defaults to COLLECTIONS[“images”].</p></li>
 </ul>
 </dd>
@@ -310,8 +309,12 @@ before calling (set at creation without hyphens).</p></li>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a></p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If images or data_list is empty, or if their
-    lengths do not match.</p>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If images list is empty, any item is not a 2-tuple,
+    or any StoredImage.image_id is not set.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.14)"><strong>TypeError</strong></a> – If any tuple’s first element is not a StoredImage
+    or second element is not bytes.</p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>
@@ -482,9 +485,8 @@ is not loaded; call load_data() on each object to retrieve bytes.</p>
 <dt class="sig sig-object py" id="dhtrader.dhstore.store_image_from_path">
 <span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">store_image_from_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filepath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">content_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'image/jpeg'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">description</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parent_collection</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parent_id_field</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parent_id_value</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tags</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bucket</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">COLLECTIONS['images']</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#store_image_from_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.store_image_from_path" title="Permalink to this definition">¶</a></dt>
 <dd><p>Read a file from disk and store it as a StoredImage in GridFS.</p>
-<p>The filename stem (without extension) is used as the StoredImage
-name, which is also used to build a unique image_id as
-f”{name}_{uuid4()}” at object creation time.</p>
+<p>The filename stem (without extension) is used as the StoredImage name,
+which is also used to build a unique image_id at object creation time.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">

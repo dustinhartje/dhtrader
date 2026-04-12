@@ -395,6 +395,7 @@
                           <span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                           <span class="n">symbol</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;ES&#39;</span><span class="p">,</span>
                           <span class="n">timeframe</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;1m&#39;</span><span class="p">,</span>
+                          <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                           <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Read lines from a CSV file and return them as a list of Candle objects.</span>
 
@@ -410,6 +411,9 @@
         <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">:</span>
             <span class="n">this_dt</span> <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1"> %H:%M:%S&#39;</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">start_dt</span> <span class="o">&lt;=</span> <span class="n">this_dt</span> <span class="o">&lt;=</span> <span class="n">end_dt</span><span class="p">:</span>
+                <span class="n">kwargs</span> <span class="o">=</span> <span class="p">{}</span>
+                <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span>
                 <span class="n">c</span> <span class="o">=</span> <span class="n">Candle</span><span class="p">(</span><span class="n">c_datetime</span><span class="o">=</span><span class="n">this_dt</span><span class="p">,</span>
                            <span class="n">c_timeframe</span><span class="o">=</span><span class="n">timeframe</span><span class="p">,</span>
                            <span class="n">c_symbol</span><span class="o">=</span><span class="n">symbol</span><span class="p">,</span>
@@ -418,6 +422,7 @@
                            <span class="n">c_low</span><span class="o">=</span><span class="n">r</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span>
                            <span class="n">c_close</span><span class="o">=</span><span class="n">r</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span>
                            <span class="n">c_volume</span><span class="o">=</span><span class="n">r</span><span class="p">[</span><span class="mi">5</span><span class="p">],</span>
+                           <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
                            <span class="p">)</span>
                 <span class="n">candles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
 
@@ -465,7 +470,9 @@
                            <span class="n">vol_diff_threshold_perc</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
                            <span class="n">start_dt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                            <span class="n">end_dt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-                           <span class="n">expect_missing_from_storage</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+                           <span class="n">expect_missing_from_storage</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                           <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                           <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Check stored candles against a CSV source file.</span>
 
 <span class="sd">    Primarily used to confirm calculated higher timeframes against data</span>
@@ -504,11 +511,15 @@
                               <span class="n">symbol</span><span class="o">=</span><span class="n">symbol</span><span class="p">,</span>
                               <span class="p">)</span>
     <span class="c1"># Get candles from CSV</span>
+    <span class="n">csv_kwargs</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">csv_kwargs</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span>
     <span class="n">csv_cans</span> <span class="o">=</span> <span class="n">read_candles_from_csv</span><span class="p">(</span><span class="n">start_dt</span><span class="o">=</span><span class="n">start_dt</span><span class="p">,</span>
                                      <span class="n">end_dt</span><span class="o">=</span><span class="n">end_dt</span><span class="p">,</span>
                                      <span class="n">filepath</span><span class="o">=</span><span class="n">filepath</span><span class="p">,</span>
                                      <span class="n">symbol</span><span class="o">=</span><span class="n">symbol</span><span class="p">,</span>
                                      <span class="n">timeframe</span><span class="o">=</span><span class="n">timeframe</span><span class="p">,</span>
+                                     <span class="o">**</span><span class="n">csv_kwargs</span><span class="p">,</span>
                                      <span class="p">)</span>
     <span class="c1"># Compare sets to find any diffs</span>
     <span class="n">all_equal</span> <span class="o">=</span> <span class="kc">True</span>

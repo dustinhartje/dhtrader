@@ -1533,7 +1533,7 @@ such as those run by the same backtester</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="dhtrader.dhtypes.Trade.trade_id">
 <span class="sig-name descname"><span class="pre">trade_id</span></span><a class="headerlink" href="#dhtrader.dhtypes.Trade.trade_id" title="Permalink to this definition">¶</a></dt>
-<dd><p>Stable unique ID, uuid4 (no hyphens), auto-generated
+<dd><p>Stable unique ID, uuid (no hyphens), auto-generated
 at construction.  A stored value may be passed to preserve it.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type<span class="colon">:</span></dt>
@@ -1731,7 +1731,7 @@ subclasses.</p>
 <li><p><strong>contracts</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Number of contracts this plan is calculated with.</p></li>
 <li><p><strong>con_fee</strong> – Per-contract fee as a float.</p></li>
 <li><p><strong>tp_id</strong> – Optional unique trade plan identifier string.  If None,
-generated from other attributes and a uuid4 suffix.</p></li>
+generated from other attributes and a uuid suffix.</p></li>
 <li><p><strong>tp_id_short</strong> – Human-readable prefix of tp_id with the uuid shortened to
 it’s last 8 characters.</p></li>
 <li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Name string used for integrity checks and cleanup.</p></li>
@@ -2622,7 +2622,7 @@ non-None string; raises ValueError at construction if
 blank or None.  Defaults to DEFAULT_OBJ_NAME.  Test
 objects must include “DELETEME” in this field.</p></li>
 <li><p><strong>image_id</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Stable unique ID generated at object creation as
-f”{name}_{uuid4_no_hyphens}”.  Set before storage;
+f”{name}_{uuid_no_hyphens}”.  Set before storage;
 never changes after creation.  Used as the primary key
 for all retrieval and deletion operations.  If None,
 generated automatically.</p></li>

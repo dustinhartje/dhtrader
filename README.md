@@ -138,6 +138,13 @@ data quality:
 
 - **`check_integrity_no_nameless_objects()`** — finds documents
   without a valid `name` field across all managed collections.
+- **`check_integrity_unique_fields(collection, fields, query)`** —
+  checks that the named fields in a collection have non-empty, unique
+  values.  Returns a dict with `status`, `total_docs`, and a `fields`
+  sub-dict keyed by field name; each field entry contains
+  `missing_count`, `missing_samples`, `duplicate_count`, and
+  `duplicate_samples`.  An optional `query` dict may be supplied to
+  restrict which documents are checked.
 - **`check_integrity_orphaned_images(reference_map)`** — finds GridFS
   images whose `image_id` is not referenced by any document in the
   caller-supplied map of `{collection: [field_paths]}`.  Uses

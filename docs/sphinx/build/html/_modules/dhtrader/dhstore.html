@@ -48,10 +48,9 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">uuid</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">Counter</span><span class="p">,</span> <span class="n">defaultdict</span><span class="p">,</span> <span class="n">namedtuple</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span> <span class="k">as</span> <span class="n">dt</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">date</span><span class="p">,</span> <span class="n">timedelta</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">timedelta</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">copy</span><span class="w"> </span><span class="kn">import</span> <span class="n">deepcopy</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
@@ -61,8 +60,9 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">.dhcommon</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">dt_as_str</span><span class="p">,</span> <span class="n">dt_as_dt</span><span class="p">,</span> <span class="n">dt_from_epoch</span><span class="p">,</span> <span class="n">dt_to_epoch</span><span class="p">,</span> <span class="n">valid_timeframe</span><span class="p">,</span>
     <span class="n">this_candle_start</span><span class="p">,</span> <span class="n">summarize_candles</span><span class="p">,</span> <span class="n">log_say</span><span class="p">,</span> <span class="n">sort_dict</span><span class="p">,</span>
-    <span class="n">rangify_candle_times</span><span class="p">,</span> <span class="n">expected_candle_datetimes</span><span class="p">,</span> <span class="n">MARKET_ERAS</span><span class="p">,</span>
-    <span class="n">ProgBar</span><span class="p">,</span> <span class="n">OperationTimer</span><span class="p">,</span> <span class="n">DEFAULT_OBJ_NAME</span><span class="p">)</span>
+    <span class="n">rangify_candle_times</span><span class="p">,</span> <span class="n">expected_candle_datetimes</span><span class="p">,</span> <span class="n">new_uuid</span><span class="p">,</span>
+    <span class="n">ProgBar</span><span class="p">,</span> <span class="n">OperationTimer</span><span class="p">,</span>
+    <span class="n">DEFAULT_OBJ_NAME</span><span class="p">,</span> <span class="n">MARKET_ERAS</span><span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">dhmongo</span> <span class="k">as</span> <span class="n">dhm</span>
 
 <span class="c1"># All collection names owned by dhtrader classes.  Custom document</span>
@@ -282,7 +282,7 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;doc_id&quot;</span><span class="p">):</span>
             <span class="n">name_prefix</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">doc</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
             <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
-                <span class="n">candidate</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name_prefix</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="n">candidate</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name_prefix</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">new_uuid</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span>
                 <span class="n">existing</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">get_custom_documents_by_field</span><span class="p">(</span>
                     <span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">,</span>
                     <span class="n">field</span><span class="o">=</span><span class="s2">&quot;doc_id&quot;</span><span class="p">,</span>
@@ -522,28 +522,28 @@
 
 <div class="viewcode-block" id="store_images"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.store_images">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">store_images</span><span class="p">(</span>
         <span class="n">images</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
-        <span class="n">data_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
         <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;images&quot;</span><span class="p">],</span>
         <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Store StoredImage objects and their binary data in GridFS.</span>
 
-<span class="sd">    image_id is set on each StoredImage at object creation time as</span>
-<span class="sd">    f&quot;{name}_{uuid4_no_hyphens}&quot; and is used as the stable retrieval</span>
-<span class="sd">    key.  Binary data is stored in GridFS; this function stores no</span>
-<span class="sd">    binary attributes on the objects themselves.</span>
+<span class="sd">    image_id is set on each StoredImage at object creation time and is used</span>
+<span class="sd">    as the stable retrieval key.  Binary data is stored in GridFS; this</span>
+<span class="sd">    function stores no binary attributes on the objects themselves.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        images: List of StoredImage objects.  image_id must be set</span>
-<span class="sd">            before calling (set at creation without hyphens).</span>
-<span class="sd">        data_list: Parallel list of bytes, one per image in images.</span>
+<span class="sd">        images: List of (StoredImage, bytes) tuples, one per image.</span>
+<span class="sd">            image_id must be set before calling (set at creation</span>
+<span class="sd">            without hyphens).</span>
 <span class="sd">        bucket: GridFS bucket prefix.  Defaults to COLLECTIONS[&quot;images&quot;].</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        list: image_id strings from the stored objects, one per image.</span>
 
 <span class="sd">    Raises:</span>
-<span class="sd">        ValueError: If images or data_list is empty, or if their</span>
-<span class="sd">            lengths do not match.</span>
+<span class="sd">        ValueError: If images list is empty, any item is not a 2-tuple,</span>
+<span class="sd">            or any StoredImage.image_id is not set.</span>
+<span class="sd">        TypeError: If any tuple&#39;s first element is not a StoredImage</span>
+<span class="sd">            or second element is not bytes.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
         <span class="sa">f</span><span class="s2">&quot;store_images: bucket=</span><span class="si">{</span><span class="n">bucket</span><span class="si">!r}</span><span class="s2">, count=</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">images</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
@@ -555,27 +555,58 @@
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
             <span class="s2">&quot;store_images: images must be a non-empty list&quot;</span>
         <span class="p">)</span>
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">images</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_list</span><span class="p">):</span>
-        <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;store_images: images length </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">images</span><span class="p">)</span><span class="si">}</span><span class="s2"> does not match &quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;data_list length </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">data_list</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
-        <span class="p">)</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="s2">&quot;store_images: images and data_list must have the same length&quot;</span>
-        <span class="p">)</span>
+    <span class="c1"># Validate all tuples before any storage begins so no partial</span>
+    <span class="c1"># writes occur due to a bad entry later in the list.</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">images</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;store_images: item at index </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> is not a 2-tuple: &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">item</span><span class="si">!r}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;store_images: each item must be a (StoredImage, bytes) &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;tuple; item at index </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> is invalid&quot;</span>
+            <span class="p">)</span>
+        <span class="n">image</span><span class="p">,</span> <span class="n">data</span> <span class="o">=</span> <span class="n">item</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">StoredImage</span><span class="p">):</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;store_images: item[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">][0] is not a StoredImage: &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">image</span><span class="p">)</span><span class="si">!r}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;store_images: item at index </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> first element must be &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;a StoredImage instance&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;store_images: item[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">][1] is not bytes: &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="si">!r}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;store_images: item at index </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> second element must be &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;bytes&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">image</span><span class="o">.</span><span class="n">image_id</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;store_images: item[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">] StoredImage has no image_id&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;store_images: item at index </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> StoredImage.image_id &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;must be set before storing&quot;</span>
+            <span class="p">)</span>
 
     <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">time_store</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
-    <span class="k">for</span> <span class="n">image</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">images</span><span class="p">,</span> <span class="n">data_list</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">image</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">images</span><span class="p">:</span>
         <span class="n">metadata</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">to_clean_dict</span><span class="p">()</span>
-        <span class="n">image_id</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">store_image</span><span class="p">(</span>
+        <span class="n">returned_image_id</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">store_image</span><span class="p">(</span>
             <span class="n">image_data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
             <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span>
             <span class="n">bucket</span><span class="o">=</span><span class="n">bucket</span><span class="p">,</span>
         <span class="p">)</span>
-        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">image_id</span><span class="p">)</span>
+        <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">returned_image_id</span><span class="p">)</span>
         <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;store_images: stored image_id=</span><span class="si">{</span><span class="n">image_id</span><span class="si">!r}</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;store_images: stored image_id=</span><span class="si">{</span><span class="n">returned_image_id</span><span class="si">!r}</span><span class="s2">&quot;</span>
         <span class="p">)</span>
     <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
         <span class="sa">f</span><span class="s2">&quot;store_images: storage loop elapsed &quot;</span>
@@ -847,9 +878,8 @@
         <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Read a file from disk and store it as a StoredImage in GridFS.</span>
 
-<span class="sd">    The filename stem (without extension) is used as the StoredImage</span>
-<span class="sd">    name, which is also used to build a unique image_id as</span>
-<span class="sd">    f&quot;{name}_{uuid4()}&quot; at object creation time.</span>
+<span class="sd">    The filename stem (without extension) is used as the StoredImage name,</span>
+<span class="sd">    which is also used to build a unique image_id at object creation time.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        filepath: Path to the image file on disk.</span>
@@ -883,7 +913,7 @@
         <span class="n">tags</span><span class="o">=</span><span class="n">tags</span><span class="p">,</span>
     <span class="p">)</span>
     <span class="n">data</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">()</span>
-    <span class="n">store_images</span><span class="p">([</span><span class="n">image</span><span class="p">],</span> <span class="p">[</span><span class="n">data</span><span class="p">],</span> <span class="n">bucket</span><span class="o">=</span><span class="n">bucket</span><span class="p">)</span>
+    <span class="n">store_images</span><span class="p">([(</span><span class="n">image</span><span class="p">,</span> <span class="n">data</span><span class="p">)],</span> <span class="n">bucket</span><span class="o">=</span><span class="n">bucket</span><span class="p">)</span>
     <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
         <span class="sa">f</span><span class="s2">&quot;store_image_from_path: stored image_id=</span><span class="si">{</span><span class="n">image</span><span class="o">.</span><span class="n">image_id</span><span class="si">!r}</span><span class="s2">&quot;</span>
     <span class="p">)</span>
