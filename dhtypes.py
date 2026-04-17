@@ -288,6 +288,11 @@ class Symbol():
 
     def __eq__(self, other):
         """Return True if this symbol equals the other symbol."""
+        # Guard: if other is not the same type (e.g. it is None or a list),
+        # return NotImplemented so Python can try the comparison the other
+        # way around.  If both sides give up, Python returns False safely.
+        if not isinstance(other, Symbol):
+            return NotImplemented
         return all(
             getattr(self, f) == getattr(other, f)
             for f in self._EQ_FIELDS
@@ -1126,6 +1131,11 @@ class Candle():
 
     def __eq__(self, other):
         """Return True if this candle equals the other candle."""
+        # Guard: if other is not the same type (e.g. it is None or a list),
+        # return NotImplemented so Python can try the comparison the other
+        # way around.  If both sides give up, Python returns False safely.
+        if not isinstance(other, Candle):
+            return NotImplemented
         return all(
             getattr(self, f) == getattr(other, f)
             for f in self._EQ_FIELDS
@@ -1194,6 +1204,11 @@ class Chart():
 
     def __eq__(self, other):
         """Return True if this Chart equals the other Chart."""
+        # Guard: if other is not the same type (e.g. it is None or a list),
+        # return NotImplemented so Python can try the comparison the other
+        # way around.  If both sides give up, Python returns False safely.
+        if not isinstance(other, Chart):
+            return NotImplemented
         return all(
             getattr(self, f) == getattr(other, f)
             for f in self._EQ_FIELDS
@@ -1793,6 +1808,11 @@ class Indicator():
 
     def __eq__(self, other):
         """Return True if all indicator attributes and datapoints match."""
+        # Guard: if other is not the same type (e.g. it is None or a list),
+        # return NotImplemented so Python can try the comparison the other
+        # way around.  If both sides give up, Python returns False safely.
+        if not isinstance(other, Indicator):
+            return NotImplemented
         return (
             all(
                 getattr(self, f) == getattr(other, f)
@@ -2593,6 +2613,11 @@ class Trade():
 
     def __eq__(self, other):
         """Return True if all Trade attributes are equal."""
+        # Guard: if other is not the same type (e.g. it is None or a list),
+        # return NotImplemented so Python can try the comparison the other
+        # way around.  If both sides give up, Python returns False safely.
+        if not isinstance(other, Trade):
+            return NotImplemented
         return all(
             getattr(self, f) == getattr(other, f)
             for f in self._EQ_FIELDS
@@ -2974,6 +2999,11 @@ class TradeSeries():
 
     def __eq__(self, other):
         """Return True if all TradeSeries attributes are equal."""
+        # Guard: if other is not the same type (e.g. it is None or a list),
+        # return NotImplemented so Python can try the comparison the other
+        # way around.  If both sides give up, Python returns False safely.
+        if not isinstance(other, TradeSeries):
+            return NotImplemented
         return all(
             getattr(self, f) == getattr(other, f)
             for f in self._EQ_FIELDS
@@ -3518,6 +3548,11 @@ class Backtest():
 
     def __eq__(self, other):
         """Return True if all Backtest attributes are equal."""
+        # Guard: if other is not the same type (e.g. it is None or a list),
+        # return NotImplemented so Python can try the comparison the other
+        # way around.  If both sides give up, Python returns False safely.
+        if not isinstance(other, Backtest):
+            return NotImplemented
         return (
             all(
                 getattr(self, f) == getattr(other, f)
@@ -4218,6 +4253,9 @@ class StoredImage():
 
     def __eq__(self, other):
         """Return True if image_id and name match."""
+        # Guard: if other is not a StoredImage (e.g. it is None or a list),
+        # isinstance returns False and Python short-circuits here without
+        # calling getattr on the wrong type, so no AttributeError can occur.
         return isinstance(other, StoredImage) and all(
             getattr(self, f) == getattr(other, f)
             for f in self._EQ_FIELDS
