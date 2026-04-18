@@ -422,10 +422,24 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
     assert len(stored) == 1
     assert stored[0].open_dt == "2099-01-06 10:03:24"
     assert stored[0].close_dt == "2099-01-06 11:45:32"
-    # Change the name attribute to allow it to store itself without replacing
-    ts_fail.trades[0].name = duplicate_trade_name
-    store_trades([ts_fail.trades[0]])
-    # Confirm integrity check now fails due to duplicate trade
+    # Create a new Trade with a distinct uniq_id but the same ts_id and
+    # open_dt to produce a detectable duplicate in storage.  uniq_id must be
+    # distinct in storage so it is not a perfect clone but review_trades()
+    # only needs ts_id and open_dt to match to consider it a duplicate since
+    # it is only trying to confirm there are not two trades opening at the same
+    # time in the same TradeSeries, not checking for full equality.
+    t_dupe = Trade(
+        open_dt="2099-01-06 10:03:24", direction="long",
+        close_dt="2099-01-06 11:45:32", timeframe="e1h",
+        trading_hours="eth",
+        entry_price=5000, exit_price=5001, high_price=5005,
+        low_price=4995, prof_target=5001, stop_target=4000,
+        name=duplicate_trade_name,
+        ts_id=ts_fail.ts_id, bt_id=ts_fail.bt_id)
+    store_trades([t_dupe])
+    stored = get_trades_by_field(field="bt_id", value=bt)
+    assert len(stored) == 2
+    # Confirm integrity check now fails due to "duplicate" trade
     r = review_trades(bt_id=bt, check_integrity=True, orphan_ok=[bt])
     assert r["integrity"]["status"] == "ERRORS"
     assert r["integrity"]["issues"] == ["1 duplicate trades found"]
