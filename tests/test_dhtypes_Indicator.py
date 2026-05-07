@@ -1,4 +1,4 @@
-"""Tests for Indicator, IndicatorSMA, and IndicatorEMA calculation."""
+"""Tests for Indicator, IndicatorSMA, IndicatorEMA, and IndicatorRSI."""
 import json
 import pytest
 from dhtrader import (
@@ -6,7 +6,7 @@ from dhtrader import (
     delete_indicators_by_name,
     get_indicator, get_indicator_datapoints,
     get_indicators_by_name, Indicator, IndicatorDataPoint,
-    IndicatorEMA, IndicatorSMA, store_indicator, Symbol)
+    IndicatorEMA, IndicatorRSI, IndicatorSMA, store_indicator, Symbol)
 
 
 @pytest.mark.storage
@@ -1209,6 +1209,291 @@ def test_IndicatorEMA_create_and_verify_common_methods():
     assert isinstance(p, str)
     assert "\n" in p
     assert "EMA" in p
+
+
+def _make_rsi_chart_from_closes(closes):
+    """Create a minimal non-storage Chart from close values."""
+    chart = Chart(c_timeframe="1m",
+                  c_trading_hours="eth",
+                  c_symbol="ES",
+                  c_start="2099-01-02 12:00:00",
+                  c_end="2099-01-02 12:30:00",
+                  autoload=False,
+                  )
+    base_dt = "2099-01-02 12:00:00"
+    for i, close in enumerate(closes):
+        dt_str = f"2099-01-02 12:{str(i).zfill(2)}:00"
+        candle = Candle(c_datetime=dt_str,
+                        c_timeframe="1m",
+                        c_open=close,
+                        c_high=close + 0.25,
+                        c_low=close - 0.25,
+                        c_close=close,
+                        c_volume=1000 + i,
+                        c_symbol="ES",
+                        )
+        chart.add_candle(candle)
+    chart.c_start = base_dt
+    chart.c_end = f"2099-01-02 12:{str(len(closes) - 1).zfill(2)}:00"
+    return chart
+
+
+@pytest.mark.suppress_stdout
+def test_IndicatorRSI_create_and_verify_common_methods():
+    """Test IndicatorRSI common methods and default parameters."""
+    chart = _make_indicator_chart()
+    rsi = IndicatorRSI(description="Test RSI",
+                       timeframe="1m",
+                       trading_hours="eth",
+                       symbol="ES",
+                       calc_version="1.0.0",
+                       calc_details="test",
+                       start_dt="2099-01-02 12:00:00",
+                       end_dt="2099-01-02 12:10:00",
+                       autoload_chart=False,
+                       candle_chart=chart,
+                       parameters={},
+                       )
+    rsi2 = IndicatorRSI(description="Test RSI",
+                        timeframe="1m",
+                        trading_hours="eth",
+                        symbol="ES",
+                        calc_version="1.0.0",
+                        calc_details="test",
+                        start_dt="2099-01-02 12:00:00",
+                        end_dt="2099-01-02 12:10:00",
+                        autoload_chart=False,
+                        candle_chart=chart,
+                        parameters={},
+                        )
+    diff = IndicatorRSI(description="Test RSI",
+                        timeframe="1m",
+                        trading_hours="eth",
+                        symbol="ES",
+                        calc_version="1.0.0",
+                        calc_details="test",
+                        start_dt="2099-01-02 12:00:00",
+                        end_dt="2099-01-02 12:10:00",
+                        autoload_chart=False,
+                        candle_chart=chart,
+                        parameters={"period": 9},
+                        )
+    assert isinstance(rsi, IndicatorRSI)
+    assert rsi.name == "RSI"
+    assert rsi.description == "Test RSI"
+    assert rsi.timeframe == "1m"
+    assert rsi.trading_hours == "eth"
+    assert rsi.symbol.ticker == "ES"
+    assert rsi.calc_version == "1.0.0"
+    assert rsi.calc_details == "test"
+    assert rsi.start_dt == "2099-01-02 12:00:00"
+    assert rsi.end_dt == "2099-01-02 12:10:00"
+    assert rsi.datapoints == []
+    assert rsi.parameters == {}
+    assert rsi.period == 14
+    assert rsi.method == "close"
+    assert rsi.smoothing == "wilder"
+    assert "close" in rsi.ind_id
+    assert "p14" in rsi.ind_id
+    assert "swilder" in rsi.ind_id
+    assert rsi.class_name == "IndicatorRSI"
+    assert rsi.autoload_chart is False
+    assert rsi.candle_chart == chart
+    expected_attrs = {
+        "autoload_chart", "calc_details", "calc_version",
+        "candle_chart", "class_name", "datapoints",
+        "description", "end_dt", "ind_id", "method",
+        "name", "parameters", "period", "smoothing",
+        "start_dt", "symbol", "timeframe", "trading_hours",
+    }
+    actual_attrs = set(vars(rsi).keys())
+    added = actual_attrs - expected_attrs
+    removed = expected_attrs - actual_attrs
+    assert actual_attrs == expected_attrs, (
+        "IndicatorRSI attributes changed. Update this "
+        "test's __init__ section. "
+        f"New attrs needing assertions: {sorted(added)}. "
+        f"Removed attrs: {sorted(removed)}."
+    )
+    assert rsi == rsi2
+    assert rsi != diff
+    expected_rsi_str = (
+        "{'ind_id': 'ES_eth_1m_RSI_close_p14_swilder', 'name': 'RSI', "
+        "'description': 'Test RSI', 'timeframe': '1m', "
+        "'trading_hours': 'eth', 'symbol': 'ES', "
+        "'calc_version': '1.0.0', 'calc_details': 'test', "
+        "'start_dt': '2099-01-02 12:00:00', "
+        "'end_dt': '2099-01-02 12:10:00', "
+        "'parameters': {}, 'datapoints_count': 0}"
+    )
+    assert str(rsi) == expected_rsi_str
+    assert repr(rsi) == expected_rsi_str
+    d = rsi.to_clean_dict()
+    assert isinstance(d, dict)
+    assert d["name"] == "RSI"
+    assert d["timeframe"] == "1m"
+    j = rsi.to_json()
+    assert isinstance(j, str)
+    parsed = json.loads(j)
+    assert isinstance(parsed, dict)
+    assert parsed["name"] == "RSI"
+    p = rsi.pretty()
+    assert isinstance(p, str)
+    assert "\n" in p
+    assert "RSI" in p
+
+
+@pytest.mark.suppress_stdout
+def test_IndicatorRSI_calculate_for_wilder_simple_exponential():
+    """Verify RSI calculations and smoothing modes on known close data."""
+    closes = [
+        44.34, 44.09, 44.15, 43.61, 44.33,
+        44.83, 45.10, 45.42, 45.84, 46.08,
+        45.89, 46.03, 45.61, 46.28, 46.28,
+        46.00, 46.03, 46.41, 46.22, 45.64,
+        46.21,
+    ]
+    chart = _make_rsi_chart_from_closes(closes)
+
+    rsi_wilder = IndicatorRSI(description="Test RSI Wilder",
+                              timeframe="1m",
+                              trading_hours="eth",
+                              symbol="ES",
+                              calc_version="1.0.0",
+                              calc_details="test",
+                              start_dt="2099-01-02 12:00:00",
+                              end_dt="2099-01-02 12:20:00",
+                              autoload_chart=False,
+                              candle_chart=chart,
+                              parameters={},
+                              )
+    rsi_wilder.calculate()
+    assert len(rsi_wilder.datapoints) == 7
+    expected_wilder = [70.46, 66.25, 66.48, 69.35, 66.29, 57.92, 62.88]
+    for i, exp in enumerate(expected_wilder):
+        assert rsi_wilder.datapoints[i].value == exp
+
+    rsi_simple = IndicatorRSI(description="Test RSI Simple",
+                              timeframe="1m",
+                              trading_hours="eth",
+                              symbol="ES",
+                              calc_version="1.0.0",
+                              calc_details="test",
+                              start_dt="2099-01-02 12:00:00",
+                              end_dt="2099-01-02 12:20:00",
+                              autoload_chart=False,
+                              candle_chart=chart,
+                              parameters={"smoothing": "simple"},
+                              )
+    rsi_simple.calculate()
+    assert len(rsi_simple.datapoints) == 7
+
+    rsi_exp = IndicatorRSI(description="Test RSI Exponential",
+                           timeframe="1m",
+                           trading_hours="eth",
+                           symbol="ES",
+                           calc_version="1.0.0",
+                           calc_details="test",
+                           start_dt="2099-01-02 12:00:00",
+                           end_dt="2099-01-02 12:20:00",
+                           autoload_chart=False,
+                           candle_chart=chart,
+                           parameters={"smoothing": "exponential"},
+                           )
+    rsi_exp.calculate()
+    assert len(rsi_exp.datapoints) == 7
+
+    assert rsi_simple.datapoints[-1].value != rsi_wilder.datapoints[-1].value
+    assert rsi_exp.datapoints[-1].value != rsi_wilder.datapoints[-1].value
+    for dp in rsi_simple.datapoints + rsi_exp.datapoints:
+        assert 0 <= dp.value <= 100
+
+
+# e1h ETH RSI14 Wilder
+def shared_assertions_Indicator_spotcheck_ES_eth_e1h_RSI_close_p14_swilder(
+    i,
+):
+    """Assert ES ETH e1h RSI close p14 swilder datapoint values.
+
+    Hard-coded expected values from storage as of 2026-05-06.
+    """
+    assert i.get_datapoint(
+        dt="2026-05-05 21:00:00").value == 69.49
+    assert i.get_datapoint(
+        dt="2026-05-05 22:00:00").value == 66.60
+    assert i.get_datapoint(
+        dt="2026-05-05 23:00:00").value == 68.03
+    assert i.get_datapoint(
+        dt="2026-05-06 00:00:00").value == 68.45
+    assert i.get_datapoint(
+        dt="2026-05-06 01:00:00").value == 69.62
+    assert i.get_datapoint(
+        dt="2026-05-06 02:00:00").value == 67.89
+    assert i.get_datapoint(
+        dt="2026-05-06 03:00:00").value == 68.37
+    assert i.get_datapoint(
+        dt="2026-05-06 04:00:00").value == 77.36
+    assert i.get_datapoint(
+        dt="2026-05-06 05:00:00").value == 79.06
+    assert i.get_datapoint(
+        dt="2026-05-06 06:00:00").value == 82.58
+    assert i.get_datapoint(
+        dt="2026-05-06 07:00:00").value == 74.30
+    assert i.get_datapoint(
+        dt="2026-05-06 08:00:00").value == 67.39
+    assert i.get_datapoint(
+        dt="2026-05-06 09:00:00").value == 69.78
+    assert i.get_datapoint(
+        dt="2026-05-06 10:00:00").value == 76.13
+    assert i.get_datapoint(
+        dt="2026-05-06 11:00:00").value == 72.55
+    assert i.get_datapoint(
+        dt="2026-05-06 12:00:00").value == 68.31
+    assert i.get_datapoint(
+        dt="2026-05-06 13:00:00").value == 71.50
+    assert i.get_datapoint(
+        dt="2026-05-06 14:00:00").value == 73.48
+    assert i.get_datapoint(
+        dt="2026-05-06 15:00:00").value == 75.16
+    assert i.get_datapoint(
+        dt="2026-05-06 16:00:00").value == 75.16
+
+
+@pytest.mark.storage
+@pytest.mark.suppress_stdout
+def test_Indicator_calculated_spotcheck_ES_eth_e1h_RSI_close_p14_swilder():
+    """Spotcheck calculated RSI values for e1h against stored values.
+
+    Storage Usage: get_indicator, load_underlying_chart.
+    """
+    ind_id = "ES_eth_e1h_RSI_close_p14_swilder"
+    ind_calced = get_indicator(ind_id=ind_id,
+                               autoload_datapoints=False,
+                               autoload_chart=True,
+                               )
+    ind_calced.start_dt = "2026-04-05 18:00:00"
+    ind_calced.end_dt = "2026-05-07 00:00:00"
+    ind_calced.load_underlying_chart()
+    ind_calced.calculate()
+    shared_assertions_Indicator_spotcheck_ES_eth_e1h_RSI_close_p14_swilder(
+        ind_calced)
+
+
+@pytest.mark.storage
+@pytest.mark.suppress_stdout
+def test_Indicator_storage_spotcheck_ES_eth_e1h_RSI_close_p14_swilder():
+    """Spotcheck stored RSI values for e1h.
+
+    Storage Usage: get_indicator, load_datapoints.
+    """
+    ind_id = "ES_eth_e1h_RSI_close_p14_swilder"
+    ind_stored = get_indicator(ind_id=ind_id,
+                               autoload_datapoints=False,
+                               autoload_chart=True,
+                               )
+    ind_stored.load_datapoints()
+    shared_assertions_Indicator_spotcheck_ES_eth_e1h_RSI_close_p14_swilder(
+        ind_stored)
 
 
 def test_IndicatorDataPoint_eq_covers_all_attributes(

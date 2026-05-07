@@ -21,7 +21,7 @@ import logging
 from pathlib import Path
 from .dhtypes import (
     Candle, Event, IndicatorDataPoint, Symbol, IndicatorSMA, IndicatorEMA,
-    Trade, TradeSeries, TradePlan, StoredImage)
+    IndicatorRSI, Trade, TradeSeries, TradePlan, StoredImage)
 from .dhcommon import (
     dt_as_str, dt_as_dt, dt_from_epoch, dt_to_epoch, valid_timeframe,
     this_candle_start, summarize_candles, log_say, sort_dict,
@@ -2512,6 +2512,18 @@ def get_indicator(ind_id: str,
                               name=i["name"],
                               parameters=i["parameters"],
                               )
+    elif i["class_name"] == "IndicatorRSI":
+        result = IndicatorRSI(description=i["description"],
+                              timeframe=i["timeframe"],
+                              trading_hours=i["trading_hours"],
+                              symbol=i["symbol"],
+                              calc_version=i["calc_version"],
+                              calc_details=i["calc_details"],
+                              ind_id=i["ind_id"],
+                              autoload_chart=autoload_chart,
+                              name=i["name"],
+                              parameters=i["parameters"],
+                              )
     else:
         raise ValueError(f"Unable to match class_name of {i['class_name']} "
                          "with a known Indicator() subclass."
@@ -2786,6 +2798,8 @@ def get_indicators_by_name(name: str,
             ind = IndicatorSMA(**common)
         elif doc["class_name"] == "IndicatorEMA":
             ind = IndicatorEMA(**common)
+        elif doc["class_name"] == "IndicatorRSI":
+            ind = IndicatorRSI(**common)
         else:
             raise ValueError(
                 f"Unable to match class_name of {doc['class_name']} "

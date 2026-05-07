@@ -2273,6 +2273,168 @@ class IndicatorEMA(Indicator):
                 counter += 1
 
 
+class IndicatorRSI(Indicator):
+    """Subclass of Indicator() used for relative strength index.
+
+    Parameters:
+        - period: Number of candles in the averaging window
+                  (default: 14).
+        - method: Candle value to use (default: close).
+        - smoothing: Averaging mode for gains/losses:
+                    wilder (default), simple, exponential.
+    """
+
+    def __init__(self,
+                 description,
+                 timeframe,
+                 trading_hours,
+                 symbol,
+                 calc_version,
+                 calc_details,
+                 start_dt=bot(),
+                 end_dt=None,
+                 ind_id=None,
+                 autoload_chart=True,
+                 candle_chart=None,
+                 name="RSI",
+                 datapoints=None,
+                 parameters={},
+                 ):
+        super().__init__(name=name,
+                         description=description,
+                         timeframe=timeframe,
+                         trading_hours=trading_hours,
+                         symbol=symbol,
+                         calc_version=calc_version,
+                         calc_details=calc_details,
+                         start_dt=start_dt,
+                         end_dt=end_dt,
+                         ind_id=ind_id,
+                         autoload_chart=autoload_chart,
+                         candle_chart=candle_chart,
+                         datapoints=datapoints,
+                         parameters=parameters,
+                         )
+        self.period = int(parameters.get("period", 14))
+        if self.period <= 0:
+            raise ValueError("period must be a positive integer")
+
+        self.method = parameters.get("method", "close")
+        supported_methods = ["close"]
+        if self.method not in supported_methods:
+            raise TypeError(f"self.method {self.method} not supported, "
+                            f"must be one of: {supported_methods}"
+                            )
+
+        self.smoothing = parameters.get("smoothing", "wilder")
+        supported_smoothing = ["wilder", "simple", "exponential"]
+        if self.smoothing not in supported_smoothing:
+            raise TypeError(
+                f"self.smoothing {self.smoothing} not supported, "
+                f"must be one of: {supported_smoothing}"
+            )
+
+        ind_id_suffix = (f"_{self.method}_p{str(self.period)}"
+                         f"_s{self.smoothing}")
+        if ind_id_suffix not in self.ind_id:
+            self.ind_id += ind_id_suffix
+        self.class_name = "IndicatorRSI"
+
+    def _calc_rsi(self,
+                  avg_gain: float,
+                  avg_loss: float,
+                  ) -> float:
+        """Return RSI for the given average gain/loss pair."""
+        if avg_loss == 0 and avg_gain == 0:
+            return 50.0
+        if avg_loss == 0:
+            return 100.0
+        if avg_gain == 0:
+            return 0.0
+        rs = avg_gain / avg_loss
+        return 100.0 - (100.0 / (1.0 + rs))
+
+    def calculate(self):
+        """Calculate relative strength index over time.
+
+        Defaults to close values, period=14, and Wilder smoothing.
+        """
+        if self.candle_chart is None:
+            self.load_underlying_chart()
+        if not isinstance(self.candle_chart, Chart):
+            raise TypeError(f"candle_chart {type(self.candle_chart)} must be "
+                            "a <class dhtypes.Chart> object")
+        self.candle_chart.sort_candles()
+
+        self.datapoints = []
+        closes = []
+        for c in self.candle_chart.c_candles:
+            if self.method == "close":
+                closes.append(c.c_close)
+
+        if len(closes) <= self.period:
+            return True
+
+        deltas = []
+        for i in range(1, len(closes)):
+            deltas.append(closes[i] - closes[i - 1])
+
+        gains = [max(d, 0.0) for d in deltas]
+        losses = [max(-d, 0.0) for d in deltas]
+
+        avg_gain = fmean(gains[:self.period])
+        avg_loss = fmean(losses[:self.period])
+
+        first_candle = self.candle_chart.c_candles[self.period]
+        first_rsi = self._calc_rsi(avg_gain, avg_loss)
+        self.datapoints.append(
+            IndicatorDataPoint(dt=dt_as_str(first_candle.c_datetime),
+                               value=round(first_rsi, 2),
+                               ind_id=self.ind_id,
+                               name=self.name,
+                               )
+        )
+
+        if self.smoothing == "simple":
+            for idx in range(self.period + 1, len(closes)):
+                start = idx - self.period
+                end = idx
+                avg_gain = fmean(gains[start:end])
+                avg_loss = fmean(losses[start:end])
+                rsi = self._calc_rsi(avg_gain, avg_loss)
+                c = self.candle_chart.c_candles[idx]
+                self.datapoints.append(
+                    IndicatorDataPoint(dt=dt_as_str(c.c_datetime),
+                                       value=round(rsi, 2),
+                                       ind_id=self.ind_id,
+                                       name=self.name,
+                                       )
+                )
+            return True
+
+        if self.smoothing == "wilder":
+            alpha = 1 / self.period
+        else:
+            alpha = 2 / (self.period + 1)
+
+        for idx in range(self.period, len(deltas)):
+            gain = gains[idx]
+            loss = losses[idx]
+            avg_gain = (gain * alpha) + (avg_gain * (1 - alpha))
+            avg_loss = (loss * alpha) + (avg_loss * (1 - alpha))
+            rsi = self._calc_rsi(avg_gain, avg_loss)
+            c = self.candle_chart.c_candles[idx + 1]
+            self.datapoints.append(
+                IndicatorDataPoint(dt=dt_as_str(c.c_datetime),
+                                   value=round(rsi, 2),
+                                   ind_id=self.ind_id,
+                                   name=self.name,
+                                   )
+            )
+
+        return True
+
+
 class Trade():
     """Represents a single trade that could have been made.
 
@@ -4360,6 +4522,7 @@ __all__ = [
     "Indicator",
     "IndicatorSMA",
     "IndicatorEMA",
+    "IndicatorRSI",
     "Trade",
     "TradePlan",
     "TradeSeries",
