@@ -1235,9 +1235,10 @@ def check_integrity_orphaned_images(reference_map: dict):
     code supplies the reference_map because dhtrader does not know
     about AnalyzeBacktestResult or RefreshCycleResult collections.
 
-    Uses MongoDB distinct() on each field path so the query is
-    resolved from the multikey index on image_ids fields when those
-    indexes exist, avoiding full collection scans as data grows.
+    Uses an aggregation pipeline ($unwind + $group) on each field
+    path to collect referenced image_ids.  This avoids MongoDB's
+    16 MB result-document cap that applies to distinct(), while
+    still leveraging multikey indexes on image_ids fields.
 
     Args:
         reference_map: Dict mapping collection names to lists of
@@ -1270,17 +1271,23 @@ def check_integrity_orphaned_images(reference_map: dict):
     }
     total_images = len(all_image_ids)
 
-    # Use distinct() per field path so MongoDB can resolve the query
-    # from a multikey index on image_ids fields rather than scanning
-    # every document.  distinct() on a dotted path into an array of
-    # subdocuments (e.g. "plans.image_ids") flattens and deduplicates
-    # automatically.
+    # Use an aggregation pipeline per field path instead of distinct()
+    # to avoid MongoDB's 16 MB result-document cap on distinct().
+    # $unwind + $group streams results through a cursor with no size
+    # limit while still deduplicating automatically.  Multikey indexes
+    # on image_ids fields are still used by the $unwind stage.
     referenced_ids: set = set()
     for coll, field_paths in reference_map.items():
         for field_path in field_paths:
-            values = dhm.db[coll].distinct(field_path)
+            pipeline = [
+                {"$unwind": f"${field_path}"},
+                {"$group": {"_id": f"${field_path}"}},
+            ]
+            values = dhm.db[coll].aggregate(pipeline)
             referenced_ids.update(
-                v for v in values if v is not None
+                doc["_id"]
+                for doc in values
+                if doc["_id"] is not None
             )
 
     # Any stored image_id not referenced by a parent is an orphan.
