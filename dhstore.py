@@ -2264,6 +2264,42 @@ _TRADEPLAN_CTOR_KEYS = frozenset({
 })
 
 
+class TradePlanReconstructionError(ValueError):
+    """Raised when a stored TradePlan cannot be reconstructed safely."""
+
+    def __init__(self,
+                 tp_id,
+                 ts_id,
+                 missing_trade_ids: list,
+                 expected_trade_ids: list,
+                 found_trade_ids: list,
+                 ):
+        self.tp_id = tp_id
+        self.ts_id = ts_id
+        self.missing_trade_ids = list(missing_trade_ids)
+        self.expected_trade_ids = list(expected_trade_ids)
+        self.found_trade_ids = list(found_trade_ids)
+        message = (
+            "TradePlan reconstruction failed due to missing trade_ids: "
+            f"tp_id={tp_id!r}, ts_id={ts_id!r}, "
+            f"missing_count={len(self.missing_trade_ids)}, "
+            f"expected_count={len(self.expected_trade_ids)}, "
+            f"found_count={len(self.found_trade_ids)}"
+        )
+        super().__init__(message)
+
+    def to_dict(self) -> dict:
+        """Return a JSON-serializable representation of this error."""
+        return {
+            "error_type": "tradeplan_reconstruction_error",
+            "tp_id": self.tp_id,
+            "ts_id": self.ts_id,
+            "missing_trade_ids": list(self.missing_trade_ids),
+            "expected_trade_count": len(self.expected_trade_ids),
+            "found_trade_count": len(self.found_trade_ids),
+        }
+
+
 def reconstruct_tradeplan(tp,
                           collection_trades: str = COLLECTIONS["trades"]):
     """Take a dictionary and build a TradePlan object from it.
@@ -2294,6 +2330,33 @@ def reconstruct_tradeplan(tp,
             collection=collection_trades,
         )
         ts.sort_trades()
+
+        found_trade_ids = {
+            t.trade_id for t in ts.trades
+            if getattr(t, "trade_id", None)
+        }
+        missing_trade_ids = []
+        missing_seen = set()
+        for trade_id in trade_ids:
+            if (trade_id not in found_trade_ids
+                    and trade_id not in missing_seen):
+                missing_seen.add(trade_id)
+                missing_trade_ids.append(trade_id)
+        if missing_trade_ids:
+            tp_id = tp.get("tp_id")
+            ts_id = ts.ts_id
+            log.critical(
+                "reconstruct_tradeplan: missing trade_ids prevent "
+                f"safe reconstruction tp_id={tp_id!r} ts_id={ts_id!r} "
+                f"missing={missing_trade_ids!r}"
+            )
+            raise TradePlanReconstructionError(
+                tp_id=tp_id,
+                ts_id=ts_id,
+                missing_trade_ids=missing_trade_ids,
+                expected_trade_ids=list(trade_ids),
+                found_trade_ids=sorted(found_trade_ids),
+            )
 
     obj = TradePlan(
         contracts=tp["contracts"],
