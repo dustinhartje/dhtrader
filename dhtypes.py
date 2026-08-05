@@ -3290,6 +3290,29 @@ class TradeSeries():
         """Sort attached Trades in ascending open_epoch order."""
         self.trades.sort(key=lambda t: t.open_epoch)
 
+    def direction(self):
+        """Return the directional makeup of attached trades.
+
+        Returns one of "long", "short", or "mixed".
+        """
+        saw_long = False
+        saw_short = False
+        for trade in self.trades:
+            if trade.direction == "long":
+                saw_long = True
+            elif trade.direction == "short":
+                saw_short = True
+
+            # Early-exit as soon as both directions are present.
+            if saw_long and saw_short:
+                return "mixed"
+
+        if saw_long:
+            return "long"
+        if saw_short:
+            return "short"
+        return "mixed"
+
     def get_trade_by_open_dt(self, dt):
         """Return the first Trade matching the given open_dt, or None.
         """

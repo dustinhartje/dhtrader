@@ -255,6 +255,35 @@ def test_TradeSeries_add_sort_and_get_trades():
 
 
 @pytest.mark.suppress_stdout
+def test_TradeSeries_direction_reports_long_short_mixed():
+    """direction() returns long/short/mixed from attached trades."""
+    ts = create_tradeseries()
+    assert ts.direction() == "mixed"
+
+    long_trade = create_trade(
+        open_dt="2099-01-03 09:00:00",
+        close_dt="2099-01-03 09:05:00",
+        direction="long",
+    )
+    ts.add_trade(long_trade)
+    assert ts.direction() == "long"
+
+    short_trade = create_trade(
+        open_dt="2099-01-03 09:10:00",
+        close_dt="2099-01-03 09:15:00",
+        direction="short",
+        stop_target=5005,
+        prof_target=4995,
+    )
+    ts.add_trade(short_trade)
+    assert ts.direction() == "mixed"
+
+    ts_short = create_tradeseries()
+    ts_short.add_trade(short_trade)
+    assert ts_short.direction() == "short"
+
+
+@pytest.mark.suppress_stdout
 def test_TradeSeries_balance_impact_and_stats():
     """Verify TradeSeries.balance_impact() and stats() calculations."""
     # Test a TradeSeries with winning and losing trades that does not liquidate
