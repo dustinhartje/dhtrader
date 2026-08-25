@@ -234,7 +234,7 @@ def test_TradeSeries_trade_configuration_excluded_from_serialization():
     Implementation repos may attach a transient trade_configuration
     attribute to a TradeSeries in memory during a build workflow; this
     must be excluded from to_json()/to_clean_dict() so it can never
-    reach storage.
+    reach storage.  The plural trade_configurations must be excluded also.
     """
     ts = create_tradeseries()
     ts.trade_configuration = {"trade_type": "indtag", "ts_id": ts.ts_id}
@@ -244,6 +244,15 @@ def test_TradeSeries_trade_configuration_excluded_from_serialization():
     # The in-memory attribute itself is untouched by serialization calls
     assert ts.trade_configuration == {"trade_type": "indtag",
                                       "ts_id": ts.ts_id}
+
+    ts2 = create_tradeseries()
+    ts2.trade_configurations = [
+        {"trade_type": "indtag", "ts_id": "TS_A"},
+        {"trade_type": "indtag", "ts_id": "TS_B"},
+    ]
+    assert "trade_configurations" not in ts2.to_clean_dict()
+    assert "trade_configurations" not in json.loads(ts2.to_json())
+    assert len(ts2.trade_configurations) == 2
 
 
 @pytest.mark.suppress_stdout
