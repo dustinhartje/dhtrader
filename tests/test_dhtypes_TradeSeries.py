@@ -228,6 +228,25 @@ def test_TradeSeries_create_and_verify_common_methods():
 
 
 @pytest.mark.suppress_stdout
+def test_TradeSeries_trade_configuration_excluded_from_serialization():
+    """An ad-hoc trade_configuration attribute must never be persisted.
+
+    Implementation repos may attach a transient trade_configuration
+    attribute to a TradeSeries in memory during a build workflow; this
+    must be excluded from to_json()/to_clean_dict() so it can never
+    reach storage.
+    """
+    ts = create_tradeseries()
+    ts.trade_configuration = {"trade_type": "indtag", "ts_id": ts.ts_id}
+
+    assert "trade_configuration" not in ts.to_clean_dict()
+    assert "trade_configuration" not in json.loads(ts.to_json())
+    # The in-memory attribute itself is untouched by serialization calls
+    assert ts.trade_configuration == {"trade_type": "indtag",
+                                      "ts_id": ts.ts_id}
+
+
+@pytest.mark.suppress_stdout
 def test_TradeSeries_add_sort_and_get_trades():
     """Verify add_trade, get_trade_by_open_dt, and trade sorting."""
     ts = create_tradeseries()
