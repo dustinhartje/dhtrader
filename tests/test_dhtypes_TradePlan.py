@@ -69,6 +69,7 @@ def create_tradeplan(name="DELETEME_tp_default",
                      tags=None,
                      notes=None,
                      with_trades=True,
+                     trade_configurations=None,
                      ):
     """Create a TradePlan with an attached TradeSeries for tests."""
     ts = create_tradeseries(name=name)
@@ -98,6 +99,7 @@ def create_tradeplan(name="DELETEME_tp_default",
         drawdown_limit=6500,
         thresholds={"label": "t1", "mrr": 0.5, "msp": 75},
         tradeseries=ts,
+        trade_configurations=trade_configurations,
     )
 
 
@@ -192,7 +194,7 @@ def test_TradePlan_create_and_verify_common_methods():
         "override_tp_id", "name",
         "id_slug", "tags", "cfg_label", "profit_perc",
         "start_dt", "end_dt", "drawdown_open", "drawdown_limit",
-        "notes", "thresholds", "tradeseries",
+        "notes", "thresholds", "tradeseries", "trade_configurations",
         "how_gl_heatmap_viz", "weekly_price_overlay_visuals",
         "created_dt", "created_epoch",
     }
@@ -234,6 +236,7 @@ def test_TradePlan_create_and_verify_common_methods():
         "'thresholds': {'label': 't1', 'mrr': 0.5, 'msp': 75}, "
         f"'tradeseries': {_ts_str}, "
         f"'tp_id_short': '{tp.tp_id_short}', "
+        "'trade_configurations': [], "
         "'how_gl_heatmap_viz': None, "
         "'weekly_price_overlay_visuals': [], "
         f"'created_dt': '{tp.created_dt}', "
@@ -268,7 +271,7 @@ def test_TradePlan_create_and_verify_common_methods():
     # pretty
     p = tp.pretty()
     assert isinstance(p, str)
-    assert len(p.splitlines()) == 46
+    assert len(p.splitlines()) == 47
     reparsed = json.loads(p)
     assert reparsed["name"] == "DELETEME_tp_common"
     assert reparsed["id_slug"] == "DELETEME_tp_common_tag"
@@ -455,10 +458,14 @@ def test_TradePlan_store_retrieve_delete(cleanup_tradeplan_storage):
     name = "DELETEME_tp_roundtrip"
     cleanup_tradeplan_storage(name)
 
+    tp_configs = [
+        {"trade_type": "indtag", "ts_id": "DELETEME_tp_roundtrip_ts"}
+    ]
     tp = create_tradeplan(name=name,
                           id_slug="DELETEME_tp_roundtrip_tag",
                           cfg_label="DELETEME_tp_roundtrip_lbl",
-                          with_trades=True)
+                          with_trades=True,
+                          trade_configurations=tp_configs)
     original_tp_id = tp.tp_id
     original_trade_count = len(tp.tradeseries.trades)
 
@@ -482,6 +489,7 @@ def test_TradePlan_store_retrieve_delete(cleanup_tradeplan_storage):
     assert r.contracts == 2
     assert r.drawdown_open == 6000
     assert r.drawdown_limit == 6500
+    assert r.trade_configurations == tp_configs
 
     # Trades should be hydrated from trade_ids
     assert r.tradeseries is not None
@@ -574,6 +582,107 @@ def test_TradePlan_required_identifiers_for_storage():
         cfg_label="")
     with pytest.raises(ValueError):
         store_tradeplans([tp_empty_label])
+
+
+@pytest.mark.suppress_stdout
+def test_TradePlan_trade_configurations_defaults_and_validation():
+    """trade_configurations defaults to [] and enforces generic structure.
+
+    Trade-type-specific validation (e.g. a registry of known
+    trade_type values) is intentionally left to calling code outside
+    this library; only the generic shape is enforced here.
+    """
+    # Defaults to an empty list when omitted
+    tp = TradePlan(contracts=1, name="DELETEME_tp_cfg",
+                   id_slug="DELETEME_tp_cfg_tag",
+                   cfg_label="DELETEME_tp_cfg_lbl")
+    assert tp.trade_configurations == []
+
+    # None is accepted the same as omitting it
+    tp = TradePlan(contracts=1, name="DELETEME_tp_cfg",
+                   id_slug="DELETEME_tp_cfg_tag",
+                   cfg_label="DELETEME_tp_cfg_lbl",
+                   trade_configurations=None)
+    assert tp.trade_configurations == []
+
+    # A well-formed list of dicts is accepted and preserved as-is
+    configs = [
+        {"trade_type": "indtag", "ts_id": "TS_A", "offset_ticks": 4},
+        {"trade_type": "indtag", "ts_id": "TS_B", "offset_ticks": -2},
+    ]
+    tp = TradePlan(contracts=1, name="DELETEME_tp_cfg",
+                   id_slug="DELETEME_tp_cfg_tag",
+                   cfg_label="DELETEME_tp_cfg_lbl",
+                   trade_configurations=configs)
+    assert tp.trade_configurations == configs
+
+    # Must be a list
+    with pytest.raises(ValueError):
+        TradePlan(contracts=1, name="DELETEME_tp_cfg",
+                  id_slug="DELETEME_tp_cfg_tag",
+                  cfg_label="DELETEME_tp_cfg_lbl",
+                  trade_configurations={"trade_type": "indtag",
+                                        "ts_id": "TS_A"})
+
+    # Each entry must be a dict
+    with pytest.raises(ValueError):
+        TradePlan(contracts=1, name="DELETEME_tp_cfg",
+                  id_slug="DELETEME_tp_cfg_tag",
+                  cfg_label="DELETEME_tp_cfg_lbl",
+                  trade_configurations=["not_a_dict"])
+
+    # Each entry must include a non-blank trade_type
+    with pytest.raises(ValueError):
+        TradePlan(contracts=1, name="DELETEME_tp_cfg",
+                  id_slug="DELETEME_tp_cfg_tag",
+                  cfg_label="DELETEME_tp_cfg_lbl",
+                  trade_configurations=[{"ts_id": "TS_A"}])
+    with pytest.raises(ValueError):
+        TradePlan(contracts=1, name="DELETEME_tp_cfg",
+                  id_slug="DELETEME_tp_cfg_tag",
+                  cfg_label="DELETEME_tp_cfg_lbl",
+                  trade_configurations=[{"trade_type": "",
+                                        "ts_id": "TS_A"}])
+
+    # Each entry must include a non-blank ts_id
+    with pytest.raises(ValueError):
+        TradePlan(contracts=1, name="DELETEME_tp_cfg",
+                  id_slug="DELETEME_tp_cfg_tag",
+                  cfg_label="DELETEME_tp_cfg_lbl",
+                  trade_configurations=[{"trade_type": "indtag"}])
+    with pytest.raises(ValueError):
+        TradePlan(contracts=1, name="DELETEME_tp_cfg",
+                  id_slug="DELETEME_tp_cfg_tag",
+                  cfg_label="DELETEME_tp_cfg_lbl",
+                  trade_configurations=[{"trade_type": "indtag",
+                                        "ts_id": ""}])
+
+
+@pytest.mark.suppress_stdout
+def test_TradePlan_validate_trade_configurations_classmethod():
+    """validate_trade_configurations is callable without an instance."""
+    configs = [{"trade_type": "indtag", "ts_id": "TS_A"}]
+    assert TradePlan.validate_trade_configurations(configs) == configs
+    assert TradePlan.validate_trade_configurations(None) == []
+    with pytest.raises(ValueError):
+        TradePlan.validate_trade_configurations([{"trade_type": "indtag"}])
+
+
+@pytest.mark.suppress_stdout
+def test_TradePlan_trade_configurations_required_for_storage():
+    """store_tradeplans must reject an empty trade_configurations list."""
+    tp_none = TradePlan(contracts=1, name="DELETEME_tp_cfg_req",
+                        id_slug="DELETEME_tp_cfg_req_tag",
+                        cfg_label="DELETEME_tp_cfg_req_lbl")
+    with pytest.raises(ValueError):
+        store_tradeplans([tp_none])
+
+    tp_empty = TradePlan(contracts=1, name="DELETEME_tp_cfg_req",
+                         id_slug="DELETEME_tp_cfg_req_tag",
+                         cfg_label="DELETEME_tp_cfg_req_lbl",
+                         trade_configurations=[])
+    with pytest.raises(ValueError):
+        store_tradeplans([tp_empty])
 
 
 @pytest.mark.suppress_stdout

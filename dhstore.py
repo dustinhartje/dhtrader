@@ -2259,6 +2259,7 @@ _TRADEPLAN_CTOR_KEYS = frozenset({
     "cfg_label",
     "profit_perc", "start_dt", "end_dt", "drawdown_open",
     "drawdown_limit", "notes", "thresholds", "tradeseries",
+    "trade_configurations",
     "how_gl_heatmap_viz", "weekly_price_overlay_visuals",
     "created_dt", "created_epoch", "uniq_id",
 })
@@ -2374,6 +2375,7 @@ def reconstruct_tradeplan(tp,
         notes=tp.get("notes"),
         thresholds=tp.get("thresholds"),
         tradeseries=ts,
+        trade_configurations=tp.get("trade_configurations"),
         how_gl_heatmap_viz=tp.get("how_gl_heatmap_viz"),
         weekly_price_overlay_visuals=tp.get(
             "weekly_price_overlay_visuals"
@@ -2472,6 +2474,11 @@ def store_tradeplans(tradeplans: list,
                 "TradePlan.cfg_label must not be None or empty "
                 f"string before storing: tp_id={tp.tp_id!r} "
                 f"cfg_label={tp.cfg_label!r}"
+            )
+        if not tp.trade_configurations:
+            raise ValueError(
+                "TradePlan.trade_configurations must not be empty "
+                f"before storing: tp_id={tp.tp_id!r}"
             )
     result = []
     for tp in tradeplans:

@@ -4164,6 +4164,9 @@ class TradePlan():
         notes: Optional list of human-readable notes.
         thresholds: Thresholds dict or instance applied to this plan.
         tradeseries: TradeSeries object attached to this plan.
+        trade_configurations: List of dicts describing how a trader
+            would configure an external trading tool to reproduce this
+            plan.
         how_gl_heatmap_viz: Optional path to hour-of-week heatmap.
         weekly_price_overlay_visuals: Optional list of visual paths.
         created_dt: ISO datetime string set at creation.  Defaults to now.
@@ -4187,6 +4190,7 @@ class TradePlan():
                  notes=None,
                  thresholds=None,
                  tradeseries=None,
+                 trade_configurations: list = None,
                  how_gl_heatmap_viz=None,
                  weekly_price_overlay_visuals=None,
                  created_dt=None,
@@ -4215,6 +4219,9 @@ class TradePlan():
         self.notes = normalize_list_of_strings(notes, "TradePlan.notes")
         self.thresholds = {} if thresholds is None else thresholds
         self.replace_tradeseries(tradeseries)
+        self.trade_configurations = self.validate_trade_configurations(
+            trade_configurations
+        )
         self.how_gl_heatmap_viz = how_gl_heatmap_viz
         self.weekly_price_overlay_visuals = weekly_price_overlay_visuals
         if self.weekly_price_overlay_visuals is None:
@@ -4235,6 +4242,43 @@ class TradePlan():
                     f"TradePlan tp_id {self.tp_id!r} does not contain "
                     f"uniq_id {self.uniq_id!r}"
                 )
+
+    @classmethod
+    def validate_trade_configurations(cls, value):
+        """Validate and normalize a trade_configurations list.
+
+        Enforces only the generic structural contract shared by all
+        trade types: a list of dicts, each with a non-blank
+        "trade_type" string and a non-blank "ts_id".  Trade-type-
+        specific validation (e.g. a registry of known trade_type
+        values) is intentionally left to calling code outside this
+        library.  Subclasses may override this to apply additional or
+        stricter rules.
+        """
+        if value is None:
+            return []
+        if not isinstance(value, list):
+            raise ValueError(
+                f"trade_configurations must be a list, got {type(value)!r}"
+            )
+        for i, entry in enumerate(value):
+            if not isinstance(entry, dict):
+                raise ValueError(
+                    f"trade_configurations[{i}] must be a dict, got "
+                    f"{type(entry)!r}"
+                )
+            trade_type = entry.get("trade_type")
+            if not trade_type or not str(trade_type).strip():
+                raise ValueError(
+                    f"trade_configurations[{i}] must include a non-blank "
+                    "'trade_type'"
+                )
+            if not entry.get("ts_id"):
+                raise ValueError(
+                    f"trade_configurations[{i}] must include a non-blank "
+                    "'ts_id'"
+                )
+        return list(value)
 
     def replace_tradeseries(self, ts):
         """Replace attached TradeSeries and update tp_id accordingly."""
