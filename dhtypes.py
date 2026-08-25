@@ -3184,11 +3184,9 @@ class TradeSeries():
         strings for portability.
         """
         working = deepcopy(self.__dict__)
-        # trade_configuration / trade_configurations (if set) are
-        # implementation-repo-managed, transient in-memory attributes
-        # used during backtest/analysis workflows; they must never be
-        # persisted as part of a TradeSeries document.
-        working.pop("trade_configuration", None)
+        # trade_configurations (if set) is an implementation-repo-managed,
+        # transient in-memory attribute used during backtest/analysis
+        # workflows and must never be persisted in a TradeSeries document.
         working.pop("trade_configurations", None)
         clean_trades = []
         if suppress_trades:

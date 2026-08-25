@@ -228,22 +228,26 @@ def test_TradeSeries_create_and_verify_common_methods():
 
 
 @pytest.mark.suppress_stdout
-def test_TradeSeries_trade_configuration_excluded_from_serialization():
-    """An ad-hoc trade_configuration attribute must never be persisted.
+def test_TradeSeries_trade_configurations_excluded_from_serialization():
+    """An ad-hoc trade_configurations attribute must never be persisted.
 
-    Implementation repos may attach a transient trade_configuration
-    attribute to a TradeSeries in memory during a build workflow; this
-    must be excluded from to_json()/to_clean_dict() so it can never
-    reach storage.  The plural trade_configurations must be excluded also.
+    Implementation repos may attach a transient trade_configurations
+    list to a TradeSeries in memory during a build workflow (whether
+    it represents a single pre-merge source or an already-merged
+    result); this must be excluded from to_json()/to_clean_dict() so
+    it can never reach storage.
     """
     ts = create_tradeseries()
-    ts.trade_configuration = {"trade_type": "indtag", "ts_id": ts.ts_id}
+    ts.trade_configurations = [
+        {"trade_type": "indtag", "ts_id": ts.ts_id},
+    ]
 
-    assert "trade_configuration" not in ts.to_clean_dict()
-    assert "trade_configuration" not in json.loads(ts.to_json())
+    assert "trade_configurations" not in ts.to_clean_dict()
+    assert "trade_configurations" not in json.loads(ts.to_json())
     # The in-memory attribute itself is untouched by serialization calls
-    assert ts.trade_configuration == {"trade_type": "indtag",
-                                      "ts_id": ts.ts_id}
+    assert ts.trade_configurations == [
+        {"trade_type": "indtag", "ts_id": ts.ts_id},
+    ]
 
     ts2 = create_tradeseries()
     ts2.trade_configurations = [
