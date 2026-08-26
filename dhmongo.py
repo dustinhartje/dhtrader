@@ -398,11 +398,21 @@ def store_image(
     from gridfs import GridFSBucket
     fs = GridFSBucket(db, bucket_name=bucket)
     filename = metadata.get("filename") or metadata.get("image_id", "image")
-    with fs.open_upload_stream(
+    grid_in = fs.open_upload_stream(
         filename,
         metadata=metadata,
-    ) as grid_in:
+    )
+    try:
         grid_in.write(image_data)
+        grid_in.close()
+    except Exception:
+        # close()/write() may have already committed chunk documents
+        # before failing on the files document insert (e.g. a
+        # duplicate metadata.image_id raising FileExists); abort()
+        # removes any such orphaned chunks so the failure leaves no
+        # trace in <bucket>.chunks.
+        grid_in.abort()
+        raise
     return metadata["image_id"]
 
 
