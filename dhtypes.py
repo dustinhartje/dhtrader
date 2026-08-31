@@ -25,6 +25,7 @@ The MARKET_ERAS configuration defines trading hours for ES futures across
 different historical time periods.
 """
 import datetime as dt
+from abc import ABC, abstractmethod
 from bisect import bisect_right
 from datetime import timedelta, date
 import sys
@@ -195,6 +196,11 @@ def get_indicator_datapoints(*args, **kwargs):
     """Delegate to dhstore.get_indicator_datapoints."""
     return _dhstore(
         'get_indicator_datapoints', *args, **kwargs)
+
+
+def get_indicator(*args, **kwargs):
+    """Delegate to dhstore.get_indicator."""
+    return _dhstore('get_indicator', *args, **kwargs)
 
 
 def store_indicator_datapoints(*args, **kwargs):
@@ -2432,6 +2438,192 @@ class IndicatorRSI(Indicator):
                                    )
             )
 
+        return True
+
+
+class IndicatorDerived(Indicator, ABC):
+    """Base class for indicators calculated from another indicator series."""
+
+    def __init__(self,
+                 description,
+                 timeframe,
+                 trading_hours,
+                 symbol,
+                 calc_version,
+                 calc_details,
+                 name,
+                 start_dt=bot(),
+                 end_dt=None,
+                 ind_id=None,
+                 autoload_chart=False,
+                 candle_chart=None,
+                 datapoints=None,
+                 parameters={},
+                 ):
+        super().__init__(name=name,
+                         description=description,
+                         timeframe=timeframe,
+                         trading_hours=trading_hours,
+                         symbol=symbol,
+                         calc_version=calc_version,
+                         calc_details=calc_details,
+                         start_dt=start_dt,
+                         end_dt=end_dt,
+                         ind_id=ind_id,
+                         autoload_chart=autoload_chart,
+                         candle_chart=candle_chart,
+                         datapoints=datapoints,
+                         parameters=parameters,
+                         )
+        self.class_name = "IndicatorDerived"
+        if "source_ind_id" not in parameters:
+            log.critical("IndicatorDerived.__init__: missing source_ind_id")
+            raise ValueError("Must provide source_ind_id in parameters")
+        self.source_ind_id = parameters["source_ind_id"]
+        if not isinstance(self.source_ind_id, str) or not self.source_ind_id:
+            log.critical("IndicatorDerived.__init__: invalid source_ind_id=%r",
+                         self.source_ind_id)
+            raise ValueError("source_ind_id must be a non-empty string")
+        self.source_indicator = get_indicator(
+            ind_id=self.source_ind_id,
+            autoload_chart=False,
+            autoload_datapoints=False,
+        )
+        if self.source_indicator is None:
+            log.critical("IndicatorDerived.__init__: source not found in "
+                         "storage source_ind_id=%r", self.source_ind_id)
+            raise ValueError("source_ind_id was not found in storage")
+
+    @abstractmethod
+    def calculate(self):
+        """Calculate datapoints from the configured source indicator.
+
+        IndicatorDerived supplies shared source retrieval, validation, and
+        serialization, but cannot define a calculation because each derived
+        indicator applies a different transformation.  The abstractmethod
+        decorator prevents this base class, or a subclass without its own
+        calculation, from being instantiated or persisted as a usable
+        indicator.
+        """
+        log.critical("IndicatorDerived.calculate called on abstract base")
+        raise NotImplementedError("Concrete derived indicators must calculate")
+
+    def to_json(self,
+                suppress_datapoints: bool = True,
+                suppress_chart_candles: bool = True,
+                ):
+        """Serialize durable lineage while omitting the live source object."""
+        working = self.__dict__.copy()
+        # Do not include the live source_indicator object in the JSON output
+        working.pop("source_indicator")
+        working = deepcopy(working)
+        if working["candle_chart"] is not None:
+            working["candle_chart"] = working["candle_chart"].to_clean_dict(
+                suppress_candles=suppress_chart_candles,
+            )
+        if suppress_datapoints:
+            count = len(self.datapoints)
+            working["datapoints"] = [
+                f"{count} Datapoints suppressed for output sanity"
+            ]
+        else:
+            working["datapoints"] = [
+                datapoint.to_clean_dict()
+                for datapoint in self.datapoints
+            ]
+        working["symbol"] = working["symbol"].ticker
+        return json.dumps(working)
+
+    def _source_datapoints(self):
+        """Return compatible, chronological datapoints from the source."""
+        source = self.source_indicator
+        if source.ind_id != self.source_ind_id:
+            log.critical("IndicatorDerived._source_datapoints: source "
+                         "ind_id=%r expected=%r", source.ind_id,
+                         self.source_ind_id)
+            raise ValueError("source_indicator ind_id does not match")
+        if (source.symbol.ticker != self.symbol.ticker or
+                source.timeframe != self.timeframe or
+                source.trading_hours != self.trading_hours):
+            log.critical("IndicatorDerived._source_datapoints: incompatible "
+                         "source_ind_id=%r", self.source_ind_id)
+            raise ValueError("source_indicator market settings do not match")
+        if len(source.datapoints) == 0:
+            source.load_datapoints()
+        if len(source.datapoints) == 0:
+            log.critical("IndicatorDerived._source_datapoints: no datapoints "
+                         "for source_ind_id=%r", self.source_ind_id)
+            raise ValueError("source_indicator has no datapoints")
+        return sorted(source.datapoints, key=lambda datapoint: datapoint.epoch)
+
+
+class IndicatorDerivedSMA(IndicatorDerived):
+    """Simple moving average calculated from another indicator's values."""
+
+    def __init__(self,
+                 description,
+                 timeframe,
+                 trading_hours,
+                 symbol,
+                 calc_version,
+                 calc_details,
+                 start_dt=bot(),
+                 end_dt=None,
+                 ind_id=None,
+                 autoload_chart=False,
+                 candle_chart=None,
+                 name="DerivedSMA",
+                 datapoints=None,
+                 parameters={},
+                 ):
+        super().__init__(description=description,
+                         timeframe=timeframe,
+                         trading_hours=trading_hours,
+                         symbol=symbol,
+                         calc_version=calc_version,
+                         calc_details=calc_details,
+                         start_dt=start_dt,
+                         end_dt=end_dt,
+                         ind_id=ind_id,
+                         autoload_chart=autoload_chart,
+                         candle_chart=candle_chart,
+                         name=name,
+                         datapoints=datapoints,
+                         parameters=parameters,
+                         )
+        if "length" not in parameters:
+            log.critical("IndicatorDerivedSMA.__init__: missing length")
+            raise ValueError("Must provide length in parameters")
+        self.length = int(parameters["length"])
+        if self.length <= 0:
+            log.critical("IndicatorDerivedSMA.__init__: invalid length=%r",
+                         self.length)
+            raise ValueError("length must be a positive integer")
+        source_suffix = self.source_ind_id.split("_", 3)[-1]
+        ind_id_suffix = f"_DerivedSMA{self.length}_{source_suffix}"
+        prefix = (f"{self.symbol.ticker}_{self.trading_hours}_"
+                  f"{self.timeframe}")
+        if self.ind_id == prefix + "_" + self.name:
+            self.ind_id = prefix + ind_id_suffix
+        self.class_name = "IndicatorDerivedSMA"
+
+    def calculate(self):
+        """Calculate SMA values from the supplied source indicator series."""
+        source_datapoints = self._source_datapoints()
+        self.datapoints = []
+        values = []
+        for source_datapoint in source_datapoints:
+            values.append(source_datapoint.value)
+            if len(values) > self.length:
+                values.pop(0)
+            if len(values) == self.length:
+                self.datapoints.append(
+                    IndicatorDataPoint(dt=source_datapoint.dt,
+                                       value=round(fmean(values), 2),
+                                       ind_id=self.ind_id,
+                                       name=self.name,
+                                       )
+                )
         return True
 
 

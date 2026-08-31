@@ -1,12 +1,14 @@
 """Tests for Indicator, IndicatorSMA, IndicatorEMA, and IndicatorRSI."""
 import json
 import pytest
+import dhtrader.dhtypes as dhtypes
 from dhtrader import (
     Candle, Chart,
     delete_indicators_by_name,
     get_indicator, get_indicator_datapoints,
     get_indicators_by_name, Indicator, IndicatorDataPoint,
-    IndicatorEMA, IndicatorRSI, IndicatorSMA, store_indicator, Symbol)
+    IndicatorEMA, IndicatorRSI, IndicatorSMA, IndicatorDerivedSMA,
+    store_indicator, Symbol)
 
 
 @pytest.mark.storage
@@ -1409,6 +1411,109 @@ def test_IndicatorRSI_calculate_for_wilder_simple_exponential():
         assert 0 <= dp.value <= 100
 
 
+@pytest.mark.suppress_stdout
+def test_IndicatorDerivedSMA_calculates_and_serializes_lineage(monkeypatch):
+    """Calculate SMA over an unordered source series and retain lineage."""
+    source = Indicator(
+        name="RSI",
+        description="Test source RSI",
+        timeframe="1m",
+        trading_hours="eth",
+        symbol="ES",
+        calc_version="1.0.0",
+        calc_details="test",
+        ind_id="ES_eth_1m_RSI_close_p14_swilder",
+        autoload_chart=False,
+        datapoints=[
+            IndicatorDataPoint("2099-01-02 12:03:00", 30, "source"),
+            IndicatorDataPoint("2099-01-02 12:01:00", 10, "source"),
+            IndicatorDataPoint("2099-01-02 12:04:00", 40, "source"),
+            IndicatorDataPoint("2099-01-02 12:02:00", 20, "source"),
+        ],
+    )
+    monkeypatch.setattr(dhtypes, "get_indicator", lambda **kwargs: source)
+    derived = IndicatorDerivedSMA(
+        description="Test RSI SMA",
+        timeframe="1m",
+        trading_hours="eth",
+        symbol="ES",
+        calc_version="1.0.0",
+        calc_details="test",
+        autoload_chart=False,
+        parameters={"source_ind_id": source.ind_id, "length": 3},
+    )
+
+    assert derived.ind_id == "ES_eth_1m_DerivedSMA3_RSI_close_p14_swilder"
+    assert derived.calculate() is True
+    assert [dp.dt for dp in derived.datapoints] == [
+        "2099-01-02 12:03:00",
+        "2099-01-02 12:04:00",
+    ]
+    assert [dp.value for dp in derived.datapoints] == [20.0, 30.0]
+    assert all(dp.ind_id == derived.ind_id for dp in derived.datapoints)
+    serialized = derived.to_clean_dict()
+    assert serialized["parameters"] == {
+        "source_ind_id": source.ind_id,
+        "length": 3,
+    }
+    assert "source_indicator" not in serialized
+
+
+@pytest.mark.suppress_stdout
+def test_IndicatorDerivedSMA_rejects_incompatible_source(monkeypatch):
+    """Reject a source indicator with different market settings."""
+    source = Indicator(name="RSI",
+                       description="Test source RSI",
+                       timeframe="5m",
+                       trading_hours="eth",
+                       symbol="ES",
+                       calc_version="1.0.0",
+                       calc_details="test",
+                       ind_id="ES_eth_5m_RSI_close_p14_swilder",
+                       autoload_chart=False,
+                       datapoints=[
+                           IndicatorDataPoint("2099-01-02 12:00:00",
+                                              50,
+                                              "source"),
+                       ],
+                       )
+    monkeypatch.setattr(dhtypes, "get_indicator", lambda **kwargs: source)
+    derived = IndicatorDerivedSMA(
+        description="Test RSI SMA",
+        timeframe="1m",
+        trading_hours="eth",
+        symbol="ES",
+        calc_version="1.0.0",
+        calc_details="test",
+        autoload_chart=False,
+        parameters={"source_ind_id": source.ind_id, "length": 1},
+    )
+
+    with pytest.raises(ValueError, match="market settings"):
+        derived.calculate()
+
+
+@pytest.mark.suppress_stdout
+def test_IndicatorDerivedSMA_rejects_missing_source(monkeypatch):
+    """Require source indicator metadata to exist during initialization."""
+    monkeypatch.setattr(dhtypes, "get_indicator", lambda **kwargs: None)
+
+    with pytest.raises(ValueError, match="not found in storage"):
+        IndicatorDerivedSMA(
+            description="Test RSI SMA",
+            timeframe="1m",
+            trading_hours="eth",
+            symbol="ES",
+            calc_version="1.0.0",
+            calc_details="test",
+            autoload_chart=False,
+            parameters={
+                "source_ind_id": "ES_eth_1m_RSI_close_p14_swilder",
+                "length": 14,
+            },
+        )
+
+
 # e1h ETH RSI14 Wilder
 def shared_assertions_Indicator_spotcheck_ES_eth_e1h_RSI_close_p14_swilder(
     i,
@@ -1493,6 +1598,106 @@ def test_Indicator_storage_spotcheck_ES_eth_e1h_RSI_close_p14_swilder():
                                )
     ind_stored.load_datapoints()
     shared_assertions_Indicator_spotcheck_ES_eth_e1h_RSI_close_p14_swilder(
+        ind_stored)
+
+
+def shared_assertions_Indicator_spotcheck_ES_eth_e1d_RSI_close_p14_swilder(
+    indicator,
+):
+    """Assert ES ETH daily RSI(14), Wilder datapoint values."""
+    indexes = indicator.datapoint_indexes_by_dt()
+    assert indicator.datapoints[indexes["2026-03-02 00:00:00"]].value == 47.63
+    assert indicator.datapoints[indexes["2026-03-09 00:00:00"]].value == 43.36
+    assert indicator.datapoints[indexes["2026-03-16 00:00:00"]].value == 43.14
+    assert indicator.datapoints[indexes["2026-03-23 00:00:00"]].value == 38.44
+    assert indicator.datapoints[indexes["2026-03-30 00:00:00"]].value == 26.62
+
+
+@pytest.mark.storage
+@pytest.mark.suppress_stdout
+def test_Indicator_calculated_spotcheck_ES_eth_e1d_RSI_close_p14_swilder():
+    """Spotcheck calculated daily RSI values against previous results."""
+    ind_id = "ES_eth_e1d_RSI_close_p14_swilder"
+    ind_calced = get_indicator(ind_id=ind_id,
+                               autoload_datapoints=False,
+                               autoload_chart=False,
+                               )
+    ind_calced.start_dt = "2008-01-01 00:00:00"
+    ind_calced.end_dt = "2026-03-31 18:00:00"
+    ind_calced.load_underlying_chart()
+    ind_calced.calculate()
+    shared_assertions_Indicator_spotcheck_ES_eth_e1d_RSI_close_p14_swilder(
+        ind_calced)
+
+
+@pytest.mark.storage
+@pytest.mark.suppress_stdout
+def test_Indicator_storage_spotcheck_ES_eth_e1d_RSI_close_p14_swilder():
+    """Spotcheck stored daily RSI values."""
+    ind_id = "ES_eth_e1d_RSI_close_p14_swilder"
+    ind_stored = get_indicator(ind_id=ind_id,
+                               autoload_datapoints=False,
+                               autoload_chart=False,
+                               )
+    ind_stored.load_datapoints()
+    shared_assertions_Indicator_spotcheck_ES_eth_e1d_RSI_close_p14_swilder(
+        ind_stored)
+
+
+def shared_assertions_Indicator_spotcheck_ES_eth_e1d_DerivedSMA14_RSI(
+    indicator,
+):
+    """Assert ES ETH daily SMA(14) over RSI(14), Wilder datapoints."""
+    indexes = indicator.datapoint_indexes_by_dt()
+    assert indicator.datapoints[indexes["2026-03-02 00:00:00"]].value == 47.32
+    assert indicator.datapoints[indexes["2026-03-09 00:00:00"]].value == 46.61
+    assert indicator.datapoints[indexes["2026-03-16 00:00:00"]].value == 43.98
+    assert indicator.datapoints[indexes["2026-03-23 00:00:00"]].value == 40.70
+    assert indicator.datapoints[indexes["2026-03-30 00:00:00"]].value == 37.01
+
+
+@pytest.mark.storage
+@pytest.mark.suppress_stdout
+def test_Indicator_calculated_spotcheck_ES_eth_e1d_DerivedSMA14_RSI():
+    """Spotcheck calculated daily SMA(14) over RSI(14), Wilder."""
+    source_ind_id = "ES_eth_e1d_RSI_close_p14_swilder"
+    source = get_indicator(ind_id=source_ind_id,
+                           autoload_datapoints=False,
+                           autoload_chart=False,
+                           )
+    source.start_dt = "2008-01-01 00:00:00"
+    source.end_dt = "2026-03-31 18:00:00"
+    source.load_underlying_chart()
+    source.calculate()
+    derived = IndicatorDerivedSMA(
+        description="Spotcheck daily SMA(14) over RSI(14), Wilder",
+        timeframe="e1d",
+        trading_hours="eth",
+        symbol="ES",
+        calc_version="1.0.0",
+        calc_details="14-period SMA of daily RSI(14), Wilder close",
+        parameters={"source_ind_id": source_ind_id, "length": 14},
+    )
+    derived.calculate()
+    shared_assertions_Indicator_spotcheck_ES_eth_e1d_DerivedSMA14_RSI(
+        derived)
+
+
+@pytest.mark.storage
+@pytest.mark.suppress_stdout
+def test_Indicator_storage_spotcheck_ES_eth_e1d_DerivedSMA14_RSI():
+    """Spotcheck stored daily SMA(14) over RSI(14), Wilder values."""
+    ind_id = "ES_eth_e1d_DerivedSMA14_RSI_close_p14_swilder"
+    ind_stored = get_indicator(ind_id=ind_id,
+                               autoload_datapoints=False,
+                               autoload_chart=False,
+                               )
+    assert ind_stored is not None, (
+        "Run refresh_data.py to store the derived SMA indicator, then "
+        "verify these values against the chart."
+    )
+    ind_stored.load_datapoints()
+    shared_assertions_Indicator_spotcheck_ES_eth_e1d_DerivedSMA14_RSI(
         ind_stored)
 
 
