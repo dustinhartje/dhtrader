@@ -6,10 +6,6 @@ from dhtrader import (
     Candle, Chart, Event)
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "load_candles filters e1d candles by their midnight storage label "
-    "instead of the prior-evening canonical session boundary"
-))
 @pytest.mark.parametrize("timeframe", ["e1d", "e1w"])
 def test_Chart_load_candles_retains_aggregate_label_closed_at_midnight(
     monkeypatch,
@@ -50,6 +46,45 @@ def test_Chart_load_candles_retains_aggregate_label_closed_at_midnight(
     )
 
     assert chart.c_candles == [aggregate_candle]
+
+
+def test_Chart_load_candles_excludes_intraday_candle_closed_at_timestamp(
+    monkeypatch,
+):
+    """Intraday candles remain filtered by their raw timestamp."""
+    minute_candle = Candle(
+        c_datetime="2026-03-02 00:00:00",
+        c_timeframe="1m",
+        c_open=100,
+        c_high=101,
+        c_low=99,
+        c_close=100.5,
+        c_volume=10,
+        c_symbol="ES",
+    )
+    closed_event = Event(
+        start_dt="2026-03-02 00:00:00",
+        end_dt="2026-03-02 01:00:00",
+        symbol="ES",
+        category="Closed",
+    )
+    monkeypatch.setattr(
+        dhtypes,
+        "get_candles",
+        lambda **kwargs: [minute_candle],
+    )
+    monkeypatch.setattr(dhtypes, "get_events", lambda **kwargs: [closed_event])
+
+    chart = Chart(
+        c_timeframe="1m",
+        c_trading_hours="eth",
+        c_symbol="ES",
+        c_start="2026-03-01 18:00:00",
+        c_end="2026-03-02 18:00:00",
+        autoload=True,
+    )
+
+    assert chart.c_candles == []
 
 
 @pytest.mark.suppress_stdout

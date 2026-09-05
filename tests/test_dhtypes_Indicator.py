@@ -1575,10 +1575,6 @@ def test_IndicatorDerivedSMA_calculates_and_serializes_lineage(monkeypatch):
     assert "source_indicator" not in serialized
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "Chart.load_candles filters aggregate source candles by their raw "
-    "labels instead of their canonical session boundaries"
-))
 @pytest.mark.parametrize(
     ("timeframe", "candle_dts"),
     [

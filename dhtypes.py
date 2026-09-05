@@ -1316,17 +1316,34 @@ class Chart():
                             categories=["Closed"],
                             )
         log.info("Filtering candles for market hours and events...")
-        # Use shared context helper to filter candles by market hours,
-        # building one context that is reused for all candles
-        self.c_candles = self.c_symbol.filter_open_candles(
-            candles=cans,
-            trading_hours=self.c_trading_hours,
-            events=events,
-            start_dt=self.c_start,
-            end_dt=self.c_end,
-            show_progress=show_progress,
-            progress_desc="Candles filtered for market hours",
-        )
+        if self.c_timeframe in ["e1d", "e1w"]:
+            # Aggregate labels are display dates, not session-open timestamps.
+            candle_keys = [
+                canonical_session_key(candle.c_datetime, self.c_timeframe)
+                for candle in cans
+            ]
+            open_keys = set(self.c_symbol.filter_open_datetimes(
+                target_dts=candle_keys,
+                trading_hours=self.c_trading_hours,
+                events=events,
+                start_dt=min(candle_keys, default=self.c_start),
+                end_dt=self.c_end,
+            ))
+            # Preserve raw storage labels after filtering by canonical keys.
+            self.c_candles = [
+                candle for candle, candle_key in zip(cans, candle_keys)
+                if candle_key in open_keys
+            ]
+        else:
+            self.c_candles = self.c_symbol.filter_open_candles(
+                candles=cans,
+                trading_hours=self.c_trading_hours,
+                events=events,
+                start_dt=self.c_start,
+                end_dt=self.c_end,
+                show_progress=show_progress,
+                progress_desc="Candles filtered for market hours",
+            )
 
         log.info("Sorting candles")
         self.sort_candles()
