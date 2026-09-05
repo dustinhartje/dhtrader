@@ -7,7 +7,7 @@ from dhtrader import (
     delete_indicators_by_name,
     get_indicator, get_indicator_datapoints,
     get_indicators_by_name, Indicator, IndicatorDataPoint,
-    IndicatorEMA, IndicatorRSI, IndicatorSMA, IndicatorDerivedSMA,
+    Event, IndicatorEMA, IndicatorRSI, IndicatorSMA, IndicatorDerivedSMA,
     store_indicator, Symbol)
 
 
@@ -1573,6 +1573,90 @@ def test_IndicatorDerivedSMA_calculates_and_serializes_lineage(monkeypatch):
         "length": 3,
     }
     assert "source_indicator" not in serialized
+
+
+@pytest.mark.xfail(strict=True, reason=(
+    "Chart.load_candles filters aggregate source candles by their raw "
+    "labels instead of their canonical session boundaries"
+))
+@pytest.mark.parametrize(
+    ("timeframe", "candle_dts"),
+    [
+        (
+            "e1d",
+            [
+                "2026-03-02 00:00:00",
+                "2026-03-03 00:00:00",
+                "2026-03-04 00:00:00",
+            ],
+        ),
+        (
+            "e1w",
+            [
+                "2026-03-02 00:00:00",
+                "2026-03-09 00:00:00",
+                "2026-03-16 00:00:00",
+            ],
+        ),
+    ],
+)
+def test_aggregate_chart_filter_preserves_primary_and_derived_datapoints(
+    monkeypatch,
+    timeframe,
+    candle_dts,
+):
+    """An aggregate input closure cannot remove dependent datapoints."""
+    candles = [
+        Candle(
+            c_datetime=candle_dt,
+            c_timeframe=timeframe,
+            c_open=100 + index,
+            c_high=101 + index,
+            c_low=99 + index,
+            c_close=100 + index,
+            c_volume=10 + index,
+            c_symbol="ES",
+        )
+        for index, candle_dt in enumerate(candle_dts)
+    ]
+    closed_event = Event(
+        start_dt="2026-03-02 00:00:00",
+        end_dt="2026-03-02 01:00:00",
+        symbol="ES",
+        category="Closed",
+    )
+    monkeypatch.setattr(dhtypes, "get_candles", lambda **kwargs: candles)
+    monkeypatch.setattr(dhtypes, "get_events", lambda **kwargs: [closed_event])
+
+    primary = IndicatorRSI(
+        description="Aggregate RSI filter regression",
+        timeframe=timeframe,
+        trading_hours="eth",
+        symbol="ES",
+        calc_version="1.0.0",
+        calc_details="test",
+        start_dt="2026-03-01 18:00:00",
+        end_dt="2026-03-16 18:00:00",
+        autoload_chart=False,
+        parameters={"period": 1},
+    )
+    primary.load_underlying_chart()
+    primary.calculate()
+    monkeypatch.setattr(dhtypes, "get_indicator", lambda **kwargs: primary)
+    derived = IndicatorDerivedSMA(
+        description="Aggregate RSI SMA filter regression",
+        timeframe=timeframe,
+        trading_hours="eth",
+        symbol="ES",
+        calc_version="1.0.0",
+        calc_details="test",
+        autoload_chart=False,
+        parameters={"source_ind_id": primary.ind_id, "length": 1},
+    )
+    derived.calculate()
+
+    assert [datapoint.dt for datapoint in primary.datapoints] == candle_dts[1:]
+    assert [datapoint.dt for datapoint in derived.datapoints] == candle_dts[1:]
 
 
 @pytest.mark.suppress_stdout
