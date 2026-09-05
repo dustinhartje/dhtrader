@@ -1004,6 +1004,9 @@ class Symbol():
 class Candle():
     """Represents a single OHLCV candlestick for a tradeable symbol.
 
+    Intraday timeframes are shorter than e1d. Higher timeframes are e1d or
+    longer, including e1d, e1w, and future e1m/e1y timeframes.
+
     Derived size, direction, and wick attributes are computed automatically
     on creation.
     """
@@ -2041,10 +2044,10 @@ class Indicator():
         previous and next requests.
 
         Intraday indicators match their raw datapoint timestamp directly.
-        Aggregate ETH indicators (e1d, e1w, e1m, and e1y) instead match a
-        canonical session key. Their raw datapoint timestamp is a chart label
-        such as daily midnight or weekly Monday midnight, while the canonical
-        key is the associated 18:00 session boundary.
+        Higher-timeframe ETH indicators (e1d, e1w, e1m, and e1y) instead
+        match a canonical session key. Their raw datapoint timestamp is a
+        chart label such as daily midnight or weekly Monday midnight, while the
+        canonical session key is the associated 18:00 session boundary.
 
         Args:
             dt: A timestamp within the requested indicator period.
@@ -2054,13 +2057,14 @@ class Indicator():
             The matched datapoint adjusted by offset, or None when absent.
 
         Raises:
-            ValueError: If multiple datapoints share one canonical aggregate
-                session key, or offset moves before the first datapoint.
+            ValueError: If multiple datapoints share one canonical
+            higher-timeframe session key, or offset moves before the first
+            datapoint.
         """
         # Normalize the request to its candle/session boundary first.
         can_dt = this_candle_start(dt=dt, timeframe=self.timeframe)
-        aggregate_timeframes = {"e1d", "e1w", "e1m", "e1y"}
-        # Aggregate storage labels must be normalized before comparison;
+        higher_timeframes = {"e1d", "e1w", "e1m", "e1y"}
+        # Higher-timeframe labels must be normalized before comparison;
         # intraday labels already represent their actual candle start.
         matching_indexes = [
             index
@@ -2070,7 +2074,7 @@ class Indicator():
                     datapoint.dt,
                     self.timeframe,
                 ) == can_dt
-                if self.timeframe in aggregate_timeframes
+                if self.timeframe in higher_timeframes
                 else dt_as_dt(datapoint.dt) == dt_as_dt(can_dt)
             )
         ]

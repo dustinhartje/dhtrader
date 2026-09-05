@@ -27,6 +27,9 @@ Core functions here include:
 
 These functions are imported by other modules throughout the system,
 including dhstore, dhutil, and dhtypes.
+
+Terminology: Intraday timeframes are shorter than e1d. Higher timeframes are
+e1d or longer, including e1d, e1w, and future e1m/e1y timeframes.
 """
 from datetime import datetime as dt
 from datetime import timedelta, date, time
@@ -542,7 +545,7 @@ def this_candle_start(dt, timeframe: str):
 
 
 def canonical_session_key(value, timeframe: str):
-    """Return the session-start timestamp used to identify an aggregate.
+    """Return the session-start timestamp used to identify a higher timeframe.
 
     A canonical session key is the stable timestamp used for matching an ETH
     daily, weekly, monthly, or yearly candle to trades and datapoints in that
@@ -597,11 +600,11 @@ def canonical_session_key(value, timeframe: str):
 
 
 def storage_label_for_session_key(value, timeframe: str):
-    """Return the chart-facing timestamp required for stored aggregates.
+    """Return the chart-facing timestamp for a stored higher timeframe.
 
     A required chart/storage label is the fixed calendar timestamp written to
-    an aggregate candle or indicator datapoint and displayed on charts. It
-    names the represented calendar period, rather than the ETH session's
+    a higher-timeframe candle or indicator datapoint and displayed on charts.
+    It names the represented calendar period, rather than the ETH session's
     18:00 start. It remains fixed when weekends or Closed events delay the
     first source data, so records can be compared and stored consistently.
 
@@ -611,12 +614,12 @@ def storage_label_for_session_key(value, timeframe: str):
     delays the first source candle after the session boundary.
 
     Args:
-        value: A canonical aggregate session key.
+        value: A canonical higher-timeframe session key.
         timeframe: One of e1d, e1w, e1m, or e1y.
     """
     key = dt_as_dt(value).replace(microsecond=0, second=0)
     if timeframe in {"e1d", "e1w", "e1m"}:
-        # These aggregate labels are midnight six hours after the associated
+        # These higher-timeframe labels are midnight after the associated
         # canonical 18:00 session boundary.
         return (key + timedelta(hours=6)).replace(
             hour=0,

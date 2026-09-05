@@ -11,7 +11,7 @@ def test_Chart_load_candles_retains_aggregate_label_closed_at_midnight(
     monkeypatch,
     timeframe,
 ):
-    """An aggregate label survives when its canonical session is open."""
+    """A higher-timeframe label survives when its canonical session is open."""
     aggregate_candle = Candle(
         c_datetime="2026-03-02 00:00:00",
         c_timeframe=timeframe,

@@ -495,7 +495,7 @@ def test_aggregate_session_key_and_storage_label(
     expected_key,
     expected_label,
 ):
-    """Aggregate session keys round trip to their prescribed chart labels."""
+    """Higher-timeframe keys round trip to prescribed chart labels."""
     key = canonical_session_key(timestamp, timeframe)
 
     assert key == datetime.fromisoformat(expected_key)
