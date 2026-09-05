@@ -26,6 +26,7 @@ from .dhtypes import (
 from .dhcommon import (
     bot,
     check_tf_th_compatibility,
+    canonical_session_key,
     DEFAULT_OBJ_NAME,
     diff_dicts,
     dow_name,
@@ -45,6 +46,7 @@ from .dhcommon import (
     ProgBar,
     prompt_yn,
     rangify_candle_times,
+    storage_label_for_session_key,
     sort_dict,
     summarize_candles,
     TF_TH_MAP,

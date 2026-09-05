@@ -533,37 +533,104 @@ def this_candle_start(dt, timeframe: str):
     elif timeframe == "e1h":
         while this_dt.minute != 0:
             this_dt = this_dt - min_delta
-    elif timeframe == "e1d":
-        # ETH daily sessions start at 18:00; find the most recent 18:00
-        # boundary (same or prior day depending on current time).
-        if this_dt.hour >= 18:
-            # At or after 6pm, return today at 18:00
-            this_dt = this_dt.replace(
-                hour=18, minute=0, second=0, microsecond=0)
-        else:
-            # Before 6pm, return yesterday at 18:00
-            this_dt = (this_dt - timedelta(days=1)).replace(
-                hour=18, minute=0, second=0, microsecond=0)
-    elif timeframe == "e1w":
-        # ETH weekly sessions start at Sunday 18:00; find the most recent
-        # such boundary by walking back to the prior Sunday if needed.
-        if this_dt.weekday() == 6 and this_dt.hour >= 18:
-            # Sunday at/after 6pm, return Sunday at 18:00
-            this_dt = this_dt.replace(
-                hour=18, minute=0, second=0, microsecond=0)
-        else:
-            # Find the most recent Sunday
-            if this_dt.weekday() == 6:  # Already Sunday but before 6pm
-                days_back = 7
-            else:
-                # Days since last Sunday (weekday 6)
-                days_back = (this_dt.weekday() + 1) % 7
-            this_dt = (this_dt - timedelta(days=days_back)).replace(
-                hour=18, minute=0, second=0, microsecond=0)
+    elif timeframe in {"e1d", "e1w", "e1m", "e1y"}:
+        this_dt = canonical_session_key(this_dt, timeframe)
     else:
         raise ValueError(f"timeframe: {timeframe} not supported")
 
     return this_dt
+
+
+def canonical_session_key(value, timeframe: str):
+    """Return the session-start timestamp used to identify an aggregate.
+
+    A canonical session key is the stable timestamp used for matching an ETH
+    daily, weekly, monthly, or yearly candle to trades and datapoints in that
+    same period. It represents the period's intended 18:00 session boundary,
+    even when the market opens later because of a weekend or Closed event.
+    It is not necessarily the timestamp shown on a chart or stored on the
+    candle/datapoint record.
+
+    For example, an ES e1d candle displayed and stored as
+    ``2026-03-02 00:00:00`` represents the session that opened at the canonical
+    session key of ``2026-03-01 18:00:00``. A trade at ``2026-03-02 10:00:00``
+    uses that same canonical session key to locate the daily candle or
+    datapoint.
+
+    Args:
+        value: A chart label, session boundary, or timestamp within a period.
+        timeframe: One of e1d, e1w, e1m, or e1y.
+    """
+    this_dt = dt_as_dt(value).replace(microsecond=0, second=0)
+    if timeframe == "e1d":
+        # The ETH daily session begins at 18:00 on the preceding calendar day
+        # until the next 18:00 boundary begins a new session.
+        if this_dt.hour < 18:
+            this_dt -= timedelta(days=1)
+        return this_dt.replace(hour=18, minute=0)
+    if timeframe == "e1w":
+        # Weekly ETH periods begin Sunday at 18:00; Sunday before 18:00 still
+        # belongs to the prior week's session.
+        if this_dt.weekday() == 6 and this_dt.hour < 18:
+            days_back = 7
+        else:
+            days_back = (this_dt.weekday() + 1) % 7
+        return (this_dt - timedelta(days=days_back)).replace(
+            hour=18,
+            minute=0,
+        )
+    if timeframe == "e1m":
+        # The month label is its first calendar midnight, so its session key
+        # is six hours earlier at 18:00 on the preceding calendar date.
+        label_date = (this_dt + timedelta(hours=6)).replace(
+            day=1,
+            hour=0,
+            minute=0,
+        )
+        return label_date - timedelta(hours=6)
+    if timeframe == "e1y":
+        # Yearly data is a hard calendar-year bucket that always starts with
+        # the January 1 18:00 session boundary, even after a holiday closure.
+        return this_dt.replace(month=1, day=1, hour=18, minute=0)
+    log.critical("canonical_session_key: unsupported timeframe %s", timeframe)
+    raise ValueError(f"Unsupported aggregate timeframe: {timeframe}")
+
+
+def storage_label_for_session_key(value, timeframe: str):
+    """Return the chart-facing timestamp required for stored aggregates.
+
+    A required chart/storage label is the fixed calendar timestamp written to
+    an aggregate candle or indicator datapoint and displayed on charts. It
+    names the represented calendar period, rather than the ETH session's
+    18:00 start. It remains fixed when weekends or Closed events delay the
+    first source data, so records can be compared and stored consistently.
+
+    For example, the ES e1d canonical session key
+    ``2026-03-01 18:00:00`` must be stored and charted with the label
+    ``2026-03-02 00:00:00``. The label remains March 2 even if a Closed event
+    delays the first source candle after the session boundary.
+
+    Args:
+        value: A canonical aggregate session key.
+        timeframe: One of e1d, e1w, e1m, or e1y.
+    """
+    key = dt_as_dt(value).replace(microsecond=0, second=0)
+    if timeframe in {"e1d", "e1w", "e1m"}:
+        # These aggregate labels are midnight six hours after the associated
+        # canonical 18:00 session boundary.
+        return (key + timedelta(hours=6)).replace(
+            hour=0,
+            minute=0,
+        )
+    if timeframe == "e1y":
+        # The yearly label is January 1 midnight in the same calendar year as
+        # its January 1 18:00 canonical session boundary.
+        return key.replace(month=1, day=1, hour=0, minute=0)
+    log.critical(
+        "storage_label_for_session_key: unsupported timeframe %s",
+        timeframe,
+    )
+    raise ValueError(f"Unsupported aggregate timeframe: {timeframe}")
 
 
 def next_candle_start(dt,

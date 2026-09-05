@@ -980,13 +980,6 @@ def test_Indicator_create_and_verify_common_methods():
          "2025-01-05 18:00:00", "2025-01-08 12:00:00"),
     ],
 )
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "get_datapoint compares canonical keys to raw chart labels; XPASS "
-        "means production behavior changed"
-    ),
-)
 def test_Indicator_get_datapoint_uses_canonical_key_for_aggregates(
     timeframe,
     first_label,
@@ -1044,13 +1037,6 @@ def test_Indicator_get_datapoint_preserves_intraday_lookup(
     assert indicator.get_datapoint(inside_period).dt == label
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "get_datapoint silently ignores duplicate canonical keys; XPASS "
-        "means production behavior changed"
-    ),
-)
 def test_Indicator_get_datapoint_rejects_duplicate_aggregate_key():
     """Do not choose an arbitrary datapoint for duplicate aggregate keys."""
     indicator = Indicator(

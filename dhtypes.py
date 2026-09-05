@@ -42,7 +42,7 @@ from .dhcommon import (
     valid_timeframe, valid_trading_hours, log_say, this_candle_start,
     check_tf_th_compatibility, start_of_week_date, dict_of_weeks, bot,
     ProgBar, DEFAULT_OBJ_NAME, MARKET_ERAS,
-    normalize_list_of_strings, new_uuid)
+    canonical_session_key, normalize_list_of_strings, new_uuid)
 CANDLE_TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w']
 BEGINNING_OF_TIME = "2008-01-01 00:00:00"
 
@@ -2015,17 +2015,58 @@ class Indicator():
                       dt,
                       offset: int = 0,
                       ):
-        """Returns a single datapoint based on datetime provided.
+        """Return a datapoint for a timestamp in this indicator's period.
 
         Because this is typically based on candle close, we often want the
         previous datapoint from the candle we are working through in a
         backtest so offset is allowed to go back or forward in the list by
         the provided value.  Wrapper methods assist with the most common
         previous and next requests.
+
+        Intraday indicators match their raw datapoint timestamp directly.
+        Aggregate ETH indicators (e1d, e1w, e1m, and e1y) instead match a
+        canonical session key. Their raw datapoint timestamp is a chart label
+        such as daily midnight or weekly Monday midnight, while the canonical
+        key is the associated 18:00 session boundary.
+
+        Args:
+            dt: A timestamp within the requested indicator period.
+            offset: Number of chronological datapoints to move after lookup.
+
+        Returns:
+            The matched datapoint adjusted by offset, or None when absent.
+
+        Raises:
+            ValueError: If multiple datapoints share one canonical aggregate
+                session key, or offset moves before the first datapoint.
         """
+        # Normalize the request to its candle/session boundary first.
         can_dt = this_candle_start(dt=dt, timeframe=self.timeframe)
-        index = next((i for i, dp in enumerate(self.datapoints)
-                      if dt_as_dt(dp.dt) == dt_as_dt(can_dt)), None)
+        aggregate_timeframes = {"e1d", "e1w", "e1m", "e1y"}
+        # Aggregate storage labels must be normalized before comparison;
+        # intraday labels already represent their actual candle start.
+        matching_indexes = [
+            index
+            for index, datapoint in enumerate(self.datapoints)
+            if (
+                canonical_session_key(
+                    datapoint.dt,
+                    self.timeframe,
+                ) == can_dt
+                if self.timeframe in aggregate_timeframes
+                else dt_as_dt(datapoint.dt) == dt_as_dt(can_dt)
+            )
+        ]
+        # A canonical key must identify exactly one aggregate datapoint.
+        if len(matching_indexes) > 1:
+            log.critical(
+                "Indicator.get_datapoint: duplicate canonical key %s for "
+                "indicator %s",
+                can_dt,
+                self.ind_id,
+            )
+            raise ValueError(f"duplicate canonical key: {can_dt}")
+        index = matching_indexes[0] if matching_indexes else None
         # If no datapoints was found, return None
         if index is None:
             return None

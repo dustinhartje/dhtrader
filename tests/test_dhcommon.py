@@ -22,8 +22,10 @@ from dhtrader import (
     valid_trading_hours,
 )
 from dhtrader.dhcommon import (
+    canonical_session_key,
     dict_of_weeks,
     EVENT_CATEGORIES,
+    storage_label_for_session_key,
     start_of_week_date,
     TIMEFRAMES,
     valid_event_category,
@@ -459,6 +461,47 @@ def test_this_candle_start():
     # Invalid timeframe raises ValueError
     with pytest.raises(ValueError):
         this_candle_start("2099-01-15 10:00:00", "invalid")
+
+
+@pytest.mark.parametrize(
+    ("timeframe", "timestamp", "expected_key", "expected_label"),
+    [
+        # Daily intraperiod timestamp maps to the preceding session open.
+        ("e1d", "2026-03-02 10:00:00", "2026-03-01 18:00:00",
+         "2026-03-02 00:00:00"),
+        # Daily session-open timestamp starts the next chart-date candle.
+        ("e1d", "2026-03-02 18:00:00", "2026-03-02 18:00:00",
+         "2026-03-03 00:00:00"),
+        # Weekly intraperiod timestamp maps to the preceding Sunday open.
+        ("e1w", "2026-03-04 10:00:00", "2026-03-01 18:00:00",
+         "2026-03-02 00:00:00"),
+        # Monthly intraperiod timestamp maps to the prior month-end session.
+        ("e1m", "2026-03-15 10:00:00", "2026-02-28 18:00:00",
+         "2026-03-01 00:00:00"),
+        # Month-end session open maps forward to the next month's label.
+        ("e1m", "2026-02-28 19:00:00", "2026-02-28 18:00:00",
+         "2026-03-01 00:00:00"),
+        # Yearly intraperiod timestamp retains the represented calendar year.
+        ("e1y", "2026-06-15 10:00:00", "2026-01-01 18:00:00",
+         "2026-01-01 00:00:00"),
+        # New Year's session boundary retains the same year label and key.
+        ("e1y", "2026-01-01 18:00:00", "2026-01-01 18:00:00",
+         "2026-01-01 00:00:00"),
+    ],
+)
+def test_aggregate_session_key_and_storage_label(
+    timeframe,
+    timestamp,
+    expected_key,
+    expected_label,
+):
+    """Aggregate session keys round trip to their prescribed chart labels."""
+    key = canonical_session_key(timestamp, timeframe)
+
+    assert key == datetime.fromisoformat(expected_key)
+    assert storage_label_for_session_key(key, timeframe) == (
+        datetime.fromisoformat(expected_label)
+    )
 
 
 @pytest.mark.suppress_stdout
