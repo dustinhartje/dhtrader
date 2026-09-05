@@ -970,6 +970,136 @@ def test_Indicator_create_and_verify_common_methods():
     assert "DELETEME" in p
 
 
+@pytest.mark.parametrize(
+    ("timeframe", "first_label", "second_label", "session_open",
+     "intraday"),
+    [
+        ("e1d", "2025-01-06 00:00:00", "2025-01-07 00:00:00",
+         "2025-01-05 18:00:00", "2025-01-06 12:00:00"),
+        ("e1w", "2025-01-06 00:00:00", "2025-01-13 00:00:00",
+         "2025-01-05 18:00:00", "2025-01-08 12:00:00"),
+    ],
+)
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "get_datapoint compares canonical keys to raw chart labels; XPASS "
+        "means production behavior changed"
+    ),
+)
+def test_Indicator_get_datapoint_uses_canonical_key_for_aggregates(
+    timeframe,
+    first_label,
+    second_label,
+    session_open,
+    intraday,
+):
+    """Characterize e1d/e1w lookup from canonical and intraperiod times."""
+    indicator = Indicator(
+        name="DELETEME",
+        description="Test aggregate lookup",
+        timeframe=timeframe,
+        trading_hours="eth",
+        symbol="ES",
+        calc_version="1.0.0",
+        calc_details="test",
+        autoload_chart=False,
+        datapoints=[
+            IndicatorDataPoint(first_label, 10, "DELETEME"),
+            IndicatorDataPoint(second_label, 20, "DELETEME"),
+        ],
+    )
+
+    assert indicator.get_datapoint(session_open).dt == first_label
+    assert indicator.get_datapoint(intraday).dt == first_label
+    assert indicator.next_datapoint(intraday).dt == second_label
+    assert indicator.prev_datapoint(second_label).dt == first_label
+
+
+@pytest.mark.parametrize(
+    ("timeframe", "label", "inside_period"),
+    [
+        ("1m", "2025-01-06 12:00:00", "2025-01-06 12:00:00"),
+        ("e1h", "2025-01-06 12:00:00", "2025-01-06 12:45:00"),
+    ],
+)
+def test_Indicator_get_datapoint_preserves_intraday_lookup(
+    timeframe,
+    label,
+    inside_period,
+):
+    """Keep established raw-label lookup semantics for intraday series."""
+    indicator = Indicator(
+        name="DELETEME",
+        description="Test intraday lookup",
+        timeframe=timeframe,
+        trading_hours="eth",
+        symbol="ES",
+        calc_version="1.0.0",
+        calc_details="test",
+        autoload_chart=False,
+        datapoints=[IndicatorDataPoint(label, 10, "DELETEME")],
+    )
+
+    assert indicator.get_datapoint(inside_period).dt == label
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "get_datapoint silently ignores duplicate canonical keys; XPASS "
+        "means production behavior changed"
+    ),
+)
+def test_Indicator_get_datapoint_rejects_duplicate_aggregate_key():
+    """Do not choose an arbitrary datapoint for duplicate aggregate keys."""
+    indicator = Indicator(
+        name="DELETEME",
+        description="Test duplicate aggregate key",
+        timeframe="e1d",
+        trading_hours="eth",
+        symbol="ES",
+        calc_version="1.0.0",
+        calc_details="test",
+        autoload_chart=False,
+        datapoints=[
+            IndicatorDataPoint("2025-01-06 00:00:00", 10, "DELETEME"),
+            IndicatorDataPoint("2025-01-05 20:00:00", 20, "DELETEME"),
+        ],
+    )
+
+    with pytest.raises(ValueError, match="duplicate canonical key"):
+        indicator.get_datapoint("2025-01-05 18:00:00")
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "get_datapoint silently returns None for an open-session gap; XPASS "
+        "means production behavior changed"
+    ),
+)
+def test_Indicator_get_datapoint_rejects_open_session_gap():
+    """Do not substitute or silently hide a missing aggregate datapoint."""
+    indicator = Indicator(
+        name="DELETEME",
+        description="Test aggregate gap",
+        timeframe="e1d",
+        trading_hours="eth",
+        symbol="ES",
+        calc_version="1.0.0",
+        calc_details="test",
+        autoload_chart=False,
+        datapoints=[
+            IndicatorDataPoint("2025-01-06 00:00:00", 10, "DELETEME"),
+            IndicatorDataPoint("2025-01-08 00:00:00", 20, "DELETEME"),
+        ],
+    )
+
+    with pytest.raises(ValueError, match="no datapoint"):
+        indicator.get_datapoint("2025-01-06 18:00:00")
+
+
 @pytest.mark.suppress_stdout
 def test_IndicatorSMA_create_and_verify_common_methods():
     """Test IndicatorSMA __init__ values, __eq__, __ne__, __str__, __repr__,
