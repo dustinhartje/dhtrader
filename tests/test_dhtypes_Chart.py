@@ -1,8 +1,55 @@
 """Tests for Chart creation, candle loading, and date restriction."""
 import json
 import pytest
+import dhtrader.dhtypes as dhtypes
 from dhtrader import (
-    Candle, Chart)
+    Candle, Chart, Event)
+
+
+@pytest.mark.xfail(strict=True, reason=(
+    "load_candles filters e1d candles by their midnight storage label "
+    "instead of the prior-evening canonical session boundary"
+))
+@pytest.mark.parametrize("timeframe", ["e1d", "e1w"])
+def test_Chart_load_candles_retains_aggregate_label_closed_at_midnight(
+    monkeypatch,
+    timeframe,
+):
+    """An aggregate label survives when its canonical session is open."""
+    aggregate_candle = Candle(
+        c_datetime="2026-03-02 00:00:00",
+        c_timeframe=timeframe,
+        c_open=100,
+        c_high=101,
+        c_low=99,
+        c_close=100.5,
+        c_volume=10,
+        c_symbol="ES",
+    )
+    closed_event = Event(
+        start_dt="2026-03-02 00:00:00",
+        end_dt="2026-03-02 01:00:00",
+        symbol="ES",
+        category="Closed",
+    )
+
+    monkeypatch.setattr(
+        dhtypes,
+        "get_candles",
+        lambda **kwargs: [aggregate_candle],
+    )
+    monkeypatch.setattr(dhtypes, "get_events", lambda **kwargs: [closed_event])
+
+    chart = Chart(
+        c_timeframe=timeframe,
+        c_trading_hours="eth",
+        c_symbol="ES",
+        c_start="2026-03-01 18:00:00",
+        c_end="2026-03-02 18:00:00",
+        autoload=True,
+    )
+
+    assert chart.c_candles == [aggregate_candle]
 
 
 @pytest.mark.suppress_stdout
