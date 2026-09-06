@@ -6,7 +6,17 @@ from dhtrader import (
     Candle, Chart, Event)
 
 
-@pytest.mark.parametrize("timeframe", ["e1d", "e1w"])
+@pytest.mark.parametrize(
+    "timeframe",
+    [
+        # e1d: midnight is a chart label; the prior Sunday 18:00 session
+        # boundary remains open despite this explicit midnight closure.
+        "e1d",
+        # e1w: the Monday chart label likewise belongs to the prior Sunday
+        # 18:00 weekly session boundary rather than to midnight itself.
+        "e1w",
+    ],
+)
 def test_Chart_load_candles_retains_aggregate_label_closed_at_midnight(
     monkeypatch,
     timeframe,

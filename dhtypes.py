@@ -1982,11 +1982,38 @@ class Indicator():
             result[dp.epoch] = i
         return result
 
-    def datapoint_indexes_by_dt(self):
-        """Return a dict mapping each datapoint's dt to its list index."""
+    def datapoint_indexes_by_candle_start(self):
+        """Return a dict mapping canonical candle starts to list indexes.
+
+        Higher-timeframe datapoints retain calendar storage labels, so their
+        canonical session keys are used here. Intraday datapoint timestamps
+        already represent their candle starts.
+
+        Raises:
+            ValueError: If multiple datapoints share a candle-start key.
+        """
+        higher_timeframes = {"e1d", "e1w", "e1m", "e1y"}
         result = {}
-        for i, dp in enumerate(self.datapoints):
-            result[dp.dt] = i
+        for index, datapoint in enumerate(self.datapoints):
+            if self.timeframe in higher_timeframes:
+                candle_start = canonical_session_key(
+                    datapoint.dt,
+                    self.timeframe,
+                )
+            else:
+                candle_start = this_candle_start(
+                    datapoint.dt,
+                    self.timeframe,
+                )
+            if candle_start in result:
+                log.critical(
+                    "Indicator.datapoint_indexes_by_candle_start: "
+                    "duplicate canonical key %s for indicator %s",
+                    candle_start,
+                    self.ind_id,
+                )
+                raise ValueError(f"duplicate canonical key: {candle_start}")
+            result[candle_start] = index
         return result
 
     def calculate(self):

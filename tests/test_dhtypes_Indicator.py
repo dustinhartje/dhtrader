@@ -974,8 +974,12 @@ def test_Indicator_create_and_verify_common_methods():
     ("timeframe", "first_label", "second_label", "session_open",
      "intraday"),
     [
+        # e1d: daily midnight labels map to the prior 18:00 session; a
+        # daytime lookup, prev, and next must retain chronological order.
         ("e1d", "2025-01-06 00:00:00", "2025-01-07 00:00:00",
          "2025-01-05 18:00:00", "2025-01-06 12:00:00"),
+        # e1w: Monday labels map to the prior Sunday 18:00 session; a
+        # midweek lookup, prev, and next must retain chronological order.
         ("e1w", "2025-01-06 00:00:00", "2025-01-13 00:00:00",
          "2025-01-05 18:00:00", "2025-01-08 12:00:00"),
     ],
@@ -1007,6 +1011,47 @@ def test_Indicator_get_datapoint_uses_canonical_key_for_aggregates(
     assert indicator.get_datapoint(intraday).dt == first_label
     assert indicator.next_datapoint(intraday).dt == second_label
     assert indicator.prev_datapoint(second_label).dt == first_label
+
+
+@pytest.mark.parametrize(
+    ("timeframe", "first_label", "second_label", "first_session_open"),
+    [
+        # e1d: a daily Monday label is indexed by its preceding Sunday 18:00
+        # canonical session key.
+        ("e1d", "2025-01-06 00:00:00", "2025-01-07 00:00:00",
+         "2025-01-05 18:00:00"),
+        # e1w: a weekly Monday label is indexed by its preceding Sunday 18:00
+        # canonical session key.
+        ("e1w", "2025-01-06 00:00:00", "2025-01-13 00:00:00",
+         "2025-01-05 18:00:00"),
+    ],
+)
+def test_Indicator_datapoint_indexes_by_candle_start_uses_canonical_key(
+    timeframe,
+    first_label,
+    second_label,
+    first_session_open,
+):
+    """Expose e1d/e1w datapoints through their canonical session keys."""
+    indicator = Indicator(
+        name="DELETEME",
+        description="Test canonical datapoint index",
+        timeframe=timeframe,
+        trading_hours="eth",
+        symbol="ES",
+        calc_version="1.0.0",
+        calc_details="test",
+        autoload_chart=False,
+        datapoints=[
+            IndicatorDataPoint(first_label, 10, "DELETEME"),
+            IndicatorDataPoint(second_label, 20, "DELETEME"),
+        ],
+    )
+
+    indexes = indicator.datapoint_indexes_by_candle_start()
+
+    assert indexes[dhtypes.dt_as_dt(first_session_open)] == 0
+    assert indexes[dhtypes.this_candle_start(second_label, timeframe)] == 1
 
 
 @pytest.mark.parametrize(
@@ -1056,6 +1101,8 @@ def test_Indicator_get_datapoint_rejects_duplicate_aggregate_key():
 
     with pytest.raises(ValueError, match="duplicate canonical key"):
         indicator.get_datapoint("2025-01-05 18:00:00")
+    with pytest.raises(ValueError, match="duplicate canonical key"):
+        indicator.datapoint_indexes_by_candle_start()
 
 
 @pytest.mark.xfail(
@@ -1578,6 +1625,8 @@ def test_IndicatorDerivedSMA_calculates_and_serializes_lineage(monkeypatch):
 @pytest.mark.parametrize(
     ("timeframe", "candle_dts"),
     [
+        # e1d: a closed midnight label must not remove the daily source
+        # candle or its primary and derived indicator datapoints.
         (
             "e1d",
             [
@@ -1586,6 +1635,8 @@ def test_IndicatorDerivedSMA_calculates_and_serializes_lineage(monkeypatch):
                 "2026-03-04 00:00:00",
             ],
         ),
+        # e1w: the same canonical-label filter rule preserves weekly source,
+        # primary, and derived indicator datapoints.
         (
             "e1w",
             [
@@ -1801,12 +1852,16 @@ def shared_assertions_Indicator_spotcheck_ES_eth_e1d_RSI_close_p14_swilder(
     indicator,
 ):
     """Assert ES ETH daily RSI(14), Wilder datapoint values."""
-    indexes = indicator.datapoint_indexes_by_dt()
-    assert indicator.datapoints[indexes["2026-03-02 00:00:00"]].value == 47.63
-    assert indicator.datapoints[indexes["2026-03-09 00:00:00"]].value == 43.36
-    assert indicator.datapoints[indexes["2026-03-16 00:00:00"]].value == 43.14
-    assert indicator.datapoints[indexes["2026-03-23 00:00:00"]].value == 38.44
-    assert indicator.datapoints[indexes["2026-03-30 00:00:00"]].value == 26.62
+    for label, expected_value in [
+        ("2026-03-02 00:00:00", 47.63),
+        ("2026-03-09 00:00:00", 43.36),
+        ("2026-03-16 00:00:00", 43.14),
+        ("2026-03-23 00:00:00", 38.44),
+        ("2026-03-30 00:00:00", 26.62),
+    ]:
+        datapoint = indicator.get_datapoint(label)
+        assert datapoint.dt == label
+        assert datapoint.value == expected_value
 
 
 @pytest.mark.storage
@@ -1844,12 +1899,16 @@ def shared_assertions_Indicator_spotcheck_ES_eth_e1d_DerivedSMA14_RSI(
     indicator,
 ):
     """Assert ES ETH daily SMA(14) over RSI(14), Wilder datapoints."""
-    indexes = indicator.datapoint_indexes_by_dt()
-    assert indicator.datapoints[indexes["2026-03-02 00:00:00"]].value == 47.32
-    assert indicator.datapoints[indexes["2026-03-09 00:00:00"]].value == 46.61
-    assert indicator.datapoints[indexes["2026-03-16 00:00:00"]].value == 43.98
-    assert indicator.datapoints[indexes["2026-03-23 00:00:00"]].value == 40.70
-    assert indicator.datapoints[indexes["2026-03-30 00:00:00"]].value == 37.01
+    for label, expected_value in [
+        ("2026-03-02 00:00:00", 47.32),
+        ("2026-03-09 00:00:00", 46.61),
+        ("2026-03-16 00:00:00", 43.98),
+        ("2026-03-23 00:00:00", 40.70),
+        ("2026-03-30 00:00:00", 37.01),
+    ]:
+        datapoint = indicator.get_datapoint(label)
+        assert datapoint.dt == label
+        assert datapoint.value == expected_value
 
 
 @pytest.mark.storage
