@@ -440,7 +440,7 @@ def compare_candles_vs_csv(filepath,
                            ):
     """Check stored candles against a CSV source file.
 
-    Primarily used to confirm calculated higher timeframes against data
+    Primarily used to confirm calculated aggregate timeframes against data
     provider equivalents to sanity check the calculation process.
 
     There is substantial overlap in the integrity checks performed by this
