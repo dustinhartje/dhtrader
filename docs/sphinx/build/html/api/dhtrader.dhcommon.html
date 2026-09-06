@@ -64,6 +64,8 @@ dt_from_epoch, etc.</p></li>
 </ul>
 <p>These functions are imported by other modules throughout the system,
 including dhstore, dhutil, and dhtypes.</p>
+<p>Terminology: Intraday timeframes are shorter than e1d. Higher timeframes are
+e1d or longer, including e1d, e1w, and future e1m/e1y timeframes.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhcommon.log_say">
 <span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">log_say</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">msg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">level</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'info'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prefix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">suffix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#log_say"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.log_say" title="Permalink to this definition">¶</a></dt>
@@ -345,6 +347,54 @@ not confirm market open and may not be able to answer in all cases.</p>
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.canonical_session_key">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">canonical_session_key</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeframe</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#canonical_session_key"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.canonical_session_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the session-start timestamp used to identify a higher timeframe.</p>
+<p>A canonical session key is the stable timestamp used for matching an ETH
+daily, weekly, monthly, or yearly candle to trades and datapoints in that
+same period. It represents the period’s intended 18:00 session boundary,
+even when the market opens later because of a weekend or Closed event.
+It is not necessarily the timestamp shown on a chart or stored on the
+candle/datapoint record.</p>
+<p>For example, an ES e1d candle displayed and stored as
+<code class="docutils literal notranslate"><span class="pre">2026-03-02</span> <span class="pre">00:00:00</span></code> represents the session that opened at the canonical
+session key of <code class="docutils literal notranslate"><span class="pre">2026-03-01</span> <span class="pre">18:00:00</span></code>. A trade at <code class="docutils literal notranslate"><span class="pre">2026-03-02</span> <span class="pre">10:00:00</span></code>
+uses that same canonical session key to locate the daily candle or
+datapoint.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>value</strong> – A chart label, session boundary, or timestamp within a period.</p></li>
+<li><p><strong>timeframe</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – One of e1d, e1w, e1m, or e1y.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dhtrader.dhcommon.storage_label_for_session_key">
+<span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">storage_label_for_session_key</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeframe</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#storage_label_for_session_key"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.storage_label_for_session_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the chart-facing timestamp for a stored higher timeframe.</p>
+<p>A required chart/storage label is the fixed calendar timestamp written to
+a higher-timeframe candle or indicator datapoint and displayed on charts.
+It names the represented calendar period, rather than the ETH session’s
+18:00 start. It remains fixed when weekends or Closed events delay the
+first source data, so records can be compared and stored consistently.</p>
+<p>For example, the ES e1d canonical session key
+<code class="docutils literal notranslate"><span class="pre">2026-03-01</span> <span class="pre">18:00:00</span></code> must be stored and charted with the label
+<code class="docutils literal notranslate"><span class="pre">2026-03-02</span> <span class="pre">00:00:00</span></code>. The label remains March 2 even if a Closed event
+delays the first source candle after the session boundary.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>value</strong> – A canonical higher-timeframe session key.</p></li>
+<li><p><strong>timeframe</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – One of e1d, e1w, e1m, or e1y.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="dhtrader.dhcommon.next_candle_start">
 <span class="sig-prename descclassname"><span class="pre">dhtrader.dhcommon.</span></span><span class="sig-name descname"><span class="pre">next_candle_start</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">trading_hours</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbol</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeframe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'1m'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">events</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhcommon.html#next_candle_start"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhcommon.next_candle_start" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return the next valid candle start datetime during open market hours.</p>
@@ -564,6 +614,8 @@ repos should pass the appropriate pattern, e.g.
 <li><a class="reference internal" href="#dhtrader.dhcommon.start_of_week_date"><code class="docutils literal notranslate"><span class="pre">start_of_week_date()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhcommon.dict_of_weeks"><code class="docutils literal notranslate"><span class="pre">dict_of_weeks()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhcommon.this_candle_start"><code class="docutils literal notranslate"><span class="pre">this_candle_start()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.canonical_session_key"><code class="docutils literal notranslate"><span class="pre">canonical_session_key()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhcommon.storage_label_for_session_key"><code class="docutils literal notranslate"><span class="pre">storage_label_for_session_key()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhcommon.next_candle_start"><code class="docutils literal notranslate"><span class="pre">next_candle_start()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhcommon.expected_candle_datetimes"><code class="docutils literal notranslate"><span class="pre">expected_candle_datetimes()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhcommon.rangify_candle_times"><code class="docutils literal notranslate"><span class="pre">rangify_candle_times()</span></code></a></li>

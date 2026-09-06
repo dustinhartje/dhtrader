@@ -62,6 +62,9 @@
 
 <span class="sd">These functions are imported by other modules throughout the system,</span>
 <span class="sd">including dhstore, dhutil, and dhtypes.</span>
+
+<span class="sd">Terminology: Intraday timeframes are shorter than e1d. Higher timeframes are</span>
+<span class="sd">e1d or longer, including e1d, e1w, and future e1m/e1y timeframes.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span> <span class="k">as</span> <span class="n">dt</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">timedelta</span><span class="p">,</span> <span class="n">date</span><span class="p">,</span> <span class="n">time</span>
@@ -568,37 +571,104 @@
     <span class="k">elif</span> <span class="n">timeframe</span> <span class="o">==</span> <span class="s2">&quot;e1h&quot;</span><span class="p">:</span>
         <span class="k">while</span> <span class="n">this_dt</span><span class="o">.</span><span class="n">minute</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">this_dt</span> <span class="o">=</span> <span class="n">this_dt</span> <span class="o">-</span> <span class="n">min_delta</span>
-    <span class="k">elif</span> <span class="n">timeframe</span> <span class="o">==</span> <span class="s2">&quot;e1d&quot;</span><span class="p">:</span>
-        <span class="c1"># ETH daily sessions start at 18:00; find the most recent 18:00</span>
-        <span class="c1"># boundary (same or prior day depending on current time).</span>
-        <span class="k">if</span> <span class="n">this_dt</span><span class="o">.</span><span class="n">hour</span> <span class="o">&gt;=</span> <span class="mi">18</span><span class="p">:</span>
-            <span class="c1"># At or after 6pm, return today at 18:00</span>
-            <span class="n">this_dt</span> <span class="o">=</span> <span class="n">this_dt</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
-                <span class="n">hour</span><span class="o">=</span><span class="mi">18</span><span class="p">,</span> <span class="n">minute</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">second</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">microsecond</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># Before 6pm, return yesterday at 18:00</span>
-            <span class="n">this_dt</span> <span class="o">=</span> <span class="p">(</span><span class="n">this_dt</span> <span class="o">-</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
-                <span class="n">hour</span><span class="o">=</span><span class="mi">18</span><span class="p">,</span> <span class="n">minute</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">second</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">microsecond</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-    <span class="k">elif</span> <span class="n">timeframe</span> <span class="o">==</span> <span class="s2">&quot;e1w&quot;</span><span class="p">:</span>
-        <span class="c1"># ETH weekly sessions start at Sunday 18:00; find the most recent</span>
-        <span class="c1"># such boundary by walking back to the prior Sunday if needed.</span>
-        <span class="k">if</span> <span class="n">this_dt</span><span class="o">.</span><span class="n">weekday</span><span class="p">()</span> <span class="o">==</span> <span class="mi">6</span> <span class="ow">and</span> <span class="n">this_dt</span><span class="o">.</span><span class="n">hour</span> <span class="o">&gt;=</span> <span class="mi">18</span><span class="p">:</span>
-            <span class="c1"># Sunday at/after 6pm, return Sunday at 18:00</span>
-            <span class="n">this_dt</span> <span class="o">=</span> <span class="n">this_dt</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
-                <span class="n">hour</span><span class="o">=</span><span class="mi">18</span><span class="p">,</span> <span class="n">minute</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">second</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">microsecond</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="c1"># Find the most recent Sunday</span>
-            <span class="k">if</span> <span class="n">this_dt</span><span class="o">.</span><span class="n">weekday</span><span class="p">()</span> <span class="o">==</span> <span class="mi">6</span><span class="p">:</span>  <span class="c1"># Already Sunday but before 6pm</span>
-                <span class="n">days_back</span> <span class="o">=</span> <span class="mi">7</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="c1"># Days since last Sunday (weekday 6)</span>
-                <span class="n">days_back</span> <span class="o">=</span> <span class="p">(</span><span class="n">this_dt</span><span class="o">.</span><span class="n">weekday</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="mi">7</span>
-            <span class="n">this_dt</span> <span class="o">=</span> <span class="p">(</span><span class="n">this_dt</span> <span class="o">-</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="n">days_back</span><span class="p">))</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
-                <span class="n">hour</span><span class="o">=</span><span class="mi">18</span><span class="p">,</span> <span class="n">minute</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">second</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">microsecond</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">timeframe</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;e1d&quot;</span><span class="p">,</span> <span class="s2">&quot;e1w&quot;</span><span class="p">,</span> <span class="s2">&quot;e1m&quot;</span><span class="p">,</span> <span class="s2">&quot;e1y&quot;</span><span class="p">}:</span>
+        <span class="n">this_dt</span> <span class="o">=</span> <span class="n">canonical_session_key</span><span class="p">(</span><span class="n">this_dt</span><span class="p">,</span> <span class="n">timeframe</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;timeframe: </span><span class="si">{</span><span class="n">timeframe</span><span class="si">}</span><span class="s2"> not supported&quot;</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">this_dt</span></div>
+
+
+<div class="viewcode-block" id="canonical_session_key"><a class="viewcode-back" href="../../api/dhtrader.dhcommon.html#dhtrader.dhcommon.canonical_session_key">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">canonical_session_key</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">timeframe</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the session-start timestamp used to identify a higher timeframe.</span>
+
+<span class="sd">    A canonical session key is the stable timestamp used for matching an ETH</span>
+<span class="sd">    daily, weekly, monthly, or yearly candle to trades and datapoints in that</span>
+<span class="sd">    same period. It represents the period&#39;s intended 18:00 session boundary,</span>
+<span class="sd">    even when the market opens later because of a weekend or Closed event.</span>
+<span class="sd">    It is not necessarily the timestamp shown on a chart or stored on the</span>
+<span class="sd">    candle/datapoint record.</span>
+
+<span class="sd">    For example, an ES e1d candle displayed and stored as</span>
+<span class="sd">    ``2026-03-02 00:00:00`` represents the session that opened at the canonical</span>
+<span class="sd">    session key of ``2026-03-01 18:00:00``. A trade at ``2026-03-02 10:00:00``</span>
+<span class="sd">    uses that same canonical session key to locate the daily candle or</span>
+<span class="sd">    datapoint.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        value: A chart label, session boundary, or timestamp within a period.</span>
+<span class="sd">        timeframe: One of e1d, e1w, e1m, or e1y.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">this_dt</span> <span class="o">=</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">microsecond</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">second</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">timeframe</span> <span class="o">==</span> <span class="s2">&quot;e1d&quot;</span><span class="p">:</span>
+        <span class="c1"># The ETH daily session begins at 18:00 on the preceding calendar day</span>
+        <span class="c1"># until the next 18:00 boundary begins a new session.</span>
+        <span class="k">if</span> <span class="n">this_dt</span><span class="o">.</span><span class="n">hour</span> <span class="o">&lt;</span> <span class="mi">18</span><span class="p">:</span>
+            <span class="n">this_dt</span> <span class="o">-=</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">this_dt</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">hour</span><span class="o">=</span><span class="mi">18</span><span class="p">,</span> <span class="n">minute</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">timeframe</span> <span class="o">==</span> <span class="s2">&quot;e1w&quot;</span><span class="p">:</span>
+        <span class="c1"># Weekly ETH periods begin Sunday at 18:00; Sunday before 18:00 still</span>
+        <span class="c1"># belongs to the prior week&#39;s session.</span>
+        <span class="k">if</span> <span class="n">this_dt</span><span class="o">.</span><span class="n">weekday</span><span class="p">()</span> <span class="o">==</span> <span class="mi">6</span> <span class="ow">and</span> <span class="n">this_dt</span><span class="o">.</span><span class="n">hour</span> <span class="o">&lt;</span> <span class="mi">18</span><span class="p">:</span>
+            <span class="n">days_back</span> <span class="o">=</span> <span class="mi">7</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">days_back</span> <span class="o">=</span> <span class="p">(</span><span class="n">this_dt</span><span class="o">.</span><span class="n">weekday</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="mi">7</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">this_dt</span> <span class="o">-</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="n">days_back</span><span class="p">))</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
+            <span class="n">hour</span><span class="o">=</span><span class="mi">18</span><span class="p">,</span>
+            <span class="n">minute</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="n">timeframe</span> <span class="o">==</span> <span class="s2">&quot;e1m&quot;</span><span class="p">:</span>
+        <span class="c1"># The month label is its first calendar midnight, so its session key</span>
+        <span class="c1"># is six hours earlier at 18:00 on the preceding calendar date.</span>
+        <span class="n">label_date</span> <span class="o">=</span> <span class="p">(</span><span class="n">this_dt</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">hours</span><span class="o">=</span><span class="mi">6</span><span class="p">))</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
+            <span class="n">day</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+            <span class="n">hour</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+            <span class="n">minute</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">label_date</span> <span class="o">-</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">hours</span><span class="o">=</span><span class="mi">6</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">timeframe</span> <span class="o">==</span> <span class="s2">&quot;e1y&quot;</span><span class="p">:</span>
+        <span class="c1"># Yearly data is a hard calendar-year bucket that always starts with</span>
+        <span class="c1"># the January 1 18:00 session boundary, even after a holiday closure.</span>
+        <span class="k">return</span> <span class="n">this_dt</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">month</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">day</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">hour</span><span class="o">=</span><span class="mi">18</span><span class="p">,</span> <span class="n">minute</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s2">&quot;canonical_session_key: unsupported timeframe </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">timeframe</span><span class="p">)</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported aggregate timeframe: </span><span class="si">{</span><span class="n">timeframe</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="storage_label_for_session_key"><a class="viewcode-back" href="../../api/dhtrader.dhcommon.html#dhtrader.dhcommon.storage_label_for_session_key">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">storage_label_for_session_key</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">timeframe</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the chart-facing timestamp for a stored higher timeframe.</span>
+
+<span class="sd">    A required chart/storage label is the fixed calendar timestamp written to</span>
+<span class="sd">    a higher-timeframe candle or indicator datapoint and displayed on charts.</span>
+<span class="sd">    It names the represented calendar period, rather than the ETH session&#39;s</span>
+<span class="sd">    18:00 start. It remains fixed when weekends or Closed events delay the</span>
+<span class="sd">    first source data, so records can be compared and stored consistently.</span>
+
+<span class="sd">    For example, the ES e1d canonical session key</span>
+<span class="sd">    ``2026-03-01 18:00:00`` must be stored and charted with the label</span>
+<span class="sd">    ``2026-03-02 00:00:00``. The label remains March 2 even if a Closed event</span>
+<span class="sd">    delays the first source candle after the session boundary.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        value: A canonical higher-timeframe session key.</span>
+<span class="sd">        timeframe: One of e1d, e1w, e1m, or e1y.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">key</span> <span class="o">=</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">microsecond</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">second</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">timeframe</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;e1d&quot;</span><span class="p">,</span> <span class="s2">&quot;e1w&quot;</span><span class="p">,</span> <span class="s2">&quot;e1m&quot;</span><span class="p">}:</span>
+        <span class="c1"># These higher-timeframe labels are midnight after the associated</span>
+        <span class="c1"># canonical 18:00 session boundary.</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">key</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">hours</span><span class="o">=</span><span class="mi">6</span><span class="p">))</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
+            <span class="n">hour</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+            <span class="n">minute</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="n">timeframe</span> <span class="o">==</span> <span class="s2">&quot;e1y&quot;</span><span class="p">:</span>
+        <span class="c1"># The yearly label is January 1 midnight in the same calendar year as</span>
+        <span class="c1"># its January 1 18:00 canonical session boundary.</span>
+        <span class="k">return</span> <span class="n">key</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">month</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">day</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">hour</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">minute</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+        <span class="s2">&quot;storage_label_for_session_key: unsupported timeframe </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+        <span class="n">timeframe</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported aggregate timeframe: </span><span class="si">{</span><span class="n">timeframe</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="next_candle_start"><a class="viewcode-back" href="../../api/dhtrader.dhcommon.html#dhtrader.dhcommon.next_candle_start">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">next_candle_start</span><span class="p">(</span><span class="n">dt</span><span class="p">,</span>

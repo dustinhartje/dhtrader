@@ -588,6 +588,8 @@ have minimal impact on backtest results over meaningful periods.</p>
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">dhtrader.dhtypes.</span></span><span class="sig-name descname"><span class="pre">Candle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">c_datetime</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_timeframe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_open</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_high</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_low</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_close</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_volume</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_symbol</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_tags</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_epoch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_date</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">DEFAULT_OBJ_NAME</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhtypes.html#Candle"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhtypes.Candle" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <p>Represents a single OHLCV candlestick for a tradeable symbol.</p>
+<p>Intraday timeframes are shorter than e1d. Higher timeframes are e1d or
+longer, including e1d, e1w, and future e1m/e1y timeframes.</p>
 <p>Derived size, direction, and wick attributes are computed automatically
 on creation.</p>
 <dl class="field-list simple">
@@ -1152,9 +1154,17 @@ ensuring a portable python data structure</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="dhtrader.dhtypes.Indicator.datapoint_indexes_by_dt">
-<span class="sig-name descname"><span class="pre">datapoint_indexes_by_dt</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhtypes.html#Indicator.datapoint_indexes_by_dt"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhtypes.Indicator.datapoint_indexes_by_dt" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return a dict mapping each datapoint’s dt to its list index.</p>
+<dt class="sig sig-object py" id="dhtrader.dhtypes.Indicator.datapoint_indexes_by_candle_start">
+<span class="sig-name descname"><span class="pre">datapoint_indexes_by_candle_start</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhtypes.html#Indicator.datapoint_indexes_by_candle_start"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhtypes.Indicator.datapoint_indexes_by_candle_start" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a dict mapping canonical candle starts to list indexes.</p>
+<p>Higher-timeframe datapoints retain calendar storage labels, so their
+canonical session keys are used here. Intraday datapoint timestamps
+already represent their candle starts.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If multiple datapoints share a candle-start key.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -1169,15 +1179,33 @@ as needed in subclasses.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="dhtrader.dhtypes.Indicator.get_datapoint">
 <span class="sig-name descname"><span class="pre">get_datapoint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhtypes.html#Indicator.get_datapoint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhtypes.Indicator.get_datapoint" title="Permalink to this definition">¶</a></dt>
-<dd><p>Returns a single datapoint based on datetime provided.</p>
+<dd><p>Return a datapoint for a timestamp in this indicator’s period.</p>
 <p>Because this is typically based on candle close, we often want the
 previous datapoint from the candle we are working through in a
 backtest so offset is allowed to go back or forward in the list by
 the provided value.  Wrapper methods assist with the most common
 previous and next requests.</p>
+<p>Intraday indicators match their raw datapoint timestamp directly.
+Higher-timeframe ETH indicators (e1d, e1w, e1m, and e1y) instead
+match a canonical session key. Their raw datapoint timestamp is a
+chart label such as daily midnight or weekly Monday midnight, while the
+canonical session key is the associated 18:00 session boundary.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>offset</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – </p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dt</strong> – A timestamp within the requested indicator period.</p></li>
+<li><p><strong>offset</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Number of chronological datapoints to move after lookup.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The matched datapoint adjusted by offset, or None when absent.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><strong>ValueError</strong></a> – If multiple datapoints share one canonical</p></li>
+<li><p><strong>higher-timeframe session key</strong><strong>, or </strong><strong>offset moves before the first</strong> – </p></li>
+<li><p><strong>datapoint.</strong> – </p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>
@@ -1231,6 +1259,31 @@ in time.</p>
 <dd><p>Calculate an exponential simple moving average over time.</p>
 <p>Defaults to using the ‘close’ value of each candle and a smoothing
 factor of 2.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="dhtrader.dhtypes.IndicatorRSI">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">dhtrader.dhtypes.</span></span><span class="sig-name descname"><span class="pre">IndicatorRSI</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">description</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeframe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">trading_hours</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbol</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calc_version</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calc_details</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_dt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">bot()</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_dt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ind_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">autoload_chart</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">candle_chart</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'RSI'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">datapoints</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parameters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhtypes.html#IndicatorRSI"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhtypes.IndicatorRSI" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#dhtrader.dhtypes.Indicator" title="dhtrader.dhtypes.Indicator"><code class="xref py py-class docutils literal notranslate"><span class="pre">Indicator</span></code></a></p>
+<p>Subclass of Indicator() used for relative strength index.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>period</strong> (<em>-</em>) – Number of candles in the averaging window
+(default: 14).</p></li>
+<li><p><strong>method</strong> (<em>-</em>) – Candle value to use (default: close).</p></li>
+<li><p><strong>smoothing</strong> (<em>-</em>) – Averaging mode for gains/losses:
+wilder (default), simple, exponential.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="dhtrader.dhtypes.IndicatorRSI.calculate">
+<span class="sig-name descname"><span class="pre">calculate</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhtypes.html#IndicatorRSI.calculate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhtypes.IndicatorRSI.calculate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate relative strength index over time.</p>
+<p>Defaults to close values, period=14, and Wilder smoothing.</p>
 </dd></dl>
 
 </dd></dl>
@@ -1719,7 +1772,7 @@ balances.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="dhtrader.dhtypes.TradePlan">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">dhtrader.dhtypes.</span></span><span class="sig-name descname"><span class="pre">TradePlan</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">contracts</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">con_fee</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">float(0)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tp_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">DEFAULT_OBJ_NAME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_slug</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tags</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cfg_label</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">profit_perc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_dt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_dt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drawdown_open</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drawdown_limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">notes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thresholds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tradeseries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">how_gl_heatmap_viz</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weekly_price_overlay_visuals</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">created_dt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">created_epoch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uniq_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhtypes.html#TradePlan"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhtypes.TradePlan" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">dhtrader.dhtypes.</span></span><span class="sig-name descname"><span class="pre">TradePlan</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">contracts</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">con_fee</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">float(0)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tp_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">DEFAULT_OBJ_NAME</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_slug</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tags</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cfg_label</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">profit_perc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_dt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_dt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drawdown_open</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drawdown_limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">notes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thresholds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tradeseries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">trade_configurations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">how_gl_heatmap_viz</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weekly_price_overlay_visuals</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">created_dt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">created_epoch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">uniq_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhtypes.html#TradePlan"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhtypes.TradePlan" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <p>Core data type for a trade plan with an attached TradeSeries.</p>
 <p>Stores identity, parameters, and serialization behavior. Analysis,
@@ -1746,6 +1799,9 @@ it’s last 8 characters.</p></li>
 <li><p><strong>notes</strong> – Optional list of human-readable notes.</p></li>
 <li><p><strong>thresholds</strong> – Thresholds dict or instance applied to this plan.</p></li>
 <li><p><strong>tradeseries</strong> – TradeSeries object attached to this plan.</p></li>
+<li><p><strong>trade_configurations</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a>) – List of dicts describing how a trader
+would configure an external trading tool to reproduce this
+plan.</p></li>
 <li><p><strong>how_gl_heatmap_viz</strong> – Optional path to hour-of-week heatmap.</p></li>
 <li><p><strong>weekly_price_overlay_visuals</strong> – Optional list of visual paths.</p></li>
 <li><p><strong>created_dt</strong> – ISO datetime string set at creation.  Defaults to now.</p></li>
@@ -1754,6 +1810,19 @@ it’s last 8 characters.</p></li>
 </ul>
 </dd>
 </dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="dhtrader.dhtypes.TradePlan.validate_trade_configurations">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">validate_trade_configurations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhtypes.html#TradePlan.validate_trade_configurations"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhtypes.TradePlan.validate_trade_configurations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Validate and normalize a trade_configurations list.</p>
+<p>Enforces only the generic structural contract shared by all
+trade types: a list of dicts, each with a non-blank
+“trade_type” string and a non-blank “ts_id”.  Trade-type-
+specific validation (e.g. a registry of known trade_type
+values) is intentionally left to calling code outside this
+library.  Subclasses may override this to apply additional or
+stricter rules.</p>
+</dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="dhtrader.dhtypes.TradePlan.replace_tradeseries">
 <span class="sig-name descname"><span class="pre">replace_tradeseries</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ts</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhtypes.html#TradePlan.replace_tradeseries"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhtypes.TradePlan.replace_tradeseries" title="Permalink to this definition">¶</a></dt>
@@ -2052,6 +2121,13 @@ this object’s ts_id.</p>
 <dt class="sig sig-object py" id="dhtrader.dhtypes.TradeSeries.sort_trades">
 <span class="sig-name descname"><span class="pre">sort_trades</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhtypes.html#TradeSeries.sort_trades"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhtypes.TradeSeries.sort_trades" title="Permalink to this definition">¶</a></dt>
 <dd><p>Sort attached Trades in ascending open_epoch order.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dhtrader.dhtypes.TradeSeries.direction">
+<span class="sig-name descname"><span class="pre">direction</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhtypes.html#TradeSeries.direction"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhtypes.TradeSeries.direction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the directional makeup of attached trades.</p>
+<p>Returns one of “long”, “short”, or “mixed”.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -2867,7 +2943,7 @@ wrapper to avoid circular imports.</p>
 <li><a class="reference internal" href="#dhtrader.dhtypes.Indicator.load_datapoints"><code class="docutils literal notranslate"><span class="pre">load_datapoints()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhtypes.Indicator.sort_datapoints"><code class="docutils literal notranslate"><span class="pre">sort_datapoints()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhtypes.Indicator.datapoint_indexes_by_epoch"><code class="docutils literal notranslate"><span class="pre">datapoint_indexes_by_epoch()</span></code></a></li>
-<li><a class="reference internal" href="#dhtrader.dhtypes.Indicator.datapoint_indexes_by_dt"><code class="docutils literal notranslate"><span class="pre">datapoint_indexes_by_dt()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhtypes.Indicator.datapoint_indexes_by_candle_start"><code class="docutils literal notranslate"><span class="pre">datapoint_indexes_by_candle_start()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhtypes.Indicator.calculate"><code class="docutils literal notranslate"><span class="pre">calculate()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhtypes.Indicator.get_datapoint"><code class="docutils literal notranslate"><span class="pre">get_datapoint()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhtypes.Indicator.next_datapoint"><code class="docutils literal notranslate"><span class="pre">next_datapoint()</span></code></a></li>
@@ -2880,6 +2956,10 @@ wrapper to avoid circular imports.</p>
 </li>
 <li><a class="reference internal" href="#dhtrader.dhtypes.IndicatorEMA"><code class="docutils literal notranslate"><span class="pre">IndicatorEMA</span></code></a><ul>
 <li><a class="reference internal" href="#dhtrader.dhtypes.IndicatorEMA.calculate"><code class="docutils literal notranslate"><span class="pre">calculate()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#dhtrader.dhtypes.IndicatorRSI"><code class="docutils literal notranslate"><span class="pre">IndicatorRSI</span></code></a><ul>
+<li><a class="reference internal" href="#dhtrader.dhtypes.IndicatorRSI.calculate"><code class="docutils literal notranslate"><span class="pre">calculate()</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#dhtrader.dhtypes.Trade"><code class="docutils literal notranslate"><span class="pre">Trade</span></code></a><ul>
@@ -2930,6 +3010,7 @@ wrapper to avoid circular imports.</p>
 </ul>
 </li>
 <li><a class="reference internal" href="#dhtrader.dhtypes.TradePlan"><code class="docutils literal notranslate"><span class="pre">TradePlan</span></code></a><ul>
+<li><a class="reference internal" href="#dhtrader.dhtypes.TradePlan.validate_trade_configurations"><code class="docutils literal notranslate"><span class="pre">validate_trade_configurations()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhtypes.TradePlan.replace_tradeseries"><code class="docutils literal notranslate"><span class="pre">replace_tradeseries()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhtypes.TradePlan.source_ts_ids"><code class="docutils literal notranslate"><span class="pre">source_ts_ids()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhtypes.TradePlan.to_json"><code class="docutils literal notranslate"><span class="pre">to_json()</span></code></a></li>
@@ -2965,6 +3046,7 @@ wrapper to avoid circular imports.</p>
 <li><a class="reference internal" href="#dhtrader.dhtypes.TradeSeries.delete_from_storage"><code class="docutils literal notranslate"><span class="pre">delete_from_storage()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhtypes.TradeSeries.add_trade"><code class="docutils literal notranslate"><span class="pre">add_trade()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhtypes.TradeSeries.sort_trades"><code class="docutils literal notranslate"><span class="pre">sort_trades()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhtypes.TradeSeries.direction"><code class="docutils literal notranslate"><span class="pre">direction()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhtypes.TradeSeries.get_trade_by_open_dt"><code class="docutils literal notranslate"><span class="pre">get_trade_by_open_dt()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhtypes.TradeSeries.count_trades"><code class="docutils literal notranslate"><span class="pre">count_trades()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhtypes.TradeSeries.restrict_dates"><code class="docutils literal notranslate"><span class="pre">restrict_dates()</span></code></a></li>

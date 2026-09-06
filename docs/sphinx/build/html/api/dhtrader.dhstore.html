@@ -614,9 +614,10 @@ Defaults to None (all documents).</p></li>
 <p>Uses COLLECTIONS[“images”] / GridFS internally.  The calling
 code supplies the reference_map because dhtrader does not know
 about AnalyzeBacktestResult or RefreshCycleResult collections.</p>
-<p>Uses MongoDB distinct() on each field path so the query is
-resolved from the multikey index on image_ids fields when those
-indexes exist, avoiding full collection scans as data grows.</p>
+<p>Uses an aggregation pipeline ($unwind + $group) on each field
+path to collect referenced image_ids.  This avoids MongoDB’s
+16 MB result-document cap that applies to distinct(), while
+still leveraging multikey indexes on image_ids fields.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>reference_map</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – <p>Dict mapping collection names to lists of
@@ -996,6 +997,33 @@ include_tradeseries=True</p>
 </ul>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="dhtrader.dhstore.TradePlanReconstructionError">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">dhtrader.dhstore.</span></span><span class="sig-name descname"><span class="pre">TradePlanReconstructionError</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tp_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ts_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">missing_trade_ids</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expected_trade_ids</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">found_trade_ids</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#TradePlanReconstructionError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.TradePlanReconstructionError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">ValueError</span></code></a></p>
+<p>Raised when a stored TradePlan cannot be reconstructed safely.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>missing_trade_ids</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a>) – </p></li>
+<li><p><strong>expected_trade_ids</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a>) – </p></li>
+<li><p><strong>found_trade_ids</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a>) – </p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="dhtrader.dhstore.TradePlanReconstructionError.to_dict">
+<span class="sig-name descname"><span class="pre">to_dict</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/dhtrader/dhstore.html#TradePlanReconstructionError.to_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#dhtrader.dhstore.TradePlanReconstructionError.to_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a JSON-serializable representation of this error.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py function">
@@ -1486,6 +1514,10 @@ delete_events_by_field(symbol=”ES”, field=”name”, value=”DELETEME”)<
 <li><a class="reference internal" href="#dhtrader.dhstore.review_backtests"><code class="docutils literal notranslate"><span class="pre">review_backtests()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhstore.delete_backtests_by_field"><code class="docutils literal notranslate"><span class="pre">delete_backtests_by_field()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhstore.delete_backtests"><code class="docutils literal notranslate"><span class="pre">delete_backtests()</span></code></a></li>
+<li><a class="reference internal" href="#dhtrader.dhstore.TradePlanReconstructionError"><code class="docutils literal notranslate"><span class="pre">TradePlanReconstructionError</span></code></a><ul>
+<li><a class="reference internal" href="#dhtrader.dhstore.TradePlanReconstructionError.to_dict"><code class="docutils literal notranslate"><span class="pre">to_dict()</span></code></a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#dhtrader.dhstore.reconstruct_tradeplan"><code class="docutils literal notranslate"><span class="pre">reconstruct_tradeplan()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhstore.get_all_tradeplans"><code class="docutils literal notranslate"><span class="pre">get_all_tradeplans()</span></code></a></li>
 <li><a class="reference internal" href="#dhtrader.dhstore.get_tradeplans_by_field"><code class="docutils literal notranslate"><span class="pre">get_tradeplans_by_field()</span></code></a></li>

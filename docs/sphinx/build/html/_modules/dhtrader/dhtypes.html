@@ -60,6 +60,7 @@
 <span class="sd">different historical time periods.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">dt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">bisect</span><span class="w"> </span><span class="kn">import</span> <span class="n">bisect_right</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">timedelta</span><span class="p">,</span> <span class="n">date</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
@@ -76,7 +77,7 @@
     <span class="n">valid_timeframe</span><span class="p">,</span> <span class="n">valid_trading_hours</span><span class="p">,</span> <span class="n">log_say</span><span class="p">,</span> <span class="n">this_candle_start</span><span class="p">,</span>
     <span class="n">check_tf_th_compatibility</span><span class="p">,</span> <span class="n">start_of_week_date</span><span class="p">,</span> <span class="n">dict_of_weeks</span><span class="p">,</span> <span class="n">bot</span><span class="p">,</span>
     <span class="n">ProgBar</span><span class="p">,</span> <span class="n">DEFAULT_OBJ_NAME</span><span class="p">,</span> <span class="n">MARKET_ERAS</span><span class="p">,</span>
-    <span class="n">normalize_list_of_strings</span><span class="p">,</span> <span class="n">new_uuid</span><span class="p">)</span>
+    <span class="n">canonical_session_key</span><span class="p">,</span> <span class="n">normalize_list_of_strings</span><span class="p">,</span> <span class="n">new_uuid</span><span class="p">)</span>
 <span class="n">CANDLE_TIMEFRAMES</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;1m&#39;</span><span class="p">,</span> <span class="s1">&#39;5m&#39;</span><span class="p">,</span> <span class="s1">&#39;15m&#39;</span><span class="p">,</span> <span class="s1">&#39;r1h&#39;</span><span class="p">,</span> <span class="s1">&#39;e1h&#39;</span><span class="p">,</span> <span class="s1">&#39;1d&#39;</span><span class="p">,</span> <span class="s1">&#39;1w&#39;</span><span class="p">]</span>
 <span class="n">BEGINNING_OF_TIME</span> <span class="o">=</span> <span class="s2">&quot;2008-01-01 00:00:00&quot;</span>
 
@@ -232,6 +233,11 @@
         <span class="s1">&#39;get_indicator_datapoints&#39;</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 
 
+<span class="k">def</span><span class="w"> </span><span class="nf">get_indicator</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Delegate to dhstore.get_indicator.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">_dhstore</span><span class="p">(</span><span class="s1">&#39;get_indicator&#39;</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+
 <div class="viewcode-block" id="store_indicator_datapoints"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.store_indicator_datapoints">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">store_indicator_datapoints</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Delegate to dhstore.store_indicator_datapoints.&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">_dhstore</span><span class="p">(</span>
@@ -323,6 +329,11 @@
 
 <div class="viewcode-block" id="Symbol.__eq__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Symbol.__eq__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return True if this symbol equals the other symbol.&quot;&quot;&quot;</span>
+        <span class="c1"># Guard: if other is not the same type (e.g. it is None or a list),</span>
+        <span class="c1"># return NotImplemented so Python can try the comparison the other</span>
+        <span class="c1"># way around.  If both sides give up, Python returns False safely.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Symbol</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
         <span class="k">return</span> <span class="nb">all</span><span class="p">(</span>
             <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="o">==</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_EQ_FIELDS</span>
@@ -1028,6 +1039,9 @@
 <div class="viewcode-block" id="Candle"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Candle">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">Candle</span><span class="p">():</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Represents a single OHLCV candlestick for a tradeable symbol.</span>
 
+<span class="sd">    Intraday timeframes are shorter than e1d. Higher timeframes are e1d or</span>
+<span class="sd">    longer, including e1d, e1w, and future e1m/e1y timeframes.</span>
+
 <span class="sd">    Derived size, direction, and wick attributes are computed automatically</span>
 <span class="sd">    on creation.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -1161,6 +1175,11 @@
 
 <div class="viewcode-block" id="Candle.__eq__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Candle.__eq__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return True if this candle equals the other candle.&quot;&quot;&quot;</span>
+        <span class="c1"># Guard: if other is not the same type (e.g. it is None or a list),</span>
+        <span class="c1"># return NotImplemented so Python can try the comparison the other</span>
+        <span class="c1"># way around.  If both sides give up, Python returns False safely.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Candle</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
         <span class="k">return</span> <span class="nb">all</span><span class="p">(</span>
             <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="o">==</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_EQ_FIELDS</span>
@@ -1229,6 +1248,11 @@
 
 <div class="viewcode-block" id="Chart.__eq__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Chart.__eq__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return True if this Chart equals the other Chart.&quot;&quot;&quot;</span>
+        <span class="c1"># Guard: if other is not the same type (e.g. it is None or a list),</span>
+        <span class="c1"># return NotImplemented so Python can try the comparison the other</span>
+        <span class="c1"># way around.  If both sides give up, Python returns False safely.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Chart</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
         <span class="k">return</span> <span class="nb">all</span><span class="p">(</span>
             <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="o">==</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_EQ_FIELDS</span>
@@ -1330,17 +1354,34 @@
                             <span class="n">categories</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Closed&quot;</span><span class="p">],</span>
                             <span class="p">)</span>
         <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Filtering candles for market hours and events...&quot;</span><span class="p">)</span>
-        <span class="c1"># Use shared context helper to filter candles by market hours,</span>
-        <span class="c1"># building one context that is reused for all candles</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">c_candles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_symbol</span><span class="o">.</span><span class="n">filter_open_candles</span><span class="p">(</span>
-            <span class="n">candles</span><span class="o">=</span><span class="n">cans</span><span class="p">,</span>
-            <span class="n">trading_hours</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">c_trading_hours</span><span class="p">,</span>
-            <span class="n">events</span><span class="o">=</span><span class="n">events</span><span class="p">,</span>
-            <span class="n">start_dt</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">c_start</span><span class="p">,</span>
-            <span class="n">end_dt</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">c_end</span><span class="p">,</span>
-            <span class="n">show_progress</span><span class="o">=</span><span class="n">show_progress</span><span class="p">,</span>
-            <span class="n">progress_desc</span><span class="o">=</span><span class="s2">&quot;Candles filtered for market hours&quot;</span><span class="p">,</span>
-        <span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_timeframe</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;e1d&quot;</span><span class="p">,</span> <span class="s2">&quot;e1w&quot;</span><span class="p">]:</span>
+            <span class="c1"># Aggregate labels are display dates, not session-open timestamps.</span>
+            <span class="n">candle_keys</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">canonical_session_key</span><span class="p">(</span><span class="n">candle</span><span class="o">.</span><span class="n">c_datetime</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_timeframe</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">candle</span> <span class="ow">in</span> <span class="n">cans</span>
+            <span class="p">]</span>
+            <span class="n">open_keys</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">c_symbol</span><span class="o">.</span><span class="n">filter_open_datetimes</span><span class="p">(</span>
+                <span class="n">target_dts</span><span class="o">=</span><span class="n">candle_keys</span><span class="p">,</span>
+                <span class="n">trading_hours</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">c_trading_hours</span><span class="p">,</span>
+                <span class="n">events</span><span class="o">=</span><span class="n">events</span><span class="p">,</span>
+                <span class="n">start_dt</span><span class="o">=</span><span class="nb">min</span><span class="p">(</span><span class="n">candle_keys</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">c_start</span><span class="p">),</span>
+                <span class="n">end_dt</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">c_end</span><span class="p">,</span>
+            <span class="p">))</span>
+            <span class="c1"># Preserve raw storage labels after filtering by canonical keys.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">c_candles</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">candle</span> <span class="k">for</span> <span class="n">candle</span><span class="p">,</span> <span class="n">candle_key</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">cans</span><span class="p">,</span> <span class="n">candle_keys</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">candle_key</span> <span class="ow">in</span> <span class="n">open_keys</span>
+            <span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">c_candles</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_symbol</span><span class="o">.</span><span class="n">filter_open_candles</span><span class="p">(</span>
+                <span class="n">candles</span><span class="o">=</span><span class="n">cans</span><span class="p">,</span>
+                <span class="n">trading_hours</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">c_trading_hours</span><span class="p">,</span>
+                <span class="n">events</span><span class="o">=</span><span class="n">events</span><span class="p">,</span>
+                <span class="n">start_dt</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">c_start</span><span class="p">,</span>
+                <span class="n">end_dt</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">c_end</span><span class="p">,</span>
+                <span class="n">show_progress</span><span class="o">=</span><span class="n">show_progress</span><span class="p">,</span>
+                <span class="n">progress_desc</span><span class="o">=</span><span class="s2">&quot;Candles filtered for market hours&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
 
         <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Sorting candles&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sort_candles</span><span class="p">()</span>
@@ -1828,6 +1869,11 @@
 
 <div class="viewcode-block" id="Indicator.__eq__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Indicator.__eq__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return True if all indicator attributes and datapoints match.&quot;&quot;&quot;</span>
+        <span class="c1"># Guard: if other is not the same type (e.g. it is None or a list),</span>
+        <span class="c1"># return NotImplemented so Python can try the comparison the other</span>
+        <span class="c1"># way around.  If both sides give up, Python returns False safely.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Indicator</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
         <span class="k">return</span> <span class="p">(</span>
             <span class="nb">all</span><span class="p">(</span>
                 <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="o">==</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
@@ -1971,11 +2017,38 @@
             <span class="n">result</span><span class="p">[</span><span class="n">dp</span><span class="o">.</span><span class="n">epoch</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
         <span class="k">return</span> <span class="n">result</span></div>
 
-<div class="viewcode-block" id="Indicator.datapoint_indexes_by_dt"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Indicator.datapoint_indexes_by_dt">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">datapoint_indexes_by_dt</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a dict mapping each datapoint&#39;s dt to its list index.&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="Indicator.datapoint_indexes_by_candle_start"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Indicator.datapoint_indexes_by_candle_start">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">datapoint_indexes_by_candle_start</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a dict mapping canonical candle starts to list indexes.</span>
+
+<span class="sd">        Higher-timeframe datapoints retain calendar storage labels, so their</span>
+<span class="sd">        canonical session keys are used here. Intraday datapoint timestamps</span>
+<span class="sd">        already represent their candle starts.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If multiple datapoints share a candle-start key.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">higher_timeframes</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;e1d&quot;</span><span class="p">,</span> <span class="s2">&quot;e1w&quot;</span><span class="p">,</span> <span class="s2">&quot;e1m&quot;</span><span class="p">,</span> <span class="s2">&quot;e1y&quot;</span><span class="p">}</span>
         <span class="n">result</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">dp</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span><span class="p">):</span>
-            <span class="n">result</span><span class="p">[</span><span class="n">dp</span><span class="o">.</span><span class="n">dt</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">datapoint</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">timeframe</span> <span class="ow">in</span> <span class="n">higher_timeframes</span><span class="p">:</span>
+                <span class="n">candle_start</span> <span class="o">=</span> <span class="n">canonical_session_key</span><span class="p">(</span>
+                    <span class="n">datapoint</span><span class="o">.</span><span class="n">dt</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">timeframe</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">candle_start</span> <span class="o">=</span> <span class="n">this_candle_start</span><span class="p">(</span>
+                    <span class="n">datapoint</span><span class="o">.</span><span class="n">dt</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">timeframe</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="n">candle_start</span> <span class="ow">in</span> <span class="n">result</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+                    <span class="s2">&quot;Indicator.datapoint_indexes_by_candle_start: &quot;</span>
+                    <span class="s2">&quot;duplicate canonical key </span><span class="si">%s</span><span class="s2"> for indicator </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                    <span class="n">candle_start</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">ind_id</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;duplicate canonical key: </span><span class="si">{</span><span class="n">candle_start</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">candle_start</span><span class="p">]</span> <span class="o">=</span> <span class="n">index</span>
         <span class="k">return</span> <span class="n">result</span></div>
 
 <div class="viewcode-block" id="Indicator.calculate"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Indicator.calculate">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">calculate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -2024,19 +2097,78 @@
                       <span class="n">dt</span><span class="p">,</span>
                       <span class="n">offset</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
                       <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns a single datapoint based on datetime provided.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a datapoint for a timestamp in this indicator&#39;s period.</span>
 
 <span class="sd">        Because this is typically based on candle close, we often want the</span>
 <span class="sd">        previous datapoint from the candle we are working through in a</span>
 <span class="sd">        backtest so offset is allowed to go back or forward in the list by</span>
 <span class="sd">        the provided value.  Wrapper methods assist with the most common</span>
 <span class="sd">        previous and next requests.</span>
+
+<span class="sd">        Intraday indicators match their raw datapoint timestamp directly.</span>
+<span class="sd">        Higher-timeframe ETH indicators (e1d, e1w, e1m, and e1y) instead</span>
+<span class="sd">        match a canonical session key. Their raw datapoint timestamp is a</span>
+<span class="sd">        chart label such as daily midnight or weekly Monday midnight, while the</span>
+<span class="sd">        canonical session key is the associated 18:00 session boundary.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            dt: A timestamp within the requested indicator period.</span>
+<span class="sd">            offset: Number of chronological datapoints to move after lookup.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The matched datapoint adjusted by offset, or None when absent.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If multiple datapoints share one canonical</span>
+<span class="sd">            higher-timeframe session key, or offset moves before the first</span>
+<span class="sd">            datapoint.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Normalize the request to its candle/session boundary first.</span>
         <span class="n">can_dt</span> <span class="o">=</span> <span class="n">this_candle_start</span><span class="p">(</span><span class="n">dt</span><span class="o">=</span><span class="n">dt</span><span class="p">,</span> <span class="n">timeframe</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeframe</span><span class="p">)</span>
-        <span class="n">index</span> <span class="o">=</span> <span class="nb">next</span><span class="p">((</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">dp</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span><span class="p">)</span>
-                      <span class="k">if</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">dt</span><span class="p">)</span> <span class="o">==</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="n">can_dt</span><span class="p">)),</span> <span class="kc">None</span><span class="p">)</span>
-        <span class="c1"># If no datapoints was found, return None</span>
+        <span class="n">higher_timeframes</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;e1d&quot;</span><span class="p">,</span> <span class="s2">&quot;e1w&quot;</span><span class="p">,</span> <span class="s2">&quot;e1m&quot;</span><span class="p">,</span> <span class="s2">&quot;e1y&quot;</span><span class="p">}</span>
+        <span class="c1"># Higher-timeframe labels must be normalized before comparison;</span>
+        <span class="c1"># intraday labels already represent their actual candle start.</span>
+        <span class="n">matching_indexes</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">index</span>
+            <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">datapoint</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="n">canonical_session_key</span><span class="p">(</span>
+                    <span class="n">datapoint</span><span class="o">.</span><span class="n">dt</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">timeframe</span><span class="p">,</span>
+                <span class="p">)</span> <span class="o">==</span> <span class="n">can_dt</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">timeframe</span> <span class="ow">in</span> <span class="n">higher_timeframes</span>
+                <span class="k">else</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="n">datapoint</span><span class="o">.</span><span class="n">dt</span><span class="p">)</span> <span class="o">==</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="n">can_dt</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="p">]</span>
+        <span class="c1"># A canonical key must identify exactly one aggregate datapoint.</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">matching_indexes</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+                <span class="s2">&quot;Indicator.get_datapoint: duplicate canonical key </span><span class="si">%s</span><span class="s2"> for &quot;</span>
+                <span class="s2">&quot;indicator </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="n">can_dt</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">ind_id</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;duplicate canonical key: </span><span class="si">{</span><span class="n">can_dt</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="n">matching_indexes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">matching_indexes</span> <span class="k">else</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="n">index</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># If no datapoint was found, confirm that the market was closed</span>
+            <span class="c1"># before returning None.  If it was open, raise an error.</span>
+            <span class="n">events</span> <span class="o">=</span> <span class="n">get_events</span><span class="p">(</span>
+                <span class="n">symbol</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">symbol</span><span class="p">,</span>
+                <span class="n">categories</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Closed&quot;</span><span class="p">],</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">symbol</span><span class="o">.</span><span class="n">market_is_open</span><span class="p">(</span>
+                    <span class="n">trading_hours</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">trading_hours</span><span class="p">,</span>
+                    <span class="n">target_dt</span><span class="o">=</span><span class="n">dt</span><span class="p">,</span>
+                    <span class="n">events</span><span class="o">=</span><span class="n">events</span><span class="p">,</span>
+                    <span class="p">):</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+                    <span class="s2">&quot;Indicator.get_datapoint: no datapoint for open &quot;</span>
+                    <span class="s2">&quot;session key </span><span class="si">%s</span><span class="s2"> for indicator </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                    <span class="n">can_dt</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">ind_id</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;no datapoint for open session: </span><span class="si">{</span><span class="n">can_dt</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="k">return</span> <span class="kc">None</span>
         <span class="n">index</span> <span class="o">+=</span> <span class="n">offset</span>
         <span class="k">if</span> <span class="n">index</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
@@ -2286,6 +2418,354 @@
                 <span class="c1"># Update vars for next candle</span>
                 <span class="n">prior_ema</span> <span class="o">=</span> <span class="n">this_ema</span>
                 <span class="n">counter</span> <span class="o">+=</span> <span class="mi">1</span></div></div>
+
+
+<div class="viewcode-block" id="IndicatorRSI"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.IndicatorRSI">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">IndicatorRSI</span><span class="p">(</span><span class="n">Indicator</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Subclass of Indicator() used for relative strength index.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">        - period: Number of candles in the averaging window</span>
+<span class="sd">                  (default: 14).</span>
+<span class="sd">        - method: Candle value to use (default: close).</span>
+<span class="sd">        - smoothing: Averaging mode for gains/losses:</span>
+<span class="sd">                    wilder (default), simple, exponential.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">description</span><span class="p">,</span>
+                 <span class="n">timeframe</span><span class="p">,</span>
+                 <span class="n">trading_hours</span><span class="p">,</span>
+                 <span class="n">symbol</span><span class="p">,</span>
+                 <span class="n">calc_version</span><span class="p">,</span>
+                 <span class="n">calc_details</span><span class="p">,</span>
+                 <span class="n">start_dt</span><span class="o">=</span><span class="n">bot</span><span class="p">(),</span>
+                 <span class="n">end_dt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">ind_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">autoload_chart</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                 <span class="n">candle_chart</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">name</span><span class="o">=</span><span class="s2">&quot;RSI&quot;</span><span class="p">,</span>
+                 <span class="n">datapoints</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">parameters</span><span class="o">=</span><span class="p">{},</span>
+                 <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+                         <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+                         <span class="n">timeframe</span><span class="o">=</span><span class="n">timeframe</span><span class="p">,</span>
+                         <span class="n">trading_hours</span><span class="o">=</span><span class="n">trading_hours</span><span class="p">,</span>
+                         <span class="n">symbol</span><span class="o">=</span><span class="n">symbol</span><span class="p">,</span>
+                         <span class="n">calc_version</span><span class="o">=</span><span class="n">calc_version</span><span class="p">,</span>
+                         <span class="n">calc_details</span><span class="o">=</span><span class="n">calc_details</span><span class="p">,</span>
+                         <span class="n">start_dt</span><span class="o">=</span><span class="n">start_dt</span><span class="p">,</span>
+                         <span class="n">end_dt</span><span class="o">=</span><span class="n">end_dt</span><span class="p">,</span>
+                         <span class="n">ind_id</span><span class="o">=</span><span class="n">ind_id</span><span class="p">,</span>
+                         <span class="n">autoload_chart</span><span class="o">=</span><span class="n">autoload_chart</span><span class="p">,</span>
+                         <span class="n">candle_chart</span><span class="o">=</span><span class="n">candle_chart</span><span class="p">,</span>
+                         <span class="n">datapoints</span><span class="o">=</span><span class="n">datapoints</span><span class="p">,</span>
+                         <span class="n">parameters</span><span class="o">=</span><span class="n">parameters</span><span class="p">,</span>
+                         <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">period</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;period&quot;</span><span class="p">,</span> <span class="mi">14</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">period</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;period must be a positive integer&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">method</span> <span class="o">=</span> <span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;method&quot;</span><span class="p">,</span> <span class="s2">&quot;close&quot;</span><span class="p">)</span>
+        <span class="n">supported_methods</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;close&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">method</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">supported_methods</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;self.method </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">method</span><span class="si">}</span><span class="s2"> not supported, &quot;</span>
+                            <span class="sa">f</span><span class="s2">&quot;must be one of: </span><span class="si">{</span><span class="n">supported_methods</span><span class="si">}</span><span class="s2">&quot;</span>
+                            <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">smoothing</span> <span class="o">=</span> <span class="n">parameters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;smoothing&quot;</span><span class="p">,</span> <span class="s2">&quot;wilder&quot;</span><span class="p">)</span>
+        <span class="n">supported_smoothing</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;wilder&quot;</span><span class="p">,</span> <span class="s2">&quot;simple&quot;</span><span class="p">,</span> <span class="s2">&quot;exponential&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">smoothing</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">supported_smoothing</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;self.smoothing </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">smoothing</span><span class="si">}</span><span class="s2"> not supported, &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;must be one of: </span><span class="si">{</span><span class="n">supported_smoothing</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">ind_id_suffix</span> <span class="o">=</span> <span class="p">(</span><span class="sa">f</span><span class="s2">&quot;_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">method</span><span class="si">}</span><span class="s2">_p</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">period</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+                         <span class="sa">f</span><span class="s2">&quot;_s</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">smoothing</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ind_id_suffix</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ind_id</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ind_id</span> <span class="o">+=</span> <span class="n">ind_id_suffix</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">class_name</span> <span class="o">=</span> <span class="s2">&quot;IndicatorRSI&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_calc_rsi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                  <span class="n">avg_gain</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                  <span class="n">avg_loss</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                  <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return RSI for the given average gain/loss pair.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">avg_loss</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">avg_gain</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mf">50.0</span>
+        <span class="k">if</span> <span class="n">avg_loss</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mf">100.0</span>
+        <span class="k">if</span> <span class="n">avg_gain</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mf">0.0</span>
+        <span class="n">rs</span> <span class="o">=</span> <span class="n">avg_gain</span> <span class="o">/</span> <span class="n">avg_loss</span>
+        <span class="k">return</span> <span class="mf">100.0</span> <span class="o">-</span> <span class="p">(</span><span class="mf">100.0</span> <span class="o">/</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="n">rs</span><span class="p">))</span>
+
+<div class="viewcode-block" id="IndicatorRSI.calculate"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.IndicatorRSI.calculate">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">calculate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate relative strength index over time.</span>
+
+<span class="sd">        Defaults to close values, period=14, and Wilder smoothing.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">candle_chart</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">load_underlying_chart</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">candle_chart</span><span class="p">,</span> <span class="n">Chart</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;candle_chart </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">candle_chart</span><span class="p">)</span><span class="si">}</span><span class="s2"> must be &quot;</span>
+                            <span class="s2">&quot;a &lt;class dhtypes.Chart&gt; object&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">candle_chart</span><span class="o">.</span><span class="n">sort_candles</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">closes</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">candle_chart</span><span class="o">.</span><span class="n">c_candles</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;close&quot;</span><span class="p">:</span>
+                <span class="n">closes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">c_close</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">closes</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">period</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+
+        <span class="n">deltas</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">closes</span><span class="p">)):</span>
+            <span class="n">deltas</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">closes</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">closes</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">])</span>
+
+        <span class="n">gains</span> <span class="o">=</span> <span class="p">[</span><span class="nb">max</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">deltas</span><span class="p">]</span>
+        <span class="n">losses</span> <span class="o">=</span> <span class="p">[</span><span class="nb">max</span><span class="p">(</span><span class="o">-</span><span class="n">d</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">deltas</span><span class="p">]</span>
+
+        <span class="n">avg_gain</span> <span class="o">=</span> <span class="n">fmean</span><span class="p">(</span><span class="n">gains</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">period</span><span class="p">])</span>
+        <span class="n">avg_loss</span> <span class="o">=</span> <span class="n">fmean</span><span class="p">(</span><span class="n">losses</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">period</span><span class="p">])</span>
+
+        <span class="n">first_candle</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">candle_chart</span><span class="o">.</span><span class="n">c_candles</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">period</span><span class="p">]</span>
+        <span class="n">first_rsi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc_rsi</span><span class="p">(</span><span class="n">avg_gain</span><span class="p">,</span> <span class="n">avg_loss</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">IndicatorDataPoint</span><span class="p">(</span><span class="n">dt</span><span class="o">=</span><span class="n">dt_as_str</span><span class="p">(</span><span class="n">first_candle</span><span class="o">.</span><span class="n">c_datetime</span><span class="p">),</span>
+                               <span class="n">value</span><span class="o">=</span><span class="nb">round</span><span class="p">(</span><span class="n">first_rsi</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+                               <span class="n">ind_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ind_id</span><span class="p">,</span>
+                               <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                               <span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">smoothing</span> <span class="o">==</span> <span class="s2">&quot;simple&quot;</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">period</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">closes</span><span class="p">)):</span>
+                <span class="n">start</span> <span class="o">=</span> <span class="n">idx</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">period</span>
+                <span class="n">end</span> <span class="o">=</span> <span class="n">idx</span>
+                <span class="n">avg_gain</span> <span class="o">=</span> <span class="n">fmean</span><span class="p">(</span><span class="n">gains</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">])</span>
+                <span class="n">avg_loss</span> <span class="o">=</span> <span class="n">fmean</span><span class="p">(</span><span class="n">losses</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">])</span>
+                <span class="n">rsi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc_rsi</span><span class="p">(</span><span class="n">avg_gain</span><span class="p">,</span> <span class="n">avg_loss</span><span class="p">)</span>
+                <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">candle_chart</span><span class="o">.</span><span class="n">c_candles</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="n">IndicatorDataPoint</span><span class="p">(</span><span class="n">dt</span><span class="o">=</span><span class="n">dt_as_str</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">c_datetime</span><span class="p">),</span>
+                                       <span class="n">value</span><span class="o">=</span><span class="nb">round</span><span class="p">(</span><span class="n">rsi</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+                                       <span class="n">ind_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ind_id</span><span class="p">,</span>
+                                       <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                                       <span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">return</span> <span class="kc">True</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">smoothing</span> <span class="o">==</span> <span class="s2">&quot;wilder&quot;</span><span class="p">:</span>
+            <span class="n">alpha</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">period</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">alpha</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">period</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">period</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">deltas</span><span class="p">)):</span>
+            <span class="n">gain</span> <span class="o">=</span> <span class="n">gains</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+            <span class="n">loss</span> <span class="o">=</span> <span class="n">losses</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+            <span class="n">avg_gain</span> <span class="o">=</span> <span class="p">(</span><span class="n">gain</span> <span class="o">*</span> <span class="n">alpha</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">avg_gain</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">alpha</span><span class="p">))</span>
+            <span class="n">avg_loss</span> <span class="o">=</span> <span class="p">(</span><span class="n">loss</span> <span class="o">*</span> <span class="n">alpha</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">avg_loss</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">alpha</span><span class="p">))</span>
+            <span class="n">rsi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc_rsi</span><span class="p">(</span><span class="n">avg_gain</span><span class="p">,</span> <span class="n">avg_loss</span><span class="p">)</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">candle_chart</span><span class="o">.</span><span class="n">c_candles</span><span class="p">[</span><span class="n">idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="n">IndicatorDataPoint</span><span class="p">(</span><span class="n">dt</span><span class="o">=</span><span class="n">dt_as_str</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">c_datetime</span><span class="p">),</span>
+                                   <span class="n">value</span><span class="o">=</span><span class="nb">round</span><span class="p">(</span><span class="n">rsi</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+                                   <span class="n">ind_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ind_id</span><span class="p">,</span>
+                                   <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                                   <span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="kc">True</span></div></div>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">IndicatorDerived</span><span class="p">(</span><span class="n">Indicator</span><span class="p">,</span> <span class="n">ABC</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Base class for indicators calculated from another indicator series.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">description</span><span class="p">,</span>
+                 <span class="n">timeframe</span><span class="p">,</span>
+                 <span class="n">trading_hours</span><span class="p">,</span>
+                 <span class="n">symbol</span><span class="p">,</span>
+                 <span class="n">calc_version</span><span class="p">,</span>
+                 <span class="n">calc_details</span><span class="p">,</span>
+                 <span class="n">name</span><span class="p">,</span>
+                 <span class="n">start_dt</span><span class="o">=</span><span class="n">bot</span><span class="p">(),</span>
+                 <span class="n">end_dt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">ind_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">autoload_chart</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">candle_chart</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">datapoints</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">parameters</span><span class="o">=</span><span class="p">{},</span>
+                 <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+                         <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+                         <span class="n">timeframe</span><span class="o">=</span><span class="n">timeframe</span><span class="p">,</span>
+                         <span class="n">trading_hours</span><span class="o">=</span><span class="n">trading_hours</span><span class="p">,</span>
+                         <span class="n">symbol</span><span class="o">=</span><span class="n">symbol</span><span class="p">,</span>
+                         <span class="n">calc_version</span><span class="o">=</span><span class="n">calc_version</span><span class="p">,</span>
+                         <span class="n">calc_details</span><span class="o">=</span><span class="n">calc_details</span><span class="p">,</span>
+                         <span class="n">start_dt</span><span class="o">=</span><span class="n">start_dt</span><span class="p">,</span>
+                         <span class="n">end_dt</span><span class="o">=</span><span class="n">end_dt</span><span class="p">,</span>
+                         <span class="n">ind_id</span><span class="o">=</span><span class="n">ind_id</span><span class="p">,</span>
+                         <span class="n">autoload_chart</span><span class="o">=</span><span class="n">autoload_chart</span><span class="p">,</span>
+                         <span class="n">candle_chart</span><span class="o">=</span><span class="n">candle_chart</span><span class="p">,</span>
+                         <span class="n">datapoints</span><span class="o">=</span><span class="n">datapoints</span><span class="p">,</span>
+                         <span class="n">parameters</span><span class="o">=</span><span class="n">parameters</span><span class="p">,</span>
+                         <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">class_name</span> <span class="o">=</span> <span class="s2">&quot;IndicatorDerived&quot;</span>
+        <span class="k">if</span> <span class="s2">&quot;source_ind_id&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">parameters</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s2">&quot;IndicatorDerived.__init__: missing source_ind_id&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Must provide source_ind_id in parameters&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">source_ind_id</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="s2">&quot;source_ind_id&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">source_ind_id</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">source_ind_id</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s2">&quot;IndicatorDerived.__init__: invalid source_ind_id=</span><span class="si">%r</span><span class="s2">&quot;</span><span class="p">,</span>
+                         <span class="bp">self</span><span class="o">.</span><span class="n">source_ind_id</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;source_ind_id must be a non-empty string&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">source_indicator</span> <span class="o">=</span> <span class="n">get_indicator</span><span class="p">(</span>
+            <span class="n">ind_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">source_ind_id</span><span class="p">,</span>
+            <span class="n">autoload_chart</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">autoload_datapoints</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">source_indicator</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s2">&quot;IndicatorDerived.__init__: source not found in &quot;</span>
+                         <span class="s2">&quot;storage source_ind_id=</span><span class="si">%r</span><span class="s2">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">source_ind_id</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;source_ind_id was not found in storage&quot;</span><span class="p">)</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">calculate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate datapoints from the configured source indicator.</span>
+
+<span class="sd">        IndicatorDerived supplies shared source retrieval, validation, and</span>
+<span class="sd">        serialization, but cannot define a calculation because each derived</span>
+<span class="sd">        indicator applies a different transformation.  The abstractmethod</span>
+<span class="sd">        decorator prevents this base class, or a subclass without its own</span>
+<span class="sd">        calculation, from being instantiated or persisted as a usable</span>
+<span class="sd">        indicator.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s2">&quot;IndicatorDerived.calculate called on abstract base&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Concrete derived indicators must calculate&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                <span class="n">suppress_datapoints</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                <span class="n">suppress_chart_candles</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Serialize durable lineage while omitting the live source object.&quot;&quot;&quot;</span>
+        <span class="n">working</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="c1"># Do not include the live source_indicator object in the JSON output</span>
+        <span class="n">working</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;source_indicator&quot;</span><span class="p">)</span>
+        <span class="n">working</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">working</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">working</span><span class="p">[</span><span class="s2">&quot;candle_chart&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">working</span><span class="p">[</span><span class="s2">&quot;candle_chart&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">working</span><span class="p">[</span><span class="s2">&quot;candle_chart&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_clean_dict</span><span class="p">(</span>
+                <span class="n">suppress_candles</span><span class="o">=</span><span class="n">suppress_chart_candles</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">suppress_datapoints</span><span class="p">:</span>
+            <span class="n">count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span><span class="p">)</span>
+            <span class="n">working</span><span class="p">[</span><span class="s2">&quot;datapoints&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">count</span><span class="si">}</span><span class="s2"> Datapoints suppressed for output sanity&quot;</span>
+            <span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">working</span><span class="p">[</span><span class="s2">&quot;datapoints&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">datapoint</span><span class="o">.</span><span class="n">to_clean_dict</span><span class="p">()</span>
+                <span class="k">for</span> <span class="n">datapoint</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span>
+            <span class="p">]</span>
+        <span class="n">working</span><span class="p">[</span><span class="s2">&quot;symbol&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">working</span><span class="p">[</span><span class="s2">&quot;symbol&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">ticker</span>
+        <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">working</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_source_datapoints</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return compatible, chronological datapoints from the source.&quot;&quot;&quot;</span>
+        <span class="n">source</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">source_indicator</span>
+        <span class="k">if</span> <span class="n">source</span><span class="o">.</span><span class="n">ind_id</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">source_ind_id</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s2">&quot;IndicatorDerived._source_datapoints: source &quot;</span>
+                         <span class="s2">&quot;ind_id=</span><span class="si">%r</span><span class="s2"> expected=</span><span class="si">%r</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">source</span><span class="o">.</span><span class="n">ind_id</span><span class="p">,</span>
+                         <span class="bp">self</span><span class="o">.</span><span class="n">source_ind_id</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;source_indicator ind_id does not match&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">symbol</span><span class="o">.</span><span class="n">ticker</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">symbol</span><span class="o">.</span><span class="n">ticker</span> <span class="ow">or</span>
+                <span class="n">source</span><span class="o">.</span><span class="n">timeframe</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">timeframe</span> <span class="ow">or</span>
+                <span class="n">source</span><span class="o">.</span><span class="n">trading_hours</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trading_hours</span><span class="p">):</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s2">&quot;IndicatorDerived._source_datapoints: incompatible &quot;</span>
+                         <span class="s2">&quot;source_ind_id=</span><span class="si">%r</span><span class="s2">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">source_ind_id</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;source_indicator market settings do not match&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">datapoints</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">source</span><span class="o">.</span><span class="n">load_datapoints</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">datapoints</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s2">&quot;IndicatorDerived._source_datapoints: no datapoints &quot;</span>
+                         <span class="s2">&quot;for source_ind_id=</span><span class="si">%r</span><span class="s2">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">source_ind_id</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;source_indicator has no datapoints&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">source</span><span class="o">.</span><span class="n">datapoints</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">datapoint</span><span class="p">:</span> <span class="n">datapoint</span><span class="o">.</span><span class="n">epoch</span><span class="p">)</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">IndicatorDerivedSMA</span><span class="p">(</span><span class="n">IndicatorDerived</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Simple moving average calculated from another indicator&#39;s values.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">description</span><span class="p">,</span>
+                 <span class="n">timeframe</span><span class="p">,</span>
+                 <span class="n">trading_hours</span><span class="p">,</span>
+                 <span class="n">symbol</span><span class="p">,</span>
+                 <span class="n">calc_version</span><span class="p">,</span>
+                 <span class="n">calc_details</span><span class="p">,</span>
+                 <span class="n">start_dt</span><span class="o">=</span><span class="n">bot</span><span class="p">(),</span>
+                 <span class="n">end_dt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">ind_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">autoload_chart</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">candle_chart</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">name</span><span class="o">=</span><span class="s2">&quot;DerivedSMA&quot;</span><span class="p">,</span>
+                 <span class="n">datapoints</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">parameters</span><span class="o">=</span><span class="p">{},</span>
+                 <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+                         <span class="n">timeframe</span><span class="o">=</span><span class="n">timeframe</span><span class="p">,</span>
+                         <span class="n">trading_hours</span><span class="o">=</span><span class="n">trading_hours</span><span class="p">,</span>
+                         <span class="n">symbol</span><span class="o">=</span><span class="n">symbol</span><span class="p">,</span>
+                         <span class="n">calc_version</span><span class="o">=</span><span class="n">calc_version</span><span class="p">,</span>
+                         <span class="n">calc_details</span><span class="o">=</span><span class="n">calc_details</span><span class="p">,</span>
+                         <span class="n">start_dt</span><span class="o">=</span><span class="n">start_dt</span><span class="p">,</span>
+                         <span class="n">end_dt</span><span class="o">=</span><span class="n">end_dt</span><span class="p">,</span>
+                         <span class="n">ind_id</span><span class="o">=</span><span class="n">ind_id</span><span class="p">,</span>
+                         <span class="n">autoload_chart</span><span class="o">=</span><span class="n">autoload_chart</span><span class="p">,</span>
+                         <span class="n">candle_chart</span><span class="o">=</span><span class="n">candle_chart</span><span class="p">,</span>
+                         <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+                         <span class="n">datapoints</span><span class="o">=</span><span class="n">datapoints</span><span class="p">,</span>
+                         <span class="n">parameters</span><span class="o">=</span><span class="n">parameters</span><span class="p">,</span>
+                         <span class="p">)</span>
+        <span class="k">if</span> <span class="s2">&quot;length&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">parameters</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s2">&quot;IndicatorDerivedSMA.__init__: missing length&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Must provide length in parameters&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">parameters</span><span class="p">[</span><span class="s2">&quot;length&quot;</span><span class="p">])</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">length</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s2">&quot;IndicatorDerivedSMA.__init__: invalid length=</span><span class="si">%r</span><span class="s2">&quot;</span><span class="p">,</span>
+                         <span class="bp">self</span><span class="o">.</span><span class="n">length</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;length must be a positive integer&quot;</span><span class="p">)</span>
+        <span class="n">source_suffix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">source_ind_id</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">,</span> <span class="mi">3</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">ind_id_suffix</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;_DerivedSMA</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">length</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">source_suffix</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">symbol</span><span class="o">.</span><span class="n">ticker</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">trading_hours</span><span class="si">}</span><span class="s2">_&quot;</span>
+                  <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">timeframe</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ind_id</span> <span class="o">==</span> <span class="n">prefix</span> <span class="o">+</span> <span class="s2">&quot;_&quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ind_id</span> <span class="o">=</span> <span class="n">prefix</span> <span class="o">+</span> <span class="n">ind_id_suffix</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">class_name</span> <span class="o">=</span> <span class="s2">&quot;IndicatorDerivedSMA&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">calculate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate SMA values from the supplied source indicator series.&quot;&quot;&quot;</span>
+        <span class="n">source_datapoints</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_source_datapoints</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">source_datapoint</span> <span class="ow">in</span> <span class="n">source_datapoints</span><span class="p">:</span>
+            <span class="n">values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">source_datapoint</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">values</span><span class="p">)</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">length</span><span class="p">:</span>
+                <span class="n">values</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">values</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">length</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="n">IndicatorDataPoint</span><span class="p">(</span><span class="n">dt</span><span class="o">=</span><span class="n">source_datapoint</span><span class="o">.</span><span class="n">dt</span><span class="p">,</span>
+                                       <span class="n">value</span><span class="o">=</span><span class="nb">round</span><span class="p">(</span><span class="n">fmean</span><span class="p">(</span><span class="n">values</span><span class="p">),</span> <span class="mi">2</span><span class="p">),</span>
+                                       <span class="n">ind_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ind_id</span><span class="p">,</span>
+                                       <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                                       <span class="p">)</span>
+                <span class="p">)</span>
+        <span class="k">return</span> <span class="kc">True</span>
 
 
 <div class="viewcode-block" id="Trade"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Trade">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">Trade</span><span class="p">():</span>
@@ -2628,6 +3108,11 @@
 
 <div class="viewcode-block" id="Trade.__eq__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Trade.__eq__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return True if all Trade attributes are equal.&quot;&quot;&quot;</span>
+        <span class="c1"># Guard: if other is not the same type (e.g. it is None or a list),</span>
+        <span class="c1"># return NotImplemented so Python can try the comparison the other</span>
+        <span class="c1"># way around.  If both sides give up, Python returns False safely.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Trade</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
         <span class="k">return</span> <span class="nb">all</span><span class="p">(</span>
             <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="o">==</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_EQ_FIELDS</span>
@@ -3009,6 +3494,11 @@
 
 <div class="viewcode-block" id="TradeSeries.__eq__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradeSeries.__eq__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return True if all TradeSeries attributes are equal.&quot;&quot;&quot;</span>
+        <span class="c1"># Guard: if other is not the same type (e.g. it is None or a list),</span>
+        <span class="c1"># return NotImplemented so Python can try the comparison the other</span>
+        <span class="c1"># way around.  If both sides give up, Python returns False safely.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">TradeSeries</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
         <span class="k">return</span> <span class="nb">all</span><span class="p">(</span>
             <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="o">==</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_EQ_FIELDS</span>
@@ -3027,6 +3517,10 @@
 <span class="sd">        strings for portability.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">working</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">)</span>
+        <span class="c1"># trade_configurations (if set) is an implementation-repo-managed,</span>
+        <span class="c1"># transient in-memory attribute used during backtest/analysis</span>
+        <span class="c1"># workflows and must never be persisted in a TradeSeries document.</span>
+        <span class="n">working</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;trade_configurations&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="n">clean_trades</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">if</span> <span class="n">suppress_trades</span><span class="p">:</span>
             <span class="n">num</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trades</span><span class="p">)</span>
@@ -3132,6 +3626,29 @@
 <div class="viewcode-block" id="TradeSeries.sort_trades"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradeSeries.sort_trades">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">sort_trades</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Sort attached Trades in ascending open_epoch order.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">trades</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">open_epoch</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TradeSeries.direction"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradeSeries.direction">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">direction</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the directional makeup of attached trades.</span>
+
+<span class="sd">        Returns one of &quot;long&quot;, &quot;short&quot;, or &quot;mixed&quot;.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">saw_long</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">saw_short</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">for</span> <span class="n">trade</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">trades</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">trade</span><span class="o">.</span><span class="n">direction</span> <span class="o">==</span> <span class="s2">&quot;long&quot;</span><span class="p">:</span>
+                <span class="n">saw_long</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">elif</span> <span class="n">trade</span><span class="o">.</span><span class="n">direction</span> <span class="o">==</span> <span class="s2">&quot;short&quot;</span><span class="p">:</span>
+                <span class="n">saw_short</span> <span class="o">=</span> <span class="kc">True</span>
+
+            <span class="c1"># Early-exit as soon as both directions are present.</span>
+            <span class="k">if</span> <span class="n">saw_long</span> <span class="ow">and</span> <span class="n">saw_short</span><span class="p">:</span>
+                <span class="k">return</span> <span class="s2">&quot;mixed&quot;</span>
+
+        <span class="k">if</span> <span class="n">saw_long</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;long&quot;</span>
+        <span class="k">if</span> <span class="n">saw_short</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;short&quot;</span>
+        <span class="k">return</span> <span class="s2">&quot;mixed&quot;</span></div>
 
 <div class="viewcode-block" id="TradeSeries.get_trade_by_open_dt"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradeSeries.get_trade_by_open_dt">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_trade_by_open_dt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dt</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the first Trade matching the given open_dt, or None.</span>
@@ -3553,6 +4070,11 @@
 
 <div class="viewcode-block" id="Backtest.__eq__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Backtest.__eq__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return True if all Backtest attributes are equal.&quot;&quot;&quot;</span>
+        <span class="c1"># Guard: if other is not the same type (e.g. it is None or a list),</span>
+        <span class="c1"># return NotImplemented so Python can try the comparison the other</span>
+        <span class="c1"># way around.  If both sides give up, Python returns False safely.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Backtest</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
         <span class="k">return</span> <span class="p">(</span>
             <span class="nb">all</span><span class="p">(</span>
                 <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="o">==</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
@@ -3979,6 +4501,9 @@
 <span class="sd">        notes: Optional list of human-readable notes.</span>
 <span class="sd">        thresholds: Thresholds dict or instance applied to this plan.</span>
 <span class="sd">        tradeseries: TradeSeries object attached to this plan.</span>
+<span class="sd">        trade_configurations: List of dicts describing how a trader</span>
+<span class="sd">            would configure an external trading tool to reproduce this</span>
+<span class="sd">            plan.</span>
 <span class="sd">        how_gl_heatmap_viz: Optional path to hour-of-week heatmap.</span>
 <span class="sd">        weekly_price_overlay_visuals: Optional list of visual paths.</span>
 <span class="sd">        created_dt: ISO datetime string set at creation.  Defaults to now.</span>
@@ -4002,6 +4527,7 @@
                  <span class="n">notes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                  <span class="n">thresholds</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                  <span class="n">tradeseries</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">trade_configurations</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">how_gl_heatmap_viz</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                  <span class="n">weekly_price_overlay_visuals</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                  <span class="n">created_dt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
@@ -4030,6 +4556,9 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">notes</span> <span class="o">=</span> <span class="n">normalize_list_of_strings</span><span class="p">(</span><span class="n">notes</span><span class="p">,</span> <span class="s2">&quot;TradePlan.notes&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">thresholds</span> <span class="o">=</span> <span class="p">{}</span> <span class="k">if</span> <span class="n">thresholds</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">thresholds</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">replace_tradeseries</span><span class="p">(</span><span class="n">tradeseries</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trade_configurations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">validate_trade_configurations</span><span class="p">(</span>
+            <span class="n">trade_configurations</span>
+        <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">how_gl_heatmap_viz</span> <span class="o">=</span> <span class="n">how_gl_heatmap_viz</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">weekly_price_overlay_visuals</span> <span class="o">=</span> <span class="n">weekly_price_overlay_visuals</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">weekly_price_overlay_visuals</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -4050,6 +4579,43 @@
                     <span class="sa">f</span><span class="s2">&quot;TradePlan tp_id </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">tp_id</span><span class="si">!r}</span><span class="s2"> does not contain &quot;</span>
                     <span class="sa">f</span><span class="s2">&quot;uniq_id </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">uniq_id</span><span class="si">!r}</span><span class="s2">&quot;</span>
                 <span class="p">)</span>
+
+<div class="viewcode-block" id="TradePlan.validate_trade_configurations"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradePlan.validate_trade_configurations">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">validate_trade_configurations</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Validate and normalize a trade_configurations list.</span>
+
+<span class="sd">        Enforces only the generic structural contract shared by all</span>
+<span class="sd">        trade types: a list of dicts, each with a non-blank</span>
+<span class="sd">        &quot;trade_type&quot; string and a non-blank &quot;ts_id&quot;.  Trade-type-</span>
+<span class="sd">        specific validation (e.g. a registry of known trade_type</span>
+<span class="sd">        values) is intentionally left to calling code outside this</span>
+<span class="sd">        library.  Subclasses may override this to apply additional or</span>
+<span class="sd">        stricter rules.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;trade_configurations must be a list, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="si">!r}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">entry</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;trade_configurations[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">] must be a dict, got &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span><span class="si">!r}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+            <span class="n">trade_type</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;trade_type&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">trade_type</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">str</span><span class="p">(</span><span class="n">trade_type</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;trade_configurations[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">] must include a non-blank &quot;</span>
+                    <span class="s2">&quot;&#39;trade_type&#39;&quot;</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ts_id&quot;</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;trade_configurations[</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">] must include a non-blank &quot;</span>
+                    <span class="s2">&quot;&#39;ts_id&#39;&quot;</span>
+                <span class="p">)</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">value</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="TradePlan.replace_tradeseries"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradePlan.replace_tradeseries">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">replace_tradeseries</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ts</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Replace attached TradeSeries and update tp_id accordingly.&quot;&quot;&quot;</span>
@@ -4253,6 +4819,9 @@
 
 <div class="viewcode-block" id="StoredImage.__eq__"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.StoredImage.__eq__">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return True if image_id and name match.&quot;&quot;&quot;</span>
+        <span class="c1"># Guard: if other is not a StoredImage (e.g. it is None or a list),</span>
+        <span class="c1"># isinstance returns False and Python short-circuits here without</span>
+        <span class="c1"># calling getattr on the wrong type, so no AttributeError can occur.</span>
         <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">StoredImage</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span>
             <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="o">==</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_EQ_FIELDS</span>
@@ -4357,6 +4926,7 @@
     <span class="s2">&quot;Indicator&quot;</span><span class="p">,</span>
     <span class="s2">&quot;IndicatorSMA&quot;</span><span class="p">,</span>
     <span class="s2">&quot;IndicatorEMA&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;IndicatorRSI&quot;</span><span class="p">,</span>
     <span class="s2">&quot;Trade&quot;</span><span class="p">,</span>
     <span class="s2">&quot;TradePlan&quot;</span><span class="p">,</span>
     <span class="s2">&quot;TradeSeries&quot;</span><span class="p">,</span>
