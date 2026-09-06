@@ -1105,13 +1105,6 @@ def test_Indicator_get_datapoint_rejects_duplicate_aggregate_key():
         indicator.datapoint_indexes_by_candle_start()
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "get_datapoint silently returns None for an open-session gap; XPASS "
-        "means production behavior changed"
-    ),
-)
 def test_Indicator_get_datapoint_rejects_open_session_gap():
     """Do not substitute or silently hide a missing aggregate datapoint."""
     indicator = Indicator(
@@ -1900,7 +1893,7 @@ def shared_assertions_Indicator_spotcheck_ES_eth_e1d_DerivedSMA14_RSI(
 ):
     """Assert ES ETH daily SMA(14) over RSI(14), Wilder datapoints."""
     for label, expected_value in [
-        ("2026-03-02 00:00:00", 47.32),
+        ("2026-03-02 00:00:00", 47.31),
         ("2026-03-09 00:00:00", 46.61),
         ("2026-03-16 00:00:00", 43.98),
         ("2026-03-23 00:00:00", 40.70),

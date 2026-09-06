@@ -2115,8 +2115,25 @@ class Indicator():
             )
             raise ValueError(f"duplicate canonical key: {can_dt}")
         index = matching_indexes[0] if matching_indexes else None
-        # If no datapoints was found, return None
         if index is None:
+            # If no datapoint was found, confirm that the market was closed
+            # before returning None.  If it was open, raise an error.
+            events = get_events(
+                symbol=self.symbol,
+                categories=["Closed"],
+            )
+            if self.symbol.market_is_open(
+                    trading_hours=self.trading_hours,
+                    target_dt=dt,
+                    events=events,
+                    ):
+                log.critical(
+                    "Indicator.get_datapoint: no datapoint for open "
+                    "session key %s for indicator %s",
+                    can_dt,
+                    self.ind_id,
+                )
+                raise ValueError(f"no datapoint for open session: {can_dt}")
             return None
         index += offset
         if index < 0:
