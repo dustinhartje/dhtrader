@@ -982,8 +982,14 @@ def test_Indicator_create_and_verify_common_methods():
         # midweek lookup, prev, and next must retain chronological order.
         ("e1w", "2025-01-06 00:00:00", "2025-01-13 00:00:00",
          "2025-01-05 18:00:00", "2025-01-08 12:00:00"),
+        # e1mo labels map to the prior month-end 18:00 session boundary.
+        ("e1mo", "2025-03-01 00:00:00", "2025-04-01 00:00:00",
+         "2025-02-28 18:00:00", "2025-03-17 12:00:00"),
+        # e1y labels map to their January 1 18:00 session boundaries.
+        ("e1y", "2025-01-01 00:00:00", "2026-01-01 00:00:00",
+         "2025-01-01 18:00:00", "2025-06-16 12:00:00"),
     ],
-)
+    )
 def test_Indicator_get_datapoint_uses_canonical_key_for_aggregates(
     timeframe,
     first_label,
@@ -991,7 +997,7 @@ def test_Indicator_get_datapoint_uses_canonical_key_for_aggregates(
     session_open,
     intraday,
 ):
-    """Characterize e1d/e1w lookup from canonical and intraperiod times."""
+    """Look up aggregate datapoints from canonical and intraperiod times."""
     indicator = Indicator(
         name="DELETEME",
         description="Test aggregate lookup",
@@ -1124,6 +1130,115 @@ def test_Indicator_get_datapoint_rejects_open_session_gap():
 
     with pytest.raises(ValueError, match="no datapoint"):
         indicator.get_datapoint("2025-01-06 18:00:00")
+
+
+@pytest.mark.parametrize(
+    ("timeframe", "first_label", "second_label", "session_open"),
+    [
+        ("e1mo", "2025-03-01 00:00:00", "2025-04-01 00:00:00",
+         "2025-02-28 18:00:00"),
+        ("e1y", "2025-01-01 00:00:00", "2026-01-01 00:00:00",
+         "2025-01-01 18:00:00"),
+    ],
+)
+def test_Indicator_calendar_indexes_use_canonical_key(
+    timeframe,
+    first_label,
+    second_label,
+    session_open,
+):
+    """Monthly and yearly index keys are their canonical ETH boundaries."""
+    indicator = Indicator(
+        name="DELETEME",
+        description="Test calendar datapoint index",
+        timeframe=timeframe,
+        trading_hours="eth",
+        symbol="ES",
+        calc_version="1.0.0",
+        calc_details="test",
+        autoload_chart=False,
+        datapoints=[
+            IndicatorDataPoint(first_label, 10, "DELETEME"),
+            IndicatorDataPoint(second_label, 20, "DELETEME"),
+        ],
+    )
+
+    indexes = indicator.datapoint_indexes_by_candle_start()
+
+    assert indexes[dhtypes.dt_as_dt(session_open)] == 0
+    assert indexes[dhtypes.this_candle_start(second_label, timeframe)] == 1
+
+
+@pytest.mark.parametrize(
+    ("timeframe", "first_label", "duplicate_label", "session_open"),
+    [
+        ("e1mo", "2025-03-01 00:00:00", "2025-03-15 20:00:00",
+         "2025-02-28 18:00:00"),
+        ("e1y", "2025-01-01 00:00:00", "2025-06-15 20:00:00",
+         "2025-01-01 18:00:00"),
+    ],
+)
+def test_Indicator_calendar_datapoints_reject_duplicate_key(
+    timeframe,
+    first_label,
+    duplicate_label,
+    session_open,
+):
+    """Monthly and yearly duplicate canonical keys remain invalid."""
+    indicator = Indicator(
+        name="DELETEME",
+        description="Test calendar duplicate key",
+        timeframe=timeframe,
+        trading_hours="eth",
+        symbol="ES",
+        calc_version="1.0.0",
+        calc_details="test",
+        autoload_chart=False,
+        datapoints=[
+            IndicatorDataPoint(first_label, 10, "DELETEME"),
+            IndicatorDataPoint(duplicate_label, 20, "DELETEME"),
+        ],
+    )
+
+    with pytest.raises(ValueError, match="duplicate canonical key"):
+        indicator.get_datapoint(session_open)
+    with pytest.raises(ValueError, match="duplicate canonical key"):
+        indicator.datapoint_indexes_by_candle_start()
+
+
+@pytest.mark.parametrize(
+    ("timeframe", "first_label", "second_label", "missing_dt"),
+    [
+        ("e1mo", "2025-03-01 00:00:00", "2025-05-01 00:00:00",
+         "2025-04-15 12:00:00"),
+        ("e1y", "2025-01-01 00:00:00", "2027-01-01 00:00:00",
+         "2026-06-15 12:00:00"),
+    ],
+)
+def test_Indicator_calendar_datapoints_reject_open_gap(
+    timeframe,
+    first_label,
+    second_label,
+    missing_dt,
+):
+    """Monthly and yearly gaps during open sessions are not hidden."""
+    indicator = Indicator(
+        name="DELETEME",
+        description="Test calendar gap",
+        timeframe=timeframe,
+        trading_hours="eth",
+        symbol="ES",
+        calc_version="1.0.0",
+        calc_details="test",
+        autoload_chart=False,
+        datapoints=[
+            IndicatorDataPoint(first_label, 10, "DELETEME"),
+            IndicatorDataPoint(second_label, 20, "DELETEME"),
+        ],
+    )
+
+    with pytest.raises(ValueError, match="no datapoint"):
+        indicator.get_datapoint(missing_dt)
 
 
 @pytest.mark.suppress_stdout
@@ -1685,6 +1800,92 @@ def test_aggregate_chart_filter_preserves_primary_and_derived_datapoints(
     monkeypatch.setattr(dhtypes, "get_indicator", lambda **kwargs: primary)
     derived = IndicatorDerivedSMA(
         description="Aggregate RSI SMA filter regression",
+        timeframe=timeframe,
+        trading_hours="eth",
+        symbol="ES",
+        calc_version="1.0.0",
+        calc_details="test",
+        autoload_chart=False,
+        parameters={"source_ind_id": primary.ind_id, "length": 1},
+    )
+    derived.calculate()
+
+    assert [datapoint.dt for datapoint in primary.datapoints] == candle_dts[1:]
+    assert [datapoint.dt for datapoint in derived.datapoints] == candle_dts[1:]
+
+
+@pytest.mark.parametrize(
+    ("timeframe", "candle_dts", "event_start", "event_end"),
+    [
+        (
+            "e1mo",
+            [
+                "2026-04-01 00:00:00",
+                "2026-05-01 00:00:00",
+                "2026-06-01 00:00:00",
+            ],
+            "2026-04-01 00:00:00",
+            "2026-04-01 01:00:00",
+        ),
+        (
+            "e1y",
+            [
+                "2026-01-01 00:00:00",
+                "2027-01-01 00:00:00",
+                "2028-01-01 00:00:00",
+            ],
+            "2026-01-01 00:00:00",
+            "2026-01-01 01:00:00",
+        ),
+    ],
+)
+def test_calendar_chart_filter_preserves_primary_and_derived_datapoints(
+    monkeypatch,
+    timeframe,
+    candle_dts,
+    event_start,
+    event_end,
+):
+    """A closed calendar label cannot remove monthly/yearly datapoints."""
+    candles = [
+        Candle(
+            c_datetime=candle_dt,
+            c_timeframe=timeframe,
+            c_open=100 + index,
+            c_high=101 + index,
+            c_low=99 + index,
+            c_close=100 + index,
+            c_volume=10 + index,
+            c_symbol="ES",
+        )
+        for index, candle_dt in enumerate(candle_dts)
+    ]
+    closed_event = Event(
+        start_dt=event_start,
+        end_dt=event_end,
+        symbol="ES",
+        category="Closed",
+    )
+    monkeypatch.setattr(dhtypes, "get_candles", lambda **kwargs: candles)
+    monkeypatch.setattr(dhtypes, "get_events", lambda **kwargs: [closed_event])
+
+    primary = IndicatorRSI(
+        description="Calendar RSI filter regression",
+        timeframe=timeframe,
+        trading_hours="eth",
+        symbol="ES",
+        calc_version="1.0.0",
+        calc_details="test",
+        start_dt=candle_dts[0],
+        end_dt=candle_dts[-1],
+        autoload_chart=False,
+        parameters={"period": 1},
+    )
+    primary.load_underlying_chart()
+    primary.calculate()
+    monkeypatch.setattr(dhtypes, "get_indicator", lambda **kwargs: primary)
+    derived = IndicatorDerivedSMA(
+        description="Calendar RSI SMA filter regression",
         timeframe=timeframe,
         trading_hours="eth",
         symbol="ES",

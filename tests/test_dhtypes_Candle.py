@@ -202,6 +202,33 @@ def test_Candle_calculated_attributes(candle):
     assert candle.c_end_datetime == "2099-01-02 12:01:00"
 
 
+@pytest.mark.parametrize(
+    ("timeframe", "candle_datetime", "expected_end"),
+    [
+        ("e1mo", "2026-12-01 00:00:00", "2027-01-01 00:00:00"),
+        ("e1y", "2026-01-01 00:00:00", "2027-01-01 00:00:00"),
+    ],
+)
+def test_Candle_calendar_timeframe_end_datetime(
+    timeframe,
+    candle_datetime,
+    expected_end,
+):
+    """Calendar candles end at the following calendar label."""
+    candle = Candle(
+        c_datetime=candle_datetime,
+        c_timeframe=timeframe,
+        c_open=5000,
+        c_high=5001,
+        c_low=4999,
+        c_close=5000,
+        c_volume=1,
+        c_symbol="ES",
+    )
+
+    assert candle.c_end_datetime == expected_end
+
+
 @pytest.mark.suppress_stdout
 def test_Candle_contains_price(candle):
     """Verify contains_price returns True within range, False outside."""

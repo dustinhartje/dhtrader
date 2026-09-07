@@ -12,10 +12,16 @@ from dhtrader import (
     dt_as_time,
     dt_from_epoch,
     dt_to_epoch,
+    Event,
+    expected_candle_datetimes,
     log_say,
+    next_candle_boundary,
+    next_candle_start,
     OperationTimer,
+    previous_candle_boundary,
     rangify_candle_times,
     sort_dict,
+    Symbol,
     this_candle_start,
     timeframe_delta,
     valid_timeframe,
@@ -222,7 +228,7 @@ def test_valid_trading_hours():
 def test_check_tf_th_compatibility():
     """Verify check_tf_th_compatibility rejects incompatible tf/th combos."""
     # Compatible ETH timeframes
-    for tf in ["1m", "5m", "15m", "e1h", "e1d"]:
+    for tf in ["1m", "5m", "15m", "e1h", "e1d", "e1mo", "e1y"]:
         assert check_tf_th_compatibility(tf, "eth") is True
     # Compatible RTH timeframes
     for tf in ["1m", "5m", "15m", "r1h", "r1d"]:
@@ -232,7 +238,7 @@ def test_check_tf_th_compatibility():
         with pytest.raises(ValueError):
             check_tf_th_compatibility(tf, "eth")
     # ETH-only timeframes with RTH raises ValueError
-    for tf in ["e1h", "e1d", "e1w", "e1mo"]:
+    for tf in ["e1h", "e1d", "e1w", "e1mo", "e1y"]:
         with pytest.raises(ValueError):
             check_tf_th_compatibility(tf, "rth")
     # Returns False without raising when exit=False
@@ -476,10 +482,10 @@ def test_this_candle_start():
         ("e1w", "2026-03-04 10:00:00", "2026-03-01 18:00:00",
          "2026-03-02 00:00:00"),
         # Monthly intraperiod timestamp maps to the prior month-end session.
-        ("e1m", "2026-03-15 10:00:00", "2026-02-28 18:00:00",
+        ("e1mo", "2026-03-15 10:00:00", "2026-02-28 18:00:00",
          "2026-03-01 00:00:00"),
         # Month-end session open maps forward to the next month's label.
-        ("e1m", "2026-02-28 19:00:00", "2026-02-28 18:00:00",
+        ("e1mo", "2026-02-28 19:00:00", "2026-02-28 18:00:00",
          "2026-03-01 00:00:00"),
         # Yearly intraperiod timestamp retains the represented calendar year.
         ("e1y", "2026-06-15 10:00:00", "2026-01-01 18:00:00",
@@ -502,6 +508,163 @@ def test_aggregate_session_key_and_storage_label(
     assert storage_label_for_session_key(key, timeframe) == (
         datetime.fromisoformat(expected_label)
     )
+
+
+@pytest.mark.parametrize(
+    ("timeframe", "timestamp", "expected"),
+    [
+        ("e1mo", "2026-02-28 18:00:00", "2026-03-31 18:00:00"),
+        ("e1mo", "2026-12-15 10:00:00", "2026-12-31 18:00:00"),
+        ("e1y", "2026-01-01 00:00:00", "2027-01-01 18:00:00"),
+        ("e1y", "2026-12-31 10:00:00", "2027-01-01 18:00:00"),
+    ],
+)
+def test_next_candle_boundary_uses_calendar_periods(
+    timeframe,
+    timestamp,
+    expected,
+):
+    """Monthly and yearly boundaries remain exact across calendar changes."""
+    assert next_candle_boundary(timestamp, timeframe) == (
+        datetime.fromisoformat(expected)
+    )
+
+
+@pytest.mark.parametrize(
+    ("timeframe", "timestamp", "expected"),
+    [
+        ("e1mo", "2026-03-31 18:00:00", "2026-02-28 18:00:00"),
+        ("e1mo", "2026-01-31 18:00:00", "2025-12-31 18:00:00"),
+        ("e1y", "2027-01-01 18:00:00", "2026-01-01 18:00:00"),
+    ],
+)
+def test_previous_candle_boundary_uses_calendar_periods(
+    timeframe,
+    timestamp,
+    expected,
+):
+    """Monthly and yearly previous boundaries remain calendar exact."""
+    assert previous_candle_boundary(timestamp, timeframe) == (
+        datetime.fromisoformat(expected)
+    )
+
+
+@pytest.mark.parametrize(
+    ("timeframe", "timestamp", "expected"),
+    [
+        ("e1mo", "2026-03-15 10:00:00", "2026-03-31 18:00:00"),
+        ("e1y", "2026-06-15 10:00:00", "2027-01-01 18:00:00"),
+    ],
+)
+def test_next_candle_start_uses_calendar_boundary(
+    timeframe,
+    timestamp,
+    expected,
+):
+    """Monthly and yearly next starts use their calendar boundaries."""
+    class AlwaysOpenSymbol:
+        """Minimal Symbol-like object that keeps this boundary test local."""
+
+        @staticmethod
+        def market_is_open(**kwargs):
+            return True
+
+    assert next_candle_start(
+        dt=timestamp,
+        trading_hours="eth",
+        symbol=AlwaysOpenSymbol(),
+        timeframe=timeframe,
+    ) == datetime.fromisoformat(expected)
+
+
+@pytest.mark.suppress_stdout
+@pytest.mark.parametrize(
+    ("timeframe", "start_dt", "end_dt", "expected"),
+    [
+        (
+            "e1mo",
+            "2026-11-30 18:00:00",
+            "2027-01-01 00:00:00",
+            ["2026-11-30 18:00:00", "2026-12-31 18:00:00"],
+        ),
+        (
+            "e1y",
+            "2025-01-01 18:00:00",
+            "2026-01-02 00:00:00",
+            ["2025-01-01 18:00:00", "2026-01-01 18:00:00"],
+        ),
+    ],
+)
+def test_expected_candle_datetimes_uses_calendar_boundaries(
+    timeframe,
+    start_dt,
+    end_dt,
+    expected,
+):
+    """Monthly and yearly expected dates remain calendar exact."""
+    symbol = Symbol(ticker="ES", name="ES", leverage_ratio=50,
+                    tick_size=0.25)
+
+    result = expected_candle_datetimes(
+        start_dt=start_dt,
+        end_dt=end_dt,
+        timeframe=timeframe,
+        symbol=symbol,
+    )
+
+    assert result == [datetime.fromisoformat(value) for value in expected]
+
+
+@pytest.mark.suppress_stdout
+def test_expected_candle_datetimes_omits_fully_closed_month():
+    """A closure covering an entire calendar period omits its candle."""
+    symbol = Symbol(ticker="ES", name="ES", leverage_ratio=50,
+                    tick_size=0.25)
+    closed_month = Event(
+        start_dt="2026-03-31 18:00:00",
+        end_dt="2026-04-30 17:59:00",
+        symbol=symbol,
+        category="Closed",
+    )
+
+    result = expected_candle_datetimes(
+        start_dt="2026-02-28 18:00:00",
+        end_dt="2026-05-01 00:00:00",
+        timeframe="e1mo",
+        symbol=symbol,
+        events=[closed_month],
+    )
+
+    assert result == [
+        datetime(2026, 2, 28, 18, 0, 0),
+        datetime(2026, 4, 30, 18, 0, 0),
+    ]
+
+
+@pytest.mark.suppress_stdout
+def test_expected_candle_datetimes_omits_fully_closed_year():
+    """A closure covering an entire calendar year omits its candle."""
+    symbol = Symbol(ticker="ES", name="ES", leverage_ratio=50,
+                    tick_size=0.25)
+    closed_year = Event(
+        start_dt="2025-01-01 18:00:00",
+        end_dt="2026-01-01 17:59:00",
+        symbol=symbol,
+        category="Closed",
+    )
+
+    result = expected_candle_datetimes(
+        start_dt="2024-01-01 18:00:00",
+        end_dt="2026-01-02 00:00:00",
+        timeframe="e1y",
+        symbol=symbol,
+        events=[closed_year],
+    )
+
+    assert result == [
+        datetime(2024, 1, 1, 18, 0, 0),
+        datetime(2026, 1, 1, 18, 0, 0),
+    ]
 
 
 @pytest.mark.suppress_stdout
@@ -551,6 +714,24 @@ def test_rangify_candle_times():
     ]
     result5 = rangify_candle_times(times5, "5m")
     assert len(result5) == 1
+
+    # Monthly and yearly calendar boundaries also collapse into ranges.
+    monthly = rangify_candle_times([
+        datetime(2026, 11, 30, 18, 0, 0),
+        datetime(2026, 12, 31, 18, 0, 0),
+    ], "e1mo")
+    assert monthly == [{
+        "start_dt": "2026-11-30 18:00:00",
+        "end_dt": "2026-12-31 18:00:00",
+    }]
+    yearly = rangify_candle_times([
+        datetime(2025, 1, 1, 18, 0, 0),
+        datetime(2026, 1, 1, 18, 0, 0),
+    ], "e1y")
+    assert yearly == [{
+        "start_dt": "2025-01-01 18:00:00",
+        "end_dt": "2026-01-01 18:00:00",
+    }]
 
 
 @pytest.mark.suppress_stdout

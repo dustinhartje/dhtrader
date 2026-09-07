@@ -29,7 +29,7 @@ These functions are imported by other modules throughout the system,
 including dhstore, dhutil, and dhtypes.
 
 Terminology: Intraday timeframes are shorter than e1d. Higher timeframes are
-e1d or longer, including e1d, e1w, and future e1m/e1y timeframes.
+e1d or longer, including e1d, e1w, and future e1mo/e1y timeframes.
 """
 from datetime import datetime as dt
 from datetime import timedelta, date, time
@@ -43,7 +43,7 @@ import uuid
 import progressbar
 
 TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', 'r1d', 'e1d', 'r1w', 'e1w',
-              'r1mo', 'e1mo']
+              'r1mo', 'e1mo', 'e1y']
 TRADING_HOURS = ['rth', 'eth']
 TF_TH_MAP = {
     "1m": ["rth", "eth"],
@@ -56,7 +56,8 @@ TF_TH_MAP = {
     "r1w": ["rth"],
     "e1w": ["eth"],
     "r1mo": ["rth"],
-    "e1mo": ["eth"]
+    "e1mo": ["eth"],
+    "e1y": ["eth"],
     }
 EVENT_CATEGORIES = ['Closed', 'Data', 'Unplanned', 'LowVolume', 'Rollover']
 DEFAULT_OBJ_NAME = "nameless"
@@ -355,7 +356,7 @@ def check_tf_th_compatibility(tf, th, exit=True):
         if tf in ["r1h", "r1d", "r1w", "r1mo"]:
             result = False
     if th == "rth":
-        if tf in ["e1h", "e1d", "e1w", "e1mo"]:
+        if tf in ["e1h", "e1d", "e1w", "e1mo", "e1y"]:
             result = False
     if exit and not result:
         raise ValueError(f"timeframe {tf} and trading_hours {th} cannot "
@@ -536,7 +537,7 @@ def this_candle_start(dt, timeframe: str):
     elif timeframe == "e1h":
         while this_dt.minute != 0:
             this_dt = this_dt - min_delta
-    elif timeframe in {"e1d", "e1w", "e1m", "e1y"}:
+    elif timeframe in {"e1d", "e1w", "e1mo", "e1y"}:
         this_dt = canonical_session_key(this_dt, timeframe)
     else:
         raise ValueError(f"timeframe: {timeframe} not supported")
@@ -562,7 +563,7 @@ def canonical_session_key(value, timeframe: str):
 
     Args:
         value: A chart label, session boundary, or timestamp within a period.
-        timeframe: One of e1d, e1w, e1m, or e1y.
+        timeframe: One of e1d, e1w, e1mo, or e1y.
     """
     this_dt = dt_as_dt(value).replace(microsecond=0, second=0)
     if timeframe == "e1d":
@@ -582,7 +583,7 @@ def canonical_session_key(value, timeframe: str):
             hour=18,
             minute=0,
         )
-    if timeframe == "e1m":
+    if timeframe == "e1mo":
         # The month label is its first calendar midnight, so its session key
         # is six hours earlier at 18:00 on the preceding calendar date.
         label_date = (this_dt + timedelta(hours=6)).replace(
@@ -615,10 +616,10 @@ def storage_label_for_session_key(value, timeframe: str):
 
     Args:
         value: A canonical higher-timeframe session key.
-        timeframe: One of e1d, e1w, e1m, or e1y.
+        timeframe: One of e1d, e1w, e1mo, or e1y.
     """
     key = dt_as_dt(value).replace(microsecond=0, second=0)
-    if timeframe in {"e1d", "e1w", "e1m"}:
+    if timeframe in {"e1d", "e1w", "e1mo"}:
         # These higher-timeframe labels are midnight after the associated
         # canonical 18:00 session boundary.
         return (key + timedelta(hours=6)).replace(
@@ -631,6 +632,79 @@ def storage_label_for_session_key(value, timeframe: str):
         return key.replace(month=1, day=1, hour=0, minute=0)
     log.critical(
         "storage_label_for_session_key: unsupported timeframe %s",
+        timeframe,
+    )
+    raise ValueError(f"Unsupported aggregate timeframe: {timeframe}")
+
+
+def next_candle_boundary(value, timeframe: str):
+    """Return the next boundary for a supported candle timeframe.
+
+    Calendar-boundary handling explicitly targets monthly ``e1mo`` and yearly
+    ``e1y`` candles. Their next canonical ETH session keys are calculated from
+    the next calendar month or year, rather than an approximate timedelta.
+    This preserves correct boundaries across varying month lengths and year
+    rollovers. Other supported fixed-duration timeframes use their registered
+    ``TIMEFRAME_DELTAS`` values. The returned boundary is independent of market
+    closures.
+    """
+    this_dt = dt_as_dt(value).replace(microsecond=0, second=0)
+    if timeframe in TIMEFRAME_DELTAS:
+        return this_candle_start(this_dt, timeframe) + TIMEFRAME_DELTAS[
+            timeframe
+        ]
+    if timeframe == "e1mo":
+        label = storage_label_for_session_key(
+            canonical_session_key(this_dt, timeframe),
+            timeframe,
+        )
+        if label.month == 12:
+            next_label = label.replace(year=label.year + 1, month=1)
+        else:
+            next_label = label.replace(month=label.month + 1)
+        return canonical_session_key(next_label, timeframe)
+    if timeframe == "e1y":
+        label = storage_label_for_session_key(
+            canonical_session_key(this_dt, timeframe),
+            timeframe,
+        )
+        next_label = label.replace(year=label.year + 1)
+        return canonical_session_key(next_label, timeframe)
+    log.critical("next_candle_boundary: unsupported timeframe %s", timeframe)
+    raise ValueError(f"Unsupported aggregate timeframe: {timeframe}")
+
+
+def previous_candle_boundary(value, timeframe: str):
+    """Return the previous boundary for a supported candle timeframe.
+
+    Calendar-boundary handling explicitly targets monthly ``e1mo`` and yearly
+    ``e1y`` candles. Their prior canonical ETH session keys are calculated from
+    the prior calendar month or year, rather than an approximate timedelta.
+    This ensures aggregation can exclude an incomplete current month or year
+    and remains correct across month/year rollovers. Other supported
+    fixed-duration timeframes use their registered ``TIMEFRAME_DELTAS`` values.
+    The returned boundary is independent of market closures.
+    """
+    this_dt = dt_as_dt(value).replace(microsecond=0, second=0)
+    if timeframe in TIMEFRAME_DELTAS:
+        return this_candle_start(this_dt, timeframe) - TIMEFRAME_DELTAS[
+            timeframe
+        ]
+    label = storage_label_for_session_key(
+        canonical_session_key(this_dt, timeframe),
+        timeframe,
+    )
+    if timeframe == "e1mo":
+        if label.month == 1:
+            previous_label = label.replace(year=label.year - 1, month=12)
+        else:
+            previous_label = label.replace(month=label.month - 1)
+        return canonical_session_key(previous_label, timeframe)
+    if timeframe == "e1y":
+        previous_label = label.replace(year=label.year - 1)
+        return canonical_session_key(previous_label, timeframe)
+    log.critical(
+        "previous_candle_boundary: unsupported timeframe %s",
         timeframe,
     )
     raise ValueError(f"Unsupported aggregate timeframe: {timeframe}")
@@ -705,6 +779,8 @@ def next_candle_start(dt,
                 next_dt = (next_dt + timedelta(
                     days=days_until_sunday)).replace(
                     hour=18, minute=0, second=0, microsecond=0)
+        elif timeframe in {"e1mo", "e1y"}:
+            next_dt = next_candle_boundary(dt, timeframe)
         elif timeframe != "1m":
             raise ValueError(f"timeframe: {timeframe} not supported")
         if use_context:
@@ -751,7 +827,9 @@ def expected_candle_datetimes(start_dt,
 
     # Determine start and end boundaries to loop through
     result = []
-    adder = timeframe_delta(timeframe)
+    calendar_timeframe = timeframe in {"e1mo", "e1y"}
+    if not calendar_timeframe:
+        adder = timeframe_delta(timeframe)
     this = this_candle_start(dt=start_dt,
                              timeframe=timeframe,
                              )
@@ -769,14 +847,20 @@ def expected_candle_datetimes(start_dt,
     # Build one shared context for entire date range for efficient lookups
     context = None
     if this <= ender:
+        context_end = ender
+        if calendar_timeframe:
+            last_bucket = this_candle_start(ender, timeframe)
+            context_end = next_candle_boundary(last_bucket, timeframe) - (
+                timedelta(minutes=1)
+            )
         context = symbol.build_market_hours_context(
             trading_hours=trading_hours,
             events=closed_events,
             start_dt=this,
-            end_dt=ender,
+            end_dt=context_end,
         )
 
-    if show_progress and this <= ender:
+    if show_progress and this <= ender and not calendar_timeframe:
         total = ((ender - this) // adder) + 1
         pbar = ProgBar(total=total,
                        desc="Expected candle starts calculated")
@@ -788,16 +872,26 @@ def expected_candle_datetimes(start_dt,
     # open market hours using shared context
     while this <= ender:
         if timeframe in TIMEFRAMES:
-            # Check each minute in this candle bucket
-            minute = dt_as_dt(this)
-            bucket_end = minute + adder - timedelta(minutes=1)
-            has_open_minute = False
+            if calendar_timeframe:
+                bucket_end = next_candle_boundary(this, timeframe) - (
+                    timedelta(minutes=1)
+                )
+                has_open_minute = _range_has_open_minute(
+                    start_dt=this,
+                    end_dt=bucket_end,
+                    closed_ranges=context["closed_ranges"],
+                )
+            else:
+                # Check each minute in this candle bucket
+                minute = dt_as_dt(this)
+                bucket_end = minute + adder - timedelta(minutes=1)
+                has_open_minute = False
 
-            while minute <= bucket_end:
-                if symbol.is_open_dt(target_dt=minute, context=context):
-                    has_open_minute = True
-                    break
-                minute = minute + timedelta(minutes=1)
+                while minute <= bucket_end:
+                    if symbol.is_open_dt(target_dt=minute, context=context):
+                        has_open_minute = True
+                        break
+                    minute = minute + timedelta(minutes=1)
 
             if has_open_minute:
                 result.append(this)
@@ -805,12 +899,30 @@ def expected_candle_datetimes(start_dt,
             raise ValueError(f"timeframe: {timeframe} not supported")
         if pbar is not None:
             pbar.increment()
-        this = this + adder
+        if calendar_timeframe:
+            this = next_candle_boundary(this, timeframe)
+        else:
+            this = this + adder
 
     if pbar is not None:
         pbar.finish()
 
     return result
+
+
+def _range_has_open_minute(start_dt, end_dt, closed_ranges):
+    """Return whether a datetime range contains any minute outside closures."""
+    open_epoch = dt_to_epoch(start_dt)
+    end_epoch = dt_to_epoch(end_dt)
+    for closed_start, closed_end in closed_ranges:
+        if closed_end < open_epoch:
+            continue
+        if closed_start > open_epoch:
+            return True
+        open_epoch = closed_end + 1
+        if open_epoch > end_epoch:
+            return False
+    return open_epoch <= end_epoch
 
 
 def rangify_candle_times(times: list,
@@ -821,7 +933,9 @@ def rangify_candle_times(times: list,
     Primarily intended to make human review sane on large sets of gap and
     unexpected candles during integrity checks.
     """
-    delta = timeframe_delta(timeframe)
+    calendar_timeframe = timeframe in {"e1mo", "e1y"}
+    if not calendar_timeframe:
+        delta = timeframe_delta(timeframe)
     sorted_times = sorted(times)
     ranges = []
     this_range = None
@@ -832,7 +946,14 @@ def rangify_candle_times(times: list,
         else:
             # If the time is one increment after the previously seen time
             # just update the current range
-            if dt_as_dt(t) == dt_as_dt(this_range["end_dt"]) + delta:
+            if calendar_timeframe:
+                next_dt = next_candle_boundary(
+                    this_range["end_dt"],
+                    timeframe,
+                )
+            else:
+                next_dt = dt_as_dt(this_range["end_dt"]) + delta
+            if dt_as_dt(t) == next_dt:
                 this_range["end_dt"] = dt_as_str(t)
             # Otherwise add the current range to the list and start a new one
             else:

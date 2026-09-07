@@ -7,23 +7,34 @@ from dhtrader import (
 
 
 @pytest.mark.parametrize(
-    "timeframe",
+    ("timeframe", "candle_datetime", "event_start", "event_end"),
     [
         # e1d: midnight is a chart label; the prior Sunday 18:00 session
         # boundary remains open despite this explicit midnight closure.
-        "e1d",
+        ("e1d", "2026-03-02 00:00:00", "2026-03-02 00:00:00",
+         "2026-03-02 01:00:00"),
         # e1w: the Monday chart label likewise belongs to the prior Sunday
         # 18:00 weekly session boundary rather than to midnight itself.
-        "e1w",
+        ("e1w", "2026-03-02 00:00:00", "2026-03-02 00:00:00",
+         "2026-03-02 01:00:00"),
+        # e1mo: the first-of-month label belongs to the preceding 18:00 key.
+        ("e1mo", "2026-04-01 00:00:00", "2026-04-01 00:00:00",
+         "2026-04-01 01:00:00"),
+        # e1y: the January 1 label belongs to its same-date 18:00 key.
+        ("e1y", "2026-01-01 00:00:00", "2026-01-01 00:00:00",
+         "2026-01-01 01:00:00"),
     ],
 )
 def test_Chart_load_candles_retains_aggregate_label_closed_at_midnight(
     monkeypatch,
     timeframe,
+    candle_datetime,
+    event_start,
+    event_end,
 ):
     """A higher-timeframe label survives when its canonical session is open."""
     aggregate_candle = Candle(
-        c_datetime="2026-03-02 00:00:00",
+        c_datetime=candle_datetime,
         c_timeframe=timeframe,
         c_open=100,
         c_high=101,
@@ -33,8 +44,8 @@ def test_Chart_load_candles_retains_aggregate_label_closed_at_midnight(
         c_symbol="ES",
     )
     closed_event = Event(
-        start_dt="2026-03-02 00:00:00",
-        end_dt="2026-03-02 01:00:00",
+        start_dt=event_start,
+        end_dt=event_end,
         symbol="ES",
         category="Closed",
     )
@@ -50,8 +61,8 @@ def test_Chart_load_candles_retains_aggregate_label_closed_at_midnight(
         c_timeframe=timeframe,
         c_trading_hours="eth",
         c_symbol="ES",
-        c_start="2026-03-01 18:00:00",
-        c_end="2026-03-02 18:00:00",
+        c_start=candle_datetime,
+        c_end=candle_datetime,
         autoload=True,
     )
 

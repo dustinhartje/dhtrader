@@ -42,8 +42,10 @@ from .dhcommon import (
     valid_timeframe, valid_trading_hours, log_say, this_candle_start,
     check_tf_th_compatibility, start_of_week_date, dict_of_weeks, bot,
     ProgBar, DEFAULT_OBJ_NAME, MARKET_ERAS,
-    canonical_session_key, normalize_list_of_strings, new_uuid)
-CANDLE_TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w']
+    canonical_session_key, expected_candle_datetimes, next_candle_boundary,
+    normalize_list_of_strings, storage_label_for_session_key, new_uuid)
+CANDLE_TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w', 'e1mo',
+                     'e1y']
 BEGINNING_OF_TIME = "2008-01-01 00:00:00"
 
 
@@ -1005,7 +1007,7 @@ class Candle():
     """Represents a single OHLCV candlestick for a tradeable symbol.
 
     Intraday timeframes are shorter than e1d. Higher timeframes are e1d or
-    longer, including e1d, e1w, and future e1m/e1y timeframes.
+    longer, including e1d, e1w, and future e1mo/e1y timeframes.
 
     Derived size, direction, and wick attributes are computed automatically
     on creation.
@@ -1072,8 +1074,18 @@ class Candle():
         self.name = name
 
         # Calculated attributes
-        delta = timeframe_delta(self.c_timeframe)
-        self.c_end_datetime = dt_as_str(c_datetime_dt + delta)
+        if self.c_timeframe in {"e1mo", "e1y"}:
+            next_key = next_candle_boundary(
+                c_datetime_dt,
+                self.c_timeframe,
+            )
+            self.c_end_datetime = dt_as_str(storage_label_for_session_key(
+                next_key,
+                self.c_timeframe,
+            ))
+        else:
+            delta = timeframe_delta(self.c_timeframe)
+            self.c_end_datetime = dt_as_str(c_datetime_dt + delta)
         self.c_size = abs(self.c_high - self.c_low)
         self.c_body_size = abs(self.c_open - self.c_close)
         self.c_upper_wick_size = self.c_high - max(self.c_open, self.c_close)
@@ -1319,19 +1331,34 @@ class Chart():
                             categories=["Closed"],
                             )
         log.info("Filtering candles for market hours and events...")
-        if self.c_timeframe in ["e1d", "e1w"]:
+        if self.c_timeframe in ["e1d", "e1w", "e1mo", "e1y"]:
             # Aggregate labels are display dates, not session-open timestamps.
             candle_keys = [
                 canonical_session_key(candle.c_datetime, self.c_timeframe)
                 for candle in cans
             ]
-            open_keys = set(self.c_symbol.filter_open_datetimes(
-                target_dts=candle_keys,
-                trading_hours=self.c_trading_hours,
-                events=events,
-                start_dt=min(candle_keys, default=self.c_start),
-                end_dt=self.c_end,
-            ))
+            if self.c_timeframe in {"e1mo", "e1y"}:
+                # A holiday may close the calendar boundary while later source
+                # minutes make this calendar candle valid.
+                open_keys = {
+                    candle_key
+                    for candle_key in candle_keys
+                    if expected_candle_datetimes(
+                        start_dt=candle_key,
+                        end_dt=candle_key,
+                        timeframe=self.c_timeframe,
+                        symbol=self.c_symbol,
+                        events=events,
+                    )
+                }
+            else:
+                open_keys = set(self.c_symbol.filter_open_datetimes(
+                    target_dts=candle_keys,
+                    trading_hours=self.c_trading_hours,
+                    events=events,
+                    start_dt=min(candle_keys, default=self.c_start),
+                    end_dt=self.c_end,
+                ))
             # Preserve raw storage labels after filtering by canonical keys.
             self.c_candles = [
                 candle for candle, candle_key in zip(cans, candle_keys)
@@ -1992,7 +2019,7 @@ class Indicator():
         Raises:
             ValueError: If multiple datapoints share a candle-start key.
         """
-        higher_timeframes = {"e1d", "e1w", "e1m", "e1y"}
+        higher_timeframes = {"e1d", "e1w", "e1mo", "e1y"}
         result = {}
         for index, datapoint in enumerate(self.datapoints):
             if self.timeframe in higher_timeframes:
@@ -2071,7 +2098,7 @@ class Indicator():
         previous and next requests.
 
         Intraday indicators match their raw datapoint timestamp directly.
-        Higher-timeframe ETH indicators (e1d, e1w, e1m, and e1y) instead
+        Higher-timeframe ETH indicators (e1d, e1w, e1mo, and e1y) instead
         match a canonical session key. Their raw datapoint timestamp is a
         chart label such as daily midnight or weekly Monday midnight, while the
         canonical session key is the associated 18:00 session boundary.
@@ -2090,7 +2117,7 @@ class Indicator():
         """
         # Normalize the request to its candle/session boundary first.
         can_dt = this_candle_start(dt=dt, timeframe=self.timeframe)
-        higher_timeframes = {"e1d", "e1w", "e1m", "e1y"}
+        higher_timeframes = {"e1d", "e1w", "e1mo", "e1y"}
         # Higher-timeframe labels must be normalized before comparison;
         # intraday labels already represent their actual candle start.
         matching_indexes = [
