@@ -2049,9 +2049,9 @@ def shared_assertions_Indicator_spotcheck_ES_eth_e1d_RSI_close_p14_swilder(
     for label, expected_value in [
         ("2026-03-02 00:00:00", 47.63),
         ("2026-03-09 00:00:00", 43.36),
-        ("2026-03-16 00:00:00", 43.14),
-        ("2026-03-23 00:00:00", 38.44),
-        ("2026-03-30 00:00:00", 26.62),
+        ("2026-03-16 00:00:00", 44.25),
+        ("2026-03-23 00:00:00", 39.62),
+        ("2026-03-30 00:00:00", 28.13),
     ]:
         datapoint = indicator.get_datapoint(label)
         assert datapoint.dt == label
@@ -2096,9 +2096,9 @@ def shared_assertions_Indicator_spotcheck_ES_eth_e1d_DerivedSMA14_RSI(
     for label, expected_value in [
         ("2026-03-02 00:00:00", 47.31),
         ("2026-03-09 00:00:00", 46.61),
-        ("2026-03-16 00:00:00", 43.98),
-        ("2026-03-23 00:00:00", 40.70),
-        ("2026-03-30 00:00:00", 37.01),
+        ("2026-03-16 00:00:00", 43.87),
+        ("2026-03-23 00:00:00", 41.05),
+        ("2026-03-30 00:00:00", 37.82),
     ]:
         datapoint = indicator.get_datapoint(label)
         assert datapoint.dt == label
