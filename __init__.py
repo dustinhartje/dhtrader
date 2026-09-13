@@ -25,6 +25,7 @@ from .dhtypes import (
 
 from .dhcommon import (
     bot,
+    bucket_is_complete,
     check_tf_th_compatibility,
     canonical_session_key,
     DEFAULT_OBJ_NAME,
@@ -38,6 +39,7 @@ from .dhcommon import (
     expected_candle_datetimes,
     find_repo_root,
     log_say,
+    last_open_minute_in_bucket,
     MARKET_ERAS,
     new_uuid,
     next_candle_boundary,
@@ -143,6 +145,7 @@ except Exception:
 __all__ = [
     'Backtest',
     'bot',
+    'bucket_is_complete',
     'Candle',
     'Chart',
     'check_integrity_future_datetimes',
@@ -213,6 +216,7 @@ __all__ = [
     'list_custom_documents',
     'list_images',
     'list_indicators_names',
+    'last_open_minute_in_bucket',
     'log_say',
     'MARKET_ERAS',
     'new_uuid',

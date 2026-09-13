@@ -805,6 +805,59 @@ def next_candle_start(dt,
     return next_dt
 
 
+def last_open_minute_in_bucket(bucket_start,
+                               timeframe: str,
+                               symbol,
+                               trading_hours: str,
+                               events: list = None,
+                               context: dict = None,
+                               ):
+    """Return the last open minute in a bucket or None when it has none.
+
+    Openness is determined by the supplied symbol, trading-hours schedule,
+    and closure events. ``None`` means the bucket contains no open minute and
+    must not be sealed.
+    """
+    start_dt = dt_as_dt(bucket_start).replace(microsecond=0, second=0)
+    end_dt = next_candle_boundary(start_dt, timeframe) - timedelta(minutes=1)
+    if context is None:
+        context = symbol.build_market_hours_context(
+            trading_hours=trading_hours,
+            events=events,
+            start_dt=start_dt,
+            end_dt=end_dt,
+        )
+    candidate_dt = end_dt
+    while candidate_dt >= start_dt:
+        if symbol.is_open_dt(target_dt=candidate_dt, context=context):
+            return candidate_dt
+        candidate_dt -= timedelta(minutes=1)
+    return None
+
+
+def bucket_is_complete(bucket_start,
+                       timeframe: str,
+                       latest_1m_dt,
+                       symbol,
+                       trading_hours: str,
+                       events: list = None,
+                       ) -> bool:
+    """Return whether a bucket is sealable, not whether its data is valid.
+
+    True means the latest stored 1m timestamp reaches the bucket's final
+    expected open minute exactly or later. A bucket with no open minutes is
+    never complete and must not be sealed.
+    """
+    last_open_dt = last_open_minute_in_bucket(
+        bucket_start=bucket_start,
+        timeframe=timeframe,
+        symbol=symbol,
+        trading_hours=trading_hours,
+        events=events,
+    )
+    return last_open_dt is not None and dt_as_dt(latest_1m_dt) >= last_open_dt
+
+
 def expected_candle_datetimes(start_dt,
                               end_dt,
                               timeframe: str,
