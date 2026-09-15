@@ -7,6 +7,7 @@ from dhtrader import (
     check_tf_th_compatibility,
     diff_dicts,
     dow_name,
+    dt_as_date,
     dt_as_dt,
     dt_as_str,
     dt_as_time,
@@ -257,6 +258,15 @@ def test_valid_event_category():
 
 
 @pytest.mark.suppress_stdout
+def test_dt_as_date_accepts_date_datetime_and_date_strings():
+    """Verify dt_as_date normalizes all supported date input shapes."""
+    expected = date(2021, 2, 15)
+    assert dt_as_date(expected) == expected
+    assert dt_as_date(datetime(2021, 2, 15, 18, 0, 0)) == expected
+    assert dt_as_date("2021-02-15 18:00:00") == expected
+    assert dt_as_date("2021-02-15") == expected
+
+
 def test_dt_as_dt():
     """Verify dt_as_dt converts various inputs to datetime or None."""
     # None returns None

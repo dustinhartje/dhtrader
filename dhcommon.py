@@ -415,6 +415,20 @@ def dt_as_dt(d):
     )
 
 
+def dt_as_date(d):
+    """Return a date from a date, datetime, or supported date string."""
+    # If None or already a date object, return it as is.
+    if d is None:
+        return None
+    if isinstance(d, date) and not isinstance(d, dt):
+        return d
+    # If a string only long enough for a date is given, convert to a date obj
+    if isinstance(d, str) and len(d) == 10:
+        return date.fromisoformat(d)
+    # Otherwise assume a full datetime string and convert with dt_as_dt()
+    return dt_as_dt(d).date()
+
+
 def dt_as_str(d):
     """Return a string from the given datetime, string, or None input.
     """

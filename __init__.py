@@ -32,6 +32,7 @@ from .dhcommon import (
     diff_dicts,
     dow_name,
     dt_as_dt,
+    dt_as_date,
     dt_as_str,
     dt_as_time,
     dt_from_epoch,
