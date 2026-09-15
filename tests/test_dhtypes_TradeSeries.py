@@ -527,6 +527,38 @@ def test_TradeSeries_balance_impact_and_stats():
                                                 'gl_in_ticks': -100,
                                                 'success_rate': 0.0}
                                  }
+    assert ts.daily_stats() == {
+        '2099-01-02': {'total_trades': 2,
+                       'profitable_trades': 1,
+                       'losing_trades': 1,
+                       'gl_in_ticks': 288,
+                       'success_rate': 50.0},
+        '2099-01-03': {'total_trades': 0,
+                       'profitable_trades': 0,
+                       'losing_trades': 0,
+                       'gl_in_ticks': 0,
+                       'success_rate': 'nil'},
+        '2099-01-04': {'total_trades': 0,
+                       'profitable_trades': 0,
+                       'losing_trades': 0,
+                       'gl_in_ticks': 0,
+                       'success_rate': 'nil'},
+        '2099-01-05': {'total_trades': 0,
+                       'profitable_trades': 0,
+                       'losing_trades': 0,
+                       'gl_in_ticks': 0,
+                       'success_rate': 'nil'},
+        '2099-01-06': {'total_trades': 0,
+                       'profitable_trades': 0,
+                       'losing_trades': 0,
+                       'gl_in_ticks': 0,
+                       'success_rate': 'nil'},
+        '2099-01-07': {'total_trades': 1,
+                       'profitable_trades': 0,
+                       'losing_trades': 1,
+                       'gl_in_ticks': -100,
+                       'success_rate': 0.0},
+    }
 
 
 @pytest.mark.suppress_stdout

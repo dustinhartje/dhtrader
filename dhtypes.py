@@ -3950,6 +3950,53 @@ class TradeSeries():
 
         return result
 
+    def daily_stats(self, include_first_min: bool = True):
+        """Return trade statistics grouped into calendar-day buckets.
+
+        The returned additive fields use the same trade inclusion and signed
+        tick calculation as weekly_stats(). Zero-trade days are retained so
+        callers can use the result for exact sub-period boundaries.
+        """
+        template = {
+            "total_trades": 0,
+            "profitable_trades": 0,
+            "losing_trades": 0,
+            "gl_in_ticks": 0,
+            "success_rate": "nil",
+        }
+        if len(self.trades) == 0:
+            return {}
+        self.sort_trades()
+        first_day = dt_as_dt(self.trades[0].open_dt).date()
+        last_day = dt_as_dt(self.trades[-1].open_dt).date()
+        result = {}
+        current_day = first_day
+        while current_day <= last_day:
+            result[str(current_day)] = dict(template)
+            current_day += timedelta(days=1)
+        for t in self.trades:
+            if not t.first_min_open or include_first_min:
+                day = str(dt_as_dt(t.open_dt).date())
+                result[day]["total_trades"] += 1
+                if t.profitable:
+                    result[day]["profitable_trades"] += 1
+                else:
+                    result[day]["losing_trades"] += 1
+                result[day]["gl_in_ticks"] += (
+                    (t.exit_price - t.entry_price)
+                    / self.symbol.tick_size
+                    * t.flipper
+                )
+        for values in result.values():
+            if values["total_trades"] > 0:
+                values["success_rate"] = round(
+                    values["profitable_trades"]
+                    / values["total_trades"]
+                    * 100,
+                    0,
+                )
+        return result
+
 
 class Backtest():
     """Base class for backtests; subclass to implement specific strategy rules.
