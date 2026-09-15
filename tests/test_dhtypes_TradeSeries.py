@@ -562,6 +562,25 @@ def test_TradeSeries_balance_impact_and_stats():
 
 
 @pytest.mark.suppress_stdout
+def test_TradeSeries_daily_stats_uses_18h_session_boundaries():
+    """Verify trades before/at 18:00 enter adjacent session days."""
+    ts = create_tradeseries()
+    before = create_trade(open_dt="2099-01-02 17:59:00")
+    before.close(price=5005, dt="2099-01-02 18:04:00")
+    at_boundary = create_trade(open_dt="2099-01-02 18:00:00")
+    at_boundary.close(price=5005, dt="2099-01-02 18:05:00")
+    ts.add_trade(before)
+    ts.add_trade(at_boundary)
+    stats = ts.daily_stats()
+    assert list(stats) == [
+        "2099-01-02",
+        "2099-01-03",
+    ]
+    assert stats["2099-01-02"]["total_trades"] == 1
+    assert stats["2099-01-03"]["total_trades"] == 1
+
+
+@pytest.mark.suppress_stdout
 def test_TradeSeries_non_target_closes_stats_and_effective_risk_reward_calc():
     """Verify effective_risk_reward when trades close at non-target prices."""
     ts = create_tradeseries()

@@ -3904,8 +3904,8 @@ class TradeSeries():
     def weekly_stats(self, include_first_min: bool = True):
         """Return trade statistics grouped into weekly buckets.
 
-        Uses Sunday as the start of each week for bucket definition and
-        membership, but emits Monday date as the bucket label for each week.
+        Uses the canonical Sunday 18:00 session boundary for membership and
+        emits the following Monday midnight storage label for each week.
         """
         # Build a dict of weeks with zeroes as default values to ensure we
         # represent non-traded weeks in the result rather than leave gaps
@@ -3919,27 +3919,31 @@ class TradeSeries():
         if len(self.trades) == 0:
             return {}
         self.sort_trades()
-        w_start = self.trades[0].open_dt
-        w_end = self.trades[-1].open_dt
-        result = dict_of_weeks(start_dt=w_start,
-                               end_dt=w_end,
-                               template=template)
-        # Relabel all Sunday keys to Monday keys for output
-        result = {str(date.fromisoformat(k) + timedelta(days=1)): v
-                  for k, v in result.items()}
+        w_start = canonical_session_key(self.trades[0].open_dt, "e1w")
+        w_end = canonical_session_key(self.trades[-1].open_dt, "e1w")
+        result = {}
+        current_week = w_start
+        while current_week <= w_end:
+            label = storage_label_for_session_key(current_week, "e1w")
+            result[label.date().isoformat()] = deepcopy(template)
+            current_week += timedelta(weeks=1)
         # Loop through trades to aggregate stats
         for t in self.trades:
             if not t.first_min_open or include_first_min:
-                d = dt_as_dt(t.open_dt)
-                w = str(start_of_week_date(dt=d) + timedelta(days=1))
-                result[w]["total_trades"] += 1
+                session_key = canonical_session_key(t.open_dt, "e1w")
+                label = storage_label_for_session_key(
+                    session_key,
+                    "e1w",
+                )
+                week = label.date().isoformat()
+                result[week]["total_trades"] += 1
                 if t.profitable:
-                    result[w]["profitable_trades"] += 1
+                    result[week]["profitable_trades"] += 1
                 else:
-                    result[w]["losing_trades"] += 1
-                result[w]["gl_in_ticks"] += ((t.exit_price - t.entry_price)
-                                             / self.symbol.tick_size
-                                             * t.flipper)
+                    result[week]["losing_trades"] += 1
+                result[week]["gl_in_ticks"] += ((t.exit_price - t.entry_price)
+                                                / self.symbol.tick_size
+                                                * t.flipper)
         # Calculate success rates
         for k in result.keys():
             if result[k]["total_trades"] > 0:
@@ -3951,11 +3955,13 @@ class TradeSeries():
         return result
 
     def daily_stats(self, include_first_min: bool = True):
-        """Return trade statistics grouped into calendar-day buckets.
+        """Return trade statistics grouped into canonical session days.
 
         The returned additive fields use the same trade inclusion and signed
-        tick calculation as weekly_stats(). Zero-trade days are retained so
-        callers can use the result for exact sub-period boundaries.
+        tick calculation as weekly_stats(). Each session runs from 18:00:00
+        through 17:59:59 of the following calendar date. Keys use the
+        date-only storage label for each session. Zero-trade sessions are
+        retained so callers can use the result for exact boundaries.
         """
         template = {
             "total_trades": 0,
@@ -3967,16 +3973,31 @@ class TradeSeries():
         if len(self.trades) == 0:
             return {}
         self.sort_trades()
-        first_day = dt_as_dt(self.trades[0].open_dt).date()
-        last_day = dt_as_dt(self.trades[-1].open_dt).date()
+        first_day = canonical_session_key(
+            self.trades[0].open_dt,
+            "e1d",
+        )
+        last_day = canonical_session_key(
+            self.trades[-1].open_dt,
+            "e1d",
+        )
         result = {}
-        current_day = first_day
-        while current_day <= last_day:
-            result[str(current_day)] = dict(template)
-            current_day += timedelta(days=1)
+        current_session = first_day
+        while current_session <= last_day:
+            label = storage_label_for_session_key(
+                current_session,
+                "e1d",
+            )
+            result[label.date().isoformat()] = deepcopy(template)
+            current_session += timedelta(days=1)
         for t in self.trades:
             if not t.first_min_open or include_first_min:
-                day = str(dt_as_dt(t.open_dt).date())
+                session_key = canonical_session_key(t.open_dt, "e1d")
+                label = storage_label_for_session_key(
+                    session_key,
+                    "e1d",
+                )
+                day = label.date().isoformat()
                 result[day]["total_trades"] += 1
                 if t.profitable:
                     result[day]["profitable_trades"] += 1
