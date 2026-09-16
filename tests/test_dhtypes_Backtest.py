@@ -76,6 +76,7 @@ def create_backtest(start_dt="2099-01-01 00:00:00",
                     autoload_charts=False,
                     prefer_stored=False,
                     tradeseries=None,
+                    trade_family=None,
                     ):
     """Create a Backtest and validate its attributes and defaults."""
     r = Backtest(start_dt=start_dt,
@@ -92,6 +93,7 @@ def create_backtest(start_dt="2099-01-01 00:00:00",
                  autoload_charts=autoload_charts,
                  prefer_stored=prefer_stored,
                  tradeseries=tradeseries,
+                 trade_family=trade_family,
                  )
     assert isinstance(r.start_dt, str)
     assert r.start_dt == start_dt
@@ -196,11 +198,12 @@ def test_Backtest_create_and_verify_common_methods():
     assert bt.tradeseries == []
     assert bt.autoload_charts is False
     assert bt.prefer_stored is False
+    assert bt.trade_family is None
     expected_attrs = {
         "autoload_charts", "bt_id", "chart_1m", "chart_tf",
         "class_name", "end_dt", "name", "parameters",
         "prefer_stored", "start_dt", "symbol", "timeframe",
-        "tradeseries", "trading_hours",
+        "tradeseries", "trading_hours", "trade_family",
     }
     actual_attrs = set(vars(bt).keys())
     added = actual_attrs - expected_attrs
@@ -223,6 +226,7 @@ def test_Backtest_create_and_verify_common_methods():
         "'end_dt': '2099-02-01 00:00:00', 'timeframe': 'e1h', "
         "'trading_hours': 'eth', 'symbol': 'ES', 'name': 'DELETEME', "
         "'bt_id': 'DELETEME', 'class_name': 'BacktestTestDeleteme', "
+        "'trade_family': None, "
         "'parameters': {'a': 1, 'b': 'two'}, "
         "'chart_tf': 'Chart suppressed for output sanity', "
         "'chart_1m': 'Chart suppressed for output sanity', "
@@ -247,14 +251,27 @@ def test_Backtest_create_and_verify_common_methods():
     assert parsed["timeframe"] == "e1h"
     # pretty
     assert isinstance(bt.pretty(), str)
-    assert len(bt.pretty().splitlines()) == 21
+    assert len(bt.pretty().splitlines()) == 22
     ts = create_tradeseries()
     tr = create_trade()
     ts.add_trade(tr)
     bt.update_tradeseries(ts, clear_storage=False)
     # With TradeSeries and Trades shown
     assert len(bt.pretty(suppress_tradeseries=False,
-                         suppress_trades=False).splitlines()) == 70
+                         suppress_trades=False).splitlines()) == 71
+
+
+def test_Backtest_trade_family_round_trips_and_affects_equality():
+    """Verify an explicit trade_family serializes and participates in eq."""
+    bt = create_backtest(trade_family="ES.indtag.EMA.e1h.9.reject")
+    same = create_backtest(trade_family="ES.indtag.EMA.e1h.9.reject")
+    different = create_backtest(trade_family="ES.indtag.EMA.e1h.9.bounce")
+
+    assert bt == same
+    assert bt != different
+    assert bt.to_clean_dict()["trade_family"] == (
+        "ES.indtag.EMA.e1h.9.reject"
+    )
 
 
 @pytest.mark.storage

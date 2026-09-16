@@ -4066,7 +4066,7 @@ class Backtest():
         "start_dt", "end_dt", "timeframe",
         "trading_hours", "symbol", "name",
         "bt_id", "class_name", "chart_tf",
-        "chart_1m", "tradeseries",
+        "chart_1m", "tradeseries", "trade_family",
     })
     _EQ_EXCLUDE: frozenset = frozenset({
         # Subclass-specific fields; compared via sub_eq()
@@ -4090,6 +4090,7 @@ class Backtest():
                  autoload_charts: bool = False,
                  prefer_stored: bool = True,
                  tradeseries: list = None,
+                 trade_family: str = None,
                  ):
         self.start_dt = dt_as_str(start_dt)
         self.end_dt = dt_as_str(end_dt)
@@ -4108,6 +4109,7 @@ class Backtest():
         else:
             self.bt_id = bt_id
         self.class_name = class_name
+        self.trade_family = trade_family
         self.parameters = deepcopy(parameters)
         self.chart_tf = chart_tf
         self.chart_1m = chart_1m
