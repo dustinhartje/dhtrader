@@ -28,12 +28,37 @@ remove the conflict.
 - **Markdown files:** trailing whitespace is allowed for formatting/rendering
 - **Line endings:** LF only for all text files
 
+## Agent Tool Restrictions
+
+- **Never use Pylance**, including Pylance MCP tools, refactorings,
+  diagnostics, profiling, or skills that require invoking Pylance.
+  Use direct file inspection, repository tools, and runtime tests instead.
+
+## File Editing Method
+
+- **When running in VS Code, make every file change through VS Code's
+  editor file-edit functions**, so the user can inspect the diff and
+  accept/reject changes in the editor/chat review UI.
+- If reviewable editor editing is unavailable, stop and tell the user;
+  do not fall back to terminal writes or scripts that rewrite files.
+- **Never modify files with terminal commands.** This includes `sed -i`,
+  `perl -pi`, `awk`, shell redirection (`>`, `>>`), `tee`, and `patch`.
+- **Always use the editor's file-edit tools**, even for bulk mechanical
+  changes such as project-wide renames. Terminal edits bypass the chat
+  review interface, so the operator loses per-file keep/undo review and
+  must fall back to Source Control to inspect the changes.
+- Terminal commands are for read-only inspection (`rg`, `git status`,
+  `git diff`), running tests, linters, and validation scripts only.
+- This applies even when a terminal one-liner would be shorter; a larger
+  reviewable diff is preferred over an unreviewable one.
+
 ## Required Workflow
 
 Before editing:
 
 1. Read `CODING_STANDARDS.md` if rule details are needed.
 2. Prefer config-driven enforcement over ad-hoc rules.
+3. Use editor file-edit tools, never terminal text manipulation.
 
 After editing:
 

@@ -97,6 +97,25 @@ sed -i 's/[[:blank:]]\+$//' <file>
    - `flake8 .` when Python files are edited
    - `./validate-file-quality.sh <file>` for each edited text file
 
+### AI agent tool restrictions
+
+AI agents must never use Pylance, including Pylance MCP tools or skills
+that invoke Pylance. Use direct file inspection, repository tools, and
+runtime tests instead.
+
+When running in VS Code, agents must use VS Code's editor file-edit
+functions for every change so users can inspect and accept/reject the
+diff in the editor/chat review UI. If those functions are unavailable,
+stop and inform the user rather than falling back to terminal writes
+or scripts that rewrite files.
+
+AI agents must make all file modifications through the editor's file-edit
+tools and must never edit files with terminal commands (`sed -i`,
+`perl -pi`, `awk`, `>`/`>>` redirection, `tee`, `patch`). This applies to
+bulk mechanical edits such as project-wide renames, and to the `sed -i`
+whitespace command above, which is intended for human use. Terminal edits
+bypass the chat review interface and prevent per-file keep/undo review.
+
 ## Configuration Files Reference
 
 - `.flake8`: Python linting and line-length policy
