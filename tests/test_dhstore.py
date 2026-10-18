@@ -71,6 +71,57 @@ def test_store_indicator_datapoints_logs_details_only_at_debug(
     assert all(record.levelno == logging.DEBUG for record in records)
 
 
+@pytest.mark.parametrize("level", [logging.INFO, logging.DEBUG])
+@pytest.mark.parametrize("count", [0, 1])
+def test_get_candles_intermediate_messages_only_at_debug(
+        monkeypatch, caplog, level, count):
+    """Keep request/count at INFO and intermediate milestones at DEBUG."""
+    start = _dhs.dt_to_epoch("2026-10-12 00:00:00")
+    document = {
+        "c_datetime": "2026-10-12 00:00:00", "c_timeframe": "e1d",
+        "c_open": 100, "c_high": 102, "c_low": 99, "c_close": 101,
+        "c_volume": 10, "c_symbol": "ES", "c_epoch": start,
+    }
+    retrieve = Mock(return_value=[document] * count)
+    candle = Mock()
+    constructor = Mock(return_value=candle)
+    monkeypatch.setattr(_dhm, "get_candles", retrieve)
+    monkeypatch.setattr(_dhs, "Candle", constructor)
+
+    with caplog.at_level(level, logger="dhstore"):
+        result = _dhs.get_candles(
+            start_epoch=start, end_epoch=start, timeframe="e1d",
+        )
+
+    retrieve.assert_called_once_with(
+        start_epoch=start, end_epoch=start, timeframe="e1d",
+        symbol="ES", show_progress=False,
+    )
+    assert result == [candle] * count
+    assert constructor.call_count == count
+    records = [
+        record for record in caplog.records
+        if record.funcName == "get_candles"
+    ]
+    info_messages = [
+        "Retrieving candles from storage for ES e1d between "
+        "2026-10-12 00:00:00 and 2026-10-12 00:00:00",
+        f"Finished building Candle objects, returning {count} candles",
+    ]
+    assert [
+        record.getMessage() for record in records
+        if record.levelno == logging.INFO
+    ] == info_messages
+    debug_messages = [
+        "Finished retrieval from storage",
+        "Building Candle objects from retrieved data",
+    ]
+    assert [
+        record.getMessage() for record in records
+        if record.levelno == logging.DEBUG
+    ] == (debug_messages if level == logging.DEBUG else [])
+
+
 def clear_storage_by_name(name: str):
     """Delete all Backtests, TradeSeries, and Trades with the given name."""
     delete_backtests_by_field(symbol="ES", field="name", value=name,

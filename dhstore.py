@@ -2980,7 +2980,10 @@ def get_candles(start_epoch: int,
                 symbol: str = "ES",
                 show_progress: bool = False,
                 ):
-    """Return candle docs within the given start and end epochs, inclusive.
+    """Return candles within the given start and end epochs, inclusive.
+
+    Log the request and final count at INFO; intermediate retrieval and
+    object-building milestones are available at DEBUG.
     """
     # Retrieve candle dictionaries from storage
     log_sym = symbol if isinstance(symbol, str) else symbol.ticker
@@ -2994,10 +2997,10 @@ def get_candles(start_epoch: int,
                              symbol=symbol,
                              show_progress=show_progress,
                              )
-    log.info("Finished retrieval from storage")
+    log.debug("Finished retrieval from storage")
 
     # Build Candle() objects from retrieved dictionaries
-    log.info("Building Candle objects from retrieved data")
+    log.debug("Building Candle objects from retrieved data")
     candles = []
     total = len(result)
     pbar = start_progbar(show_progress, total,
