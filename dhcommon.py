@@ -102,23 +102,29 @@ class _ProgBarStreamProxy:
         return getattr(self._stream, name)
 
 
-def log_say(msg, level="info", prefix="", suffix=""):
-    """Log messages while also printing to console."""
+def log_say(msg, level="info", prefix="", suffix="", *, stacklevel=1):
+    """Print and log a message, attributing its source to the caller.
+
+    The logger name remains dhcommon. Function, file, and line metadata
+    identify the caller instead of this helper. Wrappers can increase
+    stacklevel to attribute the record to their own caller (2 for one
+    wrapper), using the same convention as Python logging.
+    """
     if prefix:
         msg = f"{prefix} {msg}"
     if suffix:
         msg = f"{msg} {suffix}"
     print(msg, flush=True)
     if level == "debug":
-        log.debug(msg)
+        log.debug(msg, stacklevel=stacklevel + 1)
     if level == "info":
-        log.info(msg)
+        log.info(msg, stacklevel=stacklevel + 1)
     if level in ["warn", "warning"]:
-        log.warning(msg)
+        log.warning(msg, stacklevel=stacklevel + 1)
     if level == "error":
-        log.error(msg)
+        log.error(msg, stacklevel=stacklevel + 1)
     if level == "critical":
-        log.critical(msg)
+        log.critical(msg, stacklevel=stacklevel + 1)
 
 
 class OperationTimer():

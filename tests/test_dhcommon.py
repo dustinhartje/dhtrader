@@ -1,5 +1,8 @@
 """Tests for dhcommon utility functions and constants."""
 import json
+import inspect
+import logging
+from pathlib import Path
 import pytest
 from datetime import datetime, timedelta, date
 from dhtrader import (
@@ -46,6 +49,48 @@ def test_log_say(capsys):
         log_say(f"test {level} message", level=level)
         captured = capsys.readouterr()
         assert f"test {level} message" in captured.out
+
+
+@pytest.mark.parametrize("level, expected_level", [
+    ("debug", logging.DEBUG),
+    ("info", logging.INFO),
+    ("warn", logging.WARNING),
+    ("warning", logging.WARNING),
+    ("error", logging.ERROR),
+    ("critical", logging.CRITICAL),
+])
+def test_log_say_attributes_record_to_caller(
+        caplog, capsys, level, expected_level):
+    """All severities retain output and logger identity but cite the caller."""
+    with caplog.at_level(logging.DEBUG, logger="dhcommon"):
+        line = inspect.currentframe().f_lineno + 1
+        log_say("message", level, "prefix", "suffix")
+
+    assert capsys.readouterr().out == "prefix message suffix\n"
+    record, = caplog.records
+    assert record.getMessage() == "prefix message suffix"
+    assert record.levelno == expected_level
+    assert record.name == "dhcommon"
+    assert record.funcName == "test_log_say_attributes_record_to_caller"
+    assert Path(record.pathname).resolve() == Path(__file__).resolve()
+    assert record.module == Path(__file__).stem
+    assert record.lineno == line
+
+
+def test_log_say_stacklevel_skips_wrapper(caplog, capsys):
+    """A wrapper can request attribution to its caller without frame logic."""
+    def wrapper():
+        log_say("wrapped message", stacklevel=2)
+
+    with caplog.at_level(logging.INFO, logger="dhcommon"):
+        line = inspect.currentframe().f_lineno + 1
+        wrapper()
+
+    assert capsys.readouterr().out == "wrapped message\n"
+    record, = caplog.records
+    assert record.funcName == "test_log_say_stacklevel_skips_wrapper"
+    assert record.lineno == line
+    assert Path(record.pathname).resolve() == Path(__file__).resolve()
 
 
 @pytest.mark.suppress_stdout
