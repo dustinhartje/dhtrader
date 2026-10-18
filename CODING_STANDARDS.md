@@ -182,6 +182,11 @@ Every public store, retrieve, delete, list, and review
 function must log at entry with its key arguments and at
 exit with the result count or ID:
 
+Exception: `store_indicator_datapoints()` uses DEBUG for its processing,
+storage, and completion messages because indicator storage calls it once
+per datapoint. Keep per-indicator stored/skipped summaries at INFO in the
+calling workflow rather than emitting INFO for every datapoint.
+
 ```python
 log.info(
     f"store_custom_documents: collection={collection!r}, "

@@ -5,6 +5,8 @@ store/retrieve/delete/review functions (and their dhmongo backing functions)
 because these have no class to build a dedicated test file for.
 """
 import re
+import logging
+from unittest.mock import Mock
 import pytest
 from dhtrader import (
     Backtest,
@@ -29,7 +31,44 @@ from dhtrader import (
     TradeSeries,
 )
 import dhtrader.dhmongo as _dhm
+import dhtrader.dhstore as _dhs
 from .conftest import is_valid_uuid
+
+
+@pytest.mark.parametrize("level", [logging.INFO, logging.DEBUG])
+def test_store_indicator_datapoints_logs_details_only_at_debug(
+        monkeypatch, caplog, level):
+    """Per-datapoint messages are quiet at INFO and available at DEBUG."""
+    document = {"ind_id": "test_indicator", "value": 1}
+    datapoint = Mock()
+    datapoint.to_clean_dict.return_value = document
+    store = Mock(return_value=[document])
+    monkeypatch.setattr(_dhm, "store_indicator_datapoints", store)
+
+    with caplog.at_level(level, logger="dhstore"):
+        result = _dhs.store_indicator_datapoints(
+            [datapoint], collection="test_datapoints", skip_dupes=False,
+        )
+
+    store.assert_called_once_with(
+        datapoints=[document], collection="test_datapoints",
+    )
+    assert result["stored"] == [document]
+    assert result["skipped"] == []
+    assert result["elapsed"] is not None
+    records = [
+        record for record in caplog.records
+        if record.funcName == "store_indicator_datapoints"
+    ]
+    expected = [
+        "Processing 1 datapoints with skip_dupes=False",
+        "Storing 1 datapoints to collection=test_datapoints",
+        "Complete: 1 stored, 0 skipped",
+    ]
+    assert [record.getMessage() for record in records] == (
+        expected if level == logging.DEBUG else []
+    )
+    assert all(record.levelno == logging.DEBUG for record in records)
 
 
 def clear_storage_by_name(name: str):

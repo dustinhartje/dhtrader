@@ -126,6 +126,9 @@ or serialized), verify each item before presenting the code:
 - **`log.info`/`log_say` entry and exit** on every public
   store/retrieve/delete/list/review function; `log_say` for
   console-visible messages, `log.info` for file-only.
+  Exception: `store_indicator_datapoints()` processing/storage/completion
+  messages use DEBUG; the calling workflow keeps per-indicator
+  stored/skipped summaries at INFO.
 - **`log.debug`** for timing (`log_timer()`), per-item loop
   detail, and test-mode overrides — not visible in normal
   operation.

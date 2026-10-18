@@ -2671,9 +2671,13 @@ def store_indicator_datapoints(datapoints: list,
                                collection: str = COLLECTIONS["ind_dps"],
                                skip_dupes: bool = True,
                                ):
-    """Store one or more IndicatorDatapoint() objects in central storage."""
-    log.info(f"Processing {len(datapoints)} datapoints with "
-             f"skip_dupes={skip_dupes}")
+    """Store datapoints, logging per-call details only at DEBUG.
+
+    Indicator storage invokes this for individual datapoints which is too
+    verbose for INFO logging each call.
+    """
+    log.debug(f"Processing {len(datapoints)} datapoints with "
+              f"skip_dupes={skip_dupes}")
     store_dps = []
     r_skipped = []
     for d in datapoints:
@@ -2703,12 +2707,14 @@ def store_indicator_datapoints(datapoints: list,
             store_dps.append(d.to_clean_dict())
 
     op_timer = OperationTimer(name="Indicator Datapoints Storage Job")
-    log.info(f"Storing {len(store_dps)} datapoints to collection={collection}")
+    log.debug(
+        f"Storing {len(store_dps)} datapoints to collection={collection}"
+    )
     r_stored = dhm.store_indicator_datapoints(datapoints=store_dps,
                                               collection=collection,
                                               )
     op_timer.stop()
-    log.info(f"Complete: {len(store_dps)} stored, {len(r_skipped)} skipped")
+    log.debug(f"Complete: {len(store_dps)} stored, {len(r_skipped)} skipped")
     result = {"skipped": r_skipped,
               "stored": r_stored,
               "elapsed": op_timer,
