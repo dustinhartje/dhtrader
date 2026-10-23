@@ -16,10 +16,13 @@ import os
 import sys
 import pymongo
 from pymongo import ReplaceOne
-from pymongo.errors import BulkWriteError
+from pymongo.errors import BulkWriteError, PyMongoError
 import logging
 from dotenv import load_dotenv, find_dotenv
 from datetime import datetime as dt
+from typing import Generator
+from bson import BSON
+from bson.errors import BSONError
 from .dhcommon import (
     ProgBar, prompt_yn, valid_timeframe, dt_as_str, dt_from_epoch,
     dt_to_epoch)
@@ -181,14 +184,18 @@ def run_query(query,
 
 def count_records(collection: str,
                   query: dict = None,
+                  *,
+                  database: str = None,
                   ) -> int:
     """Return count of documents matching query in collection.
 
     query defaults to {} to count all documents in the collection.
+    database defaults to the existing primary database.
     """
     if query is None:
         query = {}
-    c = db[collection]
+    target_db = db if database is None else mc[database]
+    c = target_db[collection]
     return c.count_documents(query)
 
 
@@ -315,6 +322,8 @@ def get_custom_documents_by_field(collection: str,
                                   field: str,
                                   value,
                                   limit: int = 0,
+                                  *,
+                                  database: str = None,
                                   ):
     """Return documents matching field==value from collection.
 
@@ -323,11 +332,13 @@ def get_custom_documents_by_field(collection: str,
         field: Field name to filter on.
         value: Value to match.
         limit: Maximum documents to return; 0 means no limit.
+        database: Optional database name on the existing Mongo client.
 
     Returns:
         list of dicts, insertion order preserved.
     """
-    c = db[collection]
+    target_db = db if database is None else mc[database]
+    c = target_db[collection]
     cursor = c.find({field: value})
     if limit > 0:
         cursor = cursor.limit(limit)
@@ -356,6 +367,8 @@ def get_all_custom_documents(collection: str,
 def delete_custom_documents_by_field(collection: str,
                                      field: str,
                                      value,
+                                     *,
+                                     database: str = None,
                                      ):
     """Delete all documents matching field==value from collection.
 
@@ -363,12 +376,165 @@ def delete_custom_documents_by_field(collection: str,
         collection: Target collection name.
         field: Field name to match on.
         value: Value to match.
+        database: Optional database name on the existing Mongo client.
 
     Returns:
         pymongo DeleteResult.
     """
-    c = db[collection]
+    target_db = db if database is None else mc[database]
+    c = target_db[collection]
     return c.delete_many({field: value})
+
+
+def bulk_upsert_documents(
+        collection: str,
+        documents: list,
+        identity_field: str,
+        *,
+        database: str = None,
+        ) -> dict:
+    """Validate and ordered-upsert plain documents by their identity field.
+
+    Each document must be a BSON-compatible dict with a non-blank string
+    identity. The input batch is validated completely before any write.
+    """
+    if not isinstance(documents, (list, tuple)):
+        log.critical(
+            "bulk_upsert_documents: documents must be a list or tuple, "
+            f"got {type(documents)!r}"
+        )
+        raise ValueError("documents must be a list or tuple")
+    if not documents:
+        log.critical("bulk_upsert_documents: documents batch is empty")
+        raise ValueError("documents must be a non-empty batch")
+    if not isinstance(identity_field, str) or not identity_field.strip():
+        log.critical(
+            "bulk_upsert_documents: invalid identity_field "
+            f"{identity_field!r}"
+        )
+        raise ValueError("identity_field must be a non-blank string")
+
+    operations = []
+    identities = set()
+    for index, document in enumerate(documents):
+        if not isinstance(document, dict):
+            log.critical(
+                "bulk_upsert_documents: document at index "
+                f"{index} is not a dict: {type(document)!r}"
+            )
+            raise ValueError(
+                f"document at index {index} must be a dict"
+            )
+
+        identity = document.get(identity_field)
+        if not isinstance(identity, str) or not identity.strip():
+            log.critical(
+                "bulk_upsert_documents: document at index "
+                f"{index} has invalid identity {identity!r}"
+            )
+            raise ValueError(
+                f"document at index {index} must have a non-blank "
+                f"string {identity_field!r}"
+            )
+        if identity in identities:
+            log.critical(
+                "bulk_upsert_documents: duplicate identity "
+                f"{identity!r} at index {index}"
+            )
+            raise ValueError(
+                f"duplicate identity {identity!r} in documents"
+            )
+        identities.add(identity)
+
+        try:
+            BSON.encode(document)
+        except (BSONError, OverflowError, TypeError, ValueError) as exc:
+            log.critical(
+                "bulk_upsert_documents: document at index "
+                f"{index} is not BSON-compatible: {exc}"
+            )
+            raise ValueError(
+                f"document at index {index} is not BSON-compatible: {exc}"
+            ) from exc
+
+        operations.append(
+            ReplaceOne({identity_field: identity}, document, upsert=True)
+        )
+
+    target_db = db if database is None else mc[database]
+    try:
+        result = target_db[collection].bulk_write(
+            operations,
+            ordered=True,
+        )
+    except PyMongoError as exc:
+        log.critical(
+            "bulk_upsert_documents: bulk write failed for "
+            f"{collection!r}: {exc}"
+        )
+        raise
+
+    if not result.acknowledged:
+        log.critical(
+            "bulk_upsert_documents: write acknowledgement missing for "
+            f"{collection!r}"
+        )
+        raise RuntimeError(
+            f"bulk write to {collection!r} was not acknowledged"
+        )
+
+    return {
+        "acknowledged": result.acknowledged,
+        "attempted_count": len(operations),
+        "matched_count": result.matched_count,
+        "modified_count": result.modified_count,
+        "upserted_count": result.upserted_count,
+    }
+
+
+def iter_custom_documents_by_field(
+        collection: str,
+        field: str,
+        value,
+        *,
+        database: str = None,
+        batch_size: int = 1000,
+        limit: int = 0,
+        ) -> Generator[dict, None, None]:
+    """Return a closable iterator of matching custom documents.
+
+    batch_size bounds driver fetches. limit=0 streams without a total limit.
+    The Mongo cursor closes on exhaustion, error, or explicit iterator close.
+    """
+    if (not isinstance(batch_size, int) or isinstance(batch_size, bool)
+            or batch_size <= 0):
+        log.critical(
+            "iter_custom_documents_by_field: invalid batch_size "
+            f"{batch_size!r}"
+        )
+        raise ValueError("batch_size must be a positive integer")
+    if (not isinstance(limit, int) or isinstance(limit, bool)
+            or limit < 0):
+        log.critical(
+            "iter_custom_documents_by_field: invalid limit "
+            f"{limit!r}"
+        )
+        raise ValueError("limit must be a non-negative integer")
+
+    def _iterate():
+        cursor = None
+        try:
+            target_db = db if database is None else mc[database]
+            cursor = target_db[collection].find({field: value})
+            cursor.batch_size(batch_size)
+            if limit > 0:
+                cursor.limit(limit)
+            yield from cursor
+        finally:
+            if cursor is not None:
+                cursor.close()
+
+    return _iterate()
 
 ##############################################################################
 # GridFS image storage

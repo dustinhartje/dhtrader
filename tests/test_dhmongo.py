@@ -1,5 +1,7 @@
 """Tests for dhmongo low-level MongoDB operation functions."""
+from copy import deepcopy
 import pytest
+from unittest.mock import Mock
 from dhtrader.dhmongo import (
     delete_backtests,
     delete_candles_by_field,
@@ -28,6 +30,7 @@ from dhtrader.dhmongo import (
     update_progbar,
 )
 from dhtrader.dhcommon import dt_to_epoch
+import dhtrader.dhmongo as _dhm
 
 # ---------------------------------------------------------------------------
 # Marker values used across all storage tests.
@@ -512,3 +515,325 @@ def test_store_and_get_event_roundtrip(cleanup_dhmongo_storage):
         e for e in after if e["start_dt"] == _TEST_EVENT_DT
     ]
     assert len(matching_after) == 0
+
+
+class _FakeDatabase:
+    def __init__(self, collections):
+        self.collections = collections
+
+    def __getitem__(self, name):
+        return self.collections[name]
+
+
+class _FakeClient:
+    def __init__(self, databases):
+        self.databases = databases
+
+    def __getitem__(self, name):
+        return self.databases[name]
+
+
+class _FakeCursor:
+    def __init__(self, documents, error_at=None):
+        self.documents = documents
+        self.error_at = error_at
+        self.batch_size_value = None
+        self.limit_value = None
+        self.close_count = 0
+
+    def batch_size(self, size):
+        self.batch_size_value = size
+        return self
+
+    def limit(self, limit):
+        self.limit_value = limit
+        return self
+
+    def __iter__(self):
+        for index, document in enumerate(self.documents):
+            if index == self.error_at:
+                raise RuntimeError("cursor iteration failed")
+            if (self.limit_value is not None
+                    and index >= self.limit_value):
+                break
+            yield document
+        if self.error_at == len(self.documents):
+            raise RuntimeError("cursor iteration failed")
+
+    def close(self):
+        self.close_count += 1
+
+
+def test_field_operations_and_count_target_requested_database(monkeypatch):
+    """Explicit targets use the client; omission keeps the default db."""
+    primary_collection = Mock()
+    archive_collection = Mock()
+    primary_db = _FakeDatabase({"docs": primary_collection})
+    archive_db = _FakeDatabase({"docs": archive_collection})
+    client = _FakeClient({"primary": primary_db, "archive": archive_db})
+    monkeypatch.setattr(_dhm, "db", primary_db)
+    monkeypatch.setattr(_dhm, "mc", client)
+    archive_collection.find.return_value = [{"id": "archive"}]
+    archive_collection.delete_many.return_value = "archive-delete"
+    archive_collection.count_documents.return_value = 2
+    primary_collection.find.return_value = [{"id": "primary"}]
+
+    assert _dhm.get_custom_documents_by_field(
+        "docs", "id", "archive", database="archive",
+    ) == [{"id": "archive"}]
+    assert _dhm.get_custom_documents_by_field(
+        "docs", "id", "primary",
+    ) == [{"id": "primary"}]
+    assert _dhm.delete_custom_documents_by_field(
+        "docs", "id", "archive", database="archive",
+    ) == "archive-delete"
+    assert _dhm.count_records(
+        "docs", {"id": "archive"}, database="archive",
+    ) == 2
+
+    archive_collection.find.assert_called_once_with({"id": "archive"})
+    archive_collection.delete_many.assert_called_once_with(
+        {"id": "archive"}
+    )
+    archive_collection.count_documents.assert_called_once_with(
+        {"id": "archive"}
+    )
+    primary_collection.find.assert_called_once_with({"id": "primary"})
+    primary_collection.delete_many.assert_not_called()
+    primary_collection.count_documents.assert_not_called()
+
+
+def test_bulk_and_iterator_target_requested_database(monkeypatch):
+    """Bulk writes and streaming use the named client database."""
+    primary_collection = Mock()
+    archive_collection = Mock()
+    archive_collection.bulk_write.return_value = Mock(
+        acknowledged=True,
+        matched_count=0,
+        modified_count=0,
+        upserted_count=1,
+    )
+    cursor = _FakeCursor([{"id": "one"}])
+    archive_collection.find.return_value = cursor
+    primary_db = _FakeDatabase({"docs": primary_collection})
+    archive_db = _FakeDatabase({"docs": archive_collection})
+    monkeypatch.setattr(_dhm, "db", primary_db)
+    monkeypatch.setattr(
+        _dhm,
+        "mc",
+        _FakeClient({"primary": primary_db, "archive": archive_db}),
+    )
+
+    _dhm.bulk_upsert_documents(
+        "docs", [{"id": "one"}], "id", database="archive",
+    )
+    documents = list(_dhm.iter_custom_documents_by_field(
+        "docs", "kind", "report", database="archive",
+    ))
+
+    assert documents == [{"id": "one"}]
+    archive_collection.bulk_write.assert_called_once()
+    archive_collection.find.assert_called_once_with(
+        {"kind": "report"}
+    )
+    assert cursor.close_count == 1
+    primary_collection.bulk_write.assert_not_called()
+    primary_collection.find.assert_not_called()
+
+
+def test_bulk_upsert_uses_ordered_replacements_and_is_idempotent(
+        monkeypatch):
+    """Bulk writes use stable identity replacements without input mutation."""
+    collection = Mock()
+    collection.bulk_write.return_value = Mock(
+        acknowledged=True,
+        matched_count=1,
+        modified_count=0,
+        upserted_count=1,
+    )
+    database = _FakeDatabase({"docs": collection})
+    monkeypatch.setattr(_dhm, "db", database)
+    documents = [
+        {"id": "first", "value": 1},
+        {"id": "second", "value": {"nested": True}},
+    ]
+    original = deepcopy(documents)
+
+    first_result = _dhm.bulk_upsert_documents(
+        "docs", documents, "id",
+    )
+    second_result = _dhm.bulk_upsert_documents(
+        "docs", documents, "id",
+    )
+
+    assert first_result == {
+        "acknowledged": True,
+        "attempted_count": 2,
+        "matched_count": 1,
+        "modified_count": 0,
+        "upserted_count": 1,
+    }
+    assert second_result == first_result
+    assert documents == original
+    assert collection.bulk_write.call_count == 2
+    for write_call in collection.bulk_write.call_args_list:
+        operations = write_call.args[0]
+        assert write_call.kwargs == {"ordered": True}
+        assert [operation._filter for operation in operations] == [
+            {"id": "first"},
+            {"id": "second"},
+        ]
+        assert all(operation._upsert for operation in operations)
+        assert [operation._doc for operation in operations] == documents
+
+
+@pytest.mark.parametrize("documents, identity_field", [
+    ([], "id"),
+    ([{"id": "one"}, {"id": "one"}], "id"),
+    ([{"id": "one"}, {"id": " "}], "id"),
+    ([{"id": "one"}, {"id": "two", "payload": object()}], "id"),
+    ([{"id": "one"}], " "),
+])
+def test_bulk_upsert_validates_entire_batch_before_writing(
+        monkeypatch, documents, identity_field):
+    """Invalid later entries prevent every database write."""
+    collection = Mock()
+    database = _FakeDatabase({"docs": collection})
+    monkeypatch.setattr(_dhm, "db", database)
+
+    with pytest.raises(ValueError):
+        _dhm.bulk_upsert_documents(
+            "docs", documents, identity_field,
+        )
+
+    collection.bulk_write.assert_not_called()
+
+
+def test_bulk_upsert_propagates_ordered_write_errors(monkeypatch):
+    """Partial ordered-write failures remain explicit to the caller."""
+    from pymongo.errors import BulkWriteError
+
+    collection = Mock()
+    error = BulkWriteError({
+        "writeErrors": [{
+            "index": 0,
+            "code": 11000,
+            "errmsg": "duplicate identity",
+        }],
+        "nInserted": 0,
+    })
+    collection.bulk_write.side_effect = error
+    monkeypatch.setattr(
+        _dhm, "db", _FakeDatabase({"docs": collection}),
+    )
+
+    with pytest.raises(BulkWriteError) as raised:
+        _dhm.bulk_upsert_documents(
+            "docs", [{"id": "one"}], "id",
+        )
+
+    assert raised.value is error
+    collection.bulk_write.assert_called_once()
+    assert collection.bulk_write.call_args.kwargs == {"ordered": True}
+
+
+def test_bulk_upsert_rejects_unacknowledged_result(monkeypatch):
+    """Unacknowledged responses never become a success-shaped summary."""
+    collection = Mock()
+    collection.bulk_write.return_value = Mock(acknowledged=False)
+    monkeypatch.setattr(
+        _dhm, "db", _FakeDatabase({"docs": collection}),
+    )
+
+    with pytest.raises(RuntimeError, match="not acknowledged"):
+        _dhm.bulk_upsert_documents(
+            "docs", [{"id": "one"}], "id",
+        )
+
+
+def test_bulk_upsert_propagates_write_concern_errors(monkeypatch):
+    """Write-concern failures are logged and propagated without fallback."""
+    from pymongo.errors import WriteConcernError
+
+    collection = Mock()
+    error = WriteConcernError("write concern failed")
+    collection.bulk_write.side_effect = error
+    monkeypatch.setattr(
+        _dhm, "db", _FakeDatabase({"docs": collection}),
+    )
+
+    with pytest.raises(WriteConcernError) as raised:
+        _dhm.bulk_upsert_documents(
+            "docs", [{"id": "one"}], "id",
+        )
+
+    assert raised.value is error
+
+
+def test_custom_document_iterator_applies_batch_and_limit_and_closes(
+        monkeypatch):
+    """Streaming limits total results and closes on exhaustion."""
+    cursor = _FakeCursor([{"id": index} for index in range(4)])
+    collection = Mock()
+    collection.find.return_value = cursor
+    monkeypatch.setattr(
+        _dhm, "db", _FakeDatabase({"docs": collection}),
+    )
+
+    documents = _dhm.iter_custom_documents_by_field(
+        "docs", "group", "a", batch_size=3, limit=2,
+    )
+
+    assert next(documents) == {"id": 0}
+    assert next(documents) == {"id": 1}
+    with pytest.raises(StopIteration):
+        next(documents)
+    assert cursor.batch_size_value == 3
+    assert cursor.limit_value == 2
+    assert cursor.close_count == 1
+
+
+def test_custom_document_iterator_batch_size_does_not_limit_results(
+        monkeypatch):
+    """A driver batch smaller than the result set still streams all rows."""
+    cursor = _FakeCursor([{"id": index} for index in range(4)])
+    collection = Mock()
+    collection.find.return_value = cursor
+    monkeypatch.setattr(
+        _dhm, "db", _FakeDatabase({"docs": collection}),
+    )
+
+    documents = list(_dhm.iter_custom_documents_by_field(
+        "docs", "group", "a", batch_size=2,
+    ))
+
+    assert documents == [{"id": index} for index in range(4)]
+    assert cursor.batch_size_value == 2
+    assert cursor.limit_value is None
+    assert cursor.close_count == 1
+
+
+def test_custom_document_iterator_closes_on_early_close_and_error(
+        monkeypatch):
+    """An early stop and a cursor failure both release the cursor."""
+    early_cursor = _FakeCursor([{"id": 1}, {"id": 2}])
+    error_cursor = _FakeCursor([{"id": 1}], error_at=0)
+    collection = Mock()
+    collection.find.side_effect = [early_cursor, error_cursor]
+    monkeypatch.setattr(
+        _dhm, "db", _FakeDatabase({"docs": collection}),
+    )
+
+    early_iterator = _dhm.iter_custom_documents_by_field(
+        "docs", "group", "a",
+    )
+    assert next(early_iterator) == {"id": 1}
+    early_iterator.close()
+    assert early_cursor.close_count == 1
+
+    error_iterator = _dhm.iter_custom_documents_by_field(
+        "docs", "group", "a",
+    )
+    with pytest.raises(RuntimeError, match="cursor iteration failed"):
+        next(error_iterator)
+    assert error_cursor.close_count == 1

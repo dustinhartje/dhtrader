@@ -19,6 +19,7 @@ from datetime import timedelta
 from copy import deepcopy
 import logging
 from pathlib import Path
+from typing import Generator
 from .dhtypes import (
     Candle, Event, IndicatorDataPoint, Symbol, IndicatorSMA, IndicatorEMA,
     IndicatorRSI, IndicatorDerivedSMA, Trade, TradeSeries, TradePlan,
@@ -283,6 +284,8 @@ def store_custom_documents(collection: str,
 def delete_custom_documents_by_field(collection: str,
                                      field: str,
                                      value,
+                                     *,
+                                     database: str = None,
                                      ):
     """Delete documents matching field==value from a non-managed collection.
 
@@ -290,6 +293,7 @@ def delete_custom_documents_by_field(collection: str,
         collection: Target collection name.
         field: Document field to match on.
         value: Value to match.
+        database: Optional database name on the existing Mongo client.
 
     Raises:
         ValueError: If collection is managed.
@@ -307,11 +311,14 @@ def delete_custom_documents_by_field(collection: str,
     )
 
     time_delete = time.perf_counter()
-    result = dhm.delete_custom_documents_by_field(
-        collection=collection,
-        field=field,
-        value=value,
-    )
+    delete_args = {
+        "collection": collection,
+        "field": field,
+        "value": value,
+    }
+    if database is not None:
+        delete_args["database"] = database
+    result = dhm.delete_custom_documents_by_field(**delete_args)
     log.debug(
         f"delete_custom_documents_by_field: delete elapsed "
         f"{time.perf_counter() - time_delete:.6f}s"
@@ -371,6 +378,8 @@ def get_custom_documents_by_field(collection: str,
                                   field: str,
                                   value,
                                   limit: int = 0,
+                                  *,
+                                  database: str = None,
                                   ):
     """Return documents matching field==value from a non-managed collection.
 
@@ -379,6 +388,7 @@ def get_custom_documents_by_field(collection: str,
         field: Document field to filter on.
         value: Value to match.
         limit: Maximum number of results (0 = no limit).
+        database: Optional database name on the existing Mongo client.
 
     Raises:
         ValueError: If collection is managed.
@@ -393,17 +403,114 @@ def get_custom_documents_by_field(collection: str,
     _guard_managed_collection(
         collection, "get_custom_documents_by_field"
     )
-    results = dhm.get_custom_documents_by_field(
-        collection=collection,
-        field=field,
-        value=value,
-        limit=limit,
-    )
+    query_args = {
+        "collection": collection,
+        "field": field,
+        "value": value,
+        "limit": limit,
+    }
+    if database is not None:
+        query_args["database"] = database
+    results = dhm.get_custom_documents_by_field(**query_args)
     log.info(
         f"get_custom_documents_by_field: returning {len(results)} "
         f"documents from {collection!r}"
     )
     return results
+
+
+def bulk_upsert_documents(
+        collection: str,
+        documents: list,
+        identity_field: str,
+        *,
+        database: str = None,
+        ) -> dict:
+    """Validate and ordered-upsert plain documents in a custom collection.
+
+    The batch must contain BSON-compatible dictionaries with distinct,
+    non-blank string identities. No documents are written unless the full
+    batch passes validation.
+    """
+    count = len(documents) if isinstance(documents, (list, tuple)) else None
+    log.info(
+        f"bulk_upsert_documents: collection={collection!r}, "
+        f"identity_field={identity_field!r}, count={count!r}"
+    )
+    _guard_managed_collection(collection, "bulk_upsert_documents")
+
+    result = dhm.bulk_upsert_documents(
+        collection=collection,
+        documents=documents,
+        identity_field=identity_field,
+        database=database,
+    )
+    log.info(
+        f"bulk_upsert_documents: attempted {result['attempted_count']} "
+        f"documents in {collection!r}"
+    )
+    return result
+
+
+def iter_custom_documents_by_field(
+        collection: str,
+        field: str,
+        value,
+        *,
+        database: str = None,
+        batch_size: int = 1000,
+        limit: int = 0,
+        ) -> Generator[dict, None, None]:
+    """Return a closable iterator for custom documents matching a field."""
+    log.info(
+        f"iter_custom_documents_by_field: collection={collection!r}, "
+        f"field={field!r}, value={value!r}, batch_size={batch_size}, "
+        f"limit={limit}"
+    )
+    _guard_managed_collection(
+        collection, "iter_custom_documents_by_field"
+    )
+    result = dhm.iter_custom_documents_by_field(
+        collection=collection,
+        field=field,
+        value=value,
+        database=database,
+        batch_size=batch_size,
+        limit=limit,
+    )
+    log.info(
+        f"iter_custom_documents_by_field: returned iterator for "
+        f"{collection!r}"
+    )
+    return result
+
+
+def count_records(collection: str,
+                  query: dict = None,
+                  *,
+                  database: str = None,
+                  ) -> int:
+    """Count matching documents in a non-managed collection.
+
+    Omission of database uses dhtrader's existing primary database.
+    """
+    log.info(
+        f"count_records: collection={collection!r}, query={query!r}"
+    )
+    _guard_managed_collection(collection, "count_records")
+
+    if database is None:
+        result = dhm.count_records(collection=collection, query=query)
+    else:
+        result = dhm.count_records(
+            collection=collection,
+            query=query,
+            database=database,
+        )
+    log.info(
+        f"count_records: returning {result} documents from {collection!r}"
+    )
+    return result
 
 
 def get_all_custom_documents(collection: str,

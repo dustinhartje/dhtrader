@@ -10,13 +10,16 @@ from unittest.mock import Mock
 import pytest
 from dhtrader import (
     Backtest,
+    bulk_upsert_documents,
     COLLECTIONS,
     COLL_PATTERNS,
+    count_records,
     delete_backtests_by_field,
     delete_custom_documents_by_field,
     get_all_custom_documents,
     get_backtests_by_field,
     get_custom_documents_by_field,
+    iter_custom_documents_by_field,
     get_trades_by_field,
     get_tradeseries_by_field,
     list_custom_documents,
@@ -1055,3 +1058,144 @@ def test_custom_document_review_empty_collection_does_not_raise(
     )
     # Should print a summary header and no docs without raising.
     review_custom_documents(_TEST_COLL, "name", _TEST_MARKER)
+
+
+def test_custom_document_database_and_count_wrappers(monkeypatch):
+    """Field reads, deletes, and counts accept a separate database."""
+    get_docs = Mock(return_value=[{"id": "one"}])
+    delete_result = Mock(deleted_count=0)
+    delete_docs = Mock(return_value=delete_result)
+    count = Mock(return_value=3)
+    monkeypatch.setattr(_dhm, "get_custom_documents_by_field", get_docs)
+    monkeypatch.setattr(_dhm, "delete_custom_documents_by_field",
+                        delete_docs)
+    monkeypatch.setattr(_dhm, "count_records", count)
+
+    assert get_custom_documents_by_field(
+        "reports", "id", "one",
+    ) == [{"id": "one"}]
+    assert get_custom_documents_by_field(
+        "reports", "id", "one", database="archive",
+    ) == [{"id": "one"}]
+    assert delete_custom_documents_by_field(
+        "reports", "id", "one", database="archive",
+    ) is delete_result
+    assert count_records("reports", {"id": "one"}) == 3
+    assert count_records(
+        "reports", {"id": "one"}, database="archive",
+    ) == 3
+
+    assert get_docs.call_args_list == [
+        ((), {
+            "collection": "reports",
+            "field": "id",
+            "value": "one",
+            "limit": 0,
+        }),
+        ((), {
+            "collection": "reports",
+            "field": "id",
+            "value": "one",
+            "limit": 0,
+            "database": "archive",
+        }),
+    ]
+    delete_docs.assert_called_once_with(
+        collection="reports",
+        field="id",
+        value="one",
+        database="archive",
+    )
+    assert count.call_args_list == [
+        ((), {"collection": "reports", "query": {"id": "one"}}),
+        ((), {
+            "collection": "reports",
+            "query": {"id": "one"},
+            "database": "archive",
+        }),
+    ]
+
+
+def test_generic_persistence_wrappers_and_public_exports(monkeypatch):
+    """Bulk, streaming, and count entry points are exported and guarded."""
+    bulk_result = {
+        "acknowledged": True,
+        "attempted_count": 1,
+        "matched_count": 0,
+        "modified_count": 0,
+        "upserted_count": 1,
+    }
+    bulk = Mock(return_value=bulk_result)
+    iterator = iter([{"id": "one"}])
+    stream = Mock(return_value=iterator)
+    monkeypatch.setattr(_dhm, "bulk_upsert_documents", bulk)
+    monkeypatch.setattr(_dhm, "iter_custom_documents_by_field", stream)
+
+    assert bulk_upsert_documents(
+        "reports", [{"id": "one"}], "id", database="archive",
+    ) == bulk_result
+    assert iter_custom_documents_by_field(
+        "reports", "kind", "report", database="archive",
+        batch_size=17, limit=4,
+    ) is iterator
+    assert list(iterator) == [{"id": "one"}]
+    bulk.assert_called_once_with(
+        collection="reports",
+        documents=[{"id": "one"}],
+        identity_field="id",
+        database="archive",
+    )
+    stream.assert_called_once_with(
+        collection="reports",
+        field="kind",
+        value="report",
+        database="archive",
+        batch_size=17,
+        limit=4,
+    )
+
+    import dhtrader
+
+    assert dhtrader.bulk_upsert_documents is bulk_upsert_documents
+    assert dhtrader.iter_custom_documents_by_field is (
+        iter_custom_documents_by_field
+    )
+    assert dhtrader.count_records is count_records
+
+
+@pytest.mark.parametrize("operation", [
+    "bulk",
+    "iterator",
+    "count",
+])
+@pytest.mark.parametrize("managed_collection", [
+    next(iter(COLLECTIONS.values())),
+    "candles_ES_1m",
+    "events_ES",
+    "images.files",
+])
+def test_generic_persistence_wrappers_reject_managed_collections(
+        monkeypatch, operation, managed_collection):
+    """New generic operations preserve managed-collection protection."""
+    bulk = Mock()
+    stream = Mock()
+    count = Mock()
+    monkeypatch.setattr(_dhm, "bulk_upsert_documents", bulk)
+    monkeypatch.setattr(_dhm, "iter_custom_documents_by_field", stream)
+    monkeypatch.setattr(_dhm, "count_records", count)
+
+    with pytest.raises(ValueError, match="managed"):
+        if operation == "bulk":
+            bulk_upsert_documents(
+                managed_collection, [{"id": "one"}], "id",
+            )
+        elif operation == "iterator":
+            iter_custom_documents_by_field(
+                managed_collection, "id", "one",
+            )
+        else:
+            count_records(managed_collection)
+
+    bulk.assert_not_called()
+    stream.assert_not_called()
+    count.assert_not_called()
