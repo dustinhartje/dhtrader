@@ -36,21 +36,25 @@ remove the conflict.
 
 ## File Editing Method
 
-- **When running in VS Code, make every file change through VS Code's
-  editor file-edit functions**, so the user can inspect the diff and
-  accept/reject changes in the editor/chat review UI.
-- If reviewable editor editing is unavailable, stop and tell the user;
-  do not fall back to terminal writes or scripts that rewrite files.
-- **Never modify files with terminal commands.** This includes `sed -i`,
-  `perl -pi`, `awk`, shell redirection (`>`, `>>`), `tee`, and `patch`.
-- **Always use the editor's file-edit tools**, even for bulk mechanical
-  changes such as project-wide renames. Terminal edits bypass the chat
-  review interface, so the operator loses per-file keep/undo review and
-  must fall back to Source Control to inspect the changes.
-- Terminal commands are for read-only inspection (`rg`, `git status`,
-  `git diff`), running tests, linters, and validation scripts only.
-- This applies even when a terminal one-liner would be shorter; a larger
-  reviewable diff is preferred over an unreviewable one.
+- **Always prefer editor/file-edit tools over terminal tools** for file
+  changes, including bulk mechanical edits such as project-wide renames,
+  even when a terminal command would be shorter.
+- Prefer editor/chat review in this order: per-change **Keep/Undo**, then
+  per-file **Keep/Undo**, then diffs or Source Control. Use per-change
+  Keep/Undo whenever available, including when reintroduced by a future
+  update. Missing Keep/Undo controls do not block editing with available
+  file-edit tools.
+- Use terminal tools to modify files only when the change cannot be made
+  with available editor/file-edit tools. In an interactive chat session,
+  explain why terminal tools are necessary, describe the proposed change,
+  and request permission from the operator. Wait for explicit approval
+  before proceeding.
+- This approval rule covers terminal writes and scripts that rewrite files,
+  including `sed -i`, `perl -pi`, `awk`, shell redirection (`>`, `>>`),
+  `tee`, and terminal `patch`.
+- Terminal commands remain appropriate for read-only inspection (`rg`,
+  `git status`, `git diff`), tests, linters, and validation scripts.
+  Commands that modify files must follow the editing rule above.
 
 ## Required Workflow
 
@@ -58,7 +62,10 @@ Before editing:
 
 1. Read `CODING_STANDARDS.md` if rule details are needed.
 2. Prefer config-driven enforcement over ad-hoc rules.
-3. Use editor file-edit tools, never terminal text manipulation.
+3. Prefer editor/file-edit tools, with per-change Keep/Undo review first,
+   then per-file Keep/Undo, then diffs or Source Control. If terminal editing
+   is necessary in interactive chat, explain why and obtain operator
+   permission before proceeding.
 
 After editing:
 

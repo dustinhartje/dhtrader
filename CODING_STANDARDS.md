@@ -103,18 +103,25 @@ AI agents must never use Pylance, including Pylance MCP tools or skills
 that invoke Pylance. Use direct file inspection, repository tools, and
 runtime tests instead.
 
-When running in VS Code, agents must use VS Code's editor file-edit
-functions for every change so users can inspect and accept/reject the
-diff in the editor/chat review UI. If those functions are unavailable,
-stop and inform the user rather than falling back to terminal writes
-or scripts that rewrite files.
+AI agents must always prefer editor/file-edit tools over terminal tools
+for file changes, including bulk mechanical edits such as project-wide
+renames, even when a terminal command would be shorter.
 
-AI agents must make all file modifications through the editor's file-edit
-tools and must never edit files with terminal commands (`sed -i`,
-`perl -pi`, `awk`, `>`/`>>` redirection, `tee`, `patch`). This applies to
-bulk mechanical edits such as project-wide renames, and to the `sed -i`
-whitespace command above, which is intended for human use. Terminal edits
-bypass the chat review interface and prevent per-file keep/undo review.
+Prefer editor/chat review in this order: per-change Keep/Undo, then
+per-file Keep/Undo, then diffs or Source Control. Use per-change Keep/Undo
+whenever available, including when reintroduced by a future update. Not
+all agent harnesses provide these controls; their absence does not block
+editing with available file-edit tools.
+
+Use terminal tools to modify files only when available editor/file-edit
+tools cannot make the change. In an interactive chat session, explain why
+terminal tools are necessary, describe the proposed change, and request
+permission from the operator. Wait for explicit approval before proceeding.
+This rule covers terminal writes and file-rewriting scripts (`sed -i`,
+`perl -pi`, `awk`, `>`/`>>` redirection, `tee`, terminal `patch`), including
+the whitespace command above. Read-only inspection, tests, linters, and
+validation scripts may use terminal tools; commands that modify files
+must follow the same editing rule.
 
 ## Configuration Files Reference
 

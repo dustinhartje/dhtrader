@@ -18,14 +18,17 @@
 	Use direct file inspection, repository tools, and runtime tests instead.
 
 # File editing
-- When running in VS Code, use VS Code's editor file-edit functions for
-	every change so the user can inspect and accept/reject the editor diff.
-	If these are unavailable, stop and tell the user; do not use terminal
-	writes or scripts that rewrite files as a fallback.
-- Never modify files with terminal commands (`sed -i`, `perl -pi`, `awk`,
-	`>`/`>>` redirection, `tee`, `patch`, etc.)
-- Always use the editor's file-edit tools, even for bulk mechanical edits
-	such as project-wide renames, so every change appears in the chat
-	review UI with keep/undo per file
-- Terminal use is limited to read-only inspection, running tests, linters,
-	and validation scripts
+- Always prefer editor/file-edit tools over terminal tools for changes,
+	including bulk mechanical edits, even if a terminal command is shorter.
+- Prefer per-change Keep/Undo review, then per-file Keep/Undo, then diffs
+	or Source Control. Use per-change Keep/Undo whenever available, including
+	when reintroduced in a future update. Missing Keep/Undo controls do not
+	block editing with available file-edit tools.
+- Modify files with terminal tools only when available editor/file-edit
+	tools cannot make the change. In interactive chat, explain why terminal
+	tools are necessary, describe the proposed change, and request operator
+	permission. Wait for explicit approval before proceeding.
+- This rule includes terminal writes and file-rewriting scripts (`sed -i`,
+	`perl -pi`, `awk`, `>`/`>>` redirection, `tee`, terminal `patch`, etc.).
+- Use terminal tools for read-only inspection, tests, linters, and
+	validation scripts; commands that modify files follow the rule above.
