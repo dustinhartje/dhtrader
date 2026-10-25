@@ -151,6 +151,129 @@ data quality:
   `distinct()` per field path so indexes are leveraged rather than
   loading full documents.
 
+### Checking Your MongoDB Setup
+
+Use `verify_database_configuration()` to check that the MongoDB databases,
+collections, and indexes your application needs already exist. A collection
+holds documents; an index supports lookups and can enforce unique values.
+This is a **read-only check**: it does not create storage, repair indexes, or
+change stored data.
+
+**This API is MongoDB-specific, not storage-system agnostic.** Although it is
+available through the storage layer (`dhstore.py`), that layer currently
+delegates the check to the MongoDB implementation (`dhmongo.py`). The JSON
+format below describes MongoDB collections and indexes; it is not a portable
+configuration format for other database systems.
+
+#### 1. Select the connection before importing dhtrader
+
+Configure `MONGO_CONN` with your MongoDB connection URI and `MONGO_DB` with your
+application's default database name. Set these in the process environment or
+your application's `mongo.env` file **before importing dhtrader**. Importing
+the library establishes its Mongo client; editing the environment afterward
+does not retarget that existing client.
+
+The verification function uses this same connection. It checks database names
+from the supplied configuration without changing the application's default
+database.
+
+#### 2. Define and prepare the storage your application needs
+
+Your application owns its database names, index definitions, and setup process;
+dhtrader does not supply a universal configuration file. Keep the expected
+layout in a JSON file, ideally the same definition used by your application's
+database-setup script. For example, save this as `mongo_configuration.json`:
+
+```json
+{
+  "schema_version": 1,
+  "databases": {
+    "example": {
+      "collections": {
+        "records": {
+          "indexes": [
+            {"keys": [["owner", 1], ["sequence", -1]], "unique": true}
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+This example expects a database named `example`, a collection named `records`,
+and a compound index on `owner` followed by `sequence`. Direction `1` means
+ascending and `-1` means descending. With `unique: true`, each combination of
+those two field values must be unique; either field may repeat on its own.
+
+Saving this file does **not** create that database or index. Prepare them with
+your application's setup script or MongoDB administration tools first.
+
+#### 3. Run the check and inspect the result
+
+```python
+import json
+from pathlib import Path
+
+from dhtrader import verify_database_configuration
+
+with Path("mongo_configuration.json").open() as source:
+    configuration = json.load(source)
+
+report = verify_database_configuration(configuration)
+if report["ok"]:
+    print("MongoDB setup matches the configuration.")
+else:
+    print("MongoDB setup needs attention:")
+    for issue in report["issues"]:
+        print(issue)
+```
+
+The example reads the JSON file from your current working directory. By default,
+the check inspects every database listed in that file. To check only one,
+use `verify_database_configuration(configuration, database="example")`.
+That name must appear in the configuration.
+
+The result contains `ok` (whether all requirements match) and `issues` (a list
+of problems). Each issue identifies its `database`, `collection`, ordered index
+`keys`, and `reason`. Collection or keys are `None` when not applicable.
+
+| Reason | What to check |
+|---|---|
+| `missing_database` | The configured database is absent or not visible to this connection. |
+| `missing_collection` | A required collection is absent from its database. |
+| `missing_index` | No index has the required fields in the required order. |
+| `index_options_mismatch` | An index has the right fields/order, but incompatible options such as uniqueness. |
+
+An absent database or collection is reported once, rather than repeating each
+missing child. Extra collections/indexes are allowed, and index names do not
+need to match.
+
+Your application decides whether to stop when `ok` is false. The library does
+not automatically block other storage calls, repair problems, or retry work.
+Run the check explicitly during startup or when needed; importing dhtrader
+does not perform this verification. A successful check describes the setup at
+that moment, not a guarantee against later administrative changes.
+
+#### Configuration limits and access errors
+
+- Schema version 1 supports ordinary ascending/descending indexes, with an
+  explicit `unique` boolean and ordered `[field, direction]` pairs.
+- Every configured database needs at least one collection. A collection's
+  `indexes` array may be empty.
+- Unknown fields, duplicate index-key definitions, and numeric-only field
+  names are rejected. Numeric-only names could be reordered by JavaScript
+  setup tools.
+- Sparse, partial, TTL (automatic expiry), collation, hidden, and other special
+  index options do not satisfy an ordinary configured index.
+- Invalid configuration raises `ValueError` before any MongoDB requests.
+  Connection and permission errors also raise exceptions; they are not
+  converted into successful reports.
+- The MongoDB account needs permission to enumerate the configured databases
+  and collections and list their indexes. Restricted visibility can make an
+  existing database appear missing; confirm access before assuming it needs
+  to be created.
+
 ## For AI Agents
 
 **Important:** AI agents working on this project MUST read

@@ -18,6 +18,7 @@ import pymongo
 from pymongo import ReplaceOne
 from pymongo.errors import BulkWriteError, PyMongoError
 import logging
+from time import perf_counter
 from dotenv import load_dotenv, find_dotenv
 from datetime import datetime as dt
 from typing import Generator
@@ -84,6 +85,195 @@ def finish_progbar(pbar: ProgBar):
 
 ##############################################################################
 # Non-class specific functions
+def _configuration_error(value, message: str):
+    """Reject an invalid configuration before contacting MongoDB."""
+    log.critical(
+        "verify_database_configuration: %s; value=%r", message, value
+    )
+    raise ValueError(f"verify_database_configuration: {message}")
+
+
+def _validate_database_configuration(configuration: dict) -> None:
+    """Check the structure of a MongoDB configuration supplied by the caller.
+
+    ``configuration`` is a dictionary loaded by the application from its
+    provisioning JSON file, which describes the expected databases,
+    collections, and indexes. This function does not locate or load files.
+    See README.md, "Checking Your MongoDB Setup", for the configuration
+    format, examples, and supported settings.
+
+    Return None when valid; otherwise log the problem and raise ValueError.
+    This function only validates the dictionary: it makes no MongoDB
+    requests, checks no existing storage, and changes no data.
+    """
+    def require_shape(value, fields, location):
+        """Require exactly the documented fields at one configuration level."""
+        if not isinstance(value, dict) or set(value) != set(fields):
+            _configuration_error(location, "invalid configuration fields")
+
+    def require_names(value, location):
+        """Require a nonempty mapping of named databases or collections."""
+        if not isinstance(value, dict) or not value:
+            _configuration_error(location, "expected named entries")
+        for name in value:
+            if (
+                not isinstance(name, str) or not name.strip()
+                or "\0" in name
+            ):
+                _configuration_error(name, f"invalid name at {location}")
+
+    require_shape(configuration, ("schema_version", "databases"), "root")
+    if (
+        type(configuration["schema_version"]) is not int
+        or configuration["schema_version"] != 1
+    ):
+        _configuration_error(
+            configuration["schema_version"], "unsupported schema_version"
+        )
+    require_names(configuration["databases"], "databases")
+    for database, definition in configuration["databases"].items():
+        if (
+            any(character in database for character in ' /\\."$*<>:|?')
+            or len(database.encode("utf8")) >= 64
+        ):
+            _configuration_error(database, "invalid Mongo database name")
+        require_shape(definition, ("collections",), database)
+        require_names(definition["collections"], database)
+        for collection, details in definition["collections"].items():
+            location = f"{database}.{collection}"
+            require_shape(details, ("indexes",), location)
+            if not isinstance(details["indexes"], list):
+                _configuration_error(location, "expected index array")
+            seen_indexes = set()
+            for index in details["indexes"]:
+                require_shape(index, ("keys", "unique"), location)
+                if (
+                    type(index["unique"]) is not bool
+                    or not isinstance(index["keys"], list)
+                    or not index["keys"]
+                ):
+                    _configuration_error(location, "invalid index")
+                fields = set()
+                for pair in index["keys"]:
+                    if (
+                        not isinstance(pair, list) or len(pair) != 2
+                        or not isinstance(pair[0], str)
+                        or not pair[0].strip() or "\0" in pair[0]
+                        or (pair[0].isascii() and pair[0].isdigit())
+                        or pair[0] in fields or type(pair[1]) is not int
+                        or pair[1] not in (-1, 1)
+                    ):
+                        _configuration_error(
+                            pair, f"invalid ordered index keys at {location}"
+                        )
+                    fields.add(pair[0])
+                identity = tuple(tuple(pair) for pair in index["keys"])
+                if identity in seen_indexes:
+                    _configuration_error(location, "duplicate index keys")
+                seen_indexes.add(identity)
+
+
+def _configuration_index_matches(actual: dict, desired: dict) -> bool:
+    """Compare ordinary index semantics, ignoring server metadata and names.
+
+    Extra sparse, partial, TTL, collation, or other behavioral options must
+    not be mistaken for the ordinary index requested by configuration.
+    Extra unrelated indexes, including MongoDB's built-in _id, are allowed.
+    """
+    ordinary_fields = {"v", "ns", "name", "key", "unique"}
+    return (
+        (actual.get("unique") is True) == desired["unique"]
+        and all(
+            field in ordinary_fields
+            or (field in ("sparse", "hidden") and value is False)
+            for field, value in actual.items()
+        )
+    )
+
+
+def verify_database_configuration(
+        configuration: dict, *, database: str = None) -> dict:
+    """Read-only inspection of a caller-provided provisioning configuration.
+
+    The caller loads the JSON configuration; this library owns no deployment
+    paths or application-specific database/index definitions. Omit database
+    to inspect all configured databases, or name one configured database.
+    Uses the environment-selected client without switching the primary db.
+
+    Return {"ok": bool, "issues": list}. Each issue contains database,
+    collection (or None), ordered index keys (or None), and reason:
+    missing_database, missing_collection, missing_index, or
+    index_options_mismatch. Missing parents are reported once rather than
+    repeating every missing child. Index names and unrelated indexes do not
+    affect compatibility. No records, collections, or indexes are created.
+
+    Invalid configuration raises ValueError before any Mongo request.
+    Connection/permission errors propagate, never becoming a successful
+    report. A successful inspection is a point-in-time observation, not a
+    guarantee against subsequent administrative changes or an automatic
+    storage gate.
+    """
+    log.info("verify_database_configuration: database=%r", database)
+    started = perf_counter()
+    _validate_database_configuration(configuration)
+    definitions = configuration["databases"]
+    if database is not None:
+        if not isinstance(database, str) or database not in definitions:
+            _configuration_error(database, "database not in configuration")
+        definitions = {database: definitions[database]}
+    issues = []
+    existing_databases = mc.list_database_names()
+    for database_name, definition in definitions.items():
+        if database_name not in existing_databases:
+            issues.append({
+                "database": database_name, "collection": None,
+                "keys": None, "reason": "missing_database",
+            })
+            continue
+        target = mc[database_name]
+        existing_collections = target.list_collection_names()
+        for collection, details in definition["collections"].items():
+            if collection not in existing_collections:
+                issues.append({
+                    "database": database_name, "collection": collection,
+                    "keys": None, "reason": "missing_collection",
+                })
+                continue
+            actual_indexes = list(target[collection].list_indexes())
+            for desired in details["indexes"]:
+                same_keys = [
+                    actual for actual in actual_indexes
+                    if list(actual["key"].items()) == [
+                        tuple(pair) for pair in desired["keys"]
+                    ]
+                ]
+                if not any(
+                    _configuration_index_matches(actual, desired)
+                    for actual in same_keys
+                ):
+                    reason = (
+                        "index_options_mismatch" if same_keys
+                        else "missing_index"
+                    )
+                    issues.append({
+                        "database": database_name, "collection": collection,
+                        "keys": [pair[:] for pair in desired["keys"]],
+                        "reason": reason,
+                    })
+    result = {"ok": not issues, "issues": issues}
+    if issues:
+        log.error("verify_database_configuration: issues=%r", issues)
+    log.debug(
+        "verify_database_configuration: elapsed=%.6fs",
+        perf_counter() - started,
+    )
+    log.info(
+        "verify_database_configuration: ok=%s, issues=%s",
+        result["ok"], len(issues),
+    )
+    return result
+
+
 def review_database():
     """Quick function to gather useful information about the state of mongo."""
     raw = db.command("dbstats")

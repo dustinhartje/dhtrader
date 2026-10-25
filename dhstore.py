@@ -485,6 +485,30 @@ def iter_custom_documents_by_field(
     return result
 
 
+def verify_database_configuration(
+        configuration: dict, *, database: str = None) -> dict:
+    """Inspect configured storage without provisioning or changing defaults.
+
+    Pass the dictionary loaded from the provisioning JSON. Omit database to
+    inspect every configured database, or select one by name. Return
+    {"ok": bool, "issues": list}; see dhmongo.verify_database_configuration
+    for issue fields. Configuration, connection, and permission errors
+    propagate. This explicit preflight does not automatically prevent writes.
+
+    See README.md, "Checking Your MongoDB Setup", for connection setup,
+    configuration examples, and guidance on interpreting the results.
+    """
+    log.info("verify_database_configuration: database=%r", database)
+    result = dhm.verify_database_configuration(
+        configuration, database=database,
+    )
+    log.info(
+        "verify_database_configuration: ok=%s, issues=%s",
+        result["ok"], len(result["issues"]),
+    )
+    return result
+
+
 def count_records(collection: str,
                   query: dict = None,
                   *,
