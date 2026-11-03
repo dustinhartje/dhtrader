@@ -81,6 +81,8 @@ TIMEFRAME_DELTAS = {
     "r1w": timedelta(weeks=1),
     "e1w": timedelta(weeks=1),
 }
+# Higher timeframes identified by fixed 18:00 canonical session keys
+SESSION_KEY_TIMEFRAMES = frozenset({"e1d", "e1w", "e1mo", "e1y"})
 
 log = logging.getLogger("dhcommon")
 log.addHandler(logging.NullHandler())
@@ -557,7 +559,7 @@ def this_candle_start(dt, timeframe: str):
     elif timeframe == "e1h":
         while this_dt.minute != 0:
             this_dt = this_dt - min_delta
-    elif timeframe in {"e1d", "e1w", "e1mo", "e1y"}:
+    elif timeframe in SESSION_KEY_TIMEFRAMES:
         this_dt = canonical_session_key(this_dt, timeframe)
     else:
         raise ValueError(f"timeframe: {timeframe} not supported")
@@ -736,7 +738,16 @@ def next_candle_start(dt,
                       timeframe: str = "1m",
                       events: list = None,
                       ):
-    """Return the next valid candle start datetime during open market hours.
+    """Return the next valid candle start datetime after dt.
+
+    For intraday timeframes this is the next candle start that falls during
+    open market hours.
+
+    For e1d, e1w, e1mo, and e1y this is the canonical session key of the
+    next bucket containing at least one open minute.  Canonical keys are
+    fixed 18:00 boundaries that may themselves be closed (weekends,
+    holidays, late opens), so the key is returned even when the market is
+    closed at that exact time.  Buckets with no open minutes are skipped.
 
     symbol must be a Symbol-like object implementing market_is_open().
     """
@@ -744,6 +755,14 @@ def next_candle_start(dt,
         raise TypeError("symbol must be a Symbol object, not str")
     valid_trading_hours(trading_hours)
     check_tf_th_compatibility(tf=timeframe, th=trading_hours)
+    if timeframe in SESSION_KEY_TIMEFRAMES:
+        return _next_session_key_with_open_minute(
+            dt=dt,
+            timeframe=timeframe,
+            trading_hours=trading_hours,
+            symbol=symbol,
+            events=events,
+        )
     next_dt = dt_as_dt(dt).replace(microsecond=0, second=0)
     min_delta = timedelta(minutes=1)
     # Check if symbol has context-based predicates for efficient lookups
@@ -768,40 +787,9 @@ def next_candle_start(dt,
         elif timeframe == "e1h":
             while next_dt.minute != 0:
                 next_dt = next_dt + min_delta
-        elif timeframe == "e1d":
-            # e1d candles start at 18:00:00
-            # Return the next 18:00:00 after current datetime
-            if next_dt.hour < 18:
-                # Before 6pm, move to today at 18:00
-                next_dt = next_dt.replace(
-                    hour=18, minute=0, second=0, microsecond=0)
-            else:
-                # At or after 6pm, move to tomorrow at 18:00
-                next_dt = (next_dt + timedelta(days=1)).replace(
-                    hour=18, minute=0, second=0, microsecond=0)
-        elif timeframe == "e1w":
-            # e1w candles start at Sunday 18:00:00
-            # Return the next Sunday 18:00:00 after current datetime
-            if next_dt.weekday() == 6:  # Sunday
-                if next_dt.hour < 18:
-                    # Sunday before 6pm, move to Sunday 18:00
-                    next_dt = next_dt.replace(
-                        hour=18, minute=0, second=0, microsecond=0)
-                else:
-                    # Sunday at/after 6pm, move to next Sunday 18:00
-                    next_dt = (next_dt + timedelta(days=7)).replace(
-                        hour=18, minute=0, second=0, microsecond=0)
-            else:
-                # Not Sunday, find next Sunday
-                days_until_sunday = (6 - next_dt.weekday()) % 7
-                if days_until_sunday == 0:
-                    days_until_sunday = 7
-                next_dt = (next_dt + timedelta(
-                    days=days_until_sunday)).replace(
-                    hour=18, minute=0, second=0, microsecond=0)
-        elif timeframe in {"e1mo", "e1y"}:
-            next_dt = next_candle_boundary(dt, timeframe)
         elif timeframe != "1m":
+            log.critical("next_candle_start: unsupported timeframe %s",
+                         timeframe)
             raise ValueError(f"timeframe: {timeframe} not supported")
         if use_context:
             # Reuse context for 14-day window, rebuilding when moved beyond end
@@ -823,6 +811,50 @@ def next_candle_start(dt,
                                          )
 
     return next_dt
+
+
+def _next_session_key_with_open_minute(dt,
+                                       timeframe: str,
+                                       trading_hours: str,
+                                       symbol,
+                                       events: list = None,
+                                       ):
+    """Return the next session key after dt whose bucket has an open minute.
+
+    The returned key may itself fall on a closed time.  Symbols without
+    context support fall back to per-minute market_is_open() checks.
+    """
+    use_context = all([
+        hasattr(symbol, "build_market_hours_context"),
+        hasattr(symbol, "is_open_dt"),
+    ])
+    key = next_candle_boundary(this_candle_start(dt, timeframe), timeframe)
+    while True:
+        bucket_end = next_candle_boundary(key, timeframe) - timedelta(
+            minutes=1)
+        if use_context:
+            context = symbol.build_market_hours_context(
+                trading_hours=trading_hours,
+                events=events,
+                start_dt=key,
+                end_dt=bucket_end,
+            )
+            if _range_has_open_minute(start_dt=key,
+                                      end_dt=bucket_end,
+                                      closed_ranges=context["closed_ranges"],
+                                      ):
+                return key
+        else:
+            minute = key
+            while minute <= bucket_end:
+                if symbol.market_is_open(trading_hours=trading_hours,
+                                         target_dt=minute,
+                                         check_closed_events=True,
+                                         events=events,
+                                         ):
+                    return key
+                minute = minute + timedelta(minutes=1)
+        key = next_candle_boundary(key, timeframe)
 
 
 def last_open_minute_in_candle(candle_start,
@@ -1023,7 +1055,9 @@ def _range_has_open_minute(start_dt, end_dt, closed_ranges):
             continue
         if closed_start > open_epoch:
             return True
-        open_epoch = closed_end + 1
+        # Closures end mid-minute (schedule) or on an inclusive minute
+        # (events), so candles can only resume at the next whole minute.
+        open_epoch = (closed_end // 60 + 1) * 60
         if open_epoch > end_epoch:
             return False
     return open_epoch <= end_epoch

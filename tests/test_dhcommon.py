@@ -4,6 +4,7 @@ import inspect
 import logging
 from pathlib import Path
 import pytest
+import signal
 from datetime import datetime, timedelta, date
 from dhtrader import (
     bot,
@@ -32,6 +33,7 @@ from dhtrader import (
     valid_trading_hours,
 )
 from dhtrader.dhcommon import (
+    _range_has_open_minute,
     canonical_session_key,
     dict_of_weeks,
     EVENT_CATEGORIES,
@@ -630,6 +632,114 @@ def test_next_candle_start_uses_calendar_boundary(
         symbol=AlwaysOpenSymbol(),
         timeframe=timeframe,
     ) == datetime.fromisoformat(expected)
+
+
+def _closed_event(symbol, start_dt, end_dt):
+    """Return a Closed Event used to simulate holidays or outages."""
+    return Event(start_dt=start_dt,
+                 end_dt=end_dt,
+                 symbol=symbol,
+                 category="Closed",
+                 )
+
+
+@pytest.mark.parametrize(
+    ("timeframe", "dt", "closures", "expected"),
+    [
+        # e1d: Friday 18:00 key and the Saturday bucket have no open
+        # minutes, so the next bucket with data is Sunday 18:00.
+        ("e1d", "2026-10-30 00:00:00", [], "2026-11-01 18:00:00"),
+        # e1d: a full-session holiday closure omits that day's bucket.
+        ("e1d", "2026-11-25 00:00:00",
+         [("2026-11-25 18:00:00", "2026-11-26 17:59:00")],
+         "2026-11-26 18:00:00"),
+        # e1d: a holiday closure ending at 16:59 joins the daily
+        # maintenance break with no open minutes before the next key.
+        ("e1d", "2026-11-25 00:00:00",
+         [("2026-11-25 18:00:00", "2026-11-26 16:59:00")],
+         "2026-11-26 18:00:00"),
+        # e1d: an intraday Friday dt skips the closed weekend buckets.
+        ("e1d", "2026-10-30 10:00:00", [], "2026-11-01 18:00:00"),
+        # e1d: the key is closed but the session opens later, so the
+        # bucket still holds data and its closed key must be returned.
+        ("e1d", "2026-11-02 00:00:00",
+         [("2026-11-02 18:00:00", "2026-11-03 09:29:00")],
+         "2026-11-02 18:00:00"),
+        # e1w: a full-week closure omits that week's bucket.
+        ("e1w", "2026-10-26 00:00:00",
+         [("2026-11-01 18:00:00", "2026-11-06 16:59:00")],
+         "2026-11-08 18:00:00"),
+        # e1w: the Sunday 18:00 key is closed but the week later opens.
+        ("e1w", "2026-10-26 00:00:00",
+         [("2026-11-01 18:00:00", "2026-11-02 09:29:00")],
+         "2026-11-01 18:00:00"),
+        # e1mo: November's key is Saturday 2026-10-31 18:00 (weekend).
+        ("e1mo", "2026-10-01 00:00:00", [], "2026-10-31 18:00:00"),
+        # e1mo: a fully closed month is omitted.
+        ("e1mo", "2026-10-01 00:00:00",
+         [("2026-10-31 18:00:00", "2026-11-30 17:59:00")],
+         "2026-11-30 18:00:00"),
+        # e1y: the 2027 key is Friday 2027-01-01 18:00 (weekend).
+        ("e1y", "2026-01-01 00:00:00", [], "2027-01-01 18:00:00"),
+    ],
+)
+def test_next_candle_start_returns_closed_keys_for_open_buckets(
+    timeframe,
+    dt,
+    closures,
+    expected,
+):
+    """Higher timeframes return the next key whose bucket has open minutes.
+
+    Canonical session keys can land on closed times (weekends, holidays).
+    The returned key must be the next bucket containing any open minute,
+    even when the key itself is closed, and must never hang.
+    """
+    symbol = Symbol(ticker="ES", name="ES", leverage_ratio=50,
+                    tick_size=0.25)
+    events = [_closed_event(symbol, s, e) for s, e in closures]
+
+    def _timeout(signum, frame):
+        raise TimeoutError(f"next_candle_start hung for {timeframe} {dt}")
+
+    # Guard against the infinite loop regression failing by hanging
+    previous = signal.signal(signal.SIGALRM, _timeout)
+    signal.alarm(10)
+    try:
+        result = next_candle_start(dt=dt,
+                                   trading_hours="eth",
+                                   symbol=symbol,
+                                   timeframe=timeframe,
+                                   events=events,
+                                   )
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, previous)
+
+    assert result == datetime.fromisoformat(expected)
+
+
+def test_range_has_open_minute_ignores_sub_minute_gaps():
+    """Second-level gaps between closures are not open candle minutes."""
+    def epoch(value):
+        return dt_to_epoch(value)
+
+    # Schedule closures end at :58 seconds and events end on an inclusive
+    # minute, leaving sub-minute gaps before the next closure begins.
+    closed_ranges = [
+        (epoch("2026-10-30 17:00:00"), epoch("2026-10-30 23:59:58")),
+        (epoch("2026-10-31 00:00:00"), epoch("2026-10-31 16:59:00")),
+        (epoch("2026-10-31 17:00:00"), epoch("2026-10-31 17:59:58")),
+    ]
+
+    assert not _range_has_open_minute(start_dt="2026-10-30 18:00:00",
+                                      end_dt="2026-10-31 17:59:00",
+                                      closed_ranges=closed_ranges,
+                                      )
+    assert _range_has_open_minute(start_dt="2026-10-30 18:00:00",
+                                  end_dt="2026-10-31 18:00:00",
+                                  closed_ranges=closed_ranges,
+                                  )
 
 
 @pytest.mark.suppress_stdout
