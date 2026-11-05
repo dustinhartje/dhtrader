@@ -27,6 +27,7 @@ different historical time periods.
 import datetime as dt
 from abc import ABC, abstractmethod
 from bisect import bisect_right
+from collections.abc import Collection, Mapping
 from datetime import timedelta, date
 import sys
 import json
@@ -3435,6 +3436,40 @@ class TradeSeries():
         bt_id (str): bt_id of the Backtest() object that created this if any
         trades (list): list of trades in the series
     """
+    # Categorize .stats() output fields into meaningful groups for analysis
+    _STATS_FIELDS = (
+        "gl_sequence", "profitable_trades", "avg_gain_per_con",
+        "losing_trades", "avg_loss_per_con", "total_trades",
+        "success_percent", "duration_sec_p20", "duration_sec_median",
+        "duration_sec_p80", "setup_risk_reward", "effective_risk_reward",
+        "min_risk_reward", "max_risk_reward", "trading_days", "total_days",
+        "total_weeks", "trades_per_week", "trades_per_day",
+        "trades_per_trading_day", "trade_ticks",
+    )
+    _ALL_STATS = frozenset(_STATS_FIELDS)
+    _STATS_CATEGORIES = {
+        "activity": frozenset({
+            "profitable_trades", "losing_trades", "total_trades",
+            "success_percent", "trading_days", "total_days", "total_weeks",
+            "trades_per_week", "trades_per_day", "trades_per_trading_day",
+        }),
+        "setup_risk_reward": frozenset({
+            "setup_risk_reward", "min_risk_reward", "max_risk_reward",
+        }),
+        "profit_loss": frozenset({
+            "gl_sequence", "avg_gain_per_con", "avg_loss_per_con",
+            "effective_risk_reward",
+        }),
+        "durations": frozenset({
+            "duration_sec_p20", "duration_sec_median", "duration_sec_p80",
+        }),
+        "trade_ticks": frozenset({"trade_ticks"}),
+    }
+    # Validate all stats fields are categorized
+    uncategorized = _ALL_STATS - frozenset().union(*_STATS_CATEGORIES.values())
+    if uncategorized:
+        raise ValueError("Some stats fields are not categorized: "
+                         f"{uncategorized}")
 
     _EQ_FIELDS: frozenset = frozenset({
         "start_dt", "end_dt", "timeframe",
@@ -3801,25 +3836,88 @@ class TradeSeries():
                 "liquidated": liquidated,
                 }
 
-    def stats(self, include_first_min=True):
-        """Return useful statistics calculated from the attached Trades."""
+    @classmethod
+    def _requested_stat_fields(cls, stats_categories, requested_stats):
+        """Resolve statistic requests before inspecting any Trades."""
+        if stats_categories is not None and requested_stats is not None:
+            message = (
+                "TradeSeries.stats: requests are mutually exclusive: "
+                f"stats_categories={stats_categories!r}, "
+                f"requested_stats={requested_stats!r}"
+            )
+            log.critical(message)
+            raise ValueError(message)
+        if stats_categories is None and requested_stats is None:
+            return cls._ALL_STATS
+        if stats_categories is not None:
+            names = stats_categories
+            label = "stats_categories"
+            allowed = cls._STATS_CATEGORIES
+        else:
+            names = requested_stats
+            label = "requested_stats"
+            allowed = cls._ALL_STATS
+        if (
+                not isinstance(names, Collection)
+                or isinstance(names, (str, bytes, Mapping))
+                or not names
+                or any(
+                    not isinstance(name, str) or name not in allowed
+                    for name in names
+                )):
+            message = (
+                f"TradeSeries.stats: {label}={names!r} must be a nonempty "
+                f"collection of known names: {sorted(allowed)!r}"
+            )
+            log.critical(message)
+            raise ValueError(message)
+        if stats_categories is not None:
+            return frozenset().union(*(
+                cls._STATS_CATEGORIES[name] for name in names
+            ))
+        return frozenset(names)
+
+    def stats(self, include_first_min=True, *,
+              stats_categories=None, requested_stats=None):
+        """Calculate Trade statistics, optionally by category or field(s).
+
+        Omit both request arguments to provide complete statistics. Otherwise
+        provide one nonempty collection of category names or existing output
+        field names. Categories are:
+          - 'activity' (counts, success and calendar)
+          - 'setup_risk_reward' (setup/min/max)
+          - 'profit_loss' (sequence, averages and effective risk/reward)
+          - 'durations' (percentiles/median)
+          - 'trade_ticks' (unique stop/profit/offset configurations)
+        """
+        fields = self._requested_stat_fields(stats_categories, requested_stats)
+        duration_fields = fields & self._STATS_CATEGORIES["durations"]
+        trading_day_fields = fields & {
+            "trading_days", "trades_per_trading_day",
+        }
+        calendar_fields = fields & {
+            "total_days", "total_weeks", "trades_per_week", "trades_per_day",
+        }
         sequence = ""
         total_trades = 0
         profits = 0
         losses = 0
-        days_traded = set()
-        ticks = set()
+        days_traded = set() if trading_day_fields else None
+        ticks = set() if "trade_ticks" in fields else None
         rr = {"max": None, "min": None, "total_risk": 0, "total_reward": 0}
         err = {"total_risk": 0, "total_reward": 0}
-        durations = []
+        durations = [] if duration_fields else None
         for t in self.trades:
             if not t.first_min_open or include_first_min:
                 total_trades += 1
-                durations.append(t.duration())
+                duration = t.duration()
+                if durations is not None:
+                    durations.append(duration)
                 # Risk reward calcs
-                ticks.add((("stop", t.stop_ticks),
-                          ("prof", t.prof_ticks),
-                          ("offset", t.offset_ticks)))
+                if ticks is not None:
+                    ticks.add((("stop", t.stop_ticks),
+                              ("prof", t.prof_ticks),
+                              ("offset", t.offset_ticks)))
                 this_rr = round(t.stop_ticks/t.prof_ticks, 2)
                 if rr["max"] is None:
                     rr["max"] = this_rr
@@ -3832,20 +3930,40 @@ class TradeSeries():
                 rr["total_risk"] += t.stop_ticks
                 rr["total_reward"] += t.prof_ticks
                 # Add date to days_traded set
-                days_traded.add(dt_as_dt(t.open_dt).date())
+                if days_traded is not None:
+                    days_traded.add(dt_as_dt(t.open_dt).date())
                 # Update profitability
                 if t.profitable:
                     profits += 1
-                    sequence = "".join([sequence, "g"])
+                    if "gl_sequence" in fields:
+                        sequence = "".join([sequence, "g"])
                     err["total_reward"] += t.gain_loss()
                 else:
                     losses += 1
-                    sequence = "".join([sequence, "L"])
+                    if "gl_sequence" in fields:
+                        sequence = "".join([sequence, "L"])
                     err["total_risk"] -= t.gain_loss()
-        durations.sort()
-        if total_trades > 0:
-            success_percent = round(profits/total_trades, 4)*100
+        if durations is not None:
+            durations.sort()
+        values = {
+            "gl_sequence": sequence,
+            "profitable_trades": profits,
+            "losing_trades": losses,
+            "total_trades": total_trades,
+            "success_percent": (
+                round(profits/total_trades, 4)*100 if total_trades else 0
+            ),
+            "min_risk_reward": rr["min"],
+            "max_risk_reward": rr["max"],
+        }
+        if days_traded is not None:
             trading_days = len(days_traded)
+            values["trading_days"] = trading_days
+            if "trades_per_trading_day" in fields:
+                values["trades_per_trading_day"] = (
+                    round(total_trades/trading_days, 2) if total_trades else 0
+                )
+        if calendar_fields:
             # total_days is fuzzy because start_dt and/or end_dt may be at a
             # day boundary and either may or may not have valid trading hours.
             # There are also edge cases around eth vs rth hours.  For
@@ -3854,76 +3972,68 @@ class TradeSeries():
             # include the end date as a full day.  This may overstate
             # total_days by up to 2 days in some cases which is typically not
             # statistically meaningful for analysis on long time frames.
-            total_days = (dt_as_dt(self.end_dt).date()
-                          - dt_as_dt(self.start_dt).date()).days + 1
-            total_weeks = round(total_days/7, 2)
-            trades_per_day = round(total_trades/total_days, 2)
-            trades_per_trading_day = round(total_trades/trading_days, 2)
-            trades_per_week = round(total_trades/total_weeks, 2)
-            duration_sec_p20 = round(np.percentile(durations, 20))
-            duration_sec_median = round(np.median(durations))
-            duration_sec_p80 = round(np.percentile(durations, 80))
-        else:
-            success_percent = 0
-            trading_days = 0
-            total_days = 0
-            total_weeks = 0
-            trades_per_day = 0
-            trades_per_trading_day = 0
-            trades_per_week = 0
-            duration_sec_p20 = 0
-            duration_sec_median = 0
-            duration_sec_p80 = 0
-
-        if rr["total_reward"] > 0:
-            risk_reward = round(rr["total_risk"] / rr["total_reward"], 2)
-        else:
-            risk_reward = None
-        min_risk_reward = rr["min"]
-        max_risk_reward = rr["max"]
-        if profits == 0:
-            avg_gain_per_con = None
-        else:
-            avg_gain_per_con = err["total_reward"] / profits
-        if losses == 0:
-            avg_loss_per_con = None
-        else:
-            avg_loss_per_con = err["total_risk"] / losses
-        if avg_gain_per_con is None or avg_loss_per_con is None:
-            eff_risk_reward = None
-        else:
-            eff_risk_reward = round(avg_loss_per_con / avg_gain_per_con, 2)
-        if avg_gain_per_con is not None:
-            avg_gain_per_con = round(avg_gain_per_con, 2)
-        if avg_loss_per_con is not None:
-            avg_loss_per_con = round(avg_loss_per_con, 2)
-        # Convert ticks to a sorted list of dictionaries to aid unittests
-        # and json conversions
-        ticks_list = sorted([dict(x) for x in list(ticks)],
-                            key=lambda y: (y['stop'], y['prof'], y['offset']))
-
-        return {"gl_sequence": sequence,
-                "profitable_trades": profits,
-                "avg_gain_per_con": avg_gain_per_con,
-                "losing_trades": losses,
-                "avg_loss_per_con": avg_loss_per_con,
-                "total_trades": total_trades,
-                "success_percent": success_percent,
-                "duration_sec_p20": duration_sec_p20,
-                "duration_sec_median": duration_sec_median,
-                "duration_sec_p80": duration_sec_p80,
-                "setup_risk_reward": risk_reward,
-                "effective_risk_reward": eff_risk_reward,
-                "min_risk_reward": min_risk_reward,
-                "max_risk_reward": max_risk_reward,
-                "trading_days": trading_days,
-                "total_days": total_days,
-                "total_weeks": total_weeks,
-                "trades_per_week": trades_per_week,
-                "trades_per_day": trades_per_day,
-                "trades_per_trading_day": trades_per_trading_day,
-                "trade_ticks": ticks_list,
-                }
+            total_days = (
+                (dt_as_dt(self.end_dt).date()
+                 - dt_as_dt(self.start_dt).date()).days + 1
+                if total_trades else 0
+            )
+            values["total_days"] = total_days
+            if fields & {"total_weeks", "trades_per_week"}:
+                total_weeks = round(total_days/7, 2) if total_trades else 0
+                values["total_weeks"] = total_weeks
+            if "trades_per_day" in fields:
+                values["trades_per_day"] = (
+                    round(total_trades/total_days, 2) if total_trades else 0
+                )
+            if "trades_per_week" in fields:
+                values["trades_per_week"] = (
+                    round(total_trades/total_weeks, 2) if total_trades else 0
+                )
+        if durations is not None:
+            if "duration_sec_p20" in fields:
+                values["duration_sec_p20"] = (
+                    round(np.percentile(durations, 20)) if total_trades else 0
+                )
+            if "duration_sec_median" in fields:
+                values["duration_sec_median"] = (
+                    round(np.median(durations)) if total_trades else 0
+                )
+            if "duration_sec_p80" in fields:
+                values["duration_sec_p80"] = (
+                    round(np.percentile(durations, 80)) if total_trades else 0
+                )
+        if "setup_risk_reward" in fields:
+            values["setup_risk_reward"] = (
+                round(rr["total_risk"] / rr["total_reward"], 2)
+                if rr["total_reward"] > 0 else None
+            )
+        if fields & {"avg_gain_per_con", "effective_risk_reward"}:
+            avg_gain = err["total_reward"] / profits if profits else None
+        if fields & {"avg_loss_per_con", "effective_risk_reward"}:
+            avg_loss = err["total_risk"] / losses if losses else None
+        if "effective_risk_reward" in fields:
+            # Effective risk/reward uses averages before display rounding.
+            values["effective_risk_reward"] = (
+                round(avg_loss / avg_gain, 2)
+                if avg_gain is not None and avg_loss is not None else None
+            )
+        if "avg_gain_per_con" in fields:
+            values["avg_gain_per_con"] = (
+                round(avg_gain, 2) if avg_gain is not None else None
+            )
+        if "avg_loss_per_con" in fields:
+            values["avg_loss_per_con"] = (
+                round(avg_loss, 2) if avg_loss is not None else None
+            )
+        if ticks is not None:
+            values["trade_ticks"] = sorted(
+                [dict(tick) for tick in ticks],
+                key=lambda tick: (tick["stop"], tick["prof"], tick["offset"]),
+            )
+        return {
+            field: values[field] for field in self._STATS_FIELDS
+            if field in fields
+        }
 
     def weekly_stats(self, include_first_min: bool = True):
         """Return trade statistics grouped into weekly buckets.

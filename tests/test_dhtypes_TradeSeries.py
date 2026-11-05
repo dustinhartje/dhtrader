@@ -1,7 +1,10 @@
 """Tests for TradeSeries creation, trade management, and statistics."""
 import datetime
+from copy import deepcopy
+from itertools import combinations
 import pytest
 import json
+import re
 from unittest.mock import Mock
 import dhtrader.dhtypes as _dht
 from dhtrader import (
@@ -10,6 +13,301 @@ from dhtrader import (
     get_trades_by_field, get_tradeseries_by_field,
     store_tradeseries, Symbol, Trade, TradeSeries)
 from dhtrader.testdata.testdata import Rebuilder
+
+
+STATS_CATEGORIES = {
+    "activity": {
+        "profitable_trades", "losing_trades", "total_trades",
+        "success_percent", "trading_days", "total_days", "total_weeks",
+        "trades_per_week", "trades_per_day", "trades_per_trading_day",
+    },
+    "setup_risk_reward": {
+        "setup_risk_reward", "min_risk_reward", "max_risk_reward",
+    },
+    "profit_loss": {
+        "gl_sequence", "avg_gain_per_con", "avg_loss_per_con",
+        "effective_risk_reward",
+    },
+    "durations": {
+        "duration_sec_p20", "duration_sec_median", "duration_sec_p80",
+    },
+    "trade_ticks": {"trade_ticks"},
+}
+ACTIVITY_STATS_REQUEST = {
+    "stats_categories": ("activity", "setup_risk_reward", "trade_ticks"),
+}
+INDIVIDUAL_STATS_REQUEST = {
+    "requested_stats": {
+        "success_percent", "max_risk_reward", "total_weeks",
+        "trades_per_day", "trade_ticks",
+    },
+}
+
+
+@pytest.fixture
+def stats_tradeseries():
+    """Provide closed winning and losing Trades across first-minute rules."""
+    tradeseries = create_tradeseries(ts_id="DELETEME_stats_requests")
+    for open_dt, close_dt, profitable in (
+        ("2099-01-02 12:00:00", "2099-01-02 12:01:00", True),
+        ("2099-01-02 12:16:00", "2099-01-02 12:17:00", False),
+        ("2099-01-03 12:15:00", "2099-01-03 12:16:00", False),
+        ("2099-01-04 12:31:00", "2099-01-04 12:32:00", True),
+    ):
+        trade = create_trade(open_dt=open_dt, ts_id=tradeseries.ts_id)
+        add_1m_candle(
+            trade, close_dt, 5000,
+            5010 if profitable else 5000,
+            5000 if profitable else 4990, 5000,
+        )
+        assert not trade.is_open
+        assert trade.profitable == profitable
+        tradeseries.add_trade(trade)
+    return tradeseries
+
+
+@pytest.mark.parametrize("population", [
+    "mixed", "wins", "losses", "sparse", "empty", "first_minute",
+])
+@pytest.mark.parametrize("include_first_min", [False, True])
+@pytest.mark.parametrize("stats_request", [
+    ACTIVITY_STATS_REQUEST, INDIVIDUAL_STATS_REQUEST,
+    {"stats_categories": tuple(STATS_CATEGORIES)},
+])
+def test_TradeSeries_stats_requests_match_full_stats(
+        stats_tradeseries, population, include_first_min, stats_request):
+    """Requested statistics keep full values without changing source Trades."""
+    tradeseries = stats_tradeseries
+    if population in ("wins", "losses"):
+        tradeseries.trades = [
+            trade for trade in tradeseries.trades
+            if trade.profitable == (population == "wins")
+        ]
+    elif population == "sparse":
+        tradeseries.trades = tradeseries.trades[:1]
+    elif population == "empty":
+        tradeseries.trades = []
+    elif population == "first_minute":
+        tradeseries.trades = [
+            trade for trade in tradeseries.trades if trade.first_min_open
+        ]
+    original = deepcopy(tradeseries.__dict__)
+    original_trades = tuple(tradeseries.trades)
+    full = tradeseries.stats(include_first_min=include_first_min)
+    if "stats_categories" in stats_request:
+        fields = set().union(*(
+            STATS_CATEGORIES[category]
+            for category in stats_request["stats_categories"]
+        ))
+    else:
+        fields = stats_request["requested_stats"]
+
+    actual = tradeseries.stats(
+        include_first_min=include_first_min, **stats_request,
+    )
+
+    assert actual == {field: full[field] for field in full if field in fields}
+    assert list(actual) == [field for field in full if field in fields]
+    assert {field: type(value) for field, value in actual.items()} == {
+        field: type(full[field]) for field in actual
+    }
+    assert tradeseries.__dict__ == original
+    assert all(
+        actual is original for actual, original in zip(
+            tradeseries.trades, original_trades,
+        )
+    )
+
+
+@pytest.mark.parametrize("exclude_first_minute", [False, True])
+def test_TradeSeries_stats_empty_values_preserve_types(
+        stats_tradeseries, exclude_first_minute):
+    """Keep the original empty-statistic values, types and field order."""
+    tradeseries = stats_tradeseries
+    tradeseries.trades = (
+        tradeseries.trades[:1] if exclude_first_minute else []
+    )
+    expected = {
+        "gl_sequence": "", "profitable_trades": 0, "avg_gain_per_con": None,
+        "losing_trades": 0, "avg_loss_per_con": None, "total_trades": 0,
+        "success_percent": 0, "duration_sec_p20": 0,
+        "duration_sec_median": 0, "duration_sec_p80": 0,
+        "setup_risk_reward": None, "effective_risk_reward": None,
+        "min_risk_reward": None, "max_risk_reward": None, "trading_days": 0,
+        "total_days": 0, "total_weeks": 0, "trades_per_week": 0,
+        "trades_per_day": 0, "trades_per_trading_day": 0, "trade_ticks": [],
+    }
+    for stats_request in (
+        {}, {"stats_categories": tuple(STATS_CATEGORIES)},
+        {"requested_stats": set(expected)},
+    ):
+        actual = tradeseries.stats(
+            include_first_min=not exclude_first_minute, **stats_request,
+        )
+        assert actual == expected
+        assert list(actual) == list(expected)
+        assert {field: type(value) for field, value in actual.items()} == {
+            field: type(value) for field, value in expected.items()
+        }
+
+
+@pytest.mark.parametrize("field", sorted(set().union(
+    *STATS_CATEGORIES.values(),
+)))
+def test_TradeSeries_stats_individual_fields_match_full_stats(
+        stats_tradeseries, field):
+    """Each statistic can be requested without exposing its dependencies."""
+    full = stats_tradeseries.stats()
+    assert stats_tradeseries.stats(requested_stats=[field, field]) == {
+        field: full[field],
+    }
+
+
+@pytest.mark.parametrize("categories", [
+    categories
+    for size in range(1, len(STATS_CATEGORIES) + 1)
+    for categories in combinations(STATS_CATEGORIES, size)
+])
+def test_TradeSeries_stats_category_combinations_match_full_stats(
+        stats_tradeseries, categories):
+    """Every category combination agrees with the same individual fields."""
+    fields = set().union(*(
+        STATS_CATEGORIES[category] for category in categories
+    ))
+    full = stats_tradeseries.stats()
+    expected = {field: full[field] for field in full if field in fields}
+    assert stats_tradeseries.stats(stats_categories=categories) == expected
+    assert stats_tradeseries.stats(requested_stats=fields) == expected
+
+
+def test_TradeSeries_stats_requests_skip_unneeded_work(
+        monkeypatch, stats_tradeseries):
+    """Skip distributions in both APIs and extra calendar work by field."""
+    calls = {
+        "duration": 0, "gain_loss": 0, "percentile": 0,
+        "median": 0, "calendar": 0,
+    }
+    original_duration = Trade.duration
+    original_gain_loss = Trade.gain_loss
+    original_percentile = _dht.np.percentile
+    original_median = _dht.np.median
+    original_datetime = _dht.dt_as_dt
+
+    def duration(trade):
+        calls["duration"] += 1
+        return original_duration(trade)
+
+    def gain_loss(trade):
+        calls["gain_loss"] += 1
+        return original_gain_loss(trade)
+
+    def percentile(*args, **kwargs):
+        calls["percentile"] += 1
+        return original_percentile(*args, **kwargs)
+
+    def median(*args, **kwargs):
+        calls["median"] += 1
+        return original_median(*args, **kwargs)
+
+    def as_datetime(value):
+        calls["calendar"] += 1
+        return original_datetime(value)
+
+    monkeypatch.setattr(Trade, "duration", duration)
+    monkeypatch.setattr(Trade, "gain_loss", gain_loss)
+    monkeypatch.setattr(_dht.np, "percentile", percentile)
+    monkeypatch.setattr(_dht.np, "median", median)
+    monkeypatch.setattr(_dht, "dt_as_dt", as_datetime)
+    stats_tradeseries.stats()
+    full_calls = dict(calls)
+    assert full_calls == {
+        "duration": 4, "gain_loss": 4, "percentile": 2,
+        "median": 1, "calendar": 6,
+    }
+
+    for request, calendar_calls in (
+        (ACTIVITY_STATS_REQUEST, 6), (INDIVIDUAL_STATS_REQUEST, 2),
+    ):
+        calls.update(dict.fromkeys(calls, 0))
+        stats_tradeseries.stats(**request)
+        assert calls == {
+            "duration": 4, "gain_loss": 4, "percentile": 0,
+            "median": 0, "calendar": calendar_calls,
+        }
+
+
+@pytest.mark.parametrize("kwargs", [
+    {"stats_categories": value}
+    for value in ("activity", [], set(), {}, True, 1, ["unknown"],
+                  ["activity", None], [["activity"]])
+] + [
+    {"requested_stats": value}
+    for value in ("total_trades", [], set(), {}, True, 1, ["unknown"],
+                  ["total_trades", None], [["total_trades"]])
+] + [
+    {"stats_categories": ["activity"], "requested_stats": ["total_trades"]},
+    {"stats_categories": [], "requested_stats": []},
+])
+def test_TradeSeries_stats_rejects_invalid_requests(
+        monkeypatch, caplog, stats_tradeseries, kwargs):
+    """Reject invalid requests before inspecting any Trades."""
+    trades = Mock()
+    stats_tradeseries.trades = trades
+    with pytest.raises(ValueError) as error:
+        stats_tradeseries.stats(**kwargs)
+    assert "TradeSeries.stats" in str(error.value)
+    for name, value in kwargs.items():
+        assert name in str(error.value)
+        assert repr(value) in str(error.value)
+    assert any(
+        record.levelname == "CRITICAL"
+        and str(error.value) in record.getMessage()
+        for record in caplog.records
+    )
+    assert trades.mock_calls == []
+
+
+@pytest.mark.parametrize("invalid_input, error_type", [
+    ("open", TypeError), ("missing_close", TypeError),
+    ("malformed_close", ValueError), ("price", TypeError),
+    ("symbol", TypeError), ("profit_ticks", ZeroDivisionError),
+    ("bounds", ValueError), ("zero_days", ZeroDivisionError),
+])
+@pytest.mark.parametrize("include_first_min", [False, True])
+def test_TradeSeries_stats_requests_preserve_input_failures(
+        stats_tradeseries, invalid_input, error_type, include_first_min):
+    """Keep current input failures and first-minute exclusion in both APIs."""
+    tradeseries = stats_tradeseries
+    trade = tradeseries.trades[0]
+    assert trade.first_min_open
+    if invalid_input == "bounds":
+        tradeseries.start_dt = "invalid"
+    elif invalid_input == "zero_days":
+        tradeseries.start_dt = "2099-01-03 00:00:00"
+        tradeseries.end_dt = "2099-01-02 00:00:00"
+    else:
+        attribute, value = {
+            "open": ("is_open", True),
+            "missing_close": ("close_dt", None),
+            "malformed_close": ("close_dt", "invalid"),
+            "price": ("exit_price", None),
+            "symbol": ("symbol", Mock(leverage_ratio=None)),
+            "profit_ticks": ("prof_ticks", 0),
+        }[invalid_input]
+        object.__setattr__(trade, attribute, value)
+    settings = {"include_first_min": include_first_min}
+    if include_first_min or invalid_input in ("bounds", "zero_days"):
+        with pytest.raises(error_type) as full_error:
+            tradeseries.stats(**settings)
+        for request in (ACTIVITY_STATS_REQUEST, INDIVIDUAL_STATS_REQUEST):
+            with pytest.raises(
+                    error_type, match=re.escape(str(full_error.value))):
+                tradeseries.stats(**settings, **request)
+    else:
+        full = tradeseries.stats(**settings)
+        for request in (ACTIVITY_STATS_REQUEST, INDIVIDUAL_STATS_REQUEST):
+            actual = tradeseries.stats(**settings, **request)
+            assert actual == {field: full[field] for field in actual}
 
 
 @pytest.mark.parametrize("start_bounds, expected_start", [
