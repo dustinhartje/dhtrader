@@ -42,6 +42,117 @@ _TEST_MARKER_DT = "2099-12-31 22:00:00"   # far-future marker used across tests
 _TEST_EVENT_DT = _TEST_MARKER_DT
 
 
+@pytest.mark.parametrize("list_value", [False, True])
+@pytest.mark.parametrize("bounds", [
+    {}, {"start_dt": "2099-01-02 10:00:00"},
+    {"end_dt": "2099-01-02 11:00:00"},
+    {"start_dt": "2099-01-02 10:00:00",
+     "end_dt": "2099-01-02 11:00:00"},
+    {"start_dt": "2099-01-02 10:00:00",
+     "end_dt": "2099-01-02 10:00:00"},
+])
+def test_trade_queries_bound_open_dates_before_limit(
+        monkeypatch, list_value, bounds):
+    """Filter in storage, including endpoints and tied opens, before limit."""
+    start = dt_to_epoch("2099-01-02 10:00:00")
+    end = dt_to_epoch("2099-01-02 11:00:00")
+    documents = [
+        {"ts_id": "DELETEME_series", "trade_id": f"DELETEME_trade_{i}",
+         "open_epoch": epoch}
+        for i, epoch in enumerate([start - 1, start, start, end, end + 1])
+    ]
+    lower = dt_to_epoch(bounds["start_dt"]) if "start_dt" in bounds else None
+    upper = dt_to_epoch(bounds["end_dt"]) if "end_dt" in bounds else None
+    matching = [
+        doc for doc in documents
+        if (lower is None or doc["open_epoch"] >= lower)
+        and (upper is None or doc["open_epoch"] <= upper)
+    ]
+    cursor = Mock()
+    cursor.sort.return_value = cursor
+    cursor.limit.side_effect = lambda limit: matching[:limit]
+    collection = Mock()
+    collection.count_documents.return_value = len(matching)
+    collection.find.return_value = cursor
+    monkeypatch.setattr(_dhm, "db", {"DELETEME_trades": collection})
+    predicate = {"ts_id": {"$in": ["DELETEME_series"]}} if list_value else {
+        "ts_id": "DELETEME_series",
+    }
+    epoch_bounds = {}
+    if lower is not None:
+        epoch_bounds["$gte"] = lower
+    if upper is not None:
+        epoch_bounds["$lte"] = upper
+    query = {"$and": [predicate, {"open_epoch": epoch_bounds}]} if (
+        epoch_bounds
+    ) else predicate
+    value = ["DELETEME_series"] if list_value else "DELETEME_series"
+
+    result = get_trades_by_field(
+        field="ts_id", collection="DELETEME_trades", limit=2,
+        values=value, **bounds,
+    )
+
+    assert result == matching[:2]
+    collection.count_documents.assert_called_once_with(query)
+    collection.find.assert_called_once_with(query)
+    cursor.sort.assert_called_once_with("open_epoch", 1)
+    cursor.limit.assert_called_once_with(2)
+
+
+@pytest.mark.parametrize("list_value", [False, True])
+def test_trade_queries_reject_reversed_dates_before_database_query(
+        monkeypatch, list_value):
+    collection = Mock()
+    monkeypatch.setattr(_dhm, "db", {"DELETEME_trades": collection})
+    value = [] if list_value else "DELETEME_series"
+
+    with pytest.raises(ValueError, match="start_dt must not exceed end_dt"):
+        get_trades_by_field(
+            field="ts_id", collection="DELETEME_trades",
+            start_dt="2099-01-03 00:00:00",
+            end_dt="2099-01-02 00:00:00", values=value,
+        )
+
+    collection.count_documents.assert_not_called()
+    collection.find.assert_not_called()
+
+
+def test_trade_query_with_empty_value_list_skips_database(monkeypatch):
+    collection = Mock()
+    monkeypatch.setattr(_dhm, "db", {"DELETEME_trades": collection})
+
+    result = get_trades_by_field(
+        field="trade_id", values=[], collection="DELETEME_trades",
+        start_dt="2099-01-02 10:00:00", end_dt="2099-01-02 11:00:00",
+    )
+
+    assert result == []
+    collection.count_documents.assert_not_called()
+    collection.find.assert_not_called()
+
+
+def test_trade_date_bounds_preserve_an_open_epoch_predicate(monkeypatch):
+    epoch = dt_to_epoch("2099-01-02 10:00:00")
+    cursor = Mock()
+    cursor.sort.return_value = cursor
+    cursor.limit.return_value = []
+    collection = Mock()
+    collection.count_documents.return_value = 0
+    collection.find.return_value = cursor
+    monkeypatch.setattr(_dhm, "db", {"DELETEME_trades": collection})
+
+    get_trades_by_field(
+        field="open_epoch", values=epoch - 1,
+        collection="DELETEME_trades", start_dt="2099-01-02 10:00:00",
+    )
+
+    collection.find.assert_called_once_with({
+        "$and": [{"open_epoch": epoch - 1},
+                 {"open_epoch": {"$gte": epoch}}],
+    })
+
+
 @pytest.fixture
 def cleanup_dhmongo_storage():
     """Clean up DELETEME test records before and after each storage test.
@@ -260,7 +371,7 @@ def test_store_and_get_trade_roundtrip(cleanup_dhmongo_storage):
     # Retrieve by name
     results = get_trades_by_field(
         field="name",
-        value=_TEST_DELETEME_NAME,
+        values=_TEST_DELETEME_NAME,
         collection="trades",
     )
     assert len(results) == 1
@@ -283,7 +394,7 @@ def test_store_and_get_trade_roundtrip(cleanup_dhmongo_storage):
     # Verify deletion
     after = get_trades_by_field(
         field="name",
-        value=_TEST_DELETEME_NAME,
+        values=_TEST_DELETEME_NAME,
         collection="trades",
     )
     assert len(after) == 0

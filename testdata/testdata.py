@@ -101,7 +101,7 @@ class Extractor():
         short_trades = []
         for ts_id in ts_ids:
             trades_obj = get_trades_by_field(field="ts_id",
-                                             value=ts_id)
+                                             values=ts_id)
             all_trades.append({"ts_id": ts_id,
                                "trades": [t.to_clean_dict()
                                           for t in trades_obj]})

@@ -47,6 +47,8 @@ from .dhcommon import (
 CANDLE_TIMEFRAMES = ['1m', '5m', '15m', 'r1h', 'e1h', '1d', '1w', 'e1mo',
                      'e1y']
 BEGINNING_OF_TIME = "2008-01-01 00:00:00"
+# Distinguish omitted load bounds from an explicitly unbounded None.
+_USE_SERIES_DATES = object()
 
 
 def _merge_epoch_ranges(ranges):
@@ -3577,11 +3579,33 @@ class TradeSeries():
         for t in self.trades:
             t.bt_id = bt_id
 
-    def load_trades(self):
-        """Clear and reload all Trades matching this ts_id from storage.
+    def load_trades(self, *,
+                    start_dt=_USE_SERIES_DATES,
+                    end_dt=_USE_SERIES_DATES):
+        """Reload Trades using this series' dates unless others are supplied.
+
+        Dates may be strings or datetime objects.  Bounds are inclusive and
+        apply to Trade open dates without changing this series' dates.
+        Pass None to leave that bound unrestricted, or pass None for both
+        start_dt and end_dt to load all stored Trades for this series.
         """
+        # _USE_SERIES_DATES is needed because self.start_dt does not exist when
+        # the class in instantiated but before start_dt and end_dt are set, so
+        # they cannot be set as the default values.  It is a placeholder to
+        # indicate that the series' own dates should be used for loading trades
+        # within the series' own date range.
+        if start_dt is _USE_SERIES_DATES:
+            start_dt = self.start_dt
+        if end_dt is _USE_SERIES_DATES:
+            end_dt = self.end_dt
+        date_bounds = {}
+        if start_dt is not None:
+            date_bounds["start_dt"] = start_dt
+        if end_dt is not None:
+            date_bounds["end_dt"] = end_dt
         self.trades = get_trades_by_field(field="ts_id",
-                                          value=self.ts_id)
+                                          values=self.ts_id,
+                                          **date_bounds)
         self.sort_trades()
 
     def delete_from_storage(self,
@@ -4361,15 +4385,24 @@ class Backtest():
         """Sort attached TradeSeries in ascending ts_id order."""
         self.tradeseries.sort(key=lambda t: t.ts_id)
 
-    def load_tradeseries(self, include_trades=True):
+    def load_tradeseries(self, include_trades=True, *,
+                         start_dt=None, end_dt=None):
         """Load and attach all TradeSeries matching this bt_id from storage.
 
         This will replace any currently attached tradeseries.
+        Optional dates bound Trade opens inclusively when include_trades=True,
+        without changing stored backtest or series date-range metadata.
         """
+        date_bounds = {}
+        if start_dt is not None:
+            date_bounds["start_dt"] = start_dt
+        if end_dt is not None:
+            date_bounds["end_dt"] = end_dt
         self.tradeseries = get_tradeseries_by_field(
             field="bt_id",
             value=self.bt_id,
             include_trades=include_trades,
+            **date_bounds,
             )
         self.sort_tradeseries()
 

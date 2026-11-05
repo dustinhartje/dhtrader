@@ -188,7 +188,7 @@ def add_1m_candle(trade, dt, c_open, c_high, c_low, c_close):
 def clear_trade_storage_by_name(name: str):
     """Delete all stored trades with the given test name."""
     delete_trades_by_field(symbol="ES", field="name", value=name)
-    stored = get_trades_by_field(field="name", value=name)
+    stored = get_trades_by_field(field="name", values=name)
     assert len(stored) == 0
 
 
@@ -1369,7 +1369,7 @@ def test_Trade_store_retrieve_delete(cleanup_trade_storage):
     # First make sure there are no DELETEME trades in storage currently
     delete_trades_by_field(symbol="ES", field="name",
                            value="DELETEME-TEST")
-    stored = get_trades_by_field(field="name", value="DELETEME-TEST")
+    stored = get_trades_by_field(field="name", values="DELETEME-TEST")
     assert len(stored) == 0
 
 
@@ -1396,13 +1396,13 @@ def test_store_trades_rejects_missing_trade_id():
     # Confirm storage op returns something that looks vaguely like our trade
     assert stored[0]["name"] == "DELETEME-TEST"
     # Confirm we can retreive our trade from storage
-    stored = get_trades_by_field(field="name", value="DELETEME-TEST")
+    stored = get_trades_by_field(field="name", values="DELETEME-TEST")
     assert len(stored) == 1
     assert isinstance(stored[0], Trade)
     # Delete it from storage and confirm it can no longer be retrieved
     delete_trades_by_field(symbol="ES", field="name",
                            value="DELETEME-TEST")
-    stored = get_trades_by_field(field="name", value="DELETEME-TEST")
+    stored = get_trades_by_field(field="name", values="DELETEME-TEST")
     assert len(stored) == 0
 
 
@@ -1417,7 +1417,7 @@ def test_delete_trades(cleanup_trade_storage):
     # First make sure there are no DELETEME trades in storage currently
     delete_trades_by_field(symbol="ES", field="name",
                            value="DELETEME-TEST-LIST")
-    stored = get_trades_by_field(field="name", value="DELETEME-TEST-LIST")
+    stored = get_trades_by_field(field="name", values="DELETEME-TEST-LIST")
     assert len(stored) == 0
     # Create and store test trades
     t1 = create_trade(open_dt="2099-01-04 10:00:00",
@@ -1429,13 +1429,13 @@ def test_delete_trades(cleanup_trade_storage):
     stored = store_trades([t1, t2])
     # Confirm we can retrieve them
     retrieved = get_trades_by_field(field="name",
-                                    value="DELETEME-TEST-LIST")
+                                    values="DELETEME-TEST-LIST")
     assert len(retrieved) == 2
     assert all(isinstance(tr, Trade) for tr in retrieved)
     # Delete using the list-based delete_trades function
     delete_trades([t1, t2])
     # Confirm they were deleted
-    stored = get_trades_by_field(field="name", value="DELETEME-TEST-LIST")
+    stored = get_trades_by_field(field="name", values="DELETEME-TEST-LIST")
     assert len(stored) == 0
 
 

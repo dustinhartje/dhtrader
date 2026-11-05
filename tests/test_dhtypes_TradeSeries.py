@@ -2,12 +2,77 @@
 import datetime
 import pytest
 import json
+from unittest.mock import Mock
+import dhtrader.dhtypes as _dht
 from dhtrader import (
     Candle, delete_trades_by_field,
     delete_tradeseries, delete_tradeseries_by_field, dt_as_dt,
     get_trades_by_field, get_tradeseries_by_field,
     store_tradeseries, Symbol, Trade, TradeSeries)
 from dhtrader.testdata.testdata import Rebuilder
+
+
+@pytest.mark.parametrize("start_bounds, expected_start", [
+    ({}, "2099-01-01 00:00:00"),
+    ({"start_dt": None}, None),
+    ({"start_dt": "2099-01-02 10:00:00"}, "2099-01-02 10:00:00"),
+    ({"start_dt": datetime.datetime(2099, 1, 2, 10)},
+     datetime.datetime(2099, 1, 2, 10)),
+])
+@pytest.mark.parametrize("end_bounds, expected_end", [
+    ({}, "2099-02-01 00:00:00"),
+    ({"end_dt": None}, None),
+    ({"end_dt": "2099-01-02 11:00:00"}, "2099-01-02 11:00:00"),
+    ({"end_dt": datetime.datetime(2099, 1, 2, 11)},
+     datetime.datetime(2099, 1, 2, 11)),
+])
+def test_TradeSeries_load_trades_preserves_metadata_with_date_bounds(
+        monkeypatch, start_bounds, expected_start, end_bounds, expected_end):
+    series = create_tradeseries(
+        ts_id="DELETEME_scoped_series", bt_id="DELETEME_scoped_backtest",
+    )
+    trades = [
+        Mock(open_epoch=2, trade_id="DELETEME_trade_later"),
+        Mock(open_epoch=1, trade_id="DELETEME_trade_earlier"),
+    ]
+    retrieve = Mock(return_value=trades)
+    monkeypatch.setattr(_dht, "get_trades_by_field", retrieve)
+    metadata = series.start_dt, series.end_dt, series.ts_id, series.bt_id
+
+    series.load_trades(**start_bounds, **end_bounds)
+
+    expected_bounds = {}
+    if expected_start is not None:
+        expected_bounds["start_dt"] = expected_start
+    if expected_end is not None:
+        expected_bounds["end_dt"] = expected_end
+    retrieve.assert_called_once_with(
+        field="ts_id", values=series.ts_id, **expected_bounds,
+    )
+    assert [trade.trade_id for trade in series.trades] == [
+        "DELETEME_trade_earlier", "DELETEME_trade_later",
+    ]
+    assert (
+        series.start_dt, series.end_dt, series.ts_id, series.bt_id,
+    ) == metadata
+
+
+def test_TradeSeries_load_trades_uses_current_restricted_dates(monkeypatch):
+    series = create_tradeseries(ts_id="DELETEME_restricted_series")
+    retrieve = Mock(return_value=[])
+    monkeypatch.setattr(_dht, "get_trades_by_field", retrieve)
+    series.restrict_dates(
+        new_start_dt="2099-01-02 10:00:00",
+        new_end_dt="2099-01-02 11:00:00",
+    )
+
+    series.load_trades()
+
+    retrieve.assert_called_once_with(
+        field="ts_id", values=series.ts_id,
+        start_dt="2099-01-02 10:00:00", end_dt="2099-01-02 11:00:00",
+    )
+    assert series.trades == []
 
 
 def create_trade(open_dt="2099-01-02 12:00:00",
@@ -122,7 +187,7 @@ def clear_tradeseries_storage_by_name(name: str):
     stored_ts = get_tradeseries_by_field(field="name", value=name)
     assert len(stored_ts) == 0
     delete_trades_by_field(symbol="ES", field="name", value=name)
-    stored_tr = get_trades_by_field(field="name", value=name)
+    stored_tr = get_trades_by_field(field="name", values=name)
     assert len(stored_tr) == 0
 
 
@@ -799,7 +864,7 @@ def test_TradeSeries_store_retrieve_and_delete(cleanup_tradeseries_storage):
     assert len(s_ts) == 0
     delete_trades_by_field(symbol="ES", field="name",
                            value="DELETEME-TEST")
-    s_tr = get_trades_by_field(field="name", value="DELETEME-TEST")
+    s_tr = get_trades_by_field(field="name", values="DELETEME-TEST")
     assert len(s_tr) == 0
     # Store and check the result looks successful by matching ts_id on each
     r_tradeseries = store_tradeseries([ts], include_trades=True)
@@ -816,7 +881,7 @@ def test_TradeSeries_store_retrieve_and_delete(cleanup_tradeseries_storage):
     assert len(r_ts) == 1
     assert isinstance(r_ts[0], TradeSeries)
     assert r_ts[0].ts_id == ts.ts_id
-    r_tr = get_trades_by_field(field="ts_id", value=ts.ts_id)
+    r_tr = get_trades_by_field(field="ts_id", values=ts.ts_id)
     assert len(r_tr) == 2
     assert isinstance(r_tr[0], Trade)
     assert r_tr[0].ts_id == ts.ts_id
@@ -830,11 +895,11 @@ def test_TradeSeries_store_retrieve_and_delete(cleanup_tradeseries_storage):
     # Confirm storage has no objects with this name or ts_id at end of test
     s_ts = get_tradeseries_by_field(field="name", value="DELETEME-TEST")
     assert len(s_ts) == 0
-    s_tr = get_trades_by_field(field="name", value="DELETEME-TEST")
+    s_tr = get_trades_by_field(field="name", values="DELETEME-TEST")
     assert len(s_tr) == 0
     s_ts = get_tradeseries_by_field(field="ts_id", value=ts.ts_id)
     assert len(s_ts) == 0
-    s_tr = get_trades_by_field(field="ts_id", value=ts.ts_id)
+    s_tr = get_trades_by_field(field="ts_id", values=ts.ts_id)
     assert len(s_tr) == 0
 
 
@@ -994,9 +1059,9 @@ def test_delete_tradeseries(cleanup_tradeseries_storage):
     assert len(stored1) == 0
     assert len(stored2) == 0
     stored1 = get_trades_by_field(field="name",
-                                  value=test_name_1)
+                                  values=test_name_1)
     stored2 = get_trades_by_field(field="name",
-                                  value=test_name_2)
+                                  values=test_name_2)
     assert len(stored1) == 0
     assert len(stored2) == 0
 

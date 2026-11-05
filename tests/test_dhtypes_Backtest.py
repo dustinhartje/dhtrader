@@ -2,12 +2,41 @@
 import datetime
 import json
 import pytest
+from unittest.mock import Mock
+import dhtrader.dhtypes as _dht
 from dhtrader import (
     Backtest, Chart, delete_backtests, delete_backtests_by_field,
     delete_trades_by_field, delete_tradeseries_by_field, dt_as_dt,
     get_backtests_by_field, get_trades_by_field, get_tradeseries_by_field,
     store_backtests, store_trades, store_tradeseries, Symbol, Trade,
     TradeSeries)
+
+
+@pytest.mark.parametrize("bounds", [
+    {}, {"start_dt": "2099-01-02 10:00:00"},
+    {"start_dt": "2099-01-02 10:00:00",
+     "end_dt": "2099-01-02 11:00:00"},
+])
+def test_Backtest_load_tradeseries_preserves_metadata_with_date_bounds(
+        monkeypatch, bounds):
+    backtest = create_backtest(bt_id="DELETEME_scoped_backtest")
+    series = [
+        Mock(ts_id="DELETEME_series_b"), Mock(ts_id="DELETEME_series_a"),
+    ]
+    retrieve = Mock(return_value=series)
+    monkeypatch.setattr(_dht, "get_tradeseries_by_field", retrieve)
+    metadata = backtest.start_dt, backtest.end_dt, backtest.bt_id
+
+    backtest.load_tradeseries(**bounds)
+
+    retrieve.assert_called_once_with(
+        field="bt_id", value=backtest.bt_id, include_trades=True, **bounds,
+    )
+    assert backtest.tradeseries == [series[0], series[1]]
+    assert [item.ts_id for item in backtest.tradeseries] == [
+        "DELETEME_series_a", "DELETEME_series_b",
+    ]
+    assert (backtest.start_dt, backtest.end_dt, backtest.bt_id) == metadata
 
 
 def create_trade(open_dt="2099-01-02 12:00:00",
@@ -146,7 +175,7 @@ def clear_storage_by_name(name: str):
     s_ts = get_tradeseries_by_field(field="name", value=name)
     assert len(s_ts) == 0
     delete_trades_by_field(symbol="ES", field="name", value=name)
-    s_tr = get_trades_by_field(field="name", value=name)
+    s_tr = get_trades_by_field(field="name", values=name)
     assert len(s_tr) == 0
 
 
@@ -610,7 +639,7 @@ def test_Backtest_restrict_dates(cleanup_backtest_storage):
     assert ts.end_dt == "2025-01-10 14:59:00"
     assert len(bt.tradeseries[0].trades) == 0
     trades = get_trades_by_field(field="bt_id",
-                                 value=bt.bt_id)
+                                 values=bt.bt_id)
     assert len(trades) == 0
 
 
@@ -696,7 +725,7 @@ def test_Backtest_add_and_remove_tradeseries_and_trades(
     s_ts = get_tradeseries_by_field(field="name", value=ts2_name)
     assert len(s_ts) == 0
     delete_trades_by_field(symbol="ES", field="name", value=test_name)
-    s_tr = get_trades_by_field(field="name", value=test_name)
+    s_tr = get_trades_by_field(field="name", values=test_name)
     assert len(s_tr) == 0
     # Store the backtest and related objects
     store_backtests([bt])
@@ -756,14 +785,14 @@ def test_Backtest_add_and_remove_tradeseries_and_trades(
     assert s_ts2[0].start_dt == "2099-01-06 13:00:00"
     assert s_ts2[0].end_dt == "2099-01-06 16:00:00"
     # Confirm exactly 4 trades in storage by name and bt_id
-    s_tr = get_trades_by_field(field="name", value=test_name)
+    s_tr = get_trades_by_field(field="name", values=test_name)
     assert len(s_tr) == 4
-    s_tr = get_trades_by_field(field="bt_id", value=test_name)
+    s_tr = get_trades_by_field(field="bt_id", values=test_name)
     assert len(s_tr) == 4
     # Confirm exactly 2 Trades in storage by each TradeSeries ts_id
-    s_tr1 = get_trades_by_field(field="ts_id", value=ts1_ts_id)
+    s_tr1 = get_trades_by_field(field="ts_id", values=ts1_ts_id)
     assert len(s_tr1) == 2
-    s_tr2 = get_trades_by_field(field="ts_id", value=ts2_ts_id)
+    s_tr2 = get_trades_by_field(field="ts_id", values=ts2_ts_id)
     assert len(s_tr2) == 2
     # Confirm Trade open_dt values as expected in storage, with ts1 updated
     # and ts2 retaining original unmodified values
@@ -817,14 +846,14 @@ def test_Backtest_add_and_remove_tradeseries_and_trades(
     assert s_ts2[0].start_dt == "2099-01-06 13:00:00"
     assert s_ts2[0].end_dt == "2099-01-06 16:00:00"
     # Confirm exactly 4 trades in storage by name and bt_id
-    s_tr = get_trades_by_field(field="name", value=test_name)
+    s_tr = get_trades_by_field(field="name", values=test_name)
     assert len(s_tr) == 4
-    s_tr = get_trades_by_field(field="bt_id", value=test_name)
+    s_tr = get_trades_by_field(field="bt_id", values=test_name)
     assert len(s_tr) == 4
     # Confirm exactly 2 Trades in storage by each TradeSeries ts_id
-    s_tr1 = get_trades_by_field(field="ts_id", value=ts1_ts_id)
+    s_tr1 = get_trades_by_field(field="ts_id", values=ts1_ts_id)
     assert len(s_tr1) == 2
-    s_tr2 = get_trades_by_field(field="ts_id", value=ts2_ts_id)
+    s_tr2 = get_trades_by_field(field="ts_id", values=ts2_ts_id)
     assert len(s_tr2) == 2
     # Confirm Trade open_dt values as expected in storage, with ts1 updated
     # and ts2 retaining original unmodified values
@@ -840,7 +869,7 @@ def test_Backtest_add_and_remove_tradeseries_and_trades(
     assert bt.tradeseries[0].ts_id == ts1.ts_id
     s_ts2 = get_tradeseries_by_field(field="name", value=ts2_name)
     assert len(s_ts2) == 0
-    s_tr2 = get_trades_by_field(field="ts_id", value=ts2_ts_id)
+    s_tr2 = get_trades_by_field(field="ts_id", values=ts2_ts_id)
     assert len(s_tr2) == 0
 
     # Delete everything from storage to cleanup
@@ -854,7 +883,7 @@ def test_Backtest_add_and_remove_tradeseries_and_trades(
     s_ts = get_tradeseries_by_field(field="name", value=ts2_name)
     assert len(s_ts) == 0
     delete_trades_by_field(symbol="ES", field="name", value=test_name)
-    s_tr = get_trades_by_field(field="name", value=test_name)
+    s_tr = get_trades_by_field(field="name", values=test_name)
     assert len(s_tr) == 0
 
 
@@ -904,7 +933,7 @@ def test_Backtest_store_retrieve_load_tradeseries_and_delete(
     s_ts = get_tradeseries_by_field(field="bt_id", value=bt.bt_id)
     assert len(s_ts) == 1
     assert isinstance(s_ts[0], TradeSeries)
-    s_tr = get_trades_by_field(field="bt_id", value=bt.bt_id)
+    s_tr = get_trades_by_field(field="bt_id", values=bt.bt_id)
     assert len(s_tr) == 1
     assert isinstance(s_tr[0], Trade)
 
@@ -933,14 +962,14 @@ def test_Backtest_store_retrieve_load_tradeseries_and_delete(
     assert len(s_bt) == 0
     s_ts = get_tradeseries_by_field(field="bt_id", value=bt.bt_id)
     assert len(s_ts) == 0
-    s_tr = get_trades_by_field(field="bt_id", value=bt.bt_id)
+    s_tr = get_trades_by_field(field="bt_id", values=bt.bt_id)
     assert len(s_tr) == 0
 
     s_bt = get_backtests_by_field(field="ts_id", value=ts.ts_id)
     assert len(s_bt) == 0
     s_ts = get_tradeseries_by_field(field="ts_id", value=ts.ts_id)
     assert len(s_ts) == 0
-    s_tr = get_trades_by_field(field="ts_id", value=ts.ts_id)
+    s_tr = get_trades_by_field(field="ts_id", values=ts.ts_id)
     assert len(s_tr) == 0
 
 
@@ -1063,8 +1092,8 @@ def test_delete_backtests(cleanup_backtest_storage):
     stored2 = get_tradeseries_by_field(field="bt_id", value=test_name_2)
     assert len(stored1) == 0
     assert len(stored2) == 0
-    stored1 = get_trades_by_field(field="bt_id", value=test_name_1)
-    stored2 = get_trades_by_field(field="bt_id", value=test_name_2)
+    stored1 = get_trades_by_field(field="bt_id", values=test_name_1)
+    stored2 = get_trades_by_field(field="bt_id", values=test_name_2)
     assert len(stored1) == 0
     assert len(stored2) == 0
 

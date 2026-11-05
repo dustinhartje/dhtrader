@@ -35,7 +35,117 @@ from dhtrader import (
 )
 import dhtrader.dhmongo as _dhm
 import dhtrader.dhstore as _dhs
+import dhtrader.dhtypes as _dht
 from .conftest import is_valid_uuid
+
+
+@pytest.mark.parametrize("bt_id", [None, "DELETEME_integrity_backtest"])
+def test_review_tradeseries_checks_trades_outside_series_dates(
+        monkeypatch, bt_id):
+    series = TradeSeries(
+        start_dt="2099-01-02 00:00:00", end_dt="2099-01-03 00:00:00",
+        timeframe="5m", trading_hours="rth", symbol=Mock(),
+        ts_id="DELETEME_integrity_series", bt_id=bt_id,
+    )
+    trades = [
+        Mock(open_epoch=1, open_dt="2099-01-01 09:35:00",
+             close_dt="2099-01-01 09:45:00"),
+        Mock(open_epoch=2, open_dt="2099-01-01 09:45:00",
+             close_dt="2099-01-01 09:55:00"),
+    ]
+    retrieve = Mock(return_value=trades)
+    load = Mock(wraps=series.load_trades)
+    monkeypatch.setattr(_dht, "get_trades_by_field", retrieve)
+    monkeypatch.setattr(series, "load_trades", load)
+    monkeypatch.setattr(
+        _dhs, "get_all_tradeseries", Mock(return_value=[series]),
+    )
+    monkeypatch.setattr(
+        _dhs, "get_tradeseries_by_field", Mock(return_value=[series]),
+    )
+    monkeypatch.setattr(_dhm, "review_tradeseries", Mock(return_value=[]))
+    monkeypatch.setattr(_dhs, "ProgBar", Mock())
+
+    result = review_tradeseries(bt_id=bt_id, check_integrity=True)
+
+    load.assert_called_once_with(start_dt=None, end_dt=None)
+    retrieve.assert_called_once_with(field="ts_id", values=series.ts_id)
+    assert result["integrity"]["status"] == "ERRORS"
+    overlaps = result["integrity"]["issues"]["trade_overlaps"]
+    assert len(overlaps) == 1
+    assert overlaps[0]["trade_open"] == "2099-01-01 09:45:00"
+    assert overlaps[0]["prev_trade_open"] == "2099-01-01 09:35:00"
+    assert series.trades == []
+
+
+@pytest.mark.parametrize("list_value", [False, True])
+@pytest.mark.parametrize("bounds", [
+    {}, {"start_dt": "2099-01-02 10:00:00"},
+    {"end_dt": "2099-01-02 11:00:00"},
+    {"start_dt": "2099-01-02 10:00:00",
+     "end_dt": "2099-01-02 11:00:00"},
+])
+def test_trade_loaders_forward_dates_before_reconstruction(
+        monkeypatch, list_value, bounds):
+    """Only records returned by the bounded query are reconstructed."""
+    document = {"trade_id": "DELETEME_scoped_trade"}
+    trade = Mock(trade_id=document["trade_id"])
+    retrieve = Mock(return_value=[document])
+    reconstruct = Mock(return_value=trade)
+    monkeypatch.setattr(_dhm, "get_trades_by_field", retrieve)
+    monkeypatch.setattr(_dhs, "reconstruct_trade", reconstruct)
+    value = ["DELETEME_series"] if list_value else "DELETEME_series"
+
+    result = _dhs.get_trades_by_field(
+        field="ts_id", collection="DELETEME_trades", values=value, **bounds,
+    )
+
+    assert result == [trade]
+    retrieve.assert_called_once_with(
+        field="ts_id", collection="DELETEME_trades",
+        limit=0, show_progress=False, values=value, **bounds,
+    )
+    reconstruct.assert_called_once_with(document)
+
+
+@pytest.mark.parametrize("include_trades", [False, True])
+def test_series_loader_bounds_trades_without_changing_metadata(
+        monkeypatch, include_trades):
+    document = {"ts_id": "DELETEME_scoped_series"}
+    series = Mock(
+        ts_id=document["ts_id"], start_dt="2099-01-01 00:00:00",
+        end_dt="2099-02-01 00:00:00", trades=[],
+    )
+    trade = Mock(trade_id="DELETEME_scoped_trade")
+    retrieve = Mock(return_value=[document])
+    trades = Mock(return_value=[trade])
+    monkeypatch.setattr(_dhm, "get_tradeseries_by_field", retrieve)
+    monkeypatch.setattr(
+        _dhs, "reconstruct_tradeseries", Mock(return_value=series),
+    )
+    monkeypatch.setattr(_dhs, "get_trades_by_field", trades)
+
+    result = get_tradeseries_by_field(
+        "bt_id", "DELETEME_scoped_backtest",
+        collection="DELETEME_series", collection_trades="DELETEME_trades",
+        include_trades=include_trades,
+        start_dt="2099-01-02 10:00:00", end_dt="2099-01-02 11:00:00",
+    )
+
+    assert result == [series]
+    assert series.start_dt == "2099-01-01 00:00:00"
+    assert series.end_dt == "2099-02-01 00:00:00"
+    if include_trades:
+        trades.assert_called_once_with(
+            field="ts_id", values=document["ts_id"],
+            collection="DELETEME_trades",
+            start_dt="2099-01-02 10:00:00", end_dt="2099-01-02 11:00:00",
+        )
+        assert series.trades == [trade]
+        series.sort_trades.assert_called_once_with()
+    else:
+        trades.assert_not_called()
+        assert series.trades == []
 
 
 @pytest.mark.parametrize("level", [logging.INFO, logging.DEBUG])
@@ -133,7 +243,7 @@ def clear_storage_by_name(name: str):
     assert len(r) == 0
     r = get_tradeseries_by_field(field="name", value=name)
     assert len(r) == 0
-    r = get_trades_by_field(field="name", value=name)
+    r = get_trades_by_field(field="name", values=name)
     assert len(r) == 0
 
 
@@ -202,7 +312,7 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
     store_tradeseries([ts_good], include_trades=True)
     stored = get_tradeseries_by_field(field="bt_id", value=bt)
     assert len(stored) == 1
-    stored = get_trades_by_field(field="bt_id", value=bt)
+    stored = get_trades_by_field(field="bt_id", values=bt)
     assert len(stored) == 2
 
     # Confirm storage integrity check against sample bt_id passes
@@ -221,7 +331,7 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
     ts_good.delete_from_storage(include_trades=True)
     stored = get_tradeseries_by_field(field="bt_id", value=bt)
     assert len(stored) == 0
-    stored = get_trades_by_field(field="bt_id", value=bt)
+    stored = get_trades_by_field(field="bt_id", values=bt)
     assert len(stored) == 0
 
     # Store TradeSeries with multiple Trades opening in the same bar
@@ -253,7 +363,7 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
     store_tradeseries([ts_fail], include_trades=True)
     stored = get_tradeseries_by_field(field="bt_id", value=bt)
     assert len(stored) == 1
-    stored = get_trades_by_field(field="bt_id", value=bt)
+    stored = get_trades_by_field(field="bt_id", values=bt)
     assert len(stored) == 2
 
     # Confirm storage integrity check fails for sample bt_id
@@ -273,7 +383,7 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
     ts_fail.delete_from_storage(include_trades=True)
     stored = get_tradeseries_by_field(field="bt_id", value=bt)
     assert len(stored) == 0
-    stored = get_trades_by_field(field="bt_id", value=bt)
+    stored = get_trades_by_field(field="bt_id", values=bt)
     assert len(stored) == 0
 
     # Store TradeSeries with a Trade opening in the same bar that the prior
@@ -306,7 +416,7 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
     store_tradeseries([ts_fail], include_trades=True)
     stored = get_tradeseries_by_field(field="bt_id", value=bt)
     assert len(stored) == 1
-    stored = get_trades_by_field(field="bt_id", value=bt)
+    stored = get_trades_by_field(field="bt_id", values=bt)
     assert len(stored) == 2
     # Confirm storage integrity check against sample bt_id fails
     r = review_tradeseries(bt_id=bt, check_integrity=True)
@@ -324,7 +434,7 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
     ts_fail.delete_from_storage(include_trades=True)
     stored = get_tradeseries_by_field(field="bt_id", value=bt)
     assert len(stored) == 0
-    stored = get_trades_by_field(field="bt_id", value=bt)
+    stored = get_trades_by_field(field="bt_id", values=bt)
     assert len(stored) == 0
 
     # Add a multiday Trade and confirm Trades storage integrity check fails
@@ -357,7 +467,7 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
     store_tradeseries([ts_fail], include_trades=True)
     stored = get_tradeseries_by_field(field="bt_id", value=bt)
     assert len(stored) == 1
-    stored = get_trades_by_field(field="bt_id", value=bt)
+    stored = get_trades_by_field(field="bt_id", values=bt)
     assert len(stored) == 2
     # Confirm Trade storage integrity check against sample bt_id fails
     r = review_trades(bt_id=bt, check_integrity=True, orphan_ok=[bt])
@@ -374,7 +484,7 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
     ts_fail.delete_from_storage(include_trades=True)
     stored = get_tradeseries_by_field(field="bt_id", value=bt)
     assert len(stored) == 0
-    stored = get_trades_by_field(field="bt_id", value=bt)
+    stored = get_trades_by_field(field="bt_id", values=bt)
     assert len(stored) == 0
 
     # Add an unclosed Trade and confirm it is flagged as unclosed_trade
@@ -503,13 +613,13 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
     assert len(stored) == 1
     # While we stored 2 trades, the second should have overwritten the first
     # by design.  Therefor we only see the second Trade in storage
-    stored = get_trades_by_field(field="bt_id", value=bt)
+    stored = get_trades_by_field(field="bt_id", values=bt)
     assert len(stored) == 1
     assert stored[0].open_dt == "2099-01-06 10:03:24"
     assert stored[0].close_dt == "2099-01-06 12:32:15"
     # Store the trades
     store_trades([ts_fail.trades[0]])
-    stored = get_trades_by_field(field="bt_id", value=bt)
+    stored = get_trades_by_field(field="bt_id", values=bt)
     # Now we should still have only 1 trade, but it's the first not the second
     # this time due to another overwrite
     assert len(stored) == 1
@@ -530,7 +640,7 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
         name=duplicate_trade_name,
         ts_id=ts_fail.ts_id, bt_id=ts_fail.bt_id)
     store_trades([t_dupe])
-    stored = get_trades_by_field(field="bt_id", value=bt)
+    stored = get_trades_by_field(field="bt_id", values=bt)
     assert len(stored) == 2
     # Confirm integrity check now fails due to "duplicate" trade
     r = review_trades(bt_id=bt, check_integrity=True, orphan_ok=[bt])
@@ -540,7 +650,7 @@ def test_Backtest_TradeSeries_and_Trade_integrity_checks(
     ts_fail.delete_from_storage(include_trades=True)
     stored = get_tradeseries_by_field(field="bt_id", value=bt)
     assert len(stored) == 0
-    stored = get_trades_by_field(field="bt_id", value=bt)
+    stored = get_trades_by_field(field="bt_id", values=bt)
     assert len(stored) == 0
 
 

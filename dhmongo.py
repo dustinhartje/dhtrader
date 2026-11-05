@@ -935,50 +935,57 @@ def delete_images_by_image_id(
 
 
 def get_trades_by_field(field: str,
-                        value,
+                        values,
                         collection: str,
                         limit=0,
                         show_progress: bool = False,
+                        *,
+                        start_dt=None,
+                        end_dt=None,
                         ):
-    """Returns <limit> (0 = all) Trade documents matching (field == value)."""
-    c = db[collection]
-    total = c.count_documents({field: value})
-    if limit > 0:
-        total = min(total, limit)
-    pbar = start_progbar(show_progress, total,
-                         f"trade records fetched from {collection}")
-    # Enforce deterministic ordering for callers that depend on trade order.
-    cursor = c.find({field: value}).sort(
-        "open_epoch", pymongo.ASCENDING
-    ).limit(limit)
-    result = []
-    for i, doc in enumerate(cursor, start=1):
-        result.append(doc)
-        update_progbar(pbar, i, total)
-    finish_progbar(pbar)
+    """Return stored trades matching the field and values provided.
 
-    return result
+    If values is a list, return trades matching any value in the list.
+    Default limit=0 returns all matches, or set it to return only top X.
+    Optional start_dt/end_dt restrict when trades opened, including both
+    dates. Leave these unset to retrieve the full trade history.
+    """
+    log.info(f"Retrieving trade records by {field}={values}, limit={limit}, "
+             f"start_dt={start_dt}, end_dt={end_dt}")
+    # Match either one value or any value in a list.
+    query = {field: {"$in": values}} if isinstance(values, list) else {
+        field: values,
+    }
 
-
-def get_trades_by_field_in(field: str,
-                           values: list,
-                           collection: str,
-                           limit=0,
-                           show_progress: bool = False,
-                           ):
-    """Return Trade docs where field is in values, ordered by open_epoch."""
-    c = db[collection]
-    if values is None:
-        values = []
-    if len(values) == 0:
+    # Apply open-date restrictions before fetching records from storage.
+    dates = {}
+    if start_dt is not None:
+        dates["$gte"] = dt_to_epoch(start_dt)
+    if end_dt is not None:
+        dates["$lte"] = dt_to_epoch(end_dt)
+    if (
+        start_dt is not None and end_dt is not None
+        and dates["$gte"] > dates["$lte"]
+    ):
+        log.critical(
+            f"get_trades_by_field: start_dt={start_dt} exceeds "
+            f"end_dt={end_dt}"
+        )
+        raise ValueError("Trade start_dt must not exceed end_dt")
+    if dates:
+        # Keep the original field match even when field is open_epoch.
+        query = {"$and": [query, {"open_epoch": dates}]}
+    if isinstance(values, list) and not values:
+        log.info("Returning 0 trade records for an empty value list")
         return []
 
-    query = {field: {"$in": values}}
+    c = db[collection]
     total = c.count_documents(query)
     if limit > 0:
         total = min(total, limit)
     pbar = start_progbar(show_progress, total,
                          f"trade records fetched from {collection}")
+    # Return trades in open-time order, keeping the existing sort behavior.
     cursor = c.find(query).sort(
         "open_epoch", pymongo.ASCENDING
     ).limit(limit)
@@ -987,7 +994,7 @@ def get_trades_by_field_in(field: str,
         result.append(doc)
         update_progbar(pbar, i, total)
     finish_progbar(pbar)
-
+    log.info(f"Returning {len(result)} trade records")
     return result
 
 

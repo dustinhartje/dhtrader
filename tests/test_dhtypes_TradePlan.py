@@ -688,20 +688,20 @@ def test_TradePlan_trade_configurations_required_for_storage():
 @pytest.mark.suppress_stdout
 def test_reconstruct_tradeplan_always_hydrates_by_trade_id(monkeypatch):
     """TradePlan reconstruction should always hydrate trades by trade_id."""
-    ts_id = "TS_PLAN"
+    ts_id = "DELETEME_TS_PLAN"
     t_late = _make_trade("2099-01-02 12:10:00", ts_id)
     t_early = _make_trade("2099-01-02 12:00:00", ts_id)
 
-    def fake_get_trades_by_field_in(field, values, collection, limit=0,
-                                    show_progress=False):
+    def fake_get_trades_by_field(field, values, collection, limit=0,
+                                 show_progress=False):
         assert field == "trade_id"
         assert values == [t_late.trade_id, t_early.trade_id]
         return [t_late, t_early]
 
     monkeypatch.setattr(
         dhstore,
-        "get_trades_by_field_in",
-        fake_get_trades_by_field_in,
+        "get_trades_by_field",
+        fake_get_trades_by_field,
     )
 
     tp_doc = {

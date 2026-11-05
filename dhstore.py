@@ -1516,24 +1516,36 @@ def get_all_trades(collection: str = COLLECTIONS["trades"],
 
 
 def get_trades_by_field(field: str,
-                        value,
+                        values,
                         collection: str = COLLECTIONS["trades"],
                         limit=0,
                         show_progress: bool = False,
+                        *,
+                        start_dt=None,
+                        end_dt=None,
                         ):
-    """Returns Trade() objects matching the field=value provided.
+    """Returns Trade() objects matching the field and values provided.
 
+    If values is a list, return trades matching any value in the list.
     Default limit=0 returns all objects, or set to return only top X.
+    Optional start_dt/end_dt restrict when trades opened, including both
+    dates. Leave these unset to retrieve the full trade history.
     """
     # Retrieve trades from storage
-    log.info(f"Retrieving trades by {field}={value}, "
-             f"limit={limit}")
+    log.info(f"Retrieving trades by {field}={values}, "
+             f"limit={limit}, start_dt={start_dt}, end_dt={end_dt}")
     result = []
+    date_bounds = {}
+    if start_dt is not None:
+        date_bounds["start_dt"] = start_dt
+    if end_dt is not None:
+        date_bounds["end_dt"] = end_dt
     r = dhm.get_trades_by_field(field=field,
-                                value=value,
+                                values=values,
                                 collection=collection,
                                 limit=limit,
                                 show_progress=show_progress,
+                                **date_bounds,
                                 )
     log.info(f"Retrieved {len(r)} trade records")
 
@@ -1547,32 +1559,6 @@ def get_trades_by_field(field: str,
         update_progbar(pbar, i, total)
     finish_progbar(pbar)
     log.info(f"Returning {len(result)} Trade objects")
-
-    return result
-
-
-def get_trades_by_field_in(field: str,
-                           values: list,
-                           collection: str = COLLECTIONS["trades"],
-                           limit=0,
-                           show_progress: bool = False,
-                           ):
-    """Return Trade objects where field is in values."""
-    result = []
-    r = dhm.get_trades_by_field_in(field=field,
-                                   values=values,
-                                   collection=collection,
-                                   limit=limit,
-                                   show_progress=show_progress,
-                                   )
-
-    total = len(r)
-    pbar = start_progbar(show_progress, total,
-                         "Trade objects built")
-    for i, t in enumerate(r, start=1):
-        result.append(reconstruct_trade(t))
-        update_progbar(pbar, i, total)
-    finish_progbar(pbar)
 
     return result
 
@@ -1670,10 +1656,10 @@ def review_trades(symbol: str = "ES",
             all_trades = get_all_trades()
         elif bt_id is not None and ts_id is None:
             all_trades = get_trades_by_field(field="bt_id",
-                                             value=bt_id)
+                                             values=bt_id)
         elif bt_id is None and ts_id is not None:
             all_trades = get_trades_by_field(field="ts_id",
-                                             value=ts_id)
+                                             values=ts_id)
         else:
             raise ValueError("Integrity check supports bt_id or ts_id, not "
                              f"both!  We got ts_id={ts_id} bt_id={bt_id}")
@@ -1998,8 +1984,16 @@ def get_tradeseries_by_field(field: str,
                              limit=0,
                              include_trades: bool = True,
                              show_progress: bool = False,
+                             *,
+                             start_dt=None,
+                             end_dt=None,
                              ):
-    """Returns a list of all TradeSeries matching the bt_id provided."""
+    """Return TradeSeries matching the field and value provided.
+
+    Set include_trades=True to also load the trades for each series.
+    Optional start_dt/end_dt restrict when those trades opened, including
+    both dates. The TradeSeries attributes keep their stored date range.
+    """
     # Retrieve TradeSeries from storage
     log.info(f"Retrieving TradeSeries by {field}={value} with limit={limit} "
              f"and include_trades={include_trades}")
@@ -2015,6 +2009,11 @@ def get_tradeseries_by_field(field: str,
     # Reconstruct TradeSeries objects and optionally load trades
     log.info("Building TradeSeries objects and optionally loading trades")
     total = len(r)
+    date_bounds = {}
+    if start_dt is not None:
+        date_bounds["start_dt"] = start_dt
+    if end_dt is not None:
+        date_bounds["end_dt"] = end_dt
     pbar = start_progbar(show_progress, total,
                          "TradeSeries objects built")
     for i, t in enumerate(r, start=1):
@@ -2022,8 +2021,9 @@ def get_tradeseries_by_field(field: str,
         if include_trades:
             log.info(f"Loading trades for ts_id={ts.ts_id}")
             ts.trades = get_trades_by_field(field="ts_id",
-                                            value=ts.ts_id,
+                                            values=ts.ts_id,
                                             collection=collection_trades,
+                                            **date_bounds,
                                             )
             ts.sort_trades()
         result.append(ts)
@@ -2088,6 +2088,7 @@ def review_tradeseries(symbol: str = "ES",
 
     Optionally filters by bt_id.  Earliest start_dt and latest end_dt
     are returned as strings.  pretty=True returns a formatted string.
+    Integrity checks include all stored Trades, even outside series dates.
     """
     if check_integrity:
         if bt_id is None:
@@ -2107,7 +2108,7 @@ def review_tradeseries(symbol: str = "ES",
         # Loop through all TradeSeries/Trades, noting any issues found
         trade_overlaps = []
         for i, ts in enumerate(all_ts):
-            ts.load_trades()
+            ts.load_trades(start_dt=None, end_dt=None)
             last_trade = None
             last_close_tf = None
             for t in ts.trades:
@@ -2457,7 +2458,7 @@ def reconstruct_tradeplan(tp,
             )
 
     if ts is not None:
-        ts.trades = get_trades_by_field_in(
+        ts.trades = get_trades_by_field(
             field="trade_id",
             values=trade_ids,
             collection=collection_trades,
