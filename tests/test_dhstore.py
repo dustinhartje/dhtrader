@@ -6,6 +6,7 @@ because these have no class to build a dedicated test file for.
 """
 import re
 import logging
+from datetime import datetime, timedelta
 from unittest.mock import Mock
 import pytest
 from dhtrader import (
@@ -37,6 +38,115 @@ import dhtrader.dhmongo as _dhm
 import dhtrader.dhstore as _dhs
 import dhtrader.dhtypes as _dht
 from .conftest import is_valid_uuid
+
+
+@pytest.mark.parametrize("timestamp_kind", ["datetime", "epoch"])
+@pytest.mark.parametrize("advance_during", ["discovery", "query"])
+@pytest.mark.parametrize("write_operation", ["insert", "update"])
+@pytest.mark.parametrize("seconds_after_read", [-1, 0, 1])
+def test_check_integrity_future_datetimes_rechecks_fetched_timestamps(
+        monkeypatch, timestamp_kind, advance_during, write_operation,
+        seconds_after_read):
+    """Allow concurrent current timestamps but still report future ones.
+
+    The clock advances during discovery or the query itself. Inserts and
+    updates must be checked against query completion, not scan start.
+    """
+    scan_start = datetime(2026, 1, 2, 12, 0, 0)
+    read_time = scan_start + timedelta(seconds=3)
+    written_time = read_time + timedelta(seconds=seconds_after_read)
+    field = "updated_dt" if timestamp_kind == "datetime" else "updated_epoch"
+    collection = "DELETEME_temporal_records"
+    clock = Mock()
+    clock.now.return_value = scan_start
+
+    def timestamp(value):
+        return (
+            _dhs.dt_as_str(value) if timestamp_kind == "datetime"
+            else _dhs.dt_to_epoch(value)
+        )
+
+    existing_document = {
+        "_id": "DELETEME_existing_record",
+        "name": "DELETEME_existing_record",
+        field: timestamp(scan_start - timedelta(seconds=1)),
+    }
+    written_document = {
+        "_id": (
+            "DELETEME_inserted_record" if write_operation == "insert"
+            else existing_document["_id"]
+        ),
+        "name": "DELETEME_concurrent_record",
+        field: timestamp(written_time),
+    }
+    documents = [existing_document]
+
+    def write_document():
+        clock.now.return_value = read_time
+        if write_operation == "insert":
+            documents.append(written_document)
+        else:
+            documents[0] = written_document
+
+    def sample_documents(collection, limit):
+        samples = [document.copy() for document in documents[:limit]]
+        if advance_during == "discovery":
+            write_document()
+        return samples
+
+    def read_documents(query, collection):
+        if advance_during == "query":
+            write_document()
+        cutoff = timestamp(scan_start)
+        expected_query = (
+            {"$and": [{field: {"$ne": None}}, {field: {"$gt": cutoff}}]}
+            if timestamp_kind == "datetime" else {field: {"$gt": cutoff}}
+        )
+        assert query == expected_query
+        return [
+            document.copy() for document in documents
+            if document[field] > cutoff
+        ]
+
+    sample = Mock(side_effect=sample_documents)
+    query = Mock(side_effect=read_documents)
+    monkeypatch.setattr(_dhs, "dt", clock)
+    monkeypatch.setattr(
+        _dhs, "list_mongo_collections", Mock(return_value=[collection]),
+    )
+    monkeypatch.setattr(_dhm, "get_all_records_by_collection", sample)
+    monkeypatch.setattr(_dhm, "run_query", query)
+
+    result = _dhs.check_integrity_future_datetimes()
+
+    issues = [{
+        "collection": collection,
+        "field": field,
+        "value": written_document[field],
+        "name": written_document["name"],
+        "_id": written_document["_id"],
+    }] if seconds_after_read > 0 else []
+    assert result == {
+        "status": "ERRORS" if issues else "OK",
+        "total_issues": len(issues),
+        "issues_by_collection": {collection: issues} if issues else {},
+        "detected_fields_by_collection": {
+            collection: {
+                "dt_string_fields": (
+                    [field] if timestamp_kind == "datetime" else []
+                ),
+                "epoch_int_fields": (
+                    [field] if timestamp_kind == "epoch" else []
+                ),
+                "samples_checked": 1,
+            },
+        },
+    }
+    sample.assert_called_once_with(collection=collection, limit=20)
+    assert query.call_count == 1
+    assert existing_document[field] == timestamp(
+        scan_start - timedelta(seconds=1),
+    )
 
 
 @pytest.mark.parametrize("bt_id", [None, "DELETEME_integrity_backtest"])

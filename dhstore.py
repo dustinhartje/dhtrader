@@ -1083,13 +1083,15 @@ def check_integrity_future_datetimes():
 
     Dynamically samples each collection to detect fields containing
     datetime strings (formatted like dt_as_str()) and integer epoch
-    seconds, then checks those fields for values greater than "now".
-    Does not modify any data.
+    seconds. Each query's results are checked against the scan-start time
+    to capture potential violations, which are then rechecked against the
+    post-query completion time so writes during the test are not reported.
 
     Returns:
         dict: Results with keys status, total_issues,
         issues_by_collection, and detected_fields_by_collection.
     """
+    # First capture documents written after this test starts (now_epoch)
     now_epoch = dt_to_epoch(dt.now())
     now_str = dt_as_str(dt_from_epoch(now_epoch))
     issues_by_collection = {}
@@ -1108,9 +1110,12 @@ def check_integrity_future_datetimes():
                 {epoch_field: {"$gt": now_epoch}},
                 collection=coll,
             )
+            # Recheck violations against post-query completion time to filter
+            # out any documents that were written while the test is running.
+            checked_epoch = dt_to_epoch(dt.now())
             for doc in docs:
                 value = doc.get(epoch_field)
-                if not _is_epoch_int(value):
+                if not _is_epoch_int(value) or value <= checked_epoch:
                     continue
                 found.append({
                     "collection": coll,
@@ -1128,9 +1133,13 @@ def check_integrity_future_datetimes():
                 ]},
                 collection=coll,
             )
+            # Use query completion, not the potentially stale scan cutoff.
+            checked_dt = dt.now()
             for doc in docs:
                 value = doc.get(field)
-                if not _is_datetime_string(value):
+                if (
+                        not _is_datetime_string(value)
+                        or dt_as_dt(value) <= checked_dt):
                     continue
                 found.append({
                     "collection": coll,
