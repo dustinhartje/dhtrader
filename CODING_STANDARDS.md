@@ -123,6 +123,40 @@ the whitespace command above. Read-only inspection, tests, linters, and
 validation scripts may use terminal tools; commands that modify files
 must follow the same editing rule.
 
+## Domain object naming
+
+- Names for functions, methods, variables, parameters and test fixtures must
+  identify the concrete domain object involved when its type would otherwise
+  be ambiguous. Role qualifiers such as `source`, `selected`, `refresh` or
+  `result` do not replace object types such as Candle, Trade, TradeSeries,
+  TradePlan, Indicator or IndicatorDataPoint.
+- Distinguish objects from their IDs, metadata and settings where relevant.
+  Prefer `source_tradeseries_ids` to `source_ids`, and
+  `resolve_source_tradeseries_metadata()` to `resolve_sources()`.
+- Specify the profile mechanism wherever profiles are used; profiles for
+  different domain objects or workflows are distinct, not interchangeable
+  meanings of "profile".
+- Apply this rule to new or renamed symbols and their references, including
+  tests, logs, docstrings and comments. Review uncommitted additions for the same
+  omissions; do not expand a naming correction into unrelated committed code.
+- Preserve established public keyword arguments and persisted field names
+  unless their migration is explicitly approved.
+
+## Documentation ownership
+
+- Function and method docstrings must describe only behavior implemented or
+  owned by that function/method: inputs, validation, transformations, returns,
+  side effects, reference/copy semantics and errors.
+- Do not describe caller or workflow behavior as part of a helper's
+  implementation. For example, an IndicatorDataPoint serialization helper must
+  not claim to calculate its parent Indicator or store records when those
+  operations are performed elsewhere.
+- When another helper or document owns detailed rules, reference that
+  authoritative source instead of duplicating its policies. Describing
+  delegation is appropriate; restating independently maintained rules is not.
+- Apply the same ownership principle to related inline comments. Keep useful
+  local contracts and intent rather than removing documentation indiscriminately.
+
 ## Configuration Files Reference
 
 - `.flake8`: Python linting and line-length policy

@@ -28,6 +28,12 @@ remove the conflict.
 - **Markdown files:** trailing whitespace is allowed for formatting/rendering
 - **Line endings:** LF only for all text files
 
+## Naming
+
+- Include concrete domain object types, not just role qualifiers, in new or
+  renamed symbols. Follow
+  [Domain object naming](CODING_STANDARDS.md#domain-object-naming).
+
 ## Agent Tool Restrictions
 
 - **Never use Pylance**, including Pylance MCP tools, refactorings,
@@ -125,6 +131,8 @@ or serialized), verify each item before presenting the code:
 
 ## Logging and Comments
 
+- Follow [Documentation ownership](CODING_STANDARDS.md#documentation-ownership)
+  for function/method docstrings and related inline comments.
 - **`log.critical` before every `raise`**: include function
   name and the triggering value; applies whether the
   exception exits the script or propagates to a caller.

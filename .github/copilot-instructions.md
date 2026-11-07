@@ -9,6 +9,15 @@
 	[CODING_STANDARDS.md](../CODING_STANDARDS.md) for full rules,
 	validation commands, and agent checklists
 
+# Naming
+- Include concrete domain object types, not just role qualifiers, in new or
+	renamed symbols. Follow
+	[Domain object naming](../CODING_STANDARDS.md#domain-object-naming).
+
+# Documentation
+- Follow [Documentation ownership](../CODING_STANDARDS.md#documentation-ownership)
+	for function/method docstrings and related inline comments.
+
 # Running scripts
 - Use `python3` to run Python scripts
 - Use `/env/bin/activate` to activate the virtual environment when appropriate
