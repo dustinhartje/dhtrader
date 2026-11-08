@@ -206,9 +206,17 @@ Use these levels consistently in all Python code:
 
 ### Timing pattern
 
-Capture a start time with `tpc()` immediately before a
-block, then emit a `log_timer()` call at `log.debug` level
-after:
+For timing instrumentation, agents must:
+
+- Name start timestamps `time_<stage>` (`_time_<stage>` for private attributes).
+- Name assigned elapsed durations `elapsed_<stage>` (`_elapsed_<stage>` for
+  private attributes), including accumulated measurements.
+- Keep inline elapsed calculations when no variable is needed; do not introduce
+  an assignment solely to satisfy naming.
+- Preserve checkpoint labels and serialized/API field names in naming-only
+  refactors.
+
+Capture `tpc()` immediately before work and emit `log_timer()` at DEBUG afterward:
 
 ```python
 time_step = tpc()

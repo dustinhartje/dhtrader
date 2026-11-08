@@ -147,8 +147,12 @@ or serialized), verify each item before presenting the code:
 - **`log.debug`** for timing (`log_timer()`), per-item loop
   detail, and test-mode overrides — not visible in normal
   operation.
-- **Timing**: `time_x = tpc()` before, `log_timer(label,
-  tpc() - time_x, ...)` after each meaningful stage.
+- **Timing**: name start timestamps `time_<stage>` and assigned elapsed
+  durations `elapsed_<stage>`, including accumulators. Prefix private attributes
+  with `_time_` / `_elapsed_`. Inline elapsed calculations are valid; do not
+  introduce assignments solely for naming. Use `log_timer()` at DEBUG after
+  meaningful stages. Preserve checkpoint labels and serialized/API field names
+  in naming-only refactors. See [Timing pattern](CODING_STANDARDS.md#timing-pattern).
 - **Inline comments** describe intent, not restatement of
   code; required before every non-obvious block.
 - **No logging in unit tests.**

@@ -13,6 +13,10 @@
 - Include concrete domain object types, not just role qualifiers, in new or
 	renamed symbols. Follow
 	[Domain object naming](../CODING_STANDARDS.md#domain-object-naming).
+- Name timing starts `time_<stage>` and assigned elapsed durations
+	`elapsed_<stage>` (private attributes: `_time_` / `_elapsed_`). Keep inline
+	elapsed calculations; do not introduce assignments solely for naming. Follow
+	[Timing pattern](../CODING_STANDARDS.md#timing-pattern).
 
 # Documentation
 - Follow [Documentation ownership](../CODING_STANDARDS.md#documentation-ownership)

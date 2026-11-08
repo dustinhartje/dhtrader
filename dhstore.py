@@ -1399,7 +1399,7 @@ def check_integrity_orphaned_images(reference_map: dict):
     """
     func = "check_integrity_orphaned_images"
     log.info(f"{func}: starting orphaned image check")
-    time_start = time.perf_counter()
+    time_orphaned_image_check = time.perf_counter()
 
     # Collect all stored image_ids from GridFS metadata.
     bucket = COLLECTIONS["images"]
@@ -1441,9 +1441,11 @@ def check_integrity_orphaned_images(reference_map: dict):
             f"out of {total_images} total"
         )
 
-    elapsed = time.perf_counter() - time_start
+    elapsed_orphaned_image_check = (
+        time.perf_counter() - time_orphaned_image_check
+    )
     log.info(
-        f"{func}: completed in {elapsed:.6f}s; "
+        f"{func}: completed in {elapsed_orphaned_image_check:.6f}s; "
         f"total={total_images} orphaned={orphaned_count}"
     )
 

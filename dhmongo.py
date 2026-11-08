@@ -214,7 +214,7 @@ def verify_database_configuration(
     storage gate.
     """
     log.info("verify_database_configuration: database=%r", database)
-    started = perf_counter()
+    time_verify_configuration = perf_counter()
     _validate_database_configuration(configuration)
     definitions = configuration["databases"]
     if database is not None:
@@ -265,7 +265,7 @@ def verify_database_configuration(
         log.error("verify_database_configuration: issues=%r", issues)
     log.debug(
         "verify_database_configuration: elapsed=%.6fs",
-        perf_counter() - started,
+        perf_counter() - time_verify_configuration,
     )
     log.info(
         "verify_database_configuration: ok=%s, issues=%s",
