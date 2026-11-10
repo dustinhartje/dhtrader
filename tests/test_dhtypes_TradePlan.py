@@ -746,6 +746,58 @@ def test_reconstruct_tradeplan_always_hydrates_by_trade_id(monkeypatch):
     assert tp.tradeseries.trades[1].trade_id == t_late.trade_id
 
 
+@pytest.mark.parametrize("application_data", [
+    None, {}, ["DELETEME_application_item"],
+    {"label": "DELETEME_application_label", "items": [1, 2]},
+])
+def test_TradePlan_additional_fields_survive_storage_and_reconstruction(
+    monkeypatch, application_data,
+):
+    """Generic storage retains application fields without interpreting them."""
+    tradeplan = TradePlan(
+        contracts=1, name="DELETEME_extended_tradeplan",
+        id_slug="DELETEME_extended_tradeplan",
+        cfg_label="DELETEME_extended_config",
+        trade_configurations=[{
+            "trade_type": "DELETEME_trade_type",
+            "ts_id": "DELETEME_extended_series",
+        }],
+    )
+    tradeplan.application_label = "DELETEME_application_label"
+    tradeplan.application_data = application_data
+    stored_tradeplans = []
+
+    def store_tradeplan(document, collection):
+        stored_tradeplans.append(document)
+        return {}
+
+    monkeypatch.setattr(dhstore.dhm, "store_tradeplan", store_tradeplan)
+    store_tradeplans([tradeplan])
+    document = stored_tradeplans[0]
+    assert document["application_label"] == tradeplan.application_label
+    assert document["application_data"] == application_data
+    restored_tradeplan = dhstore.reconstruct_tradeplan(document)
+    assert restored_tradeplan.application_label == tradeplan.application_label
+    assert restored_tradeplan.application_data == application_data
+    assert restored_tradeplan.tp_id == tradeplan.tp_id
+    document["application_label"] = "DELETEME_changed_label"
+    assert tradeplan.application_label == "DELETEME_application_label"
+    assert restored_tradeplan.application_label == tradeplan.application_label
+
+
+def test_TradePlan_without_additional_fields_remains_unextended():
+    """Reconstruction does not invent application fields on plain plans."""
+    document = TradePlan(
+        contracts=1, name="DELETEME_plain_tradeplan",
+        id_slug="DELETEME_plain_tradeplan",
+        cfg_label="DELETEME_plain_config",
+    ).to_clean_dict()
+    tradeplan = dhstore.reconstruct_tradeplan(document)
+    assert not hasattr(tradeplan, "application_label")
+    assert not hasattr(tradeplan, "application_data")
+    assert tradeplan.to_clean_dict() == document
+
+
 # ---------------------------------------------------------------------------
 # Integrity: unique fields
 # ---------------------------------------------------------------------------
