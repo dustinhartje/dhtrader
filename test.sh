@@ -39,6 +39,9 @@ if [ "$FILTER_NOT_SLOW" = true ]; then
 fi
 
 pytest -sv -rA --tb=short --durations=0 --show-capture=stdout "${EXTRA_MARKS[@]}" "${ARGS[@]}"
+PYTEST_EXIT_CODE=$?
 
 ls tests/hide_* &>/dev/null
 test $? -ne 0 || echo "Hidden test files detected (./tests/hide_*.py).  Is this intentional?"
+
+exit "$PYTEST_EXIT_CODE"
