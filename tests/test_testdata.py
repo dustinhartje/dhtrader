@@ -11,10 +11,19 @@ import pytest
 import dhtrader.testdata as testdata_package
 from dhtrader import Backtest, Candle, Trade, TradeSeries, dt_to_epoch
 from dhtrader.testdata import testdata as testdata_module
+from dhtrader.testdata.extract_testdata import extract_testdata
 from dhtrader.testdata.testdata import Extractor, Rebuilder, prepare_for_csv
 
 TESTDATA_DIR = Path(__file__).resolve().parents[1] / "testdata"
 SET1_DIR = TESTDATA_DIR / "set1"
+# Fields regenerated whenever the source objects are recreated in storage
+REGENERATED_TRADE_FIELDS = frozenset({"uniq_id", "trade_id", "trade_id_short",
+                                      "created_dt", "created_epoch"})
+REGENERATED_BACKTEST_FIELDS = frozenset({"_id"})
+# Fields that Rebuilder maps from a stored Backtest into a base Backtest
+REBUILT_BACKTEST_FIELDS = ("start_dt", "end_dt", "timeframe",
+                           "trading_hours", "symbol", "name", "parameters",
+                           "bt_id", "class_name")
 SET1_BOUNCE_BT_ID = "BacktestEMABounce-eth_e1h_9"
 SET1_BOUNCE_TS_ID = "BacktestEMABounce-eth_e1h_9_s80-p160-o0"
 SET1_REJECT_BT_ID = "BacktestEMAReject-eth_e1h_9"
@@ -42,6 +51,36 @@ def _read_json(json_path):
     """Return parsed JSON file contents."""
     with open(json_path) as f:
         return json.load(f)
+
+
+def _assert_records_match(label, actual_records, expected_records,
+                          value_exempt_fields=frozenset(),
+                          dropped_fields=frozenset()):
+    """Assert record lists match, reporting only the first difference.
+
+    value_exempt_fields must exist in both records but their values are
+    not compared.  dropped_fields are ignored entirely.
+    """
+    # Normalize objects the same way extraction writes JSON files
+    actual_records = json.loads(json.dumps(actual_records, default=str))
+    assert len(actual_records) == len(expected_records), (
+        f"{label}: {len(actual_records)} records vs "
+        f"{len(expected_records)} expected")
+    missing = "<missing>"
+    for i, (actual, expected) in enumerate(zip(actual_records,
+                                               expected_records)):
+        actual = {k: v for k, v in actual.items() if k not in dropped_fields}
+        expected = {k: v for k, v in expected.items()
+                    if k not in dropped_fields}
+        diff_keys = sorted(
+            k for k in set(actual) | set(expected)
+            if k not in actual or k not in expected
+            or (k not in value_exempt_fields and actual[k] != expected[k]))
+        if diff_keys:
+            diffs = {k: (actual.get(k, missing), expected.get(k, missing))
+                     for k in diff_keys}
+            pytest.fail(f"{label}[{i}] differs (actual, expected): "
+                        f"{str(diffs)[:2000]}")
 
 
 def _trade_dict(open_dt, direction, ts_id):
@@ -409,3 +448,80 @@ def test_extract_indicator_datapoints_queries_range_and_writes_files(
     header, rows = _read_csv_rows(out_file.replace(".json", ".csv"))
     assert header == list(dps_json[0])
     assert rows[0]["value"] == "1.5"
+
+
+# On-disk set1 drift #######################################################
+
+
+@pytest.mark.storage
+@pytest.mark.historical
+@pytest.mark.suppress_stdout
+def test_set1_fresh_extraction_matches_disk():
+    """Fresh set1 extraction from storage matches the on-disk JSON files,
+    apart from fields regenerated when stored objects are recreated."""
+    metadata = _read_json(TESTDATA_DIR / "set1_metadata.json")
+    extracted = extract_testdata(blob=dict(metadata, name="set1"),
+                                 write=False)
+    _assert_records_match("candles_1m", extracted["candles_1m"],
+                          _read_json(SET1_DIR / "set1_1m_candles.json"))
+    _assert_records_match("candles_e1h", extracted["candles_tf"],
+                          _read_json(SET1_DIR / "set1_e1h_candles.json"))
+    _assert_records_match("ind_dps", extracted["ind_dps"],
+                          _read_json(SET1_DIR / "set1_ind_dps_e1h9ema.json"))
+    disk_trades_by_ts = _read_json(SET1_DIR / "set1_trades.json")
+    assert ([ts["ts_id"] for ts in extracted["trades"]["all_trades"]]
+            == [ts["ts_id"] for ts in disk_trades_by_ts])
+    for fresh_ts, disk_ts in zip(extracted["trades"]["all_trades"],
+                                 disk_trades_by_ts):
+        _assert_records_match(f"trades[{disk_ts['ts_id']}]",
+                              fresh_ts["trades"], disk_ts["trades"],
+                              value_exempt_fields=REGENERATED_TRADE_FIELDS)
+    for direction in ("long", "short"):
+        _assert_records_match(
+            f"trades_{direction}", extracted["trades"][f"{direction}_trades"],
+            _read_json(SET1_DIR / f"set1_trades_{direction}.json"),
+            value_exempt_fields=REGENERATED_TRADE_FIELDS)
+    _assert_records_match("tradeseries", extracted["tradeseries"],
+                          _read_json(SET1_DIR / "set1_tradeseries.json"))
+    _assert_records_match("backtests", extracted["backtests"],
+                          _read_json(SET1_DIR / "set1_backtests.json"),
+                          value_exempt_fields=REGENERATED_BACKTEST_FIELDS)
+
+
+@pytest.mark.historical
+@pytest.mark.suppress_stdout
+def test_set1_rebuild_matches_disk():
+    """Objects rebuilt from set1 files reproduce the on-disk JSON, apart
+    from identities Rebuilder regenerates and extraction-only fields."""
+    rebuilder = Rebuilder()
+    for timeframe in ("1m", "e1h"):
+        candles_file = SET1_DIR / f"set1_{timeframe}_candles.json"
+        candles = rebuilder.rebuild_candles(in_file=candles_file)
+        _assert_records_match(f"candles_{timeframe}",
+                              [c.to_clean_dict() for c in candles],
+                              _read_json(candles_file))
+    for disk_ts in _read_json(SET1_DIR / "set1_trades.json"):
+        trades = rebuilder.rebuild_trades(
+            in_file=SET1_DIR / "set1_trades.json", ts_id=disk_ts["ts_id"])
+        # Rebuilt Trades get new identities; prev_ind_dp is only added
+        # during extraction for analysis convenience
+        _assert_records_match(
+            f"trades[{disk_ts['ts_id']}]",
+            [t.to_clean_dict() for t in trades],
+            sorted(disk_ts["trades"], key=lambda t: t["open_epoch"]),
+            value_exempt_fields={"uniq_id", "trade_id", "trade_id_short"},
+            dropped_fields={"prev_ind_dp"})
+    tradeseries = rebuilder.rebuild_tradeseries(
+        in_file=SET1_DIR / "set1_tradeseries.json")
+    _assert_records_match("tradeseries",
+                          [ts.to_clean_dict() for ts in tradeseries],
+                          _read_json(SET1_DIR / "set1_tradeseries.json"))
+    backtests = rebuilder.rebuild_backtests(
+        in_file=SET1_DIR / "set1_backtests.json")
+    # Rebuilder creates base Backtests, so only its mapped fields compare
+    _assert_records_match(
+        "backtests",
+        [{k: bt.to_clean_dict()[k] for k in REBUILT_BACKTEST_FIELDS}
+         for bt in backtests],
+        [{k: bt[k] for k in REBUILT_BACKTEST_FIELDS}
+         for bt in _read_json(SET1_DIR / "set1_backtests.json")])

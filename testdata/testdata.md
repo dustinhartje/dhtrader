@@ -51,7 +51,12 @@ Extracts real trading data from the MongoDB storage system and saves it as JSON 
 - Creates metadata file with extraction parameters
 - Asserts expected values during extraction to catch changes in source data.  Once defined and extracted, each set should remain static and does not need re-extraction unless it is accidentally altered in some way or one wishes to validate it has not changed in storage.
 
-**Usage**: Run as a script to extract fresh test data from storage.
+**Usage**: Run as a script from the `testdata` directory (`python3 extract_testdata.py`) to extract fresh test data from storage.  Files are written relative to the current directory.
+
+### Drift Tests (`tests/test_testdata.py`)
+
+- `test_set1_fresh_extraction_matches_disk` (storage) - extracts set1 from storage without writing and compares every JSON record to disk.  Only fields regenerated when stored objects are recreated (Trade identities and creation times, Backtest `_id`) are exempt from value comparison; they must still be present.  A failure means stored data has drifted from the files; review it and re-extract if the change is intended.
+- `test_set1_rebuild_matches_disk` - rebuilds candles, Trades, TradeSeries and Backtests from the files with `Rebuilder` and compares them to disk.  Rebuilt Trade identities are exempt, extraction-only `prev_ind_dp` is ignored, and Backtests compare only the fields `Rebuilder` maps.  A failure means object construction or calculated fields changed in code.
 
 ### Data Rebuild Reference (`build_testdata.py`)
 

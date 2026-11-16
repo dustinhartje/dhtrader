@@ -202,11 +202,16 @@ def extract_all(write=False, console_output=False):
     assert t[1]["ts_id"] == "BacktestEMAReject-eth_e1h_9_s80-p160-o40"
     assert len(t[0]["trades"]) == 76
     assert len(t[1]["trades"]) == 54
-    # Confirm first trade as expected, fudging the created_dt that can change
-    trade_created = t[0]["trades"][0]["created_dt"]
-    assert t[0]["trades"][0] == {
+    # Confirm first trade as expected, fudging identity and creation fields
+    # that change whenever the source backtest is rerun and restored
+    first_trade = t[0]["trades"][0]
+    assert first_trade == {
+        'uniq_id': first_trade['uniq_id'],
+        'trade_id': first_trade['trade_id'],
+        'trade_id_short': first_trade['trade_id_short'],
+        'created_epoch': first_trade['created_epoch'],
         'open_dt': '2025-11-30 19:06:00', 'close_dt': '2025-11-30 19:48:00',
-        'created_dt': trade_created, 'direction': 'long',
+        'created_dt': first_trade['created_dt'], 'direction': 'long',
         'timeframe': 'e1h', 'trading_hours': 'eth', 'entry_price': 6848.25,
         'stop_target': 6828.25, 'prof_target': 6888.25, 'high_price': 6848.25,
         'low_price': 6828.25, 'exit_price': 6828.25, 'stop_ticks': 80,
