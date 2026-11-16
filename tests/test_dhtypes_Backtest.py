@@ -17,8 +17,11 @@ from dhtrader import (
     {"start_dt": "2099-01-02 10:00:00",
      "end_dt": "2099-01-02 11:00:00"},
 ])
+@pytest.mark.parametrize("trade_series_ids", [
+    None, [], ["DELETEME_selected_series"],
+])
 def test_Backtest_load_tradeseries_preserves_metadata_with_date_bounds(
-        monkeypatch, bounds):
+        monkeypatch, bounds, trade_series_ids):
     backtest = create_backtest(bt_id="DELETEME_scoped_backtest")
     series = [
         Mock(ts_id="DELETEME_series_b"), Mock(ts_id="DELETEME_series_a"),
@@ -27,10 +30,17 @@ def test_Backtest_load_tradeseries_preserves_metadata_with_date_bounds(
     monkeypatch.setattr(_dht, "get_tradeseries_by_field", retrieve)
     metadata = backtest.start_dt, backtest.end_dt, backtest.bt_id
 
-    backtest.load_tradeseries(**bounds)
+    backtest.load_tradeseries(
+        **bounds, trade_series_ids=trade_series_ids,
+    )
 
+    expected_filter = (
+        {"trade_series_ids": trade_series_ids}
+        if trade_series_ids else {}
+    )
     retrieve.assert_called_once_with(
-        field="bt_id", value=backtest.bt_id, include_trades=True, **bounds,
+        field="bt_id", value=backtest.bt_id, include_trades=True,
+        **expected_filter, **bounds,
     )
     assert backtest.tradeseries == [series[0], series[1]]
     assert [item.ts_id for item in backtest.tradeseries] == [

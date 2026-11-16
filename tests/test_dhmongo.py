@@ -132,6 +132,41 @@ def test_trade_query_with_empty_value_list_skips_database(monkeypatch):
     collection.find.assert_not_called()
 
 
+@pytest.mark.parametrize("trade_series_ids", [
+    None, [], ["DELETEME_selected_series_a", "DELETEME_selected_series_b"],
+])
+def test_tradeseries_query_applies_optional_id_filter(
+        monkeypatch, trade_series_ids):
+    """Combine Backtest and optional TradeSeries IDs in the Mongo query."""
+    documents = [{"ts_id": "DELETEME_selected_series_a"}]
+    cursor = Mock()
+    cursor.limit.return_value = documents
+    collection = Mock()
+    collection.count_documents.return_value = len(documents)
+    collection.find.return_value = cursor
+    monkeypatch.setattr(_dhm, "db", {"DELETEME_tradeseries": collection})
+
+    result = get_tradeseries_by_field(
+        field="bt_id",
+        value="DELETEME_source_backtest",
+        collection="DELETEME_tradeseries",
+        trade_series_ids=trade_series_ids,
+    )
+
+    backtest_query = {"bt_id": "DELETEME_source_backtest"}
+    expected_query = (
+        {"$and": [
+            backtest_query,
+            {"ts_id": {"$in": trade_series_ids}},
+        ]}
+        if trade_series_ids else backtest_query
+    )
+    assert result == documents
+    collection.count_documents.assert_called_once_with(expected_query)
+    collection.find.assert_called_once_with(expected_query)
+    cursor.limit.assert_called_once_with(0)
+
+
 def test_trade_date_bounds_preserve_an_open_epoch_predicate(monkeypatch):
     epoch = dt_to_epoch("2099-01-02 10:00:00")
     cursor = Mock()

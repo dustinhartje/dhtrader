@@ -2039,12 +2039,15 @@ def get_tradeseries_by_field(field: str,
                              include_trades: bool = True,
                              show_progress: bool = False,
                              *,
+                             trade_series_ids=None,
                              start_dt=None,
                              end_dt=None,
                              ):
     """Return TradeSeries matching the field and value provided.
 
     Set include_trades=True to also load the trades for each series.
+    Optional trade_series_ids restricts the result to those stored IDs.
+    An empty or omitted list does not restrict results.
     Optional start_dt/end_dt restrict when those trades opened, including
     both dates. The TradeSeries attributes keep their stored date range.
     """
@@ -2057,6 +2060,11 @@ def get_tradeseries_by_field(field: str,
                                      collection=collection,
                                      limit=limit,
                                      show_progress=show_progress,
+                                     **(
+                                         {"trade_series_ids":
+                                          trade_series_ids}
+                                         if trade_series_ids else {}
+                                     ),
                                      )
     log.info(f"Retrieved {len(r)} TradeSeries records")
 

@@ -4496,10 +4496,13 @@ class Backtest():
         self.tradeseries.sort(key=lambda t: t.ts_id)
 
     def load_tradeseries(self, include_trades=True, *,
-                         start_dt=None, end_dt=None):
+                         start_dt=None, end_dt=None,
+                         trade_series_ids=None):
         """Load and attach all TradeSeries matching this bt_id from storage.
 
         This will replace any currently attached tradeseries.
+        Optional trade_series_ids restricts the loaded series. An empty or
+        omitted list loads all series for this Backtest.
         Optional dates bound Trade opens inclusively when include_trades=True,
         without changing stored backtest or series date-range metadata.
         """
@@ -4512,6 +4515,10 @@ class Backtest():
             field="bt_id",
             value=self.bt_id,
             include_trades=include_trades,
+            **(
+                {"trade_series_ids": trade_series_ids}
+                if trade_series_ids else {}
+            ),
             **date_bounds,
             )
         self.sort_tradeseries()

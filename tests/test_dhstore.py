@@ -1444,6 +1444,31 @@ def test_stored_id_validation_rejects_missing_or_invalid_values(
     )
 
 
+def test_get_tradeseries_by_field_forwards_trade_series_ids(monkeypatch):
+    """Pass the optional TradeSeries ID restriction to the query layer."""
+    retrieve = Mock(return_value=[{"ts_id": "DELETEME_selected_series"}])
+    rebuilt = Mock()
+    monkeypatch.setattr(_dhm, "get_tradeseries_by_field", retrieve)
+    monkeypatch.setattr(_dhs, "reconstruct_tradeseries", rebuilt)
+
+    result = _dhs.get_tradeseries_by_field(
+        field="bt_id",
+        value="DELETEME_source_backtest",
+        include_trades=False,
+        trade_series_ids=["DELETEME_selected_series"],
+    )
+
+    assert result == [rebuilt.return_value]
+    retrieve.assert_called_once_with(
+        field="bt_id",
+        value="DELETEME_source_backtest",
+        collection=COLLECTIONS["tradeseries"],
+        limit=0,
+        show_progress=False,
+        trade_series_ids=["DELETEME_selected_series"],
+    )
+
+
 @pytest.mark.parametrize("reconstruct_object, record", [
     (
         _dhs.reconstruct_trade,

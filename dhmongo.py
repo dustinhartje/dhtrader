@@ -1124,16 +1124,25 @@ def get_tradeseries_by_field(field: str,
                              collection: str,
                              limit=0,
                              show_progress: bool = False,
+                             trade_series_ids=None,
                              ):
-    """Returns a list of TradeSeries() matching the field=value provided."""
+    """Return TradeSeries records matching field=value and optional IDs.
+
+    An empty or omitted trade_series_ids list does not restrict results.
+    """
     c = db[collection]
-    total = c.count_documents({field: value})
+    query = {field: value}
+    if trade_series_ids:
+        query = {"$and": [
+            query, {"ts_id": {"$in": trade_series_ids}},
+        ]}
+    total = c.count_documents(query)
     if limit > 0:
         total = min(total, limit)
     pbar = start_progbar(show_progress, total,
                          "tradeseries records fetched from "
                          f"{collection}")
-    cursor = c.find({field: value}).limit(limit)
+    cursor = c.find(query).limit(limit)
     result = []
     for i, doc in enumerate(cursor, start=1):
         result.append(doc)
