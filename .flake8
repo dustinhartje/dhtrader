@@ -3,11 +3,11 @@
 max-line-length = 79
 
 # Ignore specific errors:
-# F401: imported module not used in code (handled separately)
 # E402: module level import not at top of file (handled separately)
-extend-ignore = F401,E402
+extend-ignore = E402
 
 # Codes that will cause flake8 to report errors:
+# F401: unused imports (except __init__.py exports)
 # E501: line too long (ENFORCED with max-line-length)
 # W291: trailing whitespace (ENFORCED)
 # W293: blank line contains whitespace (ENFORCED)
