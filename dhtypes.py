@@ -28,7 +28,7 @@ import datetime as dt
 from abc import ABC, abstractmethod
 from bisect import bisect_right
 from collections.abc import Collection, Mapping
-from datetime import timedelta, date
+from datetime import timedelta
 import sys
 import json
 from pathlib import Path
@@ -41,7 +41,7 @@ from .dhcommon import (
     dt_as_dt, dt_as_str, dt_as_time, dt_to_epoch, dt_from_epoch,
     timeframe_delta,
     valid_timeframe, valid_trading_hours, log_say, this_candle_start,
-    check_tf_th_compatibility, start_of_week_date, dict_of_weeks, bot,
+    check_tf_th_compatibility, bot,
     ProgBar, DEFAULT_OBJ_NAME, MARKET_ERAS,
     canonical_session_key, expected_candle_datetimes, next_candle_boundary,
     normalize_list_of_strings, storage_label_for_session_key, new_uuid)

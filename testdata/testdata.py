@@ -7,24 +7,13 @@ class for recreating those objects from the saved files during testing.
 import json
 import csv
 
-try:
-    # When imported as module from dhtrader package
-    from ..dhtypes import Candle
-    from ..dhtypes import Backtest, TradeSeries, Trade
-    from ..dhstore import (
-        get_backtests_by_field, get_trades_by_field, get_candles)
-    from ..dhstore import (
-        get_tradeseries_by_field, get_indicator_datapoints)
-    from ..dhcommon import dt_to_epoch, this_candle_start
-except (ImportError, ValueError):
-    # When run as standalone script with parent added to sys.path
-    from dhtypes import Candle
-    from dhtypes import Backtest, TradeSeries, Trade
-    from dhstore import (
-        get_backtests_by_field, get_trades_by_field, get_candles)
-    from dhstore import (
-        get_tradeseries_by_field, get_indicator_datapoints)
-    from dhcommon import dt_to_epoch, this_candle_start
+from ..dhtypes import Candle
+from ..dhtypes import Backtest, TradeSeries, Trade
+from ..dhstore import (
+    get_backtests_by_field, get_trades_by_field, get_candles)
+from ..dhstore import (
+    get_tradeseries_by_field, get_indicator_datapoints)
+from ..dhcommon import dt_to_epoch, this_candle_start
 
 
 def prepare_for_csv(data_list):
