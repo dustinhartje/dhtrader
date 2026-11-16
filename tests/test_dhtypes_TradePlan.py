@@ -5,6 +5,7 @@ from dhtrader import (
     Trade, TradePlan, TradeSeries,
     dt_as_dt,
     dt_to_epoch,
+    new_uuid,
     get_tradeplans_by_field,
     store_tradeplans,
     delete_tradeplans,
@@ -689,6 +690,7 @@ def test_TradePlan_trade_configurations_required_for_storage():
 def test_reconstruct_tradeplan_always_hydrates_by_trade_id(monkeypatch):
     """TradePlan reconstruction should always hydrate trades by trade_id."""
     ts_id = "DELETEME_TS_PLAN"
+    tradeplan_uniq_id = new_uuid()
     t_late = _make_trade("2099-01-02 12:10:00", ts_id)
     t_early = _make_trade("2099-01-02 12:00:00", ts_id)
 
@@ -707,7 +709,8 @@ def test_reconstruct_tradeplan_always_hydrates_by_trade_id(monkeypatch):
     tp_doc = {
         "contracts": 1,
         "con_fee": 0.0,
-        "tp_id": "TP-1",
+        "tp_id": f"DELETEME_tp_recon_{tradeplan_uniq_id}",
+        "uniq_id": tradeplan_uniq_id,
         "name": "DELETEME_tp_recon",
         "id_slug": "DELETEME_tp_recon_tag",
         "tags": ["x"],
@@ -728,7 +731,7 @@ def test_reconstruct_tradeplan_always_hydrates_by_trade_id(monkeypatch):
             "name": "DELETEME_tp_recon_ts",
             "params_str": "",
             "ts_id": ts_id,
-            "bt_id": "BT-1",
+            "bt_id": "DELETEME_BT_1",
             "trades": ["suppressed"],
             "tags": [],
         },
@@ -737,6 +740,8 @@ def test_reconstruct_tradeplan_always_hydrates_by_trade_id(monkeypatch):
 
     tp = dhstore.reconstruct_tradeplan(tp_doc)
 
+    assert tp.uniq_id == tradeplan_uniq_id
+    assert tp.tp_id == tp_doc["tp_id"]
     assert not hasattr(tp, "trade_ids")
     assert tp.name == "DELETEME_tp_recon"
     assert len(tp.tradeseries.trades) == 2

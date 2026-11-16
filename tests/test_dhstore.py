@@ -1419,3 +1419,147 @@ def test_generic_persistence_wrappers_reject_managed_collections(
     bulk.assert_not_called()
     stream.assert_not_called()
     count.assert_not_called()
+
+
+@pytest.mark.parametrize("record, id_field", [
+    ({}, "ts_id"),
+    ({"ts_id": None}, "ts_id"),
+    ({"ts_id": ""}, "ts_id"),
+    ({"ts_id": "  "}, "ts_id"),
+    ({"ts_id": ["DELETEME_not_a_string"]}, "ts_id"),
+])
+def test_stored_id_validation_rejects_missing_or_invalid_values(
+        caplog, record, id_field):
+    """Malformed persisted identities fail explicitly before reconstruction."""
+    with pytest.raises(ValueError, match="non-empty string"):
+        _dhs._require_stored_id(
+            record, id_field, "TradeSeries",
+            function_name="test_stored_id_validation",
+        )
+
+    assert any(
+        entry.levelno == logging.CRITICAL
+        and "test_stored_id_validation" in entry.message
+        for entry in caplog.records
+    )
+
+
+@pytest.mark.parametrize("reconstruct_object, record", [
+    (
+        _dhs.reconstruct_trade,
+        {"uniq_id": None, "trade_id": "DELETEME_trade"},
+    ),
+    (
+        _dhs.reconstruct_trade,
+        {"uniq_id": "DELETEME_trade", "trade_id": None},
+    ),
+    (
+        _dhs.reconstruct_trade,
+        {"uniq_id": "DELETEME_trade"},
+    ),
+    (_dhs.reconstruct_tradeseries, {"ts_id": None}),
+    (_dhs.reconstruct_tradeseries, {}),
+    (
+        _dhs.reconstruct_tradeplan,
+        {"tp_id": None, "uniq_id": "DELETEME_tradeplan"},
+    ),
+    (
+        _dhs.reconstruct_tradeplan,
+        {"tp_id": "DELETEME_tradeplan"},
+    ),
+])
+def test_stored_object_reconstruction_rejects_missing_ids(
+        reconstruct_object, record):
+    """Stored Trades, TradeSeries, and TradePlans cannot gain new IDs."""
+    with pytest.raises(ValueError, match="non-empty string"):
+        reconstruct_object(record)
+
+
+@pytest.mark.parametrize("id_field", ["image_id", "uniq_id"])
+def test_image_retrieval_rejects_missing_stored_ids(
+        monkeypatch, id_field):
+    metadata = {
+        "image_id": "DELETEME_image_12345678",
+        "uniq_id": "DELETEME_image_uuid",
+    }
+    metadata[id_field] = None
+    retrieve = Mock(return_value=(b"DELETEME_image", metadata))
+    monkeypatch.setattr(_dhm, "get_image_by_id", retrieve)
+
+    with pytest.raises(ValueError, match="non-empty string"):
+        _dhs.get_image_by_id("DELETEME_image_12345678")
+
+    retrieve.assert_called_once()
+
+
+@pytest.mark.parametrize("id_field", ["image_id", "uniq_id"])
+def test_image_metadata_retrieval_rejects_missing_stored_ids(
+        monkeypatch, id_field):
+    metadata = {
+        "image_id": "DELETEME_image_12345678",
+        "uniq_id": "DELETEME_image_uuid",
+    }
+    metadata[id_field] = None
+    retrieve = Mock(return_value=[metadata])
+    monkeypatch.setattr(
+        _dhm, "get_image_metadata_by_field", retrieve,
+    )
+
+    with pytest.raises(ValueError, match="non-empty string"):
+        _dhs.get_images_metadata_by_field("name", "DELETEME_image")
+
+    retrieve.assert_called_once()
+
+
+def test_indicator_retrieval_rejects_missing_stored_id(monkeypatch):
+    retrieve = Mock(return_value=[{"ind_id": None}])
+    monkeypatch.setattr(_dhm, "get_indicator", retrieve)
+
+    with pytest.raises(ValueError, match="non-empty string"):
+        _dhs.get_indicator("DELETEME_indicator")
+
+    retrieve.assert_called_once()
+
+
+def test_named_indicator_retrieval_rejects_missing_stored_id(monkeypatch):
+    retrieve = Mock(return_value=[{"ind_id": None}])
+    monkeypatch.setattr(_dhm, "get_indicators_by_name", retrieve)
+
+    with pytest.raises(ValueError, match="non-empty string"):
+        _dhs.get_indicators_by_name("DELETEME_indicator")
+
+    retrieve.assert_called_once()
+
+
+def test_indicator_datapoint_retrieval_rejects_missing_indicator_id(
+        monkeypatch):
+    retrieve = Mock(return_value=[{"ind_id": None}])
+    monkeypatch.setattr(_dhm, "get_indicator_datapoints", retrieve)
+
+    with pytest.raises(ValueError, match="non-empty string"):
+        _dhs.get_indicator_datapoints("DELETEME_indicator")
+
+    retrieve.assert_called_once()
+
+
+@pytest.mark.parametrize("lookup", ["all", "by_field"])
+@pytest.mark.parametrize("record", [{"bt_id": None}, {}])
+def test_backtest_retrieval_rejects_missing_stored_id(
+        monkeypatch, lookup, record):
+    retrieve = Mock(return_value=[record])
+    if lookup == "all":
+        monkeypatch.setattr(
+            _dhm, "get_all_records_by_collection", retrieve,
+        )
+    elif lookup == "by_field":
+        monkeypatch.setattr(_dhm, "get_backtests_by_field", retrieve)
+
+    with pytest.raises(ValueError, match="non-empty string"):
+        if lookup == "all":
+            _dhs.get_all_backtests()
+        elif lookup == "by_field":
+            _dhs.get_backtests_by_field(
+                "name", "DELETEME_backtest",
+            )
+
+    retrieve.assert_called_once()

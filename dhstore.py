@@ -65,6 +65,22 @@ log = logging.getLogger("dhstore")
 log.addHandler(logging.NullHandler())
 
 
+def _require_stored_id(record: dict, id_field: str, object_type: str,
+                       *, function_name: str) -> str:
+    """Reject missing or blank stored identity fields before reconstruction."""
+    stored_id = record.get(id_field)
+    if not isinstance(stored_id, str) or not stored_id.strip():
+        log.critical(
+            "%s: invalid stored %s.%s=%r",
+            function_name, object_type, id_field, stored_id,
+        )
+        raise ValueError(
+            f"{function_name}: stored {object_type} {id_field} must be "
+            f"a non-empty string; got {stored_id!r}"
+        )
+    return stored_id
+
+
 ##############################################################################
 # Progress bar helper functions
 def start_progbar(show_progress: bool, total: int,
@@ -774,6 +790,14 @@ def get_image_by_id(
     data, meta_dict = dhm.get_image_by_id(
         image_id=image_id, bucket=bucket
     )
+    _require_stored_id(
+        meta_dict, "image_id", "StoredImage",
+        function_name="get_image_by_id",
+    )
+    _require_stored_id(
+        meta_dict, "uniq_id", "StoredImage",
+        function_name="get_image_by_id",
+    )
     stored_image = StoredImage.from_dict(meta_dict)
     log.info(
         f"get_image_by_id: returned {len(data)} bytes "
@@ -812,6 +836,15 @@ def get_images_metadata_by_field(
     metadata_list = dhm.get_image_metadata_by_field(
         field=field, value=value, bucket=bucket
     )
+    for metadata in metadata_list:
+        _require_stored_id(
+            metadata, "image_id", "StoredImage",
+            function_name="get_images_metadata_by_field",
+        )
+        _require_stored_id(
+            metadata, "uniq_id", "StoredImage",
+            function_name="get_images_metadata_by_field",
+        )
     results = [StoredImage.from_dict(m) for m in metadata_list]
     log.info(
         f"get_images_metadata_by_field: returning {len(results)} "
@@ -1466,6 +1499,12 @@ def reconstruct_trade(t):
     Primarily used by other functions to convert results retrieved from
     storage.
     """
+    _require_stored_id(
+        t, "uniq_id", "Trade", function_name="reconstruct_trade",
+    )
+    _require_stored_id(
+        t, "trade_id", "Trade", function_name="reconstruct_trade",
+    )
     close_dt = t["close_dt"]
     # Trade() expects a close_dt during initialization; rebuild unclosed
     # trades using open_dt first, then restore unclosed state.
@@ -1954,6 +1993,10 @@ def reconstruct_tradeseries(ts):
     Primarily used by other functions to convert results retrieved from
     storage.
     """
+    _require_stored_id(
+        ts, "ts_id", "TradeSeries",
+        function_name="reconstruct_tradeseries",
+    )
     return TradeSeries(start_dt=ts["start_dt"],
                        end_dt=ts["end_dt"],
                        timeframe=ts["timeframe"],
@@ -2235,9 +2278,15 @@ def get_all_backtests(collection: str = COLLECTIONS["backtests"],
     meant to be subclassed, dicts are returned so subclass implementations
     can convert them into their specific object types as needed.
     """
-    return dhm.get_all_records_by_collection(collection=collection,
-                                             limit=limit,
-                                             show_progress=show_progress)
+    backtest_documents = dhm.get_all_records_by_collection(
+        collection=collection, limit=limit, show_progress=show_progress,
+    )
+    for backtest_document in backtest_documents:
+        _require_stored_id(
+            backtest_document, "bt_id", "Backtest",
+            function_name="get_all_backtests",
+        )
+    return backtest_documents
 
 
 def get_backtests_by_field(field: str,
@@ -2258,6 +2307,11 @@ def get_backtests_by_field(field: str,
                                         limit=limit,
                                         show_progress=show_progress,
                                         )
+    for backtest_document in result:
+        _require_stored_id(
+            backtest_document, "bt_id", "Backtest",
+            function_name="get_backtests_by_field",
+        )
 
     return result
 
@@ -2452,6 +2506,12 @@ def reconstruct_tradeplan(tp,
     Reconstructs using constructor fields first, then reattaches any
     remaining stored keys via setattr to preserve post-init state.
     """
+    _require_stored_id(
+        tp, "tp_id", "TradePlan", function_name="reconstruct_tradeplan",
+    )
+    _require_stored_id(
+        tp, "uniq_id", "TradePlan", function_name="reconstruct_tradeplan",
+    )
     raw_ts = tp.get("tradeseries")
     ts = None
     if isinstance(raw_ts, dict):
@@ -2708,6 +2768,9 @@ def get_indicator(ind_id: str,
     except IndexError:
         return None
 
+    _require_stored_id(
+        i, "ind_id", "Indicator", function_name="get_indicator",
+    )
     # The stored class_name attribute tells us which object class to return
     if i["class_name"] == "IndicatorSMA":
         result = IndicatorSMA(description=i["description"],
@@ -2797,6 +2860,10 @@ def get_indicator_datapoints(ind_id: str,
     pbar = start_progbar(show_progress, total,
                          "IndicatorDataPoint objects built")
     for i, d in enumerate(working, start=1):
+        _require_stored_id(
+            d, "ind_id", "IndicatorDataPoint",
+            function_name="get_indicator_datapoints",
+        )
         result.append(IndicatorDataPoint(dt=d["dt"],
                                          value=d["value"],
                                          ind_id=d["ind_id"],
@@ -3022,6 +3089,10 @@ def get_indicators_by_name(name: str,
                                           )
     result = []
     for doc in raw_docs:
+        _require_stored_id(
+            doc, "ind_id", "Indicator",
+            function_name="get_indicators_by_name",
+        )
         common = dict(description=doc["description"],
                       timeframe=doc["timeframe"],
                       trading_hours=doc["trading_hours"],
