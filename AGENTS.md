@@ -28,6 +28,14 @@ remove the conflict.
 - **Markdown files:** trailing whitespace is allowed for formatting/rendering
 - **Line endings:** LF only for all text files
 
+## String Interpolation
+
+- Prefer f-strings over percent-style replacement interpolation (`%s`, `%r`,
+  etc.) in new and changed Python code, including logs, exceptions and tests.
+  `str()` and other legitimate string-building alternatives remain valid.
+  Preserve output and intentional templates; avoid unrelated cleanup.
+  Follow [String interpolation](CODING_STANDARDS.md#string-interpolation).
+
 ## Naming
 
 - Include concrete domain object types, not just role qualifiers, in new or

@@ -123,6 +123,26 @@ the whitespace command above. Read-only inspection, tests, linters, and
 validation scripts may use terminal tools; commands that modify files
 must follow the same editing rule.
 
+## String interpolation
+
+- Prefer f-strings for Python value interpolation in new and changed code,
+  including logging calls, exception messages and tests. Avoid percent-style
+  replacement interpolation (`%s`, `%r`, etc.), including logging's
+  template/argument style.
+- `str(value)` is valid when a string conversion is needed. Other legitimate
+  string-building alternatives are also acceptable when appropriate; do not
+  replace them solely to force an f-string.
+- When changing existing interpolation, preserve rendered text, `!s`/`!r`
+  conversions, numeric precision, escaping and expression evaluation order.
+  Preserve logging levels, context and guards; keep expensive DEBUG-only
+  formatting inside the existing enabled-level guard.
+- Preserve intentional templates and protocol syntax, including logging
+  formatter mappings, datetime directives and parameterized-query
+  placeholders. Numeric modulo, collection concatenation and sequence joins
+  are not value interpolation.
+- Keep conversions scoped to the code being changed; this preference does not
+  authorize unrelated repository-wide cleanup.
+
 ## Domain object naming
 
 - Names for functions, methods, variables, parameters and test fixtures must

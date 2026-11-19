@@ -9,6 +9,13 @@
 	[CODING_STANDARDS.md](../CODING_STANDARDS.md) for full rules,
 	validation commands, and agent checklists
 
+# String interpolation
+- Prefer f-strings over percent-style replacement interpolation (`%s`, `%r`,
+	etc.) in new and changed Python code, including logs, exceptions and tests.
+	`str()` and other legitimate string-building alternatives remain valid.
+	Preserve output and intentional templates; avoid unrelated cleanup. Follow
+	[String interpolation](../CODING_STANDARDS.md#string-interpolation).
+
 # Naming
 - Include concrete domain object types, not just role qualifiers, in new or
 	renamed symbols. Follow
