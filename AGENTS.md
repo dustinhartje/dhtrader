@@ -36,6 +36,13 @@ remove the conflict.
   Preserve output and intentional templates; avoid unrelated cleanup.
   Follow [String interpolation](CODING_STANDARDS.md#string-interpolation).
 
+## Datetime Conventions
+
+- Trust provided datetimes to share common source locale/timezone settings.
+  dhtrader does not know those settings; do not infer or correct differences.
+  Use `dt_as_*` helpers for representation. Follow
+  [Datetime conventions](CODING_STANDARDS.md#datetime-conventions).
+
 ## Naming
 
 - Include concrete domain object types, not just role qualifiers, in new or

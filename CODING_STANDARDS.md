@@ -143,6 +143,18 @@ must follow the same editing rule.
 - Keep conversions scoped to the code being changed; this preference does not
   authorize unrelated repository-wide cleanup.
 
+## Datetime conventions
+
+- Assume all provided datetimes come from a common source with consistent
+  locale/timezone settings throughout the supplied data.
+- dhtrader does not know the source or the particular locale/timezone settings.
+  The datetime format may not encode this metadata; do not infer or hardcode it.
+- Trust the common-source contract. Do not add code to detect, correct or
+  accommodate differing locales/timezones in the supplied data.
+- Use the existing `dt_as_*` helpers for conversions and consistent
+  representation. These helpers standardize formats; they do not automatically
+  attach timezone information or convert values between timezones.
+
 ## Domain object naming
 
 - Names for functions, methods, variables, parameters and test fixtures must

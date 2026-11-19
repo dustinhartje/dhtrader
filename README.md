@@ -23,6 +23,15 @@ arbitraged out quickly.
 
 See [docs index](/docs/index.html) for class details
 
+## Datetime assumptions
+
+Provided datetimes are assumed to share a common source, locale and timezone,
+whether or not those settings appear in the data format. dhtrader does not know
+the provider or settings and trusts data consistency; it does not try to correct
+or accommodate mixed locales/timezones. The `dt_as_*` helpers standardize
+representations, not timezones. See
+[Datetime conventions](CODING_STANDARDS.md#datetime-conventions).
+
 ## Core Domain Classes (`dhtypes.py`)
 
 The framework's domain model is defined in `dhtypes.py`. These classes are the
