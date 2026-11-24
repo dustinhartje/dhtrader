@@ -51,10 +51,14 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pymongo</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pymongo</span><span class="w"> </span><span class="kn">import</span> <span class="n">ReplaceOne</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pymongo.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">BulkWriteError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pymongo.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">BulkWriteError</span><span class="p">,</span> <span class="n">PyMongoError</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">time</span><span class="w"> </span><span class="kn">import</span> <span class="n">perf_counter</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dotenv</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_dotenv</span><span class="p">,</span> <span class="n">find_dotenv</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span> <span class="k">as</span> <span class="n">dt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Generator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">bson</span><span class="w"> </span><span class="kn">import</span> <span class="n">BSON</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">bson.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">BSONError</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.dhcommon</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">ProgBar</span><span class="p">,</span> <span class="n">prompt_yn</span><span class="p">,</span> <span class="n">valid_timeframe</span><span class="p">,</span> <span class="n">dt_as_str</span><span class="p">,</span> <span class="n">dt_from_epoch</span><span class="p">,</span>
     <span class="n">dt_to_epoch</span><span class="p">)</span>
@@ -116,6 +120,194 @@
 
 <span class="c1">##############################################################################</span>
 <span class="c1"># Non-class specific functions</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_configuration_error</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Reject an invalid configuration before contacting MongoDB.&quot;&quot;&quot;</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+        <span class="s2">&quot;verify_database_configuration: </span><span class="si">%s</span><span class="s2">; value=</span><span class="si">%r</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">value</span>
+    <span class="p">)</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;verify_database_configuration: </span><span class="si">{</span><span class="n">message</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_validate_database_configuration</span><span class="p">(</span><span class="n">configuration</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check the structure of a MongoDB configuration supplied by the caller.</span>
+
+<span class="sd">    ``configuration`` is a dictionary loaded by the application from its</span>
+<span class="sd">    provisioning JSON file, which describes the expected databases,</span>
+<span class="sd">    collections, and indexes. This function does not locate or load files.</span>
+<span class="sd">    See README.md, &quot;Checking Your MongoDB Setup&quot;, for the configuration</span>
+<span class="sd">    format, examples, and supported settings.</span>
+
+<span class="sd">    Return None when valid; otherwise log the problem and raise ValueError.</span>
+<span class="sd">    This function only validates the dictionary: it makes no MongoDB</span>
+<span class="sd">    requests, checks no existing storage, and changes no data.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">require_shape</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">fields</span><span class="p">,</span> <span class="n">location</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Require exactly the documented fields at one configuration level.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">set</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">set</span><span class="p">(</span><span class="n">fields</span><span class="p">):</span>
+            <span class="n">_configuration_error</span><span class="p">(</span><span class="n">location</span><span class="p">,</span> <span class="s2">&quot;invalid configuration fields&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">require_names</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">location</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Require a nonempty mapping of named databases or collections.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">value</span><span class="p">:</span>
+            <span class="n">_configuration_error</span><span class="p">(</span><span class="n">location</span><span class="p">,</span> <span class="s2">&quot;expected named entries&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">value</span><span class="p">:</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">name</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+                <span class="ow">or</span> <span class="s2">&quot;</span><span class="se">\0</span><span class="s2">&quot;</span> <span class="ow">in</span> <span class="n">name</span>
+            <span class="p">):</span>
+                <span class="n">_configuration_error</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;invalid name at </span><span class="si">{</span><span class="n">location</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">require_shape</span><span class="p">(</span><span class="n">configuration</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;schema_version&quot;</span><span class="p">,</span> <span class="s2">&quot;databases&quot;</span><span class="p">),</span> <span class="s2">&quot;root&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span>
+        <span class="nb">type</span><span class="p">(</span><span class="n">configuration</span><span class="p">[</span><span class="s2">&quot;schema_version&quot;</span><span class="p">])</span> <span class="ow">is</span> <span class="ow">not</span> <span class="nb">int</span>
+        <span class="ow">or</span> <span class="n">configuration</span><span class="p">[</span><span class="s2">&quot;schema_version&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">1</span>
+    <span class="p">):</span>
+        <span class="n">_configuration_error</span><span class="p">(</span>
+            <span class="n">configuration</span><span class="p">[</span><span class="s2">&quot;schema_version&quot;</span><span class="p">],</span> <span class="s2">&quot;unsupported schema_version&quot;</span>
+        <span class="p">)</span>
+    <span class="n">require_names</span><span class="p">(</span><span class="n">configuration</span><span class="p">[</span><span class="s2">&quot;databases&quot;</span><span class="p">],</span> <span class="s2">&quot;databases&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">database</span><span class="p">,</span> <span class="n">definition</span> <span class="ow">in</span> <span class="n">configuration</span><span class="p">[</span><span class="s2">&quot;databases&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="nb">any</span><span class="p">(</span><span class="n">character</span> <span class="ow">in</span> <span class="n">database</span> <span class="k">for</span> <span class="n">character</span> <span class="ow">in</span> <span class="s1">&#39; /</span><span class="se">\\</span><span class="s1">.&quot;$*&lt;&gt;:|?&#39;</span><span class="p">)</span>
+            <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">database</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf8&quot;</span><span class="p">))</span> <span class="o">&gt;=</span> <span class="mi">64</span>
+        <span class="p">):</span>
+            <span class="n">_configuration_error</span><span class="p">(</span><span class="n">database</span><span class="p">,</span> <span class="s2">&quot;invalid Mongo database name&quot;</span><span class="p">)</span>
+        <span class="n">require_shape</span><span class="p">(</span><span class="n">definition</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;collections&quot;</span><span class="p">,),</span> <span class="n">database</span><span class="p">)</span>
+        <span class="n">require_names</span><span class="p">(</span><span class="n">definition</span><span class="p">[</span><span class="s2">&quot;collections&quot;</span><span class="p">],</span> <span class="n">database</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">collection</span><span class="p">,</span> <span class="n">details</span> <span class="ow">in</span> <span class="n">definition</span><span class="p">[</span><span class="s2">&quot;collections&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">location</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">database</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">collection</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">require_shape</span><span class="p">(</span><span class="n">details</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;indexes&quot;</span><span class="p">,),</span> <span class="n">location</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">details</span><span class="p">[</span><span class="s2">&quot;indexes&quot;</span><span class="p">],</span> <span class="nb">list</span><span class="p">):</span>
+                <span class="n">_configuration_error</span><span class="p">(</span><span class="n">location</span><span class="p">,</span> <span class="s2">&quot;expected index array&quot;</span><span class="p">)</span>
+            <span class="n">seen_indexes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;indexes&quot;</span><span class="p">]:</span>
+                <span class="n">require_shape</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;keys&quot;</span><span class="p">,</span> <span class="s2">&quot;unique&quot;</span><span class="p">),</span> <span class="n">location</span><span class="p">)</span>
+                <span class="k">if</span> <span class="p">(</span>
+                    <span class="nb">type</span><span class="p">(</span><span class="n">index</span><span class="p">[</span><span class="s2">&quot;unique&quot;</span><span class="p">])</span> <span class="ow">is</span> <span class="ow">not</span> <span class="nb">bool</span>
+                    <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">index</span><span class="p">[</span><span class="s2">&quot;keys&quot;</span><span class="p">],</span> <span class="nb">list</span><span class="p">)</span>
+                    <span class="ow">or</span> <span class="ow">not</span> <span class="n">index</span><span class="p">[</span><span class="s2">&quot;keys&quot;</span><span class="p">]</span>
+                <span class="p">):</span>
+                    <span class="n">_configuration_error</span><span class="p">(</span><span class="n">location</span><span class="p">,</span> <span class="s2">&quot;invalid index&quot;</span><span class="p">)</span>
+                <span class="n">fields</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+                <span class="k">for</span> <span class="n">pair</span> <span class="ow">in</span> <span class="n">index</span><span class="p">[</span><span class="s2">&quot;keys&quot;</span><span class="p">]:</span>
+                    <span class="k">if</span> <span class="p">(</span>
+                        <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pair</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">pair</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span>
+                        <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pair</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">str</span><span class="p">)</span>
+                        <span class="ow">or</span> <span class="ow">not</span> <span class="n">pair</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="ow">or</span> <span class="s2">&quot;</span><span class="se">\0</span><span class="s2">&quot;</span> <span class="ow">in</span> <span class="n">pair</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                        <span class="ow">or</span> <span class="p">(</span><span class="n">pair</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">isascii</span><span class="p">()</span> <span class="ow">and</span> <span class="n">pair</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">isdigit</span><span class="p">())</span>
+                        <span class="ow">or</span> <span class="n">pair</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="n">fields</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">pair</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="ow">is</span> <span class="ow">not</span> <span class="nb">int</span>
+                        <span class="ow">or</span> <span class="n">pair</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                    <span class="p">):</span>
+                        <span class="n">_configuration_error</span><span class="p">(</span>
+                            <span class="n">pair</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;invalid ordered index keys at </span><span class="si">{</span><span class="n">location</span><span class="si">}</span><span class="s2">&quot;</span>
+                        <span class="p">)</span>
+                    <span class="n">fields</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">pair</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="n">identity</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">pair</span><span class="p">)</span> <span class="k">for</span> <span class="n">pair</span> <span class="ow">in</span> <span class="n">index</span><span class="p">[</span><span class="s2">&quot;keys&quot;</span><span class="p">])</span>
+                <span class="k">if</span> <span class="n">identity</span> <span class="ow">in</span> <span class="n">seen_indexes</span><span class="p">:</span>
+                    <span class="n">_configuration_error</span><span class="p">(</span><span class="n">location</span><span class="p">,</span> <span class="s2">&quot;duplicate index keys&quot;</span><span class="p">)</span>
+                <span class="n">seen_indexes</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">identity</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_configuration_index_matches</span><span class="p">(</span><span class="n">actual</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">desired</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check whether index settings match the configured requirements.</span>
+
+<span class="sd">    Extra sparse, partial, TTL, collation, or other behavioral options must</span>
+<span class="sd">    not be mistaken for the ordinary index requested by configuration.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ordinary_fields</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;v&quot;</span><span class="p">,</span> <span class="s2">&quot;ns&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="s2">&quot;key&quot;</span><span class="p">,</span> <span class="s2">&quot;unique&quot;</span><span class="p">}</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="p">(</span><span class="n">actual</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;unique&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">)</span> <span class="o">==</span> <span class="n">desired</span><span class="p">[</span><span class="s2">&quot;unique&quot;</span><span class="p">]</span>
+        <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span>
+            <span class="n">field</span> <span class="ow">in</span> <span class="n">ordinary_fields</span>
+            <span class="ow">or</span> <span class="p">(</span><span class="n">field</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;sparse&quot;</span><span class="p">,</span> <span class="s2">&quot;hidden&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">field</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">actual</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+
+
+<div class="viewcode-block" id="verify_database_configuration"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.verify_database_configuration">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">verify_database_configuration</span><span class="p">(</span>
+        <span class="n">configuration</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check Mongo databases, collections and indexes match expectations.</span>
+
+<span class="sd">    The caller loads the JSON configuration; this library owns no deployment</span>
+<span class="sd">    paths or application-specific database/index definitions. Omit database</span>
+<span class="sd">    to inspect all configured databases, or name one configured database.</span>
+<span class="sd">    Uses the environment-selected client without switching the primary db.</span>
+
+<span class="sd">    Return {&quot;ok&quot;: bool, &quot;issues&quot;: list}. Each issue contains database,</span>
+<span class="sd">    collection (or None), ordered index keys (or None), and reason:</span>
+<span class="sd">    missing_database, missing_collection, missing_index, or</span>
+<span class="sd">    index_options_mismatch. Missing parents are reported once rather than</span>
+<span class="sd">    repeating every missing child. Index names and unrelated indexes do not</span>
+<span class="sd">    affect compatibility. No records, collections, or indexes are created.</span>
+
+<span class="sd">    Invalid configuration raises ValueError before any Mongo request.</span>
+<span class="sd">    Connection/permission errors propagate, never becoming a successful</span>
+<span class="sd">    report. A successful inspection is a point-in-time observation, not a</span>
+<span class="sd">    guarantee against subsequent administrative changes or an automatic</span>
+<span class="sd">    storage gate.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;verify_database_configuration: database=</span><span class="si">%r</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">database</span><span class="p">)</span>
+    <span class="n">time_verify_configuration</span> <span class="o">=</span> <span class="n">perf_counter</span><span class="p">()</span>
+    <span class="n">_validate_database_configuration</span><span class="p">(</span><span class="n">configuration</span><span class="p">)</span>
+    <span class="n">definitions</span> <span class="o">=</span> <span class="n">configuration</span><span class="p">[</span><span class="s2">&quot;databases&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">database</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">database</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="n">database</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">definitions</span><span class="p">:</span>
+            <span class="n">_configuration_error</span><span class="p">(</span><span class="n">database</span><span class="p">,</span> <span class="s2">&quot;database not in configuration&quot;</span><span class="p">)</span>
+        <span class="n">definitions</span> <span class="o">=</span> <span class="p">{</span><span class="n">database</span><span class="p">:</span> <span class="n">definitions</span><span class="p">[</span><span class="n">database</span><span class="p">]}</span>
+    <span class="n">issues</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">existing_databases</span> <span class="o">=</span> <span class="n">mc</span><span class="o">.</span><span class="n">list_database_names</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">database_name</span><span class="p">,</span> <span class="n">definition</span> <span class="ow">in</span> <span class="n">definitions</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">database_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">existing_databases</span><span class="p">:</span>
+            <span class="n">issues</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                <span class="s2">&quot;database&quot;</span><span class="p">:</span> <span class="n">database_name</span><span class="p">,</span> <span class="s2">&quot;collection&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="s2">&quot;keys&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;reason&quot;</span><span class="p">:</span> <span class="s2">&quot;missing_database&quot;</span><span class="p">,</span>
+            <span class="p">})</span>
+            <span class="k">continue</span>
+        <span class="n">target</span> <span class="o">=</span> <span class="n">mc</span><span class="p">[</span><span class="n">database_name</span><span class="p">]</span>
+        <span class="n">existing_collections</span> <span class="o">=</span> <span class="n">target</span><span class="o">.</span><span class="n">list_collection_names</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">collection</span><span class="p">,</span> <span class="n">details</span> <span class="ow">in</span> <span class="n">definition</span><span class="p">[</span><span class="s2">&quot;collections&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">collection</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">existing_collections</span><span class="p">:</span>
+                <span class="n">issues</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                    <span class="s2">&quot;database&quot;</span><span class="p">:</span> <span class="n">database_name</span><span class="p">,</span> <span class="s2">&quot;collection&quot;</span><span class="p">:</span> <span class="n">collection</span><span class="p">,</span>
+                    <span class="s2">&quot;keys&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;reason&quot;</span><span class="p">:</span> <span class="s2">&quot;missing_collection&quot;</span><span class="p">,</span>
+                <span class="p">})</span>
+                <span class="k">continue</span>
+            <span class="n">actual_indexes</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">target</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span><span class="o">.</span><span class="n">list_indexes</span><span class="p">())</span>
+            <span class="k">for</span> <span class="n">desired</span> <span class="ow">in</span> <span class="n">details</span><span class="p">[</span><span class="s2">&quot;indexes&quot;</span><span class="p">]:</span>
+                <span class="n">same_keys</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="n">actual</span> <span class="k">for</span> <span class="n">actual</span> <span class="ow">in</span> <span class="n">actual_indexes</span>
+                    <span class="k">if</span> <span class="nb">list</span><span class="p">(</span><span class="n">actual</span><span class="p">[</span><span class="s2">&quot;key&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">())</span> <span class="o">==</span> <span class="p">[</span>
+                        <span class="nb">tuple</span><span class="p">(</span><span class="n">pair</span><span class="p">)</span> <span class="k">for</span> <span class="n">pair</span> <span class="ow">in</span> <span class="n">desired</span><span class="p">[</span><span class="s2">&quot;keys&quot;</span><span class="p">]</span>
+                    <span class="p">]</span>
+                <span class="p">]</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span>
+                    <span class="n">_configuration_index_matches</span><span class="p">(</span><span class="n">actual</span><span class="p">,</span> <span class="n">desired</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">actual</span> <span class="ow">in</span> <span class="n">same_keys</span>
+                <span class="p">):</span>
+                    <span class="n">reason</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="s2">&quot;index_options_mismatch&quot;</span> <span class="k">if</span> <span class="n">same_keys</span>
+                        <span class="k">else</span> <span class="s2">&quot;missing_index&quot;</span>
+                    <span class="p">)</span>
+                    <span class="n">issues</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                        <span class="s2">&quot;database&quot;</span><span class="p">:</span> <span class="n">database_name</span><span class="p">,</span> <span class="s2">&quot;collection&quot;</span><span class="p">:</span> <span class="n">collection</span><span class="p">,</span>
+                        <span class="s2">&quot;keys&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">pair</span><span class="p">[:]</span> <span class="k">for</span> <span class="n">pair</span> <span class="ow">in</span> <span class="n">desired</span><span class="p">[</span><span class="s2">&quot;keys&quot;</span><span class="p">]],</span>
+                        <span class="s2">&quot;reason&quot;</span><span class="p">:</span> <span class="n">reason</span><span class="p">,</span>
+                    <span class="p">})</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;ok&quot;</span><span class="p">:</span> <span class="ow">not</span> <span class="n">issues</span><span class="p">,</span> <span class="s2">&quot;issues&quot;</span><span class="p">:</span> <span class="n">issues</span><span class="p">}</span>
+    <span class="k">if</span> <span class="n">issues</span><span class="p">:</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;verify_database_configuration: issues=</span><span class="si">%r</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">issues</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+        <span class="s2">&quot;verify_database_configuration: elapsed=</span><span class="si">%.6f</span><span class="s2">s&quot;</span><span class="p">,</span>
+        <span class="n">perf_counter</span><span class="p">()</span> <span class="o">-</span> <span class="n">time_verify_configuration</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="s2">&quot;verify_database_configuration: ok=</span><span class="si">%s</span><span class="s2">, issues=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+        <span class="n">result</span><span class="p">[</span><span class="s2">&quot;ok&quot;</span><span class="p">],</span> <span class="nb">len</span><span class="p">(</span><span class="n">issues</span><span class="p">),</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
 <div class="viewcode-block" id="review_database"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.review_database">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">review_database</span><span class="p">():</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Quick function to gather useful information about the state of mongo.&quot;&quot;&quot;</span>
     <span class="n">raw</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="s2">&quot;dbstats&quot;</span><span class="p">)</span>
@@ -216,14 +408,18 @@
 
 <div class="viewcode-block" id="count_records"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.count_records">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">count_records</span><span class="p">(</span><span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                   <span class="n">query</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                  <span class="o">*</span><span class="p">,</span>
+                  <span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                   <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Return count of documents matching query in collection.</span>
 
 <span class="sd">    query defaults to {} to count all documents in the collection.</span>
+<span class="sd">    database defaults to the existing primary database.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">query</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">query</span> <span class="o">=</span> <span class="p">{}</span>
-    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+    <span class="n">target_db</span> <span class="o">=</span> <span class="n">db</span> <span class="k">if</span> <span class="n">database</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">mc</span><span class="p">[</span><span class="n">database</span><span class="p">]</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">target_db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
     <span class="k">return</span> <span class="n">c</span><span class="o">.</span><span class="n">count_documents</span><span class="p">(</span><span class="n">query</span><span class="p">)</span></div>
 
 
@@ -350,6 +546,8 @@
                                   <span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                                   <span class="n">value</span><span class="p">,</span>
                                   <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+                                  <span class="o">*</span><span class="p">,</span>
+                                  <span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                                   <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Return documents matching field==value from collection.</span>
 
@@ -358,11 +556,13 @@
 <span class="sd">        field: Field name to filter on.</span>
 <span class="sd">        value: Value to match.</span>
 <span class="sd">        limit: Maximum documents to return; 0 means no limit.</span>
+<span class="sd">        database: Optional database name on the existing Mongo client.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        list of dicts, insertion order preserved.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+    <span class="n">target_db</span> <span class="o">=</span> <span class="n">db</span> <span class="k">if</span> <span class="n">database</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">mc</span><span class="p">[</span><span class="n">database</span><span class="p">]</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">target_db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
     <span class="n">cursor</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="n">field</span><span class="p">:</span> <span class="n">value</span><span class="p">})</span>
     <span class="k">if</span> <span class="n">limit</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
         <span class="n">cursor</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="n">limit</span><span class="p">)</span>
@@ -391,6 +591,8 @@
 <div class="viewcode-block" id="delete_custom_documents_by_field"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.delete_custom_documents_by_field">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">delete_custom_documents_by_field</span><span class="p">(</span><span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                                      <span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                                      <span class="n">value</span><span class="p">,</span>
+                                     <span class="o">*</span><span class="p">,</span>
+                                     <span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                                      <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete all documents matching field==value from collection.</span>
 
@@ -398,12 +600,167 @@
 <span class="sd">        collection: Target collection name.</span>
 <span class="sd">        field: Field name to match on.</span>
 <span class="sd">        value: Value to match.</span>
+<span class="sd">        database: Optional database name on the existing Mongo client.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        pymongo DeleteResult.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
+    <span class="n">target_db</span> <span class="o">=</span> <span class="n">db</span> <span class="k">if</span> <span class="n">database</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">mc</span><span class="p">[</span><span class="n">database</span><span class="p">]</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">target_db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
     <span class="k">return</span> <span class="n">c</span><span class="o">.</span><span class="n">delete_many</span><span class="p">({</span><span class="n">field</span><span class="p">:</span> <span class="n">value</span><span class="p">})</span></div>
+
+
+<div class="viewcode-block" id="bulk_upsert_documents"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.bulk_upsert_documents">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">bulk_upsert_documents</span><span class="p">(</span>
+        <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">documents</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+        <span class="n">identity_field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Store or replace custom documents using their IDs.</span>
+
+<span class="sd">    Each document must be a BSON-compatible dict with a non-blank string</span>
+<span class="sd">    identity. The input batch is validated completely before any write.</span>
+<span class="sd">    Match existing documents using identity_field then apply replacements.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">documents</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+            <span class="s2">&quot;bulk_upsert_documents: documents must be a list or tuple, &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">documents</span><span class="p">)</span><span class="si">!r}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;documents must be a list or tuple&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">documents</span><span class="p">:</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s2">&quot;bulk_upsert_documents: documents batch is empty&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;documents must be a non-empty batch&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">identity_field</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">identity_field</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+            <span class="s2">&quot;bulk_upsert_documents: invalid identity_field &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">identity_field</span><span class="si">!r}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;identity_field must be a non-blank string&quot;</span><span class="p">)</span>
+
+    <span class="n">operations</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">identities</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">document</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">documents</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">document</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+                <span class="s2">&quot;bulk_upsert_documents: document at index &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2"> is not a dict: </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">document</span><span class="p">)</span><span class="si">!r}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;document at index </span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2"> must be a dict&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">identity</span> <span class="o">=</span> <span class="n">document</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">identity_field</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">identity</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">identity</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+                <span class="s2">&quot;bulk_upsert_documents: document at index &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2"> has invalid identity </span><span class="si">{</span><span class="n">identity</span><span class="si">!r}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;document at index </span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2"> must have a non-blank &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;string </span><span class="si">{</span><span class="n">identity_field</span><span class="si">!r}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">identity</span> <span class="ow">in</span> <span class="n">identities</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+                <span class="s2">&quot;bulk_upsert_documents: duplicate identity &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">identity</span><span class="si">!r}</span><span class="s2"> at index </span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;duplicate identity </span><span class="si">{</span><span class="n">identity</span><span class="si">!r}</span><span class="s2"> in documents&quot;</span>
+            <span class="p">)</span>
+        <span class="n">identities</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">identity</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">BSON</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">document</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="n">BSONError</span><span class="p">,</span> <span class="ne">OverflowError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">)</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+                <span class="s2">&quot;bulk_upsert_documents: document at index &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2"> is not BSON-compatible: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;document at index </span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2"> is not BSON-compatible: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+
+        <span class="n">operations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">ReplaceOne</span><span class="p">({</span><span class="n">identity_field</span><span class="p">:</span> <span class="n">identity</span><span class="p">},</span> <span class="n">document</span><span class="p">,</span> <span class="n">upsert</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="n">target_db</span> <span class="o">=</span> <span class="n">db</span> <span class="k">if</span> <span class="n">database</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">mc</span><span class="p">[</span><span class="n">database</span><span class="p">]</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">target_db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span><span class="o">.</span><span class="n">bulk_write</span><span class="p">(</span>
+            <span class="n">operations</span><span class="p">,</span>
+            <span class="n">ordered</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">except</span> <span class="n">PyMongoError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+            <span class="s2">&quot;bulk_upsert_documents: bulk write failed for &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">collection</span><span class="si">!r}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="k">raise</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">result</span><span class="o">.</span><span class="n">acknowledged</span><span class="p">:</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+            <span class="s2">&quot;bulk_upsert_documents: write acknowledgement missing for &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">collection</span><span class="si">!r}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;bulk write to </span><span class="si">{</span><span class="n">collection</span><span class="si">!r}</span><span class="s2"> was not acknowledged&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">&quot;acknowledged&quot;</span><span class="p">:</span> <span class="n">result</span><span class="o">.</span><span class="n">acknowledged</span><span class="p">,</span>
+        <span class="s2">&quot;attempted_count&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">operations</span><span class="p">),</span>
+        <span class="s2">&quot;matched_count&quot;</span><span class="p">:</span> <span class="n">result</span><span class="o">.</span><span class="n">matched_count</span><span class="p">,</span>
+        <span class="s2">&quot;modified_count&quot;</span><span class="p">:</span> <span class="n">result</span><span class="o">.</span><span class="n">modified_count</span><span class="p">,</span>
+        <span class="s2">&quot;upserted_count&quot;</span><span class="p">:</span> <span class="n">result</span><span class="o">.</span><span class="n">upserted_count</span><span class="p">,</span>
+    <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="iter_custom_documents_by_field"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.iter_custom_documents_by_field">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">iter_custom_documents_by_field</span><span class="p">(</span>
+        <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">value</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1000</span><span class="p">,</span>
+        <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="nb">dict</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a closable iterator of matching custom documents.</span>
+
+<span class="sd">    batch_size bounds driver fetches. limit=0 streams without a total limit.</span>
+<span class="sd">    The Mongo cursor closes on exhaustion, error, or explicit iterator close.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span>
+            <span class="ow">or</span> <span class="n">batch_size</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">):</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+            <span class="s2">&quot;iter_custom_documents_by_field: invalid batch_size &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">batch_size</span><span class="si">!r}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;batch_size must be a positive integer&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">limit</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">limit</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span>
+            <span class="ow">or</span> <span class="n">limit</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">):</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+            <span class="s2">&quot;iter_custom_documents_by_field: invalid limit &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">limit</span><span class="si">!r}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;limit must be a non-negative integer&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_iterate</span><span class="p">():</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Iterate over matching custom documents.&quot;&quot;&quot;</span>
+        <span class="n">cursor</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">target_db</span> <span class="o">=</span> <span class="n">db</span> <span class="k">if</span> <span class="n">database</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">mc</span><span class="p">[</span><span class="n">database</span><span class="p">]</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="n">target_db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="n">field</span><span class="p">:</span> <span class="n">value</span><span class="p">})</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">batch_size</span><span class="p">(</span><span class="n">batch_size</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">limit</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="n">limit</span><span class="p">)</span>
+            <span class="k">yield from</span> <span class="n">cursor</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">cursor</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">cursor</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">_iterate</span><span class="p">()</span></div>
 
 <span class="c1">##############################################################################</span>
 <span class="c1"># GridFS image storage</span>
@@ -614,50 +971,57 @@
 
 
 <div class="viewcode-block" id="get_trades_by_field"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.get_trades_by_field">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_trades_by_field</span><span class="p">(</span><span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-                        <span class="n">value</span><span class="p">,</span>
+                        <span class="n">values</span><span class="p">,</span>
                         <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                         <span class="n">limit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
                         <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                        <span class="o">*</span><span class="p">,</span>
+                        <span class="n">start_dt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                        <span class="n">end_dt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                         <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns &lt;limit&gt; (0 = all) Trade documents matching (field == value).&quot;&quot;&quot;</span>
-    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
-    <span class="n">total</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">count_documents</span><span class="p">({</span><span class="n">field</span><span class="p">:</span> <span class="n">value</span><span class="p">})</span>
-    <span class="k">if</span> <span class="n">limit</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="n">total</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">total</span><span class="p">,</span> <span class="n">limit</span><span class="p">)</span>
-    <span class="n">pbar</span> <span class="o">=</span> <span class="n">start_progbar</span><span class="p">(</span><span class="n">show_progress</span><span class="p">,</span> <span class="n">total</span><span class="p">,</span>
-                         <span class="sa">f</span><span class="s2">&quot;trade records fetched from </span><span class="si">{</span><span class="n">collection</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-    <span class="c1"># Enforce deterministic ordering for callers that depend on trade order.</span>
-    <span class="n">cursor</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="n">field</span><span class="p">:</span> <span class="n">value</span><span class="p">})</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span>
-        <span class="s2">&quot;open_epoch&quot;</span><span class="p">,</span> <span class="n">pymongo</span><span class="o">.</span><span class="n">ASCENDING</span>
-    <span class="p">)</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="n">limit</span><span class="p">)</span>
-    <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">doc</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
-        <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span>
-        <span class="n">update_progbar</span><span class="p">(</span><span class="n">pbar</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">total</span><span class="p">)</span>
-    <span class="n">finish_progbar</span><span class="p">(</span><span class="n">pbar</span><span class="p">)</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return stored trades matching the field and values provided.</span>
 
-    <span class="k">return</span> <span class="n">result</span></div>
+<span class="sd">    If values is a list, return trades matching any value in the list.</span>
+<span class="sd">    Default limit=0 returns all matches, or set it to return only top X.</span>
+<span class="sd">    Optional start_dt/end_dt restrict when trades opened, including both</span>
+<span class="sd">    dates. Leave these unset to retrieve the full trade history.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Retrieving trade records by </span><span class="si">{</span><span class="n">field</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">values</span><span class="si">}</span><span class="s2">, limit=</span><span class="si">{</span><span class="n">limit</span><span class="si">}</span><span class="s2">, &quot;</span>
+             <span class="sa">f</span><span class="s2">&quot;start_dt=</span><span class="si">{</span><span class="n">start_dt</span><span class="si">}</span><span class="s2">, end_dt=</span><span class="si">{</span><span class="n">end_dt</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="c1"># Match either one value or any value in a list.</span>
+    <span class="n">query</span> <span class="o">=</span> <span class="p">{</span><span class="n">field</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;$in&quot;</span><span class="p">:</span> <span class="n">values</span><span class="p">}}</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="n">field</span><span class="p">:</span> <span class="n">values</span><span class="p">,</span>
+    <span class="p">}</span>
 
-
-<div class="viewcode-block" id="get_trades_by_field_in"><a class="viewcode-back" href="../../api/dhtrader.dhmongo.html#dhtrader.dhmongo.get_trades_by_field_in">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_trades_by_field_in</span><span class="p">(</span><span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-                           <span class="n">values</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
-                           <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-                           <span class="n">limit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-                           <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-                           <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return Trade docs where field is in values, ordered by open_epoch.&quot;&quot;&quot;</span>
-    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
-    <span class="k">if</span> <span class="n">values</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">values</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">values</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="c1"># Apply open-date restrictions before fetching records from storage.</span>
+    <span class="n">dates</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="n">start_dt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">dates</span><span class="p">[</span><span class="s2">&quot;$gte&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dt_to_epoch</span><span class="p">(</span><span class="n">start_dt</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">end_dt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">dates</span><span class="p">[</span><span class="s2">&quot;$lte&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dt_to_epoch</span><span class="p">(</span><span class="n">end_dt</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span>
+        <span class="n">start_dt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">end_dt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="ow">and</span> <span class="n">dates</span><span class="p">[</span><span class="s2">&quot;$gte&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">dates</span><span class="p">[</span><span class="s2">&quot;$lte&quot;</span><span class="p">]</span>
+    <span class="p">):</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;get_trades_by_field: start_dt=</span><span class="si">{</span><span class="n">start_dt</span><span class="si">}</span><span class="s2"> exceeds &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;end_dt=</span><span class="si">{</span><span class="n">end_dt</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Trade start_dt must not exceed end_dt&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">dates</span><span class="p">:</span>
+        <span class="c1"># Keep the original field match even when field is open_epoch.</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;$and&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">query</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;open_epoch&quot;</span><span class="p">:</span> <span class="n">dates</span><span class="p">}]}</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">values</span><span class="p">:</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Returning 0 trade records for an empty value list&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="p">[]</span>
 
-    <span class="n">query</span> <span class="o">=</span> <span class="p">{</span><span class="n">field</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;$in&quot;</span><span class="p">:</span> <span class="n">values</span><span class="p">}}</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
     <span class="n">total</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">count_documents</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">limit</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
         <span class="n">total</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">total</span><span class="p">,</span> <span class="n">limit</span><span class="p">)</span>
     <span class="n">pbar</span> <span class="o">=</span> <span class="n">start_progbar</span><span class="p">(</span><span class="n">show_progress</span><span class="p">,</span> <span class="n">total</span><span class="p">,</span>
                          <span class="sa">f</span><span class="s2">&quot;trade records fetched from </span><span class="si">{</span><span class="n">collection</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="c1"># Return trades in open-time order, keeping the existing sort behavior.</span>
     <span class="n">cursor</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span>
         <span class="s2">&quot;open_epoch&quot;</span><span class="p">,</span> <span class="n">pymongo</span><span class="o">.</span><span class="n">ASCENDING</span>
     <span class="p">)</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="n">limit</span><span class="p">)</span>
@@ -666,7 +1030,7 @@
         <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span>
         <span class="n">update_progbar</span><span class="p">(</span><span class="n">pbar</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">total</span><span class="p">)</span>
     <span class="n">finish_progbar</span><span class="p">(</span><span class="n">pbar</span><span class="p">)</span>
-
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Returning </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="si">}</span><span class="s2"> trade records&quot;</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">result</span></div>
 
 
@@ -796,16 +1160,25 @@
                              <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                              <span class="n">limit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
                              <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                             <span class="n">trade_series_ids</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                              <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns a list of TradeSeries() matching the field=value provided.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return TradeSeries records matching field=value and optional IDs.</span>
+
+<span class="sd">    An empty or omitted trade_series_ids list does not restrict results.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">c</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="n">collection</span><span class="p">]</span>
-    <span class="n">total</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">count_documents</span><span class="p">({</span><span class="n">field</span><span class="p">:</span> <span class="n">value</span><span class="p">})</span>
+    <span class="n">query</span> <span class="o">=</span> <span class="p">{</span><span class="n">field</span><span class="p">:</span> <span class="n">value</span><span class="p">}</span>
+    <span class="k">if</span> <span class="n">trade_series_ids</span><span class="p">:</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;$and&quot;</span><span class="p">:</span> <span class="p">[</span>
+            <span class="n">query</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;ts_id&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;$in&quot;</span><span class="p">:</span> <span class="n">trade_series_ids</span><span class="p">}},</span>
+        <span class="p">]}</span>
+    <span class="n">total</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">count_documents</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">limit</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
         <span class="n">total</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">total</span><span class="p">,</span> <span class="n">limit</span><span class="p">)</span>
     <span class="n">pbar</span> <span class="o">=</span> <span class="n">start_progbar</span><span class="p">(</span><span class="n">show_progress</span><span class="p">,</span> <span class="n">total</span><span class="p">,</span>
                          <span class="s2">&quot;tradeseries records fetched from &quot;</span>
                          <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">collection</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-    <span class="n">cursor</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="n">field</span><span class="p">:</span> <span class="n">value</span><span class="p">})</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="n">limit</span><span class="p">)</span>
+    <span class="n">cursor</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="n">limit</span><span class="p">)</span>
     <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">doc</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
         <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span>

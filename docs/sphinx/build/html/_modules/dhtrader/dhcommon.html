@@ -64,7 +64,7 @@
 <span class="sd">including dhstore, dhutil, and dhtypes.</span>
 
 <span class="sd">Terminology: Intraday timeframes are shorter than e1d. Higher timeframes are</span>
-<span class="sd">e1d or longer, including e1d, e1w, and future e1m/e1y timeframes.</span>
+<span class="sd">e1d or longer, including e1d, e1w, and future e1mo/e1y timeframes.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span> <span class="k">as</span> <span class="n">dt</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">timedelta</span><span class="p">,</span> <span class="n">date</span><span class="p">,</span> <span class="n">time</span>
@@ -78,7 +78,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">progressbar</span>
 
 <span class="n">TIMEFRAMES</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;1m&#39;</span><span class="p">,</span> <span class="s1">&#39;5m&#39;</span><span class="p">,</span> <span class="s1">&#39;15m&#39;</span><span class="p">,</span> <span class="s1">&#39;r1h&#39;</span><span class="p">,</span> <span class="s1">&#39;e1h&#39;</span><span class="p">,</span> <span class="s1">&#39;r1d&#39;</span><span class="p">,</span> <span class="s1">&#39;e1d&#39;</span><span class="p">,</span> <span class="s1">&#39;r1w&#39;</span><span class="p">,</span> <span class="s1">&#39;e1w&#39;</span><span class="p">,</span>
-              <span class="s1">&#39;r1mo&#39;</span><span class="p">,</span> <span class="s1">&#39;e1mo&#39;</span><span class="p">]</span>
+              <span class="s1">&#39;r1mo&#39;</span><span class="p">,</span> <span class="s1">&#39;e1mo&#39;</span><span class="p">,</span> <span class="s1">&#39;e1y&#39;</span><span class="p">]</span>
 <span class="n">TRADING_HOURS</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;rth&#39;</span><span class="p">,</span> <span class="s1">&#39;eth&#39;</span><span class="p">]</span>
 <span class="n">TF_TH_MAP</span> <span class="o">=</span> <span class="p">{</span>
     <span class="s2">&quot;1m&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;rth&quot;</span><span class="p">,</span> <span class="s2">&quot;eth&quot;</span><span class="p">],</span>
@@ -91,7 +91,8 @@
     <span class="s2">&quot;r1w&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;rth&quot;</span><span class="p">],</span>
     <span class="s2">&quot;e1w&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;eth&quot;</span><span class="p">],</span>
     <span class="s2">&quot;r1mo&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;rth&quot;</span><span class="p">],</span>
-    <span class="s2">&quot;e1mo&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;eth&quot;</span><span class="p">]</span>
+    <span class="s2">&quot;e1mo&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;eth&quot;</span><span class="p">],</span>
+    <span class="s2">&quot;e1y&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;eth&quot;</span><span class="p">],</span>
     <span class="p">}</span>
 <span class="n">EVENT_CATEGORIES</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Closed&#39;</span><span class="p">,</span> <span class="s1">&#39;Data&#39;</span><span class="p">,</span> <span class="s1">&#39;Unplanned&#39;</span><span class="p">,</span> <span class="s1">&#39;LowVolume&#39;</span><span class="p">,</span> <span class="s1">&#39;Rollover&#39;</span><span class="p">]</span>
 <span class="n">DEFAULT_OBJ_NAME</span> <span class="o">=</span> <span class="s2">&quot;nameless&quot;</span>
@@ -115,6 +116,8 @@
     <span class="s2">&quot;r1w&quot;</span><span class="p">:</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">weeks</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
     <span class="s2">&quot;e1w&quot;</span><span class="p">:</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">weeks</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
 <span class="p">}</span>
+<span class="c1"># Higher timeframes identified by fixed 18:00 canonical session keys</span>
+<span class="n">SESSION_KEY_TIMEFRAMES</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">&quot;e1d&quot;</span><span class="p">,</span> <span class="s2">&quot;e1w&quot;</span><span class="p">,</span> <span class="s2">&quot;e1mo&quot;</span><span class="p">,</span> <span class="s2">&quot;e1y&quot;</span><span class="p">})</span>
 
 <span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;dhcommon&quot;</span><span class="p">)</span>
 <span class="n">log</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">NullHandler</span><span class="p">())</span>
@@ -136,23 +139,29 @@
         <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_stream</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
 
 
-<div class="viewcode-block" id="log_say"><a class="viewcode-back" href="../../api/dhtrader.dhcommon.html#dhtrader.dhcommon.log_say">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">log_say</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="s2">&quot;info&quot;</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Log messages while also printing to console.&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="log_say"><a class="viewcode-back" href="../../api/dhtrader.dhcommon.html#dhtrader.dhcommon.log_say">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">log_say</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="s2">&quot;info&quot;</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Print and log a message, attributing its source to the caller.</span>
+
+<span class="sd">    The logger name remains dhcommon. Function, file, and line metadata</span>
+<span class="sd">    identify the caller instead of this helper. Wrappers can increase</span>
+<span class="sd">    stacklevel to attribute the record to their own caller (2 for one</span>
+<span class="sd">    wrapper), using the same convention as Python logging.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">prefix</span><span class="p">:</span>
         <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">prefix</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">msg</span><span class="si">}</span><span class="s2">&quot;</span>
     <span class="k">if</span> <span class="n">suffix</span><span class="p">:</span>
         <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">msg</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">suffix</span><span class="si">}</span><span class="s2">&quot;</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">level</span> <span class="o">==</span> <span class="s2">&quot;debug&quot;</span><span class="p">:</span>
-        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="n">stacklevel</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">level</span> <span class="o">==</span> <span class="s2">&quot;info&quot;</span><span class="p">:</span>
-        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="n">stacklevel</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">level</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;warn&quot;</span><span class="p">,</span> <span class="s2">&quot;warning&quot;</span><span class="p">]:</span>
-        <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="n">stacklevel</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">level</span> <span class="o">==</span> <span class="s2">&quot;error&quot;</span><span class="p">:</span>
-        <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="n">stacklevel</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">level</span> <span class="o">==</span> <span class="s2">&quot;critical&quot;</span><span class="p">:</span>
-        <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span></div>
+        <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="n">stacklevel</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="OperationTimer"><a class="viewcode-back" href="../../api/dhtrader.dhcommon.html#dhtrader.dhcommon.OperationTimer">[docs]</a><span class="k">class</span><span class="w"> </span><span class="nc">OperationTimer</span><span class="p">():</span>
@@ -390,7 +399,7 @@
         <span class="k">if</span> <span class="n">tf</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;r1h&quot;</span><span class="p">,</span> <span class="s2">&quot;r1d&quot;</span><span class="p">,</span> <span class="s2">&quot;r1w&quot;</span><span class="p">,</span> <span class="s2">&quot;r1mo&quot;</span><span class="p">]:</span>
             <span class="n">result</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="k">if</span> <span class="n">th</span> <span class="o">==</span> <span class="s2">&quot;rth&quot;</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">tf</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;e1h&quot;</span><span class="p">,</span> <span class="s2">&quot;e1d&quot;</span><span class="p">,</span> <span class="s2">&quot;e1w&quot;</span><span class="p">,</span> <span class="s2">&quot;e1mo&quot;</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="n">tf</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;e1h&quot;</span><span class="p">,</span> <span class="s2">&quot;e1d&quot;</span><span class="p">,</span> <span class="s2">&quot;e1w&quot;</span><span class="p">,</span> <span class="s2">&quot;e1mo&quot;</span><span class="p">,</span> <span class="s2">&quot;e1y&quot;</span><span class="p">]:</span>
             <span class="n">result</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="k">if</span> <span class="n">exit</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">result</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;timeframe </span><span class="si">{</span><span class="n">tf</span><span class="si">}</span><span class="s2"> and trading_hours </span><span class="si">{</span><span class="n">th</span><span class="si">}</span><span class="s2"> cannot &quot;</span>
@@ -447,6 +456,20 @@
         <span class="sa">f</span><span class="s2">&quot;Unsupported datetime string format: </span><span class="si">{</span><span class="n">d</span><span class="si">}</span><span class="s2">. Expected &quot;</span>
         <span class="s2">&quot;YYYY-mm-dd HH:MM:SS or shorthand with &#39;-&#39; separators.&quot;</span>
     <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="dt_as_date"><a class="viewcode-back" href="../../api/dhtrader.dhcommon.html#dhtrader.dhcommon.dt_as_date">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">dt_as_date</span><span class="p">(</span><span class="n">d</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a date from a date, datetime, or supported date string.&quot;&quot;&quot;</span>
+    <span class="c1"># If None or already a date object, return it as is.</span>
+    <span class="k">if</span> <span class="n">d</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">date</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">dt</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">d</span>
+    <span class="c1"># If a string only long enough for a date is given, convert to a date obj</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="o">==</span> <span class="mi">10</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">date</span><span class="o">.</span><span class="n">fromisoformat</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+    <span class="c1"># Otherwise assume a full datetime string and convert with dt_as_dt()</span>
+    <span class="k">return</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="n">d</span><span class="p">)</span><span class="o">.</span><span class="n">date</span><span class="p">()</span></div>
 
 
 <div class="viewcode-block" id="dt_as_str"><a class="viewcode-back" href="../../api/dhtrader.dhcommon.html#dhtrader.dhcommon.dt_as_str">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">dt_as_str</span><span class="p">(</span><span class="n">d</span><span class="p">):</span>
@@ -571,7 +594,7 @@
     <span class="k">elif</span> <span class="n">timeframe</span> <span class="o">==</span> <span class="s2">&quot;e1h&quot;</span><span class="p">:</span>
         <span class="k">while</span> <span class="n">this_dt</span><span class="o">.</span><span class="n">minute</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">this_dt</span> <span class="o">=</span> <span class="n">this_dt</span> <span class="o">-</span> <span class="n">min_delta</span>
-    <span class="k">elif</span> <span class="n">timeframe</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;e1d&quot;</span><span class="p">,</span> <span class="s2">&quot;e1w&quot;</span><span class="p">,</span> <span class="s2">&quot;e1m&quot;</span><span class="p">,</span> <span class="s2">&quot;e1y&quot;</span><span class="p">}:</span>
+    <span class="k">elif</span> <span class="n">timeframe</span> <span class="ow">in</span> <span class="n">SESSION_KEY_TIMEFRAMES</span><span class="p">:</span>
         <span class="n">this_dt</span> <span class="o">=</span> <span class="n">canonical_session_key</span><span class="p">(</span><span class="n">this_dt</span><span class="p">,</span> <span class="n">timeframe</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;timeframe: </span><span class="si">{</span><span class="n">timeframe</span><span class="si">}</span><span class="s2"> not supported&quot;</span><span class="p">)</span>
@@ -597,7 +620,7 @@
 
 <span class="sd">    Args:</span>
 <span class="sd">        value: A chart label, session boundary, or timestamp within a period.</span>
-<span class="sd">        timeframe: One of e1d, e1w, e1m, or e1y.</span>
+<span class="sd">        timeframe: One of e1d, e1w, e1mo, or e1y.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">this_dt</span> <span class="o">=</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">microsecond</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">second</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">timeframe</span> <span class="o">==</span> <span class="s2">&quot;e1d&quot;</span><span class="p">:</span>
@@ -617,7 +640,7 @@
             <span class="n">hour</span><span class="o">=</span><span class="mi">18</span><span class="p">,</span>
             <span class="n">minute</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
         <span class="p">)</span>
-    <span class="k">if</span> <span class="n">timeframe</span> <span class="o">==</span> <span class="s2">&quot;e1m&quot;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">timeframe</span> <span class="o">==</span> <span class="s2">&quot;e1mo&quot;</span><span class="p">:</span>
         <span class="c1"># The month label is its first calendar midnight, so its session key</span>
         <span class="c1"># is six hours earlier at 18:00 on the preceding calendar date.</span>
         <span class="n">label_date</span> <span class="o">=</span> <span class="p">(</span><span class="n">this_dt</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">hours</span><span class="o">=</span><span class="mi">6</span><span class="p">))</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
@@ -650,10 +673,10 @@
 
 <span class="sd">    Args:</span>
 <span class="sd">        value: A canonical higher-timeframe session key.</span>
-<span class="sd">        timeframe: One of e1d, e1w, e1m, or e1y.</span>
+<span class="sd">        timeframe: One of e1d, e1w, e1mo, or e1y.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">key</span> <span class="o">=</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">microsecond</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">second</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">timeframe</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;e1d&quot;</span><span class="p">,</span> <span class="s2">&quot;e1w&quot;</span><span class="p">,</span> <span class="s2">&quot;e1m&quot;</span><span class="p">}:</span>
+    <span class="k">if</span> <span class="n">timeframe</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;e1d&quot;</span><span class="p">,</span> <span class="s2">&quot;e1w&quot;</span><span class="p">,</span> <span class="s2">&quot;e1mo&quot;</span><span class="p">}:</span>
         <span class="c1"># These higher-timeframe labels are midnight after the associated</span>
         <span class="c1"># canonical 18:00 session boundary.</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">key</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">hours</span><span class="o">=</span><span class="mi">6</span><span class="p">))</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
@@ -671,13 +694,95 @@
     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported aggregate timeframe: </span><span class="si">{</span><span class="n">timeframe</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
 
 
+<div class="viewcode-block" id="next_candle_boundary"><a class="viewcode-back" href="../../api/dhtrader.dhcommon.html#dhtrader.dhcommon.next_candle_boundary">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">next_candle_boundary</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">timeframe</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the next boundary for a supported candle timeframe.</span>
+
+<span class="sd">    Calendar-boundary handling explicitly targets monthly ``e1mo`` and yearly</span>
+<span class="sd">    ``e1y`` candles. Their next canonical ETH session keys are calculated from</span>
+<span class="sd">    the next calendar month or year, rather than an approximate timedelta.</span>
+<span class="sd">    This preserves correct boundaries across varying month lengths and year</span>
+<span class="sd">    rollovers. Other supported fixed-duration timeframes use their registered</span>
+<span class="sd">    ``TIMEFRAME_DELTAS`` values. The returned boundary is independent of market</span>
+<span class="sd">    closures.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">this_dt</span> <span class="o">=</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">microsecond</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">second</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">timeframe</span> <span class="ow">in</span> <span class="n">TIMEFRAME_DELTAS</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">this_candle_start</span><span class="p">(</span><span class="n">this_dt</span><span class="p">,</span> <span class="n">timeframe</span><span class="p">)</span> <span class="o">+</span> <span class="n">TIMEFRAME_DELTAS</span><span class="p">[</span>
+            <span class="n">timeframe</span>
+        <span class="p">]</span>
+    <span class="k">if</span> <span class="n">timeframe</span> <span class="o">==</span> <span class="s2">&quot;e1mo&quot;</span><span class="p">:</span>
+        <span class="n">label</span> <span class="o">=</span> <span class="n">storage_label_for_session_key</span><span class="p">(</span>
+            <span class="n">canonical_session_key</span><span class="p">(</span><span class="n">this_dt</span><span class="p">,</span> <span class="n">timeframe</span><span class="p">),</span>
+            <span class="n">timeframe</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">label</span><span class="o">.</span><span class="n">month</span> <span class="o">==</span> <span class="mi">12</span><span class="p">:</span>
+            <span class="n">next_label</span> <span class="o">=</span> <span class="n">label</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">year</span><span class="o">=</span><span class="n">label</span><span class="o">.</span><span class="n">year</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">month</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">next_label</span> <span class="o">=</span> <span class="n">label</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">month</span><span class="o">=</span><span class="n">label</span><span class="o">.</span><span class="n">month</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">canonical_session_key</span><span class="p">(</span><span class="n">next_label</span><span class="p">,</span> <span class="n">timeframe</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">timeframe</span> <span class="o">==</span> <span class="s2">&quot;e1y&quot;</span><span class="p">:</span>
+        <span class="n">label</span> <span class="o">=</span> <span class="n">storage_label_for_session_key</span><span class="p">(</span>
+            <span class="n">canonical_session_key</span><span class="p">(</span><span class="n">this_dt</span><span class="p">,</span> <span class="n">timeframe</span><span class="p">),</span>
+            <span class="n">timeframe</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">next_label</span> <span class="o">=</span> <span class="n">label</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">year</span><span class="o">=</span><span class="n">label</span><span class="o">.</span><span class="n">year</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">canonical_session_key</span><span class="p">(</span><span class="n">next_label</span><span class="p">,</span> <span class="n">timeframe</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s2">&quot;next_candle_boundary: unsupported timeframe </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">timeframe</span><span class="p">)</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported aggregate timeframe: </span><span class="si">{</span><span class="n">timeframe</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="previous_candle_boundary"><a class="viewcode-back" href="../../api/dhtrader.dhcommon.html#dhtrader.dhcommon.previous_candle_boundary">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">previous_candle_boundary</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">timeframe</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the previous boundary for a supported candle timeframe.</span>
+
+<span class="sd">    Calendar-boundary handling explicitly targets monthly ``e1mo`` and yearly</span>
+<span class="sd">    ``e1y`` candles. Their prior canonical ETH session keys are calculated from</span>
+<span class="sd">    the prior calendar month or year, rather than an approximate timedelta.</span>
+<span class="sd">    This ensures aggregation can exclude an incomplete current month or year</span>
+<span class="sd">    and remains correct across month/year rollovers. Other supported</span>
+<span class="sd">    fixed-duration timeframes use their registered ``TIMEFRAME_DELTAS`` values.</span>
+<span class="sd">    The returned boundary is independent of market closures.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">this_dt</span> <span class="o">=</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">microsecond</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">second</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">timeframe</span> <span class="ow">in</span> <span class="n">TIMEFRAME_DELTAS</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">this_candle_start</span><span class="p">(</span><span class="n">this_dt</span><span class="p">,</span> <span class="n">timeframe</span><span class="p">)</span> <span class="o">-</span> <span class="n">TIMEFRAME_DELTAS</span><span class="p">[</span>
+            <span class="n">timeframe</span>
+        <span class="p">]</span>
+    <span class="n">label</span> <span class="o">=</span> <span class="n">storage_label_for_session_key</span><span class="p">(</span>
+        <span class="n">canonical_session_key</span><span class="p">(</span><span class="n">this_dt</span><span class="p">,</span> <span class="n">timeframe</span><span class="p">),</span>
+        <span class="n">timeframe</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">timeframe</span> <span class="o">==</span> <span class="s2">&quot;e1mo&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">label</span><span class="o">.</span><span class="n">month</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">previous_label</span> <span class="o">=</span> <span class="n">label</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">year</span><span class="o">=</span><span class="n">label</span><span class="o">.</span><span class="n">year</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">month</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">previous_label</span> <span class="o">=</span> <span class="n">label</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">month</span><span class="o">=</span><span class="n">label</span><span class="o">.</span><span class="n">month</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">canonical_session_key</span><span class="p">(</span><span class="n">previous_label</span><span class="p">,</span> <span class="n">timeframe</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">timeframe</span> <span class="o">==</span> <span class="s2">&quot;e1y&quot;</span><span class="p">:</span>
+        <span class="n">previous_label</span> <span class="o">=</span> <span class="n">label</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">year</span><span class="o">=</span><span class="n">label</span><span class="o">.</span><span class="n">year</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">canonical_session_key</span><span class="p">(</span><span class="n">previous_label</span><span class="p">,</span> <span class="n">timeframe</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+        <span class="s2">&quot;previous_candle_boundary: unsupported timeframe </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+        <span class="n">timeframe</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported aggregate timeframe: </span><span class="si">{</span><span class="n">timeframe</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
 <div class="viewcode-block" id="next_candle_start"><a class="viewcode-back" href="../../api/dhtrader.dhcommon.html#dhtrader.dhcommon.next_candle_start">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">next_candle_start</span><span class="p">(</span><span class="n">dt</span><span class="p">,</span>
                       <span class="n">trading_hours</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                       <span class="n">symbol</span><span class="p">,</span>
                       <span class="n">timeframe</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;1m&quot;</span><span class="p">,</span>
                       <span class="n">events</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                       <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the next valid candle start datetime during open market hours.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the next valid candle start datetime after dt.</span>
+
+<span class="sd">    For intraday timeframes this is the next candle start that falls during</span>
+<span class="sd">    open market hours.</span>
+
+<span class="sd">    For e1d, e1w, e1mo, and e1y this is the canonical session key of the</span>
+<span class="sd">    next bucket containing at least one open minute.  Canonical keys are</span>
+<span class="sd">    fixed 18:00 boundaries that may themselves be closed (weekends,</span>
+<span class="sd">    holidays, late opens), so the key is returned even when the market is</span>
+<span class="sd">    closed at that exact time.  Buckets with no open minutes are skipped.</span>
 
 <span class="sd">    symbol must be a Symbol-like object implementing market_is_open().</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -685,6 +790,14 @@
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;symbol must be a Symbol object, not str&quot;</span><span class="p">)</span>
     <span class="n">valid_trading_hours</span><span class="p">(</span><span class="n">trading_hours</span><span class="p">)</span>
     <span class="n">check_tf_th_compatibility</span><span class="p">(</span><span class="n">tf</span><span class="o">=</span><span class="n">timeframe</span><span class="p">,</span> <span class="n">th</span><span class="o">=</span><span class="n">trading_hours</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">timeframe</span> <span class="ow">in</span> <span class="n">SESSION_KEY_TIMEFRAMES</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_next_session_key_with_open_minute</span><span class="p">(</span>
+            <span class="n">dt</span><span class="o">=</span><span class="n">dt</span><span class="p">,</span>
+            <span class="n">timeframe</span><span class="o">=</span><span class="n">timeframe</span><span class="p">,</span>
+            <span class="n">trading_hours</span><span class="o">=</span><span class="n">trading_hours</span><span class="p">,</span>
+            <span class="n">symbol</span><span class="o">=</span><span class="n">symbol</span><span class="p">,</span>
+            <span class="n">events</span><span class="o">=</span><span class="n">events</span><span class="p">,</span>
+        <span class="p">)</span>
     <span class="n">next_dt</span> <span class="o">=</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="n">dt</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">microsecond</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">second</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
     <span class="n">min_delta</span> <span class="o">=</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
     <span class="c1"># Check if symbol has context-based predicates for efficient lookups</span>
@@ -709,38 +822,9 @@
         <span class="k">elif</span> <span class="n">timeframe</span> <span class="o">==</span> <span class="s2">&quot;e1h&quot;</span><span class="p">:</span>
             <span class="k">while</span> <span class="n">next_dt</span><span class="o">.</span><span class="n">minute</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="n">next_dt</span> <span class="o">=</span> <span class="n">next_dt</span> <span class="o">+</span> <span class="n">min_delta</span>
-        <span class="k">elif</span> <span class="n">timeframe</span> <span class="o">==</span> <span class="s2">&quot;e1d&quot;</span><span class="p">:</span>
-            <span class="c1"># e1d candles start at 18:00:00</span>
-            <span class="c1"># Return the next 18:00:00 after current datetime</span>
-            <span class="k">if</span> <span class="n">next_dt</span><span class="o">.</span><span class="n">hour</span> <span class="o">&lt;</span> <span class="mi">18</span><span class="p">:</span>
-                <span class="c1"># Before 6pm, move to today at 18:00</span>
-                <span class="n">next_dt</span> <span class="o">=</span> <span class="n">next_dt</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
-                    <span class="n">hour</span><span class="o">=</span><span class="mi">18</span><span class="p">,</span> <span class="n">minute</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">second</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">microsecond</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="c1"># At or after 6pm, move to tomorrow at 18:00</span>
-                <span class="n">next_dt</span> <span class="o">=</span> <span class="p">(</span><span class="n">next_dt</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
-                    <span class="n">hour</span><span class="o">=</span><span class="mi">18</span><span class="p">,</span> <span class="n">minute</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">second</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">microsecond</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">timeframe</span> <span class="o">==</span> <span class="s2">&quot;e1w&quot;</span><span class="p">:</span>
-            <span class="c1"># e1w candles start at Sunday 18:00:00</span>
-            <span class="c1"># Return the next Sunday 18:00:00 after current datetime</span>
-            <span class="k">if</span> <span class="n">next_dt</span><span class="o">.</span><span class="n">weekday</span><span class="p">()</span> <span class="o">==</span> <span class="mi">6</span><span class="p">:</span>  <span class="c1"># Sunday</span>
-                <span class="k">if</span> <span class="n">next_dt</span><span class="o">.</span><span class="n">hour</span> <span class="o">&lt;</span> <span class="mi">18</span><span class="p">:</span>
-                    <span class="c1"># Sunday before 6pm, move to Sunday 18:00</span>
-                    <span class="n">next_dt</span> <span class="o">=</span> <span class="n">next_dt</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
-                        <span class="n">hour</span><span class="o">=</span><span class="mi">18</span><span class="p">,</span> <span class="n">minute</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">second</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">microsecond</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="c1"># Sunday at/after 6pm, move to next Sunday 18:00</span>
-                    <span class="n">next_dt</span> <span class="o">=</span> <span class="p">(</span><span class="n">next_dt</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">7</span><span class="p">))</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
-                        <span class="n">hour</span><span class="o">=</span><span class="mi">18</span><span class="p">,</span> <span class="n">minute</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">second</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">microsecond</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="c1"># Not Sunday, find next Sunday</span>
-                <span class="n">days_until_sunday</span> <span class="o">=</span> <span class="p">(</span><span class="mi">6</span> <span class="o">-</span> <span class="n">next_dt</span><span class="o">.</span><span class="n">weekday</span><span class="p">())</span> <span class="o">%</span> <span class="mi">7</span>
-                <span class="k">if</span> <span class="n">days_until_sunday</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                    <span class="n">days_until_sunday</span> <span class="o">=</span> <span class="mi">7</span>
-                <span class="n">next_dt</span> <span class="o">=</span> <span class="p">(</span><span class="n">next_dt</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span>
-                    <span class="n">days</span><span class="o">=</span><span class="n">days_until_sunday</span><span class="p">))</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
-                    <span class="n">hour</span><span class="o">=</span><span class="mi">18</span><span class="p">,</span> <span class="n">minute</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">second</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">microsecond</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
         <span class="k">elif</span> <span class="n">timeframe</span> <span class="o">!=</span> <span class="s2">&quot;1m&quot;</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s2">&quot;next_candle_start: unsupported timeframe </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                         <span class="n">timeframe</span><span class="p">)</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;timeframe: </span><span class="si">{</span><span class="n">timeframe</span><span class="si">}</span><span class="s2"> not supported&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">use_context</span><span class="p">:</span>
             <span class="c1"># Reuse context for 14-day window, rebuilding when moved beyond end</span>
@@ -762,6 +846,134 @@
                                          <span class="p">)</span>
 
     <span class="k">return</span> <span class="n">next_dt</span></div>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_next_session_key_with_open_minute</span><span class="p">(</span><span class="n">dt</span><span class="p">,</span>
+                                       <span class="n">timeframe</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                                       <span class="n">trading_hours</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                                       <span class="n">symbol</span><span class="p">,</span>
+                                       <span class="n">events</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                                       <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the next session key after dt whose bucket has an open minute.</span>
+
+<span class="sd">    The returned key may itself fall on a closed time.  Symbols without</span>
+<span class="sd">    context support fall back to per-minute market_is_open() checks.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">use_context</span> <span class="o">=</span> <span class="nb">all</span><span class="p">([</span>
+        <span class="nb">hasattr</span><span class="p">(</span><span class="n">symbol</span><span class="p">,</span> <span class="s2">&quot;build_market_hours_context&quot;</span><span class="p">),</span>
+        <span class="nb">hasattr</span><span class="p">(</span><span class="n">symbol</span><span class="p">,</span> <span class="s2">&quot;is_open_dt&quot;</span><span class="p">),</span>
+    <span class="p">])</span>
+    <span class="n">key</span> <span class="o">=</span> <span class="n">next_candle_boundary</span><span class="p">(</span><span class="n">this_candle_start</span><span class="p">(</span><span class="n">dt</span><span class="p">,</span> <span class="n">timeframe</span><span class="p">),</span> <span class="n">timeframe</span><span class="p">)</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">bucket_end</span> <span class="o">=</span> <span class="n">next_candle_boundary</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">timeframe</span><span class="p">)</span> <span class="o">-</span> <span class="n">timedelta</span><span class="p">(</span>
+            <span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">use_context</span><span class="p">:</span>
+            <span class="n">context</span> <span class="o">=</span> <span class="n">symbol</span><span class="o">.</span><span class="n">build_market_hours_context</span><span class="p">(</span>
+                <span class="n">trading_hours</span><span class="o">=</span><span class="n">trading_hours</span><span class="p">,</span>
+                <span class="n">events</span><span class="o">=</span><span class="n">events</span><span class="p">,</span>
+                <span class="n">start_dt</span><span class="o">=</span><span class="n">key</span><span class="p">,</span>
+                <span class="n">end_dt</span><span class="o">=</span><span class="n">bucket_end</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">_range_has_open_minute</span><span class="p">(</span><span class="n">start_dt</span><span class="o">=</span><span class="n">key</span><span class="p">,</span>
+                                      <span class="n">end_dt</span><span class="o">=</span><span class="n">bucket_end</span><span class="p">,</span>
+                                      <span class="n">closed_ranges</span><span class="o">=</span><span class="n">context</span><span class="p">[</span><span class="s2">&quot;closed_ranges&quot;</span><span class="p">],</span>
+                                      <span class="p">):</span>
+                <span class="k">return</span> <span class="n">key</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">minute</span> <span class="o">=</span> <span class="n">key</span>
+            <span class="k">while</span> <span class="n">minute</span> <span class="o">&lt;=</span> <span class="n">bucket_end</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">symbol</span><span class="o">.</span><span class="n">market_is_open</span><span class="p">(</span><span class="n">trading_hours</span><span class="o">=</span><span class="n">trading_hours</span><span class="p">,</span>
+                                         <span class="n">target_dt</span><span class="o">=</span><span class="n">minute</span><span class="p">,</span>
+                                         <span class="n">check_closed_events</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                         <span class="n">events</span><span class="o">=</span><span class="n">events</span><span class="p">,</span>
+                                         <span class="p">):</span>
+                    <span class="k">return</span> <span class="n">key</span>
+                <span class="n">minute</span> <span class="o">=</span> <span class="n">minute</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">next_candle_boundary</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">timeframe</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="last_open_minute_in_candle"><a class="viewcode-back" href="../../api/dhtrader.dhcommon.html#dhtrader.dhcommon.last_open_minute_in_candle">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">last_open_minute_in_candle</span><span class="p">(</span><span class="n">candle_start</span><span class="p">,</span>
+                               <span class="n">timeframe</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                               <span class="n">symbol</span><span class="p">,</span>
+                               <span class="n">trading_hours</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                               <span class="n">events</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                               <span class="n">context</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                               <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the last open minute in a candle or None when it has none.</span>
+
+<span class="sd">    Openness is determined by the supplied symbol, trading-hours schedule,</span>
+<span class="sd">    and closure events. ``None`` means the candle contains no open minute and</span>
+<span class="sd">    must not be sealed.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">start_dt</span> <span class="o">=</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="n">candle_start</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">microsecond</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">second</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">end_dt</span> <span class="o">=</span> <span class="n">next_candle_boundary</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">timeframe</span><span class="p">)</span> <span class="o">-</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">context</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="n">symbol</span><span class="o">.</span><span class="n">build_market_hours_context</span><span class="p">(</span>
+            <span class="n">trading_hours</span><span class="o">=</span><span class="n">trading_hours</span><span class="p">,</span>
+            <span class="n">events</span><span class="o">=</span><span class="n">events</span><span class="p">,</span>
+            <span class="n">start_dt</span><span class="o">=</span><span class="n">start_dt</span><span class="p">,</span>
+            <span class="n">end_dt</span><span class="o">=</span><span class="n">end_dt</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="n">candidate_dt</span> <span class="o">=</span> <span class="n">end_dt</span>
+    <span class="k">while</span> <span class="n">candidate_dt</span> <span class="o">&gt;=</span> <span class="n">start_dt</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">symbol</span><span class="o">.</span><span class="n">is_open_dt</span><span class="p">(</span><span class="n">target_dt</span><span class="o">=</span><span class="n">candidate_dt</span><span class="p">,</span> <span class="n">context</span><span class="o">=</span><span class="n">context</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">candidate_dt</span>
+        <span class="n">candidate_dt</span> <span class="o">-=</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="expected_open_minutes_in_candle"><a class="viewcode-back" href="../../api/dhtrader.dhcommon.html#dhtrader.dhcommon.expected_open_minutes_in_candle">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">expected_open_minutes_in_candle</span><span class="p">(</span><span class="n">candle_start</span><span class="p">,</span>
+                                    <span class="n">timeframe</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                                    <span class="n">symbol</span><span class="p">,</span>
+                                    <span class="n">trading_hours</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                                    <span class="n">events</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                                    <span class="n">context</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                                    <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return every open minute expected in a candle, in ascending order.</span>
+
+<span class="sd">    Uses the same symbol, trading-hours, and closure-event openness rules as</span>
+<span class="sd">    ``last_open_minute_in_candle()``. An empty list means the candle has no</span>
+<span class="sd">    open minute.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">start_dt</span> <span class="o">=</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="n">candle_start</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">microsecond</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">second</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">end_dt</span> <span class="o">=</span> <span class="n">next_candle_boundary</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">timeframe</span><span class="p">)</span> <span class="o">-</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">context</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="n">symbol</span><span class="o">.</span><span class="n">build_market_hours_context</span><span class="p">(</span>
+            <span class="n">trading_hours</span><span class="o">=</span><span class="n">trading_hours</span><span class="p">,</span>
+            <span class="n">events</span><span class="o">=</span><span class="n">events</span><span class="p">,</span>
+            <span class="n">start_dt</span><span class="o">=</span><span class="n">start_dt</span><span class="p">,</span>
+            <span class="n">end_dt</span><span class="o">=</span><span class="n">end_dt</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">candidate_dt</span> <span class="o">=</span> <span class="n">start_dt</span>
+    <span class="k">while</span> <span class="n">candidate_dt</span> <span class="o">&lt;=</span> <span class="n">end_dt</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">symbol</span><span class="o">.</span><span class="n">is_open_dt</span><span class="p">(</span><span class="n">target_dt</span><span class="o">=</span><span class="n">candidate_dt</span><span class="p">,</span> <span class="n">context</span><span class="o">=</span><span class="n">context</span><span class="p">):</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">candidate_dt</span><span class="p">)</span>
+        <span class="n">candidate_dt</span> <span class="o">+=</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="candle_is_complete"><a class="viewcode-back" href="../../api/dhtrader.dhcommon.html#dhtrader.dhcommon.candle_is_complete">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">candle_is_complete</span><span class="p">(</span><span class="n">candle_start</span><span class="p">,</span>
+                       <span class="n">timeframe</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                       <span class="n">latest_1m_dt</span><span class="p">,</span>
+                       <span class="n">symbol</span><span class="p">,</span>
+                       <span class="n">trading_hours</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                       <span class="n">events</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                       <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return whether a candle is sealable, not whether its data is valid.</span>
+
+<span class="sd">    True means the latest stored 1m timestamp reaches the candle&#39;s final</span>
+<span class="sd">    expected open minute exactly or later. A candle with no open minutes is</span>
+<span class="sd">    never complete and must not be sealed.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">last_open_dt</span> <span class="o">=</span> <span class="n">last_open_minute_in_candle</span><span class="p">(</span>
+        <span class="n">candle_start</span><span class="o">=</span><span class="n">candle_start</span><span class="p">,</span>
+        <span class="n">timeframe</span><span class="o">=</span><span class="n">timeframe</span><span class="p">,</span>
+        <span class="n">symbol</span><span class="o">=</span><span class="n">symbol</span><span class="p">,</span>
+        <span class="n">trading_hours</span><span class="o">=</span><span class="n">trading_hours</span><span class="p">,</span>
+        <span class="n">events</span><span class="o">=</span><span class="n">events</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">last_open_dt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="n">latest_1m_dt</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">last_open_dt</span></div>
 
 
 <div class="viewcode-block" id="expected_candle_datetimes"><a class="viewcode-back" href="../../api/dhtrader.dhcommon.html#dhtrader.dhcommon.expected_candle_datetimes">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">expected_candle_datetimes</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span>
@@ -786,7 +998,9 @@
 
     <span class="c1"># Determine start and end boundaries to loop through</span>
     <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="n">adder</span> <span class="o">=</span> <span class="n">timeframe_delta</span><span class="p">(</span><span class="n">timeframe</span><span class="p">)</span>
+    <span class="n">calendar_timeframe</span> <span class="o">=</span> <span class="n">timeframe</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;e1mo&quot;</span><span class="p">,</span> <span class="s2">&quot;e1y&quot;</span><span class="p">}</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">calendar_timeframe</span><span class="p">:</span>
+        <span class="n">adder</span> <span class="o">=</span> <span class="n">timeframe_delta</span><span class="p">(</span><span class="n">timeframe</span><span class="p">)</span>
     <span class="n">this</span> <span class="o">=</span> <span class="n">this_candle_start</span><span class="p">(</span><span class="n">dt</span><span class="o">=</span><span class="n">start_dt</span><span class="p">,</span>
                              <span class="n">timeframe</span><span class="o">=</span><span class="n">timeframe</span><span class="p">,</span>
                              <span class="p">)</span>
@@ -804,14 +1018,20 @@
     <span class="c1"># Build one shared context for entire date range for efficient lookups</span>
     <span class="n">context</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="k">if</span> <span class="n">this</span> <span class="o">&lt;=</span> <span class="n">ender</span><span class="p">:</span>
+        <span class="n">context_end</span> <span class="o">=</span> <span class="n">ender</span>
+        <span class="k">if</span> <span class="n">calendar_timeframe</span><span class="p">:</span>
+            <span class="n">last_bucket</span> <span class="o">=</span> <span class="n">this_candle_start</span><span class="p">(</span><span class="n">ender</span><span class="p">,</span> <span class="n">timeframe</span><span class="p">)</span>
+            <span class="n">context_end</span> <span class="o">=</span> <span class="n">next_candle_boundary</span><span class="p">(</span><span class="n">last_bucket</span><span class="p">,</span> <span class="n">timeframe</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span>
+                <span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="p">)</span>
         <span class="n">context</span> <span class="o">=</span> <span class="n">symbol</span><span class="o">.</span><span class="n">build_market_hours_context</span><span class="p">(</span>
             <span class="n">trading_hours</span><span class="o">=</span><span class="n">trading_hours</span><span class="p">,</span>
             <span class="n">events</span><span class="o">=</span><span class="n">closed_events</span><span class="p">,</span>
             <span class="n">start_dt</span><span class="o">=</span><span class="n">this</span><span class="p">,</span>
-            <span class="n">end_dt</span><span class="o">=</span><span class="n">ender</span><span class="p">,</span>
+            <span class="n">end_dt</span><span class="o">=</span><span class="n">context_end</span><span class="p">,</span>
         <span class="p">)</span>
 
-    <span class="k">if</span> <span class="n">show_progress</span> <span class="ow">and</span> <span class="n">this</span> <span class="o">&lt;=</span> <span class="n">ender</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">show_progress</span> <span class="ow">and</span> <span class="n">this</span> <span class="o">&lt;=</span> <span class="n">ender</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">calendar_timeframe</span><span class="p">:</span>
         <span class="n">total</span> <span class="o">=</span> <span class="p">((</span><span class="n">ender</span> <span class="o">-</span> <span class="n">this</span><span class="p">)</span> <span class="o">//</span> <span class="n">adder</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
         <span class="n">pbar</span> <span class="o">=</span> <span class="n">ProgBar</span><span class="p">(</span><span class="n">total</span><span class="o">=</span><span class="n">total</span><span class="p">,</span>
                        <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Expected candle starts calculated&quot;</span><span class="p">)</span>
@@ -823,16 +1043,26 @@
     <span class="c1"># open market hours using shared context</span>
     <span class="k">while</span> <span class="n">this</span> <span class="o">&lt;=</span> <span class="n">ender</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">timeframe</span> <span class="ow">in</span> <span class="n">TIMEFRAMES</span><span class="p">:</span>
-            <span class="c1"># Check each minute in this candle bucket</span>
-            <span class="n">minute</span> <span class="o">=</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="n">this</span><span class="p">)</span>
-            <span class="n">bucket_end</span> <span class="o">=</span> <span class="n">minute</span> <span class="o">+</span> <span class="n">adder</span> <span class="o">-</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-            <span class="n">has_open_minute</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">if</span> <span class="n">calendar_timeframe</span><span class="p">:</span>
+                <span class="n">bucket_end</span> <span class="o">=</span> <span class="n">next_candle_boundary</span><span class="p">(</span><span class="n">this</span><span class="p">,</span> <span class="n">timeframe</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span>
+                    <span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                <span class="p">)</span>
+                <span class="n">has_open_minute</span> <span class="o">=</span> <span class="n">_range_has_open_minute</span><span class="p">(</span>
+                    <span class="n">start_dt</span><span class="o">=</span><span class="n">this</span><span class="p">,</span>
+                    <span class="n">end_dt</span><span class="o">=</span><span class="n">bucket_end</span><span class="p">,</span>
+                    <span class="n">closed_ranges</span><span class="o">=</span><span class="n">context</span><span class="p">[</span><span class="s2">&quot;closed_ranges&quot;</span><span class="p">],</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Check each minute in this candle bucket</span>
+                <span class="n">minute</span> <span class="o">=</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="n">this</span><span class="p">)</span>
+                <span class="n">bucket_end</span> <span class="o">=</span> <span class="n">minute</span> <span class="o">+</span> <span class="n">adder</span> <span class="o">-</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">has_open_minute</span> <span class="o">=</span> <span class="kc">False</span>
 
-            <span class="k">while</span> <span class="n">minute</span> <span class="o">&lt;=</span> <span class="n">bucket_end</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">symbol</span><span class="o">.</span><span class="n">is_open_dt</span><span class="p">(</span><span class="n">target_dt</span><span class="o">=</span><span class="n">minute</span><span class="p">,</span> <span class="n">context</span><span class="o">=</span><span class="n">context</span><span class="p">):</span>
-                    <span class="n">has_open_minute</span> <span class="o">=</span> <span class="kc">True</span>
-                    <span class="k">break</span>
-                <span class="n">minute</span> <span class="o">=</span> <span class="n">minute</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+                <span class="k">while</span> <span class="n">minute</span> <span class="o">&lt;=</span> <span class="n">bucket_end</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">symbol</span><span class="o">.</span><span class="n">is_open_dt</span><span class="p">(</span><span class="n">target_dt</span><span class="o">=</span><span class="n">minute</span><span class="p">,</span> <span class="n">context</span><span class="o">=</span><span class="n">context</span><span class="p">):</span>
+                        <span class="n">has_open_minute</span> <span class="o">=</span> <span class="kc">True</span>
+                        <span class="k">break</span>
+                    <span class="n">minute</span> <span class="o">=</span> <span class="n">minute</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">minutes</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="n">has_open_minute</span><span class="p">:</span>
                 <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">this</span><span class="p">)</span>
@@ -840,12 +1070,32 @@
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;timeframe: </span><span class="si">{</span><span class="n">timeframe</span><span class="si">}</span><span class="s2"> not supported&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">pbar</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">pbar</span><span class="o">.</span><span class="n">increment</span><span class="p">()</span>
-        <span class="n">this</span> <span class="o">=</span> <span class="n">this</span> <span class="o">+</span> <span class="n">adder</span>
+        <span class="k">if</span> <span class="n">calendar_timeframe</span><span class="p">:</span>
+            <span class="n">this</span> <span class="o">=</span> <span class="n">next_candle_boundary</span><span class="p">(</span><span class="n">this</span><span class="p">,</span> <span class="n">timeframe</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">this</span> <span class="o">=</span> <span class="n">this</span> <span class="o">+</span> <span class="n">adder</span>
 
     <span class="k">if</span> <span class="n">pbar</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">pbar</span><span class="o">.</span><span class="n">finish</span><span class="p">()</span>
 
     <span class="k">return</span> <span class="n">result</span></div>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_range_has_open_minute</span><span class="p">(</span><span class="n">start_dt</span><span class="p">,</span> <span class="n">end_dt</span><span class="p">,</span> <span class="n">closed_ranges</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return whether a datetime range contains any minute outside closures.&quot;&quot;&quot;</span>
+    <span class="n">open_epoch</span> <span class="o">=</span> <span class="n">dt_to_epoch</span><span class="p">(</span><span class="n">start_dt</span><span class="p">)</span>
+    <span class="n">end_epoch</span> <span class="o">=</span> <span class="n">dt_to_epoch</span><span class="p">(</span><span class="n">end_dt</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">closed_start</span><span class="p">,</span> <span class="n">closed_end</span> <span class="ow">in</span> <span class="n">closed_ranges</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">closed_end</span> <span class="o">&lt;</span> <span class="n">open_epoch</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">closed_start</span> <span class="o">&gt;</span> <span class="n">open_epoch</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="c1"># Closures end mid-minute (schedule) or on an inclusive minute</span>
+        <span class="c1"># (events), so candles can only resume at the next whole minute.</span>
+        <span class="n">open_epoch</span> <span class="o">=</span> <span class="p">(</span><span class="n">closed_end</span> <span class="o">//</span> <span class="mi">60</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mi">60</span>
+        <span class="k">if</span> <span class="n">open_epoch</span> <span class="o">&gt;</span> <span class="n">end_epoch</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">return</span> <span class="n">open_epoch</span> <span class="o">&lt;=</span> <span class="n">end_epoch</span>
 
 
 <div class="viewcode-block" id="rangify_candle_times"><a class="viewcode-back" href="../../api/dhtrader.dhcommon.html#dhtrader.dhcommon.rangify_candle_times">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">rangify_candle_times</span><span class="p">(</span><span class="n">times</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
@@ -856,7 +1106,9 @@
 <span class="sd">    Primarily intended to make human review sane on large sets of gap and</span>
 <span class="sd">    unexpected candles during integrity checks.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">delta</span> <span class="o">=</span> <span class="n">timeframe_delta</span><span class="p">(</span><span class="n">timeframe</span><span class="p">)</span>
+    <span class="n">calendar_timeframe</span> <span class="o">=</span> <span class="n">timeframe</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;e1mo&quot;</span><span class="p">,</span> <span class="s2">&quot;e1y&quot;</span><span class="p">}</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">calendar_timeframe</span><span class="p">:</span>
+        <span class="n">delta</span> <span class="o">=</span> <span class="n">timeframe_delta</span><span class="p">(</span><span class="n">timeframe</span><span class="p">)</span>
     <span class="n">sorted_times</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">times</span><span class="p">)</span>
     <span class="n">ranges</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">this_range</span> <span class="o">=</span> <span class="kc">None</span>
@@ -867,7 +1119,14 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># If the time is one increment after the previously seen time</span>
             <span class="c1"># just update the current range</span>
-            <span class="k">if</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="o">==</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="n">this_range</span><span class="p">[</span><span class="s2">&quot;end_dt&quot;</span><span class="p">])</span> <span class="o">+</span> <span class="n">delta</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">calendar_timeframe</span><span class="p">:</span>
+                <span class="n">next_dt</span> <span class="o">=</span> <span class="n">next_candle_boundary</span><span class="p">(</span>
+                    <span class="n">this_range</span><span class="p">[</span><span class="s2">&quot;end_dt&quot;</span><span class="p">],</span>
+                    <span class="n">timeframe</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">next_dt</span> <span class="o">=</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="n">this_range</span><span class="p">[</span><span class="s2">&quot;end_dt&quot;</span><span class="p">])</span> <span class="o">+</span> <span class="n">delta</span>
+            <span class="k">if</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="o">==</span> <span class="n">next_dt</span><span class="p">:</span>
                 <span class="n">this_range</span><span class="p">[</span><span class="s2">&quot;end_dt&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dt_as_str</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
             <span class="c1"># Otherwise add the current range to the list and start a new one</span>
             <span class="k">else</span><span class="p">:</span>

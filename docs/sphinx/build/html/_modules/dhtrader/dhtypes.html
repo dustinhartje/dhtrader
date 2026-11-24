@@ -62,7 +62,8 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">dt</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">bisect</span><span class="w"> </span><span class="kn">import</span> <span class="n">bisect_right</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">timedelta</span><span class="p">,</span> <span class="n">date</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Collection</span><span class="p">,</span> <span class="n">Mapping</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">timedelta</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
@@ -75,11 +76,15 @@
     <span class="n">dt_as_dt</span><span class="p">,</span> <span class="n">dt_as_str</span><span class="p">,</span> <span class="n">dt_as_time</span><span class="p">,</span> <span class="n">dt_to_epoch</span><span class="p">,</span> <span class="n">dt_from_epoch</span><span class="p">,</span>
     <span class="n">timeframe_delta</span><span class="p">,</span>
     <span class="n">valid_timeframe</span><span class="p">,</span> <span class="n">valid_trading_hours</span><span class="p">,</span> <span class="n">log_say</span><span class="p">,</span> <span class="n">this_candle_start</span><span class="p">,</span>
-    <span class="n">check_tf_th_compatibility</span><span class="p">,</span> <span class="n">start_of_week_date</span><span class="p">,</span> <span class="n">dict_of_weeks</span><span class="p">,</span> <span class="n">bot</span><span class="p">,</span>
+    <span class="n">check_tf_th_compatibility</span><span class="p">,</span> <span class="n">bot</span><span class="p">,</span>
     <span class="n">ProgBar</span><span class="p">,</span> <span class="n">DEFAULT_OBJ_NAME</span><span class="p">,</span> <span class="n">MARKET_ERAS</span><span class="p">,</span>
-    <span class="n">canonical_session_key</span><span class="p">,</span> <span class="n">normalize_list_of_strings</span><span class="p">,</span> <span class="n">new_uuid</span><span class="p">)</span>
-<span class="n">CANDLE_TIMEFRAMES</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;1m&#39;</span><span class="p">,</span> <span class="s1">&#39;5m&#39;</span><span class="p">,</span> <span class="s1">&#39;15m&#39;</span><span class="p">,</span> <span class="s1">&#39;r1h&#39;</span><span class="p">,</span> <span class="s1">&#39;e1h&#39;</span><span class="p">,</span> <span class="s1">&#39;1d&#39;</span><span class="p">,</span> <span class="s1">&#39;1w&#39;</span><span class="p">]</span>
+    <span class="n">canonical_session_key</span><span class="p">,</span> <span class="n">expected_candle_datetimes</span><span class="p">,</span> <span class="n">next_candle_boundary</span><span class="p">,</span>
+    <span class="n">normalize_list_of_strings</span><span class="p">,</span> <span class="n">storage_label_for_session_key</span><span class="p">,</span> <span class="n">new_uuid</span><span class="p">)</span>
+<span class="n">CANDLE_TIMEFRAMES</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;1m&#39;</span><span class="p">,</span> <span class="s1">&#39;5m&#39;</span><span class="p">,</span> <span class="s1">&#39;15m&#39;</span><span class="p">,</span> <span class="s1">&#39;r1h&#39;</span><span class="p">,</span> <span class="s1">&#39;e1h&#39;</span><span class="p">,</span> <span class="s1">&#39;1d&#39;</span><span class="p">,</span> <span class="s1">&#39;1w&#39;</span><span class="p">,</span> <span class="s1">&#39;e1mo&#39;</span><span class="p">,</span>
+                     <span class="s1">&#39;e1y&#39;</span><span class="p">]</span>
 <span class="n">BEGINNING_OF_TIME</span> <span class="o">=</span> <span class="s2">&quot;2008-01-01 00:00:00&quot;</span>
+<span class="c1"># Distinguish omitted load bounds from an explicitly unbounded None.</span>
+<span class="n">_USE_SERIES_DATES</span> <span class="o">=</span> <span class="nb">object</span><span class="p">()</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_merge_epoch_ranges</span><span class="p">(</span><span class="n">ranges</span><span class="p">):</span>
@@ -1040,7 +1045,7 @@
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Represents a single OHLCV candlestick for a tradeable symbol.</span>
 
 <span class="sd">    Intraday timeframes are shorter than e1d. Higher timeframes are e1d or</span>
-<span class="sd">    longer, including e1d, e1w, and future e1m/e1y timeframes.</span>
+<span class="sd">    longer, including e1d, e1w, and future e1mo/e1y timeframes.</span>
 
 <span class="sd">    Derived size, direction, and wick attributes are computed automatically</span>
 <span class="sd">    on creation.</span>
@@ -1107,8 +1112,18 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
 
         <span class="c1"># Calculated attributes</span>
-        <span class="n">delta</span> <span class="o">=</span> <span class="n">timeframe_delta</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">c_timeframe</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">c_end_datetime</span> <span class="o">=</span> <span class="n">dt_as_str</span><span class="p">(</span><span class="n">c_datetime_dt</span> <span class="o">+</span> <span class="n">delta</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_timeframe</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;e1mo&quot;</span><span class="p">,</span> <span class="s2">&quot;e1y&quot;</span><span class="p">}:</span>
+            <span class="n">next_key</span> <span class="o">=</span> <span class="n">next_candle_boundary</span><span class="p">(</span>
+                <span class="n">c_datetime_dt</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">c_timeframe</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">c_end_datetime</span> <span class="o">=</span> <span class="n">dt_as_str</span><span class="p">(</span><span class="n">storage_label_for_session_key</span><span class="p">(</span>
+                <span class="n">next_key</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">c_timeframe</span><span class="p">,</span>
+            <span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">delta</span> <span class="o">=</span> <span class="n">timeframe_delta</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">c_timeframe</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">c_end_datetime</span> <span class="o">=</span> <span class="n">dt_as_str</span><span class="p">(</span><span class="n">c_datetime_dt</span> <span class="o">+</span> <span class="n">delta</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">c_size</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">c_high</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_low</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">c_body_size</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">c_open</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_close</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">c_upper_wick_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_high</span> <span class="o">-</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">c_open</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_close</span><span class="p">)</span>
@@ -1354,19 +1369,34 @@
                             <span class="n">categories</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Closed&quot;</span><span class="p">],</span>
                             <span class="p">)</span>
         <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Filtering candles for market hours and events...&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_timeframe</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;e1d&quot;</span><span class="p">,</span> <span class="s2">&quot;e1w&quot;</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_timeframe</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;e1d&quot;</span><span class="p">,</span> <span class="s2">&quot;e1w&quot;</span><span class="p">,</span> <span class="s2">&quot;e1mo&quot;</span><span class="p">,</span> <span class="s2">&quot;e1y&quot;</span><span class="p">]:</span>
             <span class="c1"># Aggregate labels are display dates, not session-open timestamps.</span>
             <span class="n">candle_keys</span> <span class="o">=</span> <span class="p">[</span>
                 <span class="n">canonical_session_key</span><span class="p">(</span><span class="n">candle</span><span class="o">.</span><span class="n">c_datetime</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_timeframe</span><span class="p">)</span>
                 <span class="k">for</span> <span class="n">candle</span> <span class="ow">in</span> <span class="n">cans</span>
             <span class="p">]</span>
-            <span class="n">open_keys</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">c_symbol</span><span class="o">.</span><span class="n">filter_open_datetimes</span><span class="p">(</span>
-                <span class="n">target_dts</span><span class="o">=</span><span class="n">candle_keys</span><span class="p">,</span>
-                <span class="n">trading_hours</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">c_trading_hours</span><span class="p">,</span>
-                <span class="n">events</span><span class="o">=</span><span class="n">events</span><span class="p">,</span>
-                <span class="n">start_dt</span><span class="o">=</span><span class="nb">min</span><span class="p">(</span><span class="n">candle_keys</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">c_start</span><span class="p">),</span>
-                <span class="n">end_dt</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">c_end</span><span class="p">,</span>
-            <span class="p">))</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">c_timeframe</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;e1mo&quot;</span><span class="p">,</span> <span class="s2">&quot;e1y&quot;</span><span class="p">}:</span>
+                <span class="c1"># A holiday may close the calendar boundary while later source</span>
+                <span class="c1"># minutes make this calendar candle valid.</span>
+                <span class="n">open_keys</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="n">candle_key</span>
+                    <span class="k">for</span> <span class="n">candle_key</span> <span class="ow">in</span> <span class="n">candle_keys</span>
+                    <span class="k">if</span> <span class="n">expected_candle_datetimes</span><span class="p">(</span>
+                        <span class="n">start_dt</span><span class="o">=</span><span class="n">candle_key</span><span class="p">,</span>
+                        <span class="n">end_dt</span><span class="o">=</span><span class="n">candle_key</span><span class="p">,</span>
+                        <span class="n">timeframe</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">c_timeframe</span><span class="p">,</span>
+                        <span class="n">symbol</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">c_symbol</span><span class="p">,</span>
+                        <span class="n">events</span><span class="o">=</span><span class="n">events</span><span class="p">,</span>
+                    <span class="p">)</span>
+                <span class="p">}</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">open_keys</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">c_symbol</span><span class="o">.</span><span class="n">filter_open_datetimes</span><span class="p">(</span>
+                    <span class="n">target_dts</span><span class="o">=</span><span class="n">candle_keys</span><span class="p">,</span>
+                    <span class="n">trading_hours</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">c_trading_hours</span><span class="p">,</span>
+                    <span class="n">events</span><span class="o">=</span><span class="n">events</span><span class="p">,</span>
+                    <span class="n">start_dt</span><span class="o">=</span><span class="nb">min</span><span class="p">(</span><span class="n">candle_keys</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">c_start</span><span class="p">),</span>
+                    <span class="n">end_dt</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">c_end</span><span class="p">,</span>
+                <span class="p">))</span>
             <span class="c1"># Preserve raw storage labels after filtering by canonical keys.</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">c_candles</span> <span class="o">=</span> <span class="p">[</span>
                 <span class="n">candle</span> <span class="k">for</span> <span class="n">candle</span><span class="p">,</span> <span class="n">candle_key</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">cans</span><span class="p">,</span> <span class="n">candle_keys</span><span class="p">)</span>
@@ -2027,7 +2057,7 @@
 <span class="sd">        Raises:</span>
 <span class="sd">            ValueError: If multiple datapoints share a candle-start key.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">higher_timeframes</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;e1d&quot;</span><span class="p">,</span> <span class="s2">&quot;e1w&quot;</span><span class="p">,</span> <span class="s2">&quot;e1m&quot;</span><span class="p">,</span> <span class="s2">&quot;e1y&quot;</span><span class="p">}</span>
+        <span class="n">higher_timeframes</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;e1d&quot;</span><span class="p">,</span> <span class="s2">&quot;e1w&quot;</span><span class="p">,</span> <span class="s2">&quot;e1mo&quot;</span><span class="p">,</span> <span class="s2">&quot;e1y&quot;</span><span class="p">}</span>
         <span class="n">result</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">datapoint</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span><span class="p">):</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">timeframe</span> <span class="ow">in</span> <span class="n">higher_timeframes</span><span class="p">:</span>
@@ -2106,7 +2136,7 @@
 <span class="sd">        previous and next requests.</span>
 
 <span class="sd">        Intraday indicators match their raw datapoint timestamp directly.</span>
-<span class="sd">        Higher-timeframe ETH indicators (e1d, e1w, e1m, and e1y) instead</span>
+<span class="sd">        Higher-timeframe ETH indicators (e1d, e1w, e1mo, and e1y) instead</span>
 <span class="sd">        match a canonical session key. Their raw datapoint timestamp is a</span>
 <span class="sd">        chart label such as daily midnight or weekly Monday midnight, while the</span>
 <span class="sd">        canonical session key is the associated 18:00 session boundary.</span>
@@ -2125,7 +2155,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Normalize the request to its candle/session boundary first.</span>
         <span class="n">can_dt</span> <span class="o">=</span> <span class="n">this_candle_start</span><span class="p">(</span><span class="n">dt</span><span class="o">=</span><span class="n">dt</span><span class="p">,</span> <span class="n">timeframe</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeframe</span><span class="p">)</span>
-        <span class="n">higher_timeframes</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;e1d&quot;</span><span class="p">,</span> <span class="s2">&quot;e1w&quot;</span><span class="p">,</span> <span class="s2">&quot;e1m&quot;</span><span class="p">,</span> <span class="s2">&quot;e1y&quot;</span><span class="p">}</span>
+        <span class="n">higher_timeframes</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;e1d&quot;</span><span class="p">,</span> <span class="s2">&quot;e1w&quot;</span><span class="p">,</span> <span class="s2">&quot;e1mo&quot;</span><span class="p">,</span> <span class="s2">&quot;e1y&quot;</span><span class="p">}</span>
         <span class="c1"># Higher-timeframe labels must be normalized before comparison;</span>
         <span class="c1"># intraday labels already represent their actual candle start.</span>
         <span class="n">matching_indexes</span> <span class="o">=</span> <span class="p">[</span>
@@ -3441,6 +3471,40 @@
 <span class="sd">        bt_id (str): bt_id of the Backtest() object that created this if any</span>
 <span class="sd">        trades (list): list of trades in the series</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Categorize .stats() output fields into meaningful groups for analysis</span>
+    <span class="n">_STATS_FIELDS</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="s2">&quot;gl_sequence&quot;</span><span class="p">,</span> <span class="s2">&quot;profitable_trades&quot;</span><span class="p">,</span> <span class="s2">&quot;avg_gain_per_con&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;losing_trades&quot;</span><span class="p">,</span> <span class="s2">&quot;avg_loss_per_con&quot;</span><span class="p">,</span> <span class="s2">&quot;total_trades&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;success_percent&quot;</span><span class="p">,</span> <span class="s2">&quot;duration_sec_p20&quot;</span><span class="p">,</span> <span class="s2">&quot;duration_sec_median&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;duration_sec_p80&quot;</span><span class="p">,</span> <span class="s2">&quot;setup_risk_reward&quot;</span><span class="p">,</span> <span class="s2">&quot;effective_risk_reward&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;min_risk_reward&quot;</span><span class="p">,</span> <span class="s2">&quot;max_risk_reward&quot;</span><span class="p">,</span> <span class="s2">&quot;trading_days&quot;</span><span class="p">,</span> <span class="s2">&quot;total_days&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;total_weeks&quot;</span><span class="p">,</span> <span class="s2">&quot;trades_per_week&quot;</span><span class="p">,</span> <span class="s2">&quot;trades_per_day&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;trades_per_trading_day&quot;</span><span class="p">,</span> <span class="s2">&quot;trade_ticks&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">_ALL_STATS</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">_STATS_FIELDS</span><span class="p">)</span>
+    <span class="n">_STATS_CATEGORIES</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;activity&quot;</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">({</span>
+            <span class="s2">&quot;profitable_trades&quot;</span><span class="p">,</span> <span class="s2">&quot;losing_trades&quot;</span><span class="p">,</span> <span class="s2">&quot;total_trades&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;success_percent&quot;</span><span class="p">,</span> <span class="s2">&quot;trading_days&quot;</span><span class="p">,</span> <span class="s2">&quot;total_days&quot;</span><span class="p">,</span> <span class="s2">&quot;total_weeks&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;trades_per_week&quot;</span><span class="p">,</span> <span class="s2">&quot;trades_per_day&quot;</span><span class="p">,</span> <span class="s2">&quot;trades_per_trading_day&quot;</span><span class="p">,</span>
+        <span class="p">}),</span>
+        <span class="s2">&quot;setup_risk_reward&quot;</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">({</span>
+            <span class="s2">&quot;setup_risk_reward&quot;</span><span class="p">,</span> <span class="s2">&quot;min_risk_reward&quot;</span><span class="p">,</span> <span class="s2">&quot;max_risk_reward&quot;</span><span class="p">,</span>
+        <span class="p">}),</span>
+        <span class="s2">&quot;profit_loss&quot;</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">({</span>
+            <span class="s2">&quot;gl_sequence&quot;</span><span class="p">,</span> <span class="s2">&quot;avg_gain_per_con&quot;</span><span class="p">,</span> <span class="s2">&quot;avg_loss_per_con&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;effective_risk_reward&quot;</span><span class="p">,</span>
+        <span class="p">}),</span>
+        <span class="s2">&quot;durations&quot;</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">({</span>
+            <span class="s2">&quot;duration_sec_p20&quot;</span><span class="p">,</span> <span class="s2">&quot;duration_sec_median&quot;</span><span class="p">,</span> <span class="s2">&quot;duration_sec_p80&quot;</span><span class="p">,</span>
+        <span class="p">}),</span>
+        <span class="s2">&quot;trade_ticks&quot;</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">({</span><span class="s2">&quot;trade_ticks&quot;</span><span class="p">}),</span>
+    <span class="p">}</span>
+    <span class="c1"># Validate all stats fields are categorized</span>
+    <span class="n">uncategorized</span> <span class="o">=</span> <span class="n">_ALL_STATS</span> <span class="o">-</span> <span class="nb">frozenset</span><span class="p">()</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="o">*</span><span class="n">_STATS_CATEGORIES</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+    <span class="k">if</span> <span class="n">uncategorized</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Some stats fields are not categorized: &quot;</span>
+                         <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">uncategorized</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
     <span class="n">_EQ_FIELDS</span><span class="p">:</span> <span class="nb">frozenset</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span>
         <span class="s2">&quot;start_dt&quot;</span><span class="p">,</span> <span class="s2">&quot;end_dt&quot;</span><span class="p">,</span> <span class="s2">&quot;timeframe&quot;</span><span class="p">,</span>
@@ -3585,11 +3649,33 @@
         <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">trades</span><span class="p">:</span>
             <span class="n">t</span><span class="o">.</span><span class="n">bt_id</span> <span class="o">=</span> <span class="n">bt_id</span></div>
 
-<div class="viewcode-block" id="TradeSeries.load_trades"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradeSeries.load_trades">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">load_trades</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Clear and reload all Trades matching this ts_id from storage.</span>
+<div class="viewcode-block" id="TradeSeries.load_trades"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradeSeries.load_trades">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">load_trades</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span>
+                    <span class="n">start_dt</span><span class="o">=</span><span class="n">_USE_SERIES_DATES</span><span class="p">,</span>
+                    <span class="n">end_dt</span><span class="o">=</span><span class="n">_USE_SERIES_DATES</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Reload Trades using this series&#39; dates unless others are supplied.</span>
+
+<span class="sd">        Dates may be strings or datetime objects.  Bounds are inclusive and</span>
+<span class="sd">        apply to Trade open dates without changing this series&#39; dates.</span>
+<span class="sd">        Pass None to leave that bound unrestricted, or pass None for both</span>
+<span class="sd">        start_dt and end_dt to load all stored Trades for this series.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># _USE_SERIES_DATES is needed because self.start_dt does not exist when</span>
+        <span class="c1"># the class in instantiated but before start_dt and end_dt are set, so</span>
+        <span class="c1"># they cannot be set as the default values.  It is a placeholder to</span>
+        <span class="c1"># indicate that the series&#39; own dates should be used for loading trades</span>
+        <span class="c1"># within the series&#39; own date range.</span>
+        <span class="k">if</span> <span class="n">start_dt</span> <span class="ow">is</span> <span class="n">_USE_SERIES_DATES</span><span class="p">:</span>
+            <span class="n">start_dt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_dt</span>
+        <span class="k">if</span> <span class="n">end_dt</span> <span class="ow">is</span> <span class="n">_USE_SERIES_DATES</span><span class="p">:</span>
+            <span class="n">end_dt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_dt</span>
+        <span class="n">date_bounds</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">start_dt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">date_bounds</span><span class="p">[</span><span class="s2">&quot;start_dt&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">start_dt</span>
+        <span class="k">if</span> <span class="n">end_dt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">date_bounds</span><span class="p">[</span><span class="s2">&quot;end_dt&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">end_dt</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">trades</span> <span class="o">=</span> <span class="n">get_trades_by_field</span><span class="p">(</span><span class="n">field</span><span class="o">=</span><span class="s2">&quot;ts_id&quot;</span><span class="p">,</span>
-                                          <span class="n">value</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ts_id</span><span class="p">)</span>
+                                          <span class="n">values</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ts_id</span><span class="p">,</span>
+                                          <span class="o">**</span><span class="n">date_bounds</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sort_trades</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="TradeSeries.delete_from_storage"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradeSeries.delete_from_storage">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">delete_from_storage</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
@@ -3785,25 +3871,89 @@
                 <span class="s2">&quot;liquidated&quot;</span><span class="p">:</span> <span class="n">liquidated</span><span class="p">,</span>
                 <span class="p">}</span></div>
 
-<div class="viewcode-block" id="TradeSeries.stats"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradeSeries.stats">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">stats</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">include_first_min</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return useful statistics calculated from the attached Trades.&quot;&quot;&quot;</span>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_requested_stat_fields</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">stats_categories</span><span class="p">,</span> <span class="n">requested_stats</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Resolve statistic requests before inspecting any Trades.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">stats_categories</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">requested_stats</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">&quot;TradeSeries.stats: requests are mutually exclusive: &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;stats_categories=</span><span class="si">{</span><span class="n">stats_categories</span><span class="si">!r}</span><span class="s2">, &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;requested_stats=</span><span class="si">{</span><span class="n">requested_stats</span><span class="si">!r}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">stats_categories</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">requested_stats</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_ALL_STATS</span>
+        <span class="k">if</span> <span class="n">stats_categories</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">names</span> <span class="o">=</span> <span class="n">stats_categories</span>
+            <span class="n">label</span> <span class="o">=</span> <span class="s2">&quot;stats_categories&quot;</span>
+            <span class="n">allowed</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_STATS_CATEGORIES</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">names</span> <span class="o">=</span> <span class="n">requested_stats</span>
+            <span class="n">label</span> <span class="o">=</span> <span class="s2">&quot;requested_stats&quot;</span>
+            <span class="n">allowed</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_ALL_STATS</span>
+        <span class="k">if</span> <span class="p">(</span>
+                <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">names</span><span class="p">,</span> <span class="n">Collection</span><span class="p">)</span>
+                <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">names</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">))</span>
+                <span class="ow">or</span> <span class="ow">not</span> <span class="n">names</span>
+                <span class="ow">or</span> <span class="nb">any</span><span class="p">(</span>
+                    <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">allowed</span>
+                    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span>
+                <span class="p">)):</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;TradeSeries.stats: </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">names</span><span class="si">!r}</span><span class="s2"> must be a nonempty &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;collection of known names: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">allowed</span><span class="p">)</span><span class="si">!r}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">stats_categories</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">frozenset</span><span class="p">()</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="o">*</span><span class="p">(</span>
+                <span class="bp">cls</span><span class="o">.</span><span class="n">_STATS_CATEGORIES</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span>
+            <span class="p">))</span>
+        <span class="k">return</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">names</span><span class="p">)</span>
+
+<div class="viewcode-block" id="TradeSeries.stats"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradeSeries.stats">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">stats</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">include_first_min</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span>
+              <span class="n">stats_categories</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">requested_stats</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate Trade statistics, optionally by category or field(s).</span>
+
+<span class="sd">        Omit both request arguments to provide complete statistics. Otherwise</span>
+<span class="sd">        provide one nonempty collection of category names or existing output</span>
+<span class="sd">        field names. Categories are:</span>
+
+<span class="sd">        - &#39;activity&#39; (counts, success and calendar)</span>
+<span class="sd">        - &#39;setup_risk_reward&#39; (setup/min/max)</span>
+<span class="sd">        - &#39;profit_loss&#39; (sequence, averages and effective risk/reward)</span>
+<span class="sd">        - &#39;durations&#39; (percentiles/median)</span>
+<span class="sd">        - &#39;trade_ticks&#39; (unique stop/profit/offset configurations)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">fields</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_requested_stat_fields</span><span class="p">(</span><span class="n">stats_categories</span><span class="p">,</span> <span class="n">requested_stats</span><span class="p">)</span>
+        <span class="n">duration_fields</span> <span class="o">=</span> <span class="n">fields</span> <span class="o">&amp;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_STATS_CATEGORIES</span><span class="p">[</span><span class="s2">&quot;durations&quot;</span><span class="p">]</span>
+        <span class="n">trading_day_fields</span> <span class="o">=</span> <span class="n">fields</span> <span class="o">&amp;</span> <span class="p">{</span>
+            <span class="s2">&quot;trading_days&quot;</span><span class="p">,</span> <span class="s2">&quot;trades_per_trading_day&quot;</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="n">calendar_fields</span> <span class="o">=</span> <span class="n">fields</span> <span class="o">&amp;</span> <span class="p">{</span>
+            <span class="s2">&quot;total_days&quot;</span><span class="p">,</span> <span class="s2">&quot;total_weeks&quot;</span><span class="p">,</span> <span class="s2">&quot;trades_per_week&quot;</span><span class="p">,</span> <span class="s2">&quot;trades_per_day&quot;</span><span class="p">,</span>
+        <span class="p">}</span>
         <span class="n">sequence</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
         <span class="n">total_trades</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="n">profits</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="n">losses</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="n">days_traded</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-        <span class="n">ticks</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="n">days_traded</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span> <span class="k">if</span> <span class="n">trading_day_fields</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="n">ticks</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span> <span class="k">if</span> <span class="s2">&quot;trade_ticks&quot;</span> <span class="ow">in</span> <span class="n">fields</span> <span class="k">else</span> <span class="kc">None</span>
         <span class="n">rr</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;max&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;min&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;total_risk&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;total_reward&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">}</span>
         <span class="n">err</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;total_risk&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;total_reward&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">}</span>
-        <span class="n">durations</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">durations</span> <span class="o">=</span> <span class="p">[]</span> <span class="k">if</span> <span class="n">duration_fields</span> <span class="k">else</span> <span class="kc">None</span>
         <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">trades</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">t</span><span class="o">.</span><span class="n">first_min_open</span> <span class="ow">or</span> <span class="n">include_first_min</span><span class="p">:</span>
                 <span class="n">total_trades</span> <span class="o">+=</span> <span class="mi">1</span>
-                <span class="n">durations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">duration</span><span class="p">())</span>
+                <span class="n">duration</span> <span class="o">=</span> <span class="n">t</span><span class="o">.</span><span class="n">duration</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">durations</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">durations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">duration</span><span class="p">)</span>
                 <span class="c1"># Risk reward calcs</span>
-                <span class="n">ticks</span><span class="o">.</span><span class="n">add</span><span class="p">(((</span><span class="s2">&quot;stop&quot;</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">stop_ticks</span><span class="p">),</span>
-                          <span class="p">(</span><span class="s2">&quot;prof&quot;</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">prof_ticks</span><span class="p">),</span>
-                          <span class="p">(</span><span class="s2">&quot;offset&quot;</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">offset_ticks</span><span class="p">)))</span>
+                <span class="k">if</span> <span class="n">ticks</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">ticks</span><span class="o">.</span><span class="n">add</span><span class="p">(((</span><span class="s2">&quot;stop&quot;</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">stop_ticks</span><span class="p">),</span>
+                              <span class="p">(</span><span class="s2">&quot;prof&quot;</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">prof_ticks</span><span class="p">),</span>
+                              <span class="p">(</span><span class="s2">&quot;offset&quot;</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">offset_ticks</span><span class="p">)))</span>
                 <span class="n">this_rr</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">stop_ticks</span><span class="o">/</span><span class="n">t</span><span class="o">.</span><span class="n">prof_ticks</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">rr</span><span class="p">[</span><span class="s2">&quot;max&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                     <span class="n">rr</span><span class="p">[</span><span class="s2">&quot;max&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">this_rr</span>
@@ -3816,20 +3966,40 @@
                 <span class="n">rr</span><span class="p">[</span><span class="s2">&quot;total_risk&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">t</span><span class="o">.</span><span class="n">stop_ticks</span>
                 <span class="n">rr</span><span class="p">[</span><span class="s2">&quot;total_reward&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">t</span><span class="o">.</span><span class="n">prof_ticks</span>
                 <span class="c1"># Add date to days_traded set</span>
-                <span class="n">days_traded</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">dt_as_dt</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">open_dt</span><span class="p">)</span><span class="o">.</span><span class="n">date</span><span class="p">())</span>
+                <span class="k">if</span> <span class="n">days_traded</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">days_traded</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">dt_as_dt</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">open_dt</span><span class="p">)</span><span class="o">.</span><span class="n">date</span><span class="p">())</span>
                 <span class="c1"># Update profitability</span>
                 <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">profitable</span><span class="p">:</span>
                     <span class="n">profits</span> <span class="o">+=</span> <span class="mi">1</span>
-                    <span class="n">sequence</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">sequence</span><span class="p">,</span> <span class="s2">&quot;g&quot;</span><span class="p">])</span>
+                    <span class="k">if</span> <span class="s2">&quot;gl_sequence&quot;</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">:</span>
+                        <span class="n">sequence</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">sequence</span><span class="p">,</span> <span class="s2">&quot;g&quot;</span><span class="p">])</span>
                     <span class="n">err</span><span class="p">[</span><span class="s2">&quot;total_reward&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">t</span><span class="o">.</span><span class="n">gain_loss</span><span class="p">()</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="n">losses</span> <span class="o">+=</span> <span class="mi">1</span>
-                    <span class="n">sequence</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">sequence</span><span class="p">,</span> <span class="s2">&quot;L&quot;</span><span class="p">])</span>
+                    <span class="k">if</span> <span class="s2">&quot;gl_sequence&quot;</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">:</span>
+                        <span class="n">sequence</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">sequence</span><span class="p">,</span> <span class="s2">&quot;L&quot;</span><span class="p">])</span>
                     <span class="n">err</span><span class="p">[</span><span class="s2">&quot;total_risk&quot;</span><span class="p">]</span> <span class="o">-=</span> <span class="n">t</span><span class="o">.</span><span class="n">gain_loss</span><span class="p">()</span>
-        <span class="n">durations</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
-        <span class="k">if</span> <span class="n">total_trades</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">success_percent</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">profits</span><span class="o">/</span><span class="n">total_trades</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span><span class="o">*</span><span class="mi">100</span>
+        <span class="k">if</span> <span class="n">durations</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">durations</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;gl_sequence&quot;</span><span class="p">:</span> <span class="n">sequence</span><span class="p">,</span>
+            <span class="s2">&quot;profitable_trades&quot;</span><span class="p">:</span> <span class="n">profits</span><span class="p">,</span>
+            <span class="s2">&quot;losing_trades&quot;</span><span class="p">:</span> <span class="n">losses</span><span class="p">,</span>
+            <span class="s2">&quot;total_trades&quot;</span><span class="p">:</span> <span class="n">total_trades</span><span class="p">,</span>
+            <span class="s2">&quot;success_percent&quot;</span><span class="p">:</span> <span class="p">(</span>
+                <span class="nb">round</span><span class="p">(</span><span class="n">profits</span><span class="o">/</span><span class="n">total_trades</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span><span class="o">*</span><span class="mi">100</span> <span class="k">if</span> <span class="n">total_trades</span> <span class="k">else</span> <span class="mi">0</span>
+            <span class="p">),</span>
+            <span class="s2">&quot;min_risk_reward&quot;</span><span class="p">:</span> <span class="n">rr</span><span class="p">[</span><span class="s2">&quot;min&quot;</span><span class="p">],</span>
+            <span class="s2">&quot;max_risk_reward&quot;</span><span class="p">:</span> <span class="n">rr</span><span class="p">[</span><span class="s2">&quot;max&quot;</span><span class="p">],</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="n">days_traded</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">trading_days</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">days_traded</span><span class="p">)</span>
+            <span class="n">values</span><span class="p">[</span><span class="s2">&quot;trading_days&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">trading_days</span>
+            <span class="k">if</span> <span class="s2">&quot;trades_per_trading_day&quot;</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">:</span>
+                <span class="n">values</span><span class="p">[</span><span class="s2">&quot;trades_per_trading_day&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="nb">round</span><span class="p">(</span><span class="n">total_trades</span><span class="o">/</span><span class="n">trading_days</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="k">if</span> <span class="n">total_trades</span> <span class="k">else</span> <span class="mi">0</span>
+                <span class="p">)</span>
+        <span class="k">if</span> <span class="n">calendar_fields</span><span class="p">:</span>
             <span class="c1"># total_days is fuzzy because start_dt and/or end_dt may be at a</span>
             <span class="c1"># day boundary and either may or may not have valid trading hours.</span>
             <span class="c1"># There are also edge cases around eth vs rth hours.  For</span>
@@ -3838,82 +4008,74 @@
             <span class="c1"># include the end date as a full day.  This may overstate</span>
             <span class="c1"># total_days by up to 2 days in some cases which is typically not</span>
             <span class="c1"># statistically meaningful for analysis on long time frames.</span>
-            <span class="n">total_days</span> <span class="o">=</span> <span class="p">(</span><span class="n">dt_as_dt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">end_dt</span><span class="p">)</span><span class="o">.</span><span class="n">date</span><span class="p">()</span>
-                          <span class="o">-</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_dt</span><span class="p">)</span><span class="o">.</span><span class="n">date</span><span class="p">())</span><span class="o">.</span><span class="n">days</span> <span class="o">+</span> <span class="mi">1</span>
-            <span class="n">total_weeks</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">total_days</span><span class="o">/</span><span class="mi">7</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
-            <span class="n">trades_per_day</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">total_trades</span><span class="o">/</span><span class="n">total_days</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
-            <span class="n">trades_per_trading_day</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">total_trades</span><span class="o">/</span><span class="n">trading_days</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
-            <span class="n">trades_per_week</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">total_trades</span><span class="o">/</span><span class="n">total_weeks</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
-            <span class="n">duration_sec_p20</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">durations</span><span class="p">,</span> <span class="mi">20</span><span class="p">))</span>
-            <span class="n">duration_sec_median</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">durations</span><span class="p">))</span>
-            <span class="n">duration_sec_p80</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">durations</span><span class="p">,</span> <span class="mi">80</span><span class="p">))</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">success_percent</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="n">trading_days</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="n">total_days</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="n">total_weeks</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="n">trades_per_day</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="n">trades_per_trading_day</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="n">trades_per_week</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="n">duration_sec_p20</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="n">duration_sec_median</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="n">duration_sec_p80</span> <span class="o">=</span> <span class="mi">0</span>
-
-        <span class="k">if</span> <span class="n">rr</span><span class="p">[</span><span class="s2">&quot;total_reward&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">risk_reward</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">rr</span><span class="p">[</span><span class="s2">&quot;total_risk&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="n">rr</span><span class="p">[</span><span class="s2">&quot;total_reward&quot;</span><span class="p">],</span> <span class="mi">2</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">risk_reward</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="n">min_risk_reward</span> <span class="o">=</span> <span class="n">rr</span><span class="p">[</span><span class="s2">&quot;min&quot;</span><span class="p">]</span>
-        <span class="n">max_risk_reward</span> <span class="o">=</span> <span class="n">rr</span><span class="p">[</span><span class="s2">&quot;max&quot;</span><span class="p">]</span>
-        <span class="k">if</span> <span class="n">profits</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">avg_gain_per_con</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">avg_gain_per_con</span> <span class="o">=</span> <span class="n">err</span><span class="p">[</span><span class="s2">&quot;total_reward&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="n">profits</span>
-        <span class="k">if</span> <span class="n">losses</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">avg_loss_per_con</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">avg_loss_per_con</span> <span class="o">=</span> <span class="n">err</span><span class="p">[</span><span class="s2">&quot;total_risk&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="n">losses</span>
-        <span class="k">if</span> <span class="n">avg_gain_per_con</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">avg_loss_per_con</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">eff_risk_reward</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">eff_risk_reward</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">avg_loss_per_con</span> <span class="o">/</span> <span class="n">avg_gain_per_con</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">avg_gain_per_con</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">avg_gain_per_con</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">avg_gain_per_con</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">avg_loss_per_con</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">avg_loss_per_con</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">avg_loss_per_con</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
-        <span class="c1"># Convert ticks to a sorted list of dictionaries to aid unittests</span>
-        <span class="c1"># and json conversions</span>
-        <span class="n">ticks_list</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">([</span><span class="nb">dict</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">ticks</span><span class="p">)],</span>
-                            <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">y</span><span class="p">:</span> <span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="s1">&#39;stop&#39;</span><span class="p">],</span> <span class="n">y</span><span class="p">[</span><span class="s1">&#39;prof&#39;</span><span class="p">],</span> <span class="n">y</span><span class="p">[</span><span class="s1">&#39;offset&#39;</span><span class="p">]))</span>
-
-        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;gl_sequence&quot;</span><span class="p">:</span> <span class="n">sequence</span><span class="p">,</span>
-                <span class="s2">&quot;profitable_trades&quot;</span><span class="p">:</span> <span class="n">profits</span><span class="p">,</span>
-                <span class="s2">&quot;avg_gain_per_con&quot;</span><span class="p">:</span> <span class="n">avg_gain_per_con</span><span class="p">,</span>
-                <span class="s2">&quot;losing_trades&quot;</span><span class="p">:</span> <span class="n">losses</span><span class="p">,</span>
-                <span class="s2">&quot;avg_loss_per_con&quot;</span><span class="p">:</span> <span class="n">avg_loss_per_con</span><span class="p">,</span>
-                <span class="s2">&quot;total_trades&quot;</span><span class="p">:</span> <span class="n">total_trades</span><span class="p">,</span>
-                <span class="s2">&quot;success_percent&quot;</span><span class="p">:</span> <span class="n">success_percent</span><span class="p">,</span>
-                <span class="s2">&quot;duration_sec_p20&quot;</span><span class="p">:</span> <span class="n">duration_sec_p20</span><span class="p">,</span>
-                <span class="s2">&quot;duration_sec_median&quot;</span><span class="p">:</span> <span class="n">duration_sec_median</span><span class="p">,</span>
-                <span class="s2">&quot;duration_sec_p80&quot;</span><span class="p">:</span> <span class="n">duration_sec_p80</span><span class="p">,</span>
-                <span class="s2">&quot;setup_risk_reward&quot;</span><span class="p">:</span> <span class="n">risk_reward</span><span class="p">,</span>
-                <span class="s2">&quot;effective_risk_reward&quot;</span><span class="p">:</span> <span class="n">eff_risk_reward</span><span class="p">,</span>
-                <span class="s2">&quot;min_risk_reward&quot;</span><span class="p">:</span> <span class="n">min_risk_reward</span><span class="p">,</span>
-                <span class="s2">&quot;max_risk_reward&quot;</span><span class="p">:</span> <span class="n">max_risk_reward</span><span class="p">,</span>
-                <span class="s2">&quot;trading_days&quot;</span><span class="p">:</span> <span class="n">trading_days</span><span class="p">,</span>
-                <span class="s2">&quot;total_days&quot;</span><span class="p">:</span> <span class="n">total_days</span><span class="p">,</span>
-                <span class="s2">&quot;total_weeks&quot;</span><span class="p">:</span> <span class="n">total_weeks</span><span class="p">,</span>
-                <span class="s2">&quot;trades_per_week&quot;</span><span class="p">:</span> <span class="n">trades_per_week</span><span class="p">,</span>
-                <span class="s2">&quot;trades_per_day&quot;</span><span class="p">:</span> <span class="n">trades_per_day</span><span class="p">,</span>
-                <span class="s2">&quot;trades_per_trading_day&quot;</span><span class="p">:</span> <span class="n">trades_per_trading_day</span><span class="p">,</span>
-                <span class="s2">&quot;trade_ticks&quot;</span><span class="p">:</span> <span class="n">ticks_list</span><span class="p">,</span>
-                <span class="p">}</span></div>
+            <span class="n">total_days</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="p">(</span><span class="n">dt_as_dt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">end_dt</span><span class="p">)</span><span class="o">.</span><span class="n">date</span><span class="p">()</span>
+                 <span class="o">-</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_dt</span><span class="p">)</span><span class="o">.</span><span class="n">date</span><span class="p">())</span><span class="o">.</span><span class="n">days</span> <span class="o">+</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="n">total_trades</span> <span class="k">else</span> <span class="mi">0</span>
+            <span class="p">)</span>
+            <span class="n">values</span><span class="p">[</span><span class="s2">&quot;total_days&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">total_days</span>
+            <span class="k">if</span> <span class="n">fields</span> <span class="o">&amp;</span> <span class="p">{</span><span class="s2">&quot;total_weeks&quot;</span><span class="p">,</span> <span class="s2">&quot;trades_per_week&quot;</span><span class="p">}:</span>
+                <span class="n">total_weeks</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">total_days</span><span class="o">/</span><span class="mi">7</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="k">if</span> <span class="n">total_trades</span> <span class="k">else</span> <span class="mi">0</span>
+                <span class="n">values</span><span class="p">[</span><span class="s2">&quot;total_weeks&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">total_weeks</span>
+            <span class="k">if</span> <span class="s2">&quot;trades_per_day&quot;</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">:</span>
+                <span class="n">values</span><span class="p">[</span><span class="s2">&quot;trades_per_day&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="nb">round</span><span class="p">(</span><span class="n">total_trades</span><span class="o">/</span><span class="n">total_days</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="k">if</span> <span class="n">total_trades</span> <span class="k">else</span> <span class="mi">0</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="s2">&quot;trades_per_week&quot;</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">:</span>
+                <span class="n">values</span><span class="p">[</span><span class="s2">&quot;trades_per_week&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="nb">round</span><span class="p">(</span><span class="n">total_trades</span><span class="o">/</span><span class="n">total_weeks</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="k">if</span> <span class="n">total_trades</span> <span class="k">else</span> <span class="mi">0</span>
+                <span class="p">)</span>
+        <span class="k">if</span> <span class="n">durations</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">&quot;duration_sec_p20&quot;</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">:</span>
+                <span class="n">values</span><span class="p">[</span><span class="s2">&quot;duration_sec_p20&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="nb">round</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">durations</span><span class="p">,</span> <span class="mi">20</span><span class="p">))</span> <span class="k">if</span> <span class="n">total_trades</span> <span class="k">else</span> <span class="mi">0</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="s2">&quot;duration_sec_median&quot;</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">:</span>
+                <span class="n">values</span><span class="p">[</span><span class="s2">&quot;duration_sec_median&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="nb">round</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">durations</span><span class="p">))</span> <span class="k">if</span> <span class="n">total_trades</span> <span class="k">else</span> <span class="mi">0</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="s2">&quot;duration_sec_p80&quot;</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">:</span>
+                <span class="n">values</span><span class="p">[</span><span class="s2">&quot;duration_sec_p80&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="nb">round</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">durations</span><span class="p">,</span> <span class="mi">80</span><span class="p">))</span> <span class="k">if</span> <span class="n">total_trades</span> <span class="k">else</span> <span class="mi">0</span>
+                <span class="p">)</span>
+        <span class="k">if</span> <span class="s2">&quot;setup_risk_reward&quot;</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">:</span>
+            <span class="n">values</span><span class="p">[</span><span class="s2">&quot;setup_risk_reward&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="nb">round</span><span class="p">(</span><span class="n">rr</span><span class="p">[</span><span class="s2">&quot;total_risk&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="n">rr</span><span class="p">[</span><span class="s2">&quot;total_reward&quot;</span><span class="p">],</span> <span class="mi">2</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">rr</span><span class="p">[</span><span class="s2">&quot;total_reward&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">fields</span> <span class="o">&amp;</span> <span class="p">{</span><span class="s2">&quot;avg_gain_per_con&quot;</span><span class="p">,</span> <span class="s2">&quot;effective_risk_reward&quot;</span><span class="p">}:</span>
+            <span class="n">avg_gain</span> <span class="o">=</span> <span class="n">err</span><span class="p">[</span><span class="s2">&quot;total_reward&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="n">profits</span> <span class="k">if</span> <span class="n">profits</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">fields</span> <span class="o">&amp;</span> <span class="p">{</span><span class="s2">&quot;avg_loss_per_con&quot;</span><span class="p">,</span> <span class="s2">&quot;effective_risk_reward&quot;</span><span class="p">}:</span>
+            <span class="n">avg_loss</span> <span class="o">=</span> <span class="n">err</span><span class="p">[</span><span class="s2">&quot;total_risk&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="n">losses</span> <span class="k">if</span> <span class="n">losses</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="s2">&quot;effective_risk_reward&quot;</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">:</span>
+            <span class="c1"># Effective risk/reward uses averages before display rounding.</span>
+            <span class="n">values</span><span class="p">[</span><span class="s2">&quot;effective_risk_reward&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="nb">round</span><span class="p">(</span><span class="n">avg_loss</span> <span class="o">/</span> <span class="n">avg_gain</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">avg_gain</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">avg_loss</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="s2">&quot;avg_gain_per_con&quot;</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">:</span>
+            <span class="n">values</span><span class="p">[</span><span class="s2">&quot;avg_gain_per_con&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="nb">round</span><span class="p">(</span><span class="n">avg_gain</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="k">if</span> <span class="n">avg_gain</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="s2">&quot;avg_loss_per_con&quot;</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">:</span>
+            <span class="n">values</span><span class="p">[</span><span class="s2">&quot;avg_loss_per_con&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="nb">round</span><span class="p">(</span><span class="n">avg_loss</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="k">if</span> <span class="n">avg_loss</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">ticks</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">values</span><span class="p">[</span><span class="s2">&quot;trade_ticks&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+                <span class="p">[</span><span class="nb">dict</span><span class="p">(</span><span class="n">tick</span><span class="p">)</span> <span class="k">for</span> <span class="n">tick</span> <span class="ow">in</span> <span class="n">ticks</span><span class="p">],</span>
+                <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">tick</span><span class="p">:</span> <span class="p">(</span><span class="n">tick</span><span class="p">[</span><span class="s2">&quot;stop&quot;</span><span class="p">],</span> <span class="n">tick</span><span class="p">[</span><span class="s2">&quot;prof&quot;</span><span class="p">],</span> <span class="n">tick</span><span class="p">[</span><span class="s2">&quot;offset&quot;</span><span class="p">]),</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="n">field</span><span class="p">:</span> <span class="n">values</span><span class="p">[</span><span class="n">field</span><span class="p">]</span> <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_STATS_FIELDS</span>
+            <span class="k">if</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">fields</span>
+        <span class="p">}</span></div>
 
 <div class="viewcode-block" id="TradeSeries.weekly_stats"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradeSeries.weekly_stats">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">weekly_stats</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">include_first_min</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Return trade statistics grouped into weekly buckets.</span>
 
-<span class="sd">        Uses Sunday as the start of each week for bucket definition and</span>
-<span class="sd">        membership, but emits Monday date as the bucket label for each week.</span>
+<span class="sd">        Uses the canonical Sunday 18:00 session boundary for membership and</span>
+<span class="sd">        emits the following Monday midnight storage label for each week.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Build a dict of weeks with zeroes as default values to ensure we</span>
         <span class="c1"># represent non-traded weeks in the result rather than leave gaps</span>
@@ -3927,27 +4089,31 @@
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trades</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">{}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sort_trades</span><span class="p">()</span>
-        <span class="n">w_start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trades</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">open_dt</span>
-        <span class="n">w_end</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trades</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">open_dt</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="n">dict_of_weeks</span><span class="p">(</span><span class="n">start_dt</span><span class="o">=</span><span class="n">w_start</span><span class="p">,</span>
-                               <span class="n">end_dt</span><span class="o">=</span><span class="n">w_end</span><span class="p">,</span>
-                               <span class="n">template</span><span class="o">=</span><span class="n">template</span><span class="p">)</span>
-        <span class="c1"># Relabel all Sunday keys to Monday keys for output</span>
-        <span class="n">result</span> <span class="o">=</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">date</span><span class="o">.</span><span class="n">fromisoformat</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">)):</span> <span class="n">v</span>
-                  <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+        <span class="n">w_start</span> <span class="o">=</span> <span class="n">canonical_session_key</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trades</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">open_dt</span><span class="p">,</span> <span class="s2">&quot;e1w&quot;</span><span class="p">)</span>
+        <span class="n">w_end</span> <span class="o">=</span> <span class="n">canonical_session_key</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trades</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">open_dt</span><span class="p">,</span> <span class="s2">&quot;e1w&quot;</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">current_week</span> <span class="o">=</span> <span class="n">w_start</span>
+        <span class="k">while</span> <span class="n">current_week</span> <span class="o">&lt;=</span> <span class="n">w_end</span><span class="p">:</span>
+            <span class="n">label</span> <span class="o">=</span> <span class="n">storage_label_for_session_key</span><span class="p">(</span><span class="n">current_week</span><span class="p">,</span> <span class="s2">&quot;e1w&quot;</span><span class="p">)</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">label</span><span class="o">.</span><span class="n">date</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()]</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">template</span><span class="p">)</span>
+            <span class="n">current_week</span> <span class="o">+=</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">weeks</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
         <span class="c1"># Loop through trades to aggregate stats</span>
         <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">trades</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">t</span><span class="o">.</span><span class="n">first_min_open</span> <span class="ow">or</span> <span class="n">include_first_min</span><span class="p">:</span>
-                <span class="n">d</span> <span class="o">=</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">open_dt</span><span class="p">)</span>
-                <span class="n">w</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">start_of_week_date</span><span class="p">(</span><span class="n">dt</span><span class="o">=</span><span class="n">d</span><span class="p">)</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
-                <span class="n">result</span><span class="p">[</span><span class="n">w</span><span class="p">][</span><span class="s2">&quot;total_trades&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">session_key</span> <span class="o">=</span> <span class="n">canonical_session_key</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">open_dt</span><span class="p">,</span> <span class="s2">&quot;e1w&quot;</span><span class="p">)</span>
+                <span class="n">label</span> <span class="o">=</span> <span class="n">storage_label_for_session_key</span><span class="p">(</span>
+                    <span class="n">session_key</span><span class="p">,</span>
+                    <span class="s2">&quot;e1w&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">week</span> <span class="o">=</span> <span class="n">label</span><span class="o">.</span><span class="n">date</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span>
+                <span class="n">result</span><span class="p">[</span><span class="n">week</span><span class="p">][</span><span class="s2">&quot;total_trades&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
                 <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">profitable</span><span class="p">:</span>
-                    <span class="n">result</span><span class="p">[</span><span class="n">w</span><span class="p">][</span><span class="s2">&quot;profitable_trades&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="n">result</span><span class="p">[</span><span class="n">week</span><span class="p">][</span><span class="s2">&quot;profitable_trades&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="n">result</span><span class="p">[</span><span class="n">w</span><span class="p">][</span><span class="s2">&quot;losing_trades&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
-                <span class="n">result</span><span class="p">[</span><span class="n">w</span><span class="p">][</span><span class="s2">&quot;gl_in_ticks&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="p">((</span><span class="n">t</span><span class="o">.</span><span class="n">exit_price</span> <span class="o">-</span> <span class="n">t</span><span class="o">.</span><span class="n">entry_price</span><span class="p">)</span>
-                                             <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">symbol</span><span class="o">.</span><span class="n">tick_size</span>
-                                             <span class="o">*</span> <span class="n">t</span><span class="o">.</span><span class="n">flipper</span><span class="p">)</span>
+                    <span class="n">result</span><span class="p">[</span><span class="n">week</span><span class="p">][</span><span class="s2">&quot;losing_trades&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">result</span><span class="p">[</span><span class="n">week</span><span class="p">][</span><span class="s2">&quot;gl_in_ticks&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="p">((</span><span class="n">t</span><span class="o">.</span><span class="n">exit_price</span> <span class="o">-</span> <span class="n">t</span><span class="o">.</span><span class="n">entry_price</span><span class="p">)</span>
+                                                <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">symbol</span><span class="o">.</span><span class="n">tick_size</span>
+                                                <span class="o">*</span> <span class="n">t</span><span class="o">.</span><span class="n">flipper</span><span class="p">)</span>
         <span class="c1"># Calculate success rates</span>
         <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
             <span class="k">if</span> <span class="n">result</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="s2">&quot;total_trades&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
@@ -3956,6 +4122,70 @@
                               <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
                 <span class="n">result</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="s2">&quot;success_rate&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">srate</span>
 
+        <span class="k">return</span> <span class="n">result</span></div>
+
+<div class="viewcode-block" id="TradeSeries.daily_stats"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.TradeSeries.daily_stats">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">daily_stats</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">include_first_min</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return trade statistics grouped into canonical session days.</span>
+
+<span class="sd">        The returned additive fields use the same trade inclusion and signed</span>
+<span class="sd">        tick calculation as weekly_stats(). Each session runs from 18:00:00</span>
+<span class="sd">        through 17:59:59 of the following calendar date. Keys use the</span>
+<span class="sd">        date-only storage label for each session. Zero-trade sessions are</span>
+<span class="sd">        retained so callers can use the result for exact boundaries.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">template</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;total_trades&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="s2">&quot;profitable_trades&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="s2">&quot;losing_trades&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="s2">&quot;gl_in_ticks&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="s2">&quot;success_rate&quot;</span><span class="p">:</span> <span class="s2">&quot;nil&quot;</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trades</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sort_trades</span><span class="p">()</span>
+        <span class="n">first_day</span> <span class="o">=</span> <span class="n">canonical_session_key</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trades</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">open_dt</span><span class="p">,</span>
+            <span class="s2">&quot;e1d&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">last_day</span> <span class="o">=</span> <span class="n">canonical_session_key</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trades</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">open_dt</span><span class="p">,</span>
+            <span class="s2">&quot;e1d&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">current_session</span> <span class="o">=</span> <span class="n">first_day</span>
+        <span class="k">while</span> <span class="n">current_session</span> <span class="o">&lt;=</span> <span class="n">last_day</span><span class="p">:</span>
+            <span class="n">label</span> <span class="o">=</span> <span class="n">storage_label_for_session_key</span><span class="p">(</span>
+                <span class="n">current_session</span><span class="p">,</span>
+                <span class="s2">&quot;e1d&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">label</span><span class="o">.</span><span class="n">date</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()]</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">template</span><span class="p">)</span>
+            <span class="n">current_session</span> <span class="o">+=</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">trades</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">t</span><span class="o">.</span><span class="n">first_min_open</span> <span class="ow">or</span> <span class="n">include_first_min</span><span class="p">:</span>
+                <span class="n">session_key</span> <span class="o">=</span> <span class="n">canonical_session_key</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">open_dt</span><span class="p">,</span> <span class="s2">&quot;e1d&quot;</span><span class="p">)</span>
+                <span class="n">label</span> <span class="o">=</span> <span class="n">storage_label_for_session_key</span><span class="p">(</span>
+                    <span class="n">session_key</span><span class="p">,</span>
+                    <span class="s2">&quot;e1d&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">day</span> <span class="o">=</span> <span class="n">label</span><span class="o">.</span><span class="n">date</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span>
+                <span class="n">result</span><span class="p">[</span><span class="n">day</span><span class="p">][</span><span class="s2">&quot;total_trades&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">profitable</span><span class="p">:</span>
+                    <span class="n">result</span><span class="p">[</span><span class="n">day</span><span class="p">][</span><span class="s2">&quot;profitable_trades&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">result</span><span class="p">[</span><span class="n">day</span><span class="p">][</span><span class="s2">&quot;losing_trades&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">result</span><span class="p">[</span><span class="n">day</span><span class="p">][</span><span class="s2">&quot;gl_in_ticks&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="p">(</span>
+                    <span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">exit_price</span> <span class="o">-</span> <span class="n">t</span><span class="o">.</span><span class="n">entry_price</span><span class="p">)</span>
+                    <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">symbol</span><span class="o">.</span><span class="n">tick_size</span>
+                    <span class="o">*</span> <span class="n">t</span><span class="o">.</span><span class="n">flipper</span>
+                <span class="p">)</span>
+        <span class="k">for</span> <span class="n">values</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">values</span><span class="p">[</span><span class="s2">&quot;total_trades&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">values</span><span class="p">[</span><span class="s2">&quot;success_rate&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span>
+                    <span class="n">values</span><span class="p">[</span><span class="s2">&quot;profitable_trades&quot;</span><span class="p">]</span>
+                    <span class="o">/</span> <span class="n">values</span><span class="p">[</span><span class="s2">&quot;total_trades&quot;</span><span class="p">]</span>
+                    <span class="o">*</span> <span class="mi">100</span><span class="p">,</span>
+                    <span class="mi">0</span><span class="p">,</span>
+                <span class="p">)</span>
         <span class="k">return</span> <span class="n">result</span></div></div>
 
 
@@ -4006,7 +4236,7 @@
         <span class="s2">&quot;start_dt&quot;</span><span class="p">,</span> <span class="s2">&quot;end_dt&quot;</span><span class="p">,</span> <span class="s2">&quot;timeframe&quot;</span><span class="p">,</span>
         <span class="s2">&quot;trading_hours&quot;</span><span class="p">,</span> <span class="s2">&quot;symbol&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">,</span>
         <span class="s2">&quot;bt_id&quot;</span><span class="p">,</span> <span class="s2">&quot;class_name&quot;</span><span class="p">,</span> <span class="s2">&quot;chart_tf&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;chart_1m&quot;</span><span class="p">,</span> <span class="s2">&quot;tradeseries&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;chart_1m&quot;</span><span class="p">,</span> <span class="s2">&quot;tradeseries&quot;</span><span class="p">,</span> <span class="s2">&quot;trade_family&quot;</span><span class="p">,</span>
     <span class="p">})</span>
     <span class="n">_EQ_EXCLUDE</span><span class="p">:</span> <span class="nb">frozenset</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span>
         <span class="c1"># Subclass-specific fields; compared via sub_eq()</span>
@@ -4030,6 +4260,7 @@
                  <span class="n">autoload_charts</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                  <span class="n">prefer_stored</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
                  <span class="n">tradeseries</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                 <span class="n">trade_family</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">start_dt</span> <span class="o">=</span> <span class="n">dt_as_str</span><span class="p">(</span><span class="n">start_dt</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">end_dt</span> <span class="o">=</span> <span class="n">dt_as_str</span><span class="p">(</span><span class="n">end_dt</span><span class="p">)</span>
@@ -4048,6 +4279,7 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">bt_id</span> <span class="o">=</span> <span class="n">bt_id</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">class_name</span> <span class="o">=</span> <span class="n">class_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trade_family</span> <span class="o">=</span> <span class="n">trade_family</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">parameters</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">chart_tf</span> <span class="o">=</span> <span class="n">chart_tf</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">chart_1m</span> <span class="o">=</span> <span class="n">chart_1m</span>
@@ -4299,15 +4531,31 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Sort attached TradeSeries in ascending ts_id order.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">tradeseries</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">ts_id</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Backtest.load_tradeseries"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Backtest.load_tradeseries">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">load_tradeseries</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">include_trades</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<div class="viewcode-block" id="Backtest.load_tradeseries"><a class="viewcode-back" href="../../api/dhtrader.dhtypes.html#dhtrader.dhtypes.Backtest.load_tradeseries">[docs]</a>    <span class="k">def</span><span class="w"> </span><span class="nf">load_tradeseries</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">include_trades</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span>
+                         <span class="n">start_dt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">end_dt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                         <span class="n">trade_series_ids</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Load and attach all TradeSeries matching this bt_id from storage.</span>
 
 <span class="sd">        This will replace any currently attached tradeseries.</span>
+<span class="sd">        Optional trade_series_ids restricts the loaded series. An empty or</span>
+<span class="sd">        omitted list loads all series for this Backtest.</span>
+<span class="sd">        Optional dates bound Trade opens inclusively when include_trades=True,</span>
+<span class="sd">        without changing stored backtest or series date-range metadata.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">date_bounds</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">start_dt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">date_bounds</span><span class="p">[</span><span class="s2">&quot;start_dt&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">start_dt</span>
+        <span class="k">if</span> <span class="n">end_dt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">date_bounds</span><span class="p">[</span><span class="s2">&quot;end_dt&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">end_dt</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">tradeseries</span> <span class="o">=</span> <span class="n">get_tradeseries_by_field</span><span class="p">(</span>
             <span class="n">field</span><span class="o">=</span><span class="s2">&quot;bt_id&quot;</span><span class="p">,</span>
             <span class="n">value</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bt_id</span><span class="p">,</span>
             <span class="n">include_trades</span><span class="o">=</span><span class="n">include_trades</span><span class="p">,</span>
+            <span class="o">**</span><span class="p">(</span>
+                <span class="p">{</span><span class="s2">&quot;trade_series_ids&quot;</span><span class="p">:</span> <span class="n">trade_series_ids</span><span class="p">}</span>
+                <span class="k">if</span> <span class="n">trade_series_ids</span> <span class="k">else</span> <span class="p">{}</span>
+            <span class="p">),</span>
+            <span class="o">**</span><span class="n">date_bounds</span><span class="p">,</span>
             <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sort_tradeseries</span><span class="p">()</span></div>
 

@@ -54,6 +54,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">copy</span><span class="w"> </span><span class="kn">import</span> <span class="n">deepcopy</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Generator</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.dhtypes</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">Candle</span><span class="p">,</span> <span class="n">Event</span><span class="p">,</span> <span class="n">IndicatorDataPoint</span><span class="p">,</span> <span class="n">Symbol</span><span class="p">,</span> <span class="n">IndicatorSMA</span><span class="p">,</span> <span class="n">IndicatorEMA</span><span class="p">,</span>
     <span class="n">IndicatorRSI</span><span class="p">,</span> <span class="n">IndicatorDerivedSMA</span><span class="p">,</span> <span class="n">Trade</span><span class="p">,</span> <span class="n">TradeSeries</span><span class="p">,</span> <span class="n">TradePlan</span><span class="p">,</span>
@@ -97,6 +98,22 @@
 
 <span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;dhstore&quot;</span><span class="p">)</span>
 <span class="n">log</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">NullHandler</span><span class="p">())</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_require_stored_id</span><span class="p">(</span><span class="n">record</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">id_field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">object_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                       <span class="o">*</span><span class="p">,</span> <span class="n">function_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Reject missing or blank stored identity fields before reconstruction.&quot;&quot;&quot;</span>
+    <span class="n">stored_id</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">id_field</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">stored_id</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">stored_id</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span>
+            <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">: invalid stored </span><span class="si">%s</span><span class="s2">.</span><span class="si">%s</span><span class="s2">=</span><span class="si">%r</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">function_name</span><span class="p">,</span> <span class="n">object_type</span><span class="p">,</span> <span class="n">id_field</span><span class="p">,</span> <span class="n">stored_id</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">function_name</span><span class="si">}</span><span class="s2">: stored </span><span class="si">{</span><span class="n">object_type</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">id_field</span><span class="si">}</span><span class="s2"> must be &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;a non-empty string; got </span><span class="si">{</span><span class="n">stored_id</span><span class="si">!r}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">stored_id</span>
 
 
 <span class="c1">##############################################################################</span>
@@ -318,6 +335,8 @@
 <div class="viewcode-block" id="delete_custom_documents_by_field"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.delete_custom_documents_by_field">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">delete_custom_documents_by_field</span><span class="p">(</span><span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                                      <span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                                      <span class="n">value</span><span class="p">,</span>
+                                     <span class="o">*</span><span class="p">,</span>
+                                     <span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                                      <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete documents matching field==value from a non-managed collection.</span>
 
@@ -325,6 +344,7 @@
 <span class="sd">        collection: Target collection name.</span>
 <span class="sd">        field: Document field to match on.</span>
 <span class="sd">        value: Value to match.</span>
+<span class="sd">        database: Optional database name on the existing Mongo client.</span>
 
 <span class="sd">    Raises:</span>
 <span class="sd">        ValueError: If collection is managed.</span>
@@ -342,11 +362,14 @@
     <span class="p">)</span>
 
     <span class="n">time_delete</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
-    <span class="n">result</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">delete_custom_documents_by_field</span><span class="p">(</span>
-        <span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">,</span>
-        <span class="n">field</span><span class="o">=</span><span class="n">field</span><span class="p">,</span>
-        <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">,</span>
-    <span class="p">)</span>
+    <span class="n">delete_args</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;collection&quot;</span><span class="p">:</span> <span class="n">collection</span><span class="p">,</span>
+        <span class="s2">&quot;field&quot;</span><span class="p">:</span> <span class="n">field</span><span class="p">,</span>
+        <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">value</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="n">database</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">delete_args</span><span class="p">[</span><span class="s2">&quot;database&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">database</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">delete_custom_documents_by_field</span><span class="p">(</span><span class="o">**</span><span class="n">delete_args</span><span class="p">)</span>
     <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
         <span class="sa">f</span><span class="s2">&quot;delete_custom_documents_by_field: delete elapsed &quot;</span>
         <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">time_delete</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2">s&quot;</span>
@@ -406,6 +429,8 @@
                                   <span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                                   <span class="n">value</span><span class="p">,</span>
                                   <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+                                  <span class="o">*</span><span class="p">,</span>
+                                  <span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                                   <span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Return documents matching field==value from a non-managed collection.</span>
 
@@ -414,6 +439,7 @@
 <span class="sd">        field: Document field to filter on.</span>
 <span class="sd">        value: Value to match.</span>
 <span class="sd">        limit: Maximum number of results (0 = no limit).</span>
+<span class="sd">        database: Optional database name on the existing Mongo client.</span>
 
 <span class="sd">    Raises:</span>
 <span class="sd">        ValueError: If collection is managed.</span>
@@ -428,17 +454,137 @@
     <span class="n">_guard_managed_collection</span><span class="p">(</span>
         <span class="n">collection</span><span class="p">,</span> <span class="s2">&quot;get_custom_documents_by_field&quot;</span>
     <span class="p">)</span>
-    <span class="n">results</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">get_custom_documents_by_field</span><span class="p">(</span>
-        <span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">,</span>
-        <span class="n">field</span><span class="o">=</span><span class="n">field</span><span class="p">,</span>
-        <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">,</span>
-        <span class="n">limit</span><span class="o">=</span><span class="n">limit</span><span class="p">,</span>
-    <span class="p">)</span>
+    <span class="n">query_args</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;collection&quot;</span><span class="p">:</span> <span class="n">collection</span><span class="p">,</span>
+        <span class="s2">&quot;field&quot;</span><span class="p">:</span> <span class="n">field</span><span class="p">,</span>
+        <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">value</span><span class="p">,</span>
+        <span class="s2">&quot;limit&quot;</span><span class="p">:</span> <span class="n">limit</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="n">database</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">query_args</span><span class="p">[</span><span class="s2">&quot;database&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">database</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">get_custom_documents_by_field</span><span class="p">(</span><span class="o">**</span><span class="n">query_args</span><span class="p">)</span>
     <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
         <span class="sa">f</span><span class="s2">&quot;get_custom_documents_by_field: returning </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span><span class="si">}</span><span class="s2"> &quot;</span>
         <span class="sa">f</span><span class="s2">&quot;documents from </span><span class="si">{</span><span class="n">collection</span><span class="si">!r}</span><span class="s2">&quot;</span>
     <span class="p">)</span>
     <span class="k">return</span> <span class="n">results</span></div>
+
+
+<div class="viewcode-block" id="bulk_upsert_documents"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.bulk_upsert_documents">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">bulk_upsert_documents</span><span class="p">(</span>
+        <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">documents</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+        <span class="n">identity_field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Store or replace a batch of custom documents.</span>
+
+<span class="sd">    Reject managed collections and delegate validation and ordered writes</span>
+<span class="sd">    to dhmongo.bulk_upsert_documents(). Return its write summary.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">documents</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">documents</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">))</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;bulk_upsert_documents: collection=</span><span class="si">{</span><span class="n">collection</span><span class="si">!r}</span><span class="s2">, &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;identity_field=</span><span class="si">{</span><span class="n">identity_field</span><span class="si">!r}</span><span class="s2">, count=</span><span class="si">{</span><span class="n">count</span><span class="si">!r}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="n">_guard_managed_collection</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="s2">&quot;bulk_upsert_documents&quot;</span><span class="p">)</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">bulk_upsert_documents</span><span class="p">(</span>
+        <span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">,</span>
+        <span class="n">documents</span><span class="o">=</span><span class="n">documents</span><span class="p">,</span>
+        <span class="n">identity_field</span><span class="o">=</span><span class="n">identity_field</span><span class="p">,</span>
+        <span class="n">database</span><span class="o">=</span><span class="n">database</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;bulk_upsert_documents: attempted </span><span class="si">{</span><span class="n">result</span><span class="p">[</span><span class="s1">&#39;attempted_count&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;documents in </span><span class="si">{</span><span class="n">collection</span><span class="si">!r}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="iter_custom_documents_by_field"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.iter_custom_documents_by_field">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">iter_custom_documents_by_field</span><span class="p">(</span>
+        <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">value</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1000</span><span class="p">,</span>
+        <span class="n">limit</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Generator</span><span class="p">[</span><span class="nb">dict</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a closable iterator for custom documents matching a field.&quot;&quot;&quot;</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;iter_custom_documents_by_field: collection=</span><span class="si">{</span><span class="n">collection</span><span class="si">!r}</span><span class="s2">, &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;field=</span><span class="si">{</span><span class="n">field</span><span class="si">!r}</span><span class="s2">, value=</span><span class="si">{</span><span class="n">value</span><span class="si">!r}</span><span class="s2">, batch_size=</span><span class="si">{</span><span class="n">batch_size</span><span class="si">}</span><span class="s2">, &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;limit=</span><span class="si">{</span><span class="n">limit</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="n">_guard_managed_collection</span><span class="p">(</span>
+        <span class="n">collection</span><span class="p">,</span> <span class="s2">&quot;iter_custom_documents_by_field&quot;</span>
+    <span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">iter_custom_documents_by_field</span><span class="p">(</span>
+        <span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">,</span>
+        <span class="n">field</span><span class="o">=</span><span class="n">field</span><span class="p">,</span>
+        <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">,</span>
+        <span class="n">database</span><span class="o">=</span><span class="n">database</span><span class="p">,</span>
+        <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
+        <span class="n">limit</span><span class="o">=</span><span class="n">limit</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;iter_custom_documents_by_field: returned iterator for &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">collection</span><span class="si">!r}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="verify_database_configuration"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.verify_database_configuration">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">verify_database_configuration</span><span class="p">(</span>
+        <span class="n">configuration</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check configured Mongo storage against expectations.</span>
+
+<span class="sd">    Pass the dictionary loaded from the provisioning JSON. Omit database to</span>
+<span class="sd">    inspect every configured database, or select one by name. Return</span>
+<span class="sd">    {&quot;ok&quot;: bool, &quot;issues&quot;: list}; see dhmongo.verify_database_configuration</span>
+<span class="sd">    for issue fields. Configuration, connection, and permission errors</span>
+<span class="sd">    propagate. This explicit preflight does not automatically prevent writes.</span>
+
+<span class="sd">    See README.md, &quot;Checking Your MongoDB Setup&quot;, for connection setup,</span>
+<span class="sd">    configuration examples, and guidance on interpreting the results.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;verify_database_configuration: database=</span><span class="si">%r</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">database</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">verify_database_configuration</span><span class="p">(</span>
+        <span class="n">configuration</span><span class="p">,</span> <span class="n">database</span><span class="o">=</span><span class="n">database</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="s2">&quot;verify_database_configuration: ok=</span><span class="si">%s</span><span class="s2">, issues=</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+        <span class="n">result</span><span class="p">[</span><span class="s2">&quot;ok&quot;</span><span class="p">],</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s2">&quot;issues&quot;</span><span class="p">]),</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="count_records"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.count_records">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">count_records</span><span class="p">(</span><span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                  <span class="n">query</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                  <span class="o">*</span><span class="p">,</span>
+                  <span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                  <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Count matching documents in a non-managed collection.</span>
+
+<span class="sd">    Omission of database uses dhtrader&#39;s existing primary database.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;count_records: collection=</span><span class="si">{</span><span class="n">collection</span><span class="si">!r}</span><span class="s2">, query=</span><span class="si">{</span><span class="n">query</span><span class="si">!r}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="n">_guard_managed_collection</span><span class="p">(</span><span class="n">collection</span><span class="p">,</span> <span class="s2">&quot;count_records&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">database</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">count_records</span><span class="p">(</span><span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">,</span> <span class="n">query</span><span class="o">=</span><span class="n">query</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">count_records</span><span class="p">(</span>
+            <span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">,</span>
+            <span class="n">query</span><span class="o">=</span><span class="n">query</span><span class="p">,</span>
+            <span class="n">database</span><span class="o">=</span><span class="n">database</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;count_records: returning </span><span class="si">{</span><span class="n">result</span><span class="si">}</span><span class="s2"> documents from </span><span class="si">{</span><span class="n">collection</span><span class="si">!r}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span></div>
 
 
 <div class="viewcode-block" id="get_all_custom_documents"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.get_all_custom_documents">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_all_custom_documents</span><span class="p">(</span><span class="n">collection</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -678,6 +824,14 @@
     <span class="n">data</span><span class="p">,</span> <span class="n">meta_dict</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">get_image_by_id</span><span class="p">(</span>
         <span class="n">image_id</span><span class="o">=</span><span class="n">image_id</span><span class="p">,</span> <span class="n">bucket</span><span class="o">=</span><span class="n">bucket</span>
     <span class="p">)</span>
+    <span class="n">_require_stored_id</span><span class="p">(</span>
+        <span class="n">meta_dict</span><span class="p">,</span> <span class="s2">&quot;image_id&quot;</span><span class="p">,</span> <span class="s2">&quot;StoredImage&quot;</span><span class="p">,</span>
+        <span class="n">function_name</span><span class="o">=</span><span class="s2">&quot;get_image_by_id&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">_require_stored_id</span><span class="p">(</span>
+        <span class="n">meta_dict</span><span class="p">,</span> <span class="s2">&quot;uniq_id&quot;</span><span class="p">,</span> <span class="s2">&quot;StoredImage&quot;</span><span class="p">,</span>
+        <span class="n">function_name</span><span class="o">=</span><span class="s2">&quot;get_image_by_id&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
     <span class="n">stored_image</span> <span class="o">=</span> <span class="n">StoredImage</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">meta_dict</span><span class="p">)</span>
     <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
         <span class="sa">f</span><span class="s2">&quot;get_image_by_id: returned </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="si">}</span><span class="s2"> bytes &quot;</span>
@@ -716,6 +870,15 @@
     <span class="n">metadata_list</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">get_image_metadata_by_field</span><span class="p">(</span>
         <span class="n">field</span><span class="o">=</span><span class="n">field</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">,</span> <span class="n">bucket</span><span class="o">=</span><span class="n">bucket</span>
     <span class="p">)</span>
+    <span class="k">for</span> <span class="n">metadata</span> <span class="ow">in</span> <span class="n">metadata_list</span><span class="p">:</span>
+        <span class="n">_require_stored_id</span><span class="p">(</span>
+            <span class="n">metadata</span><span class="p">,</span> <span class="s2">&quot;image_id&quot;</span><span class="p">,</span> <span class="s2">&quot;StoredImage&quot;</span><span class="p">,</span>
+            <span class="n">function_name</span><span class="o">=</span><span class="s2">&quot;get_images_metadata_by_field&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">_require_stored_id</span><span class="p">(</span>
+            <span class="n">metadata</span><span class="p">,</span> <span class="s2">&quot;uniq_id&quot;</span><span class="p">,</span> <span class="s2">&quot;StoredImage&quot;</span><span class="p">,</span>
+            <span class="n">function_name</span><span class="o">=</span><span class="s2">&quot;get_images_metadata_by_field&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
     <span class="n">results</span> <span class="o">=</span> <span class="p">[</span><span class="n">StoredImage</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">m</span><span class="p">)</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">metadata_list</span><span class="p">]</span>
     <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
         <span class="sa">f</span><span class="s2">&quot;get_images_metadata_by_field: returning </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span><span class="si">}</span><span class="s2"> &quot;</span>
@@ -987,13 +1150,15 @@
 
 <span class="sd">    Dynamically samples each collection to detect fields containing</span>
 <span class="sd">    datetime strings (formatted like dt_as_str()) and integer epoch</span>
-<span class="sd">    seconds, then checks those fields for values greater than &quot;now&quot;.</span>
-<span class="sd">    Does not modify any data.</span>
+<span class="sd">    seconds. Each query&#39;s results are checked against the scan-start time</span>
+<span class="sd">    to capture potential violations, which are then rechecked against the</span>
+<span class="sd">    post-query completion time so writes during the test are not reported.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        dict: Results with keys status, total_issues,</span>
 <span class="sd">        issues_by_collection, and detected_fields_by_collection.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># First capture documents written after this test starts (now_epoch)</span>
     <span class="n">now_epoch</span> <span class="o">=</span> <span class="n">dt_to_epoch</span><span class="p">(</span><span class="n">dt</span><span class="o">.</span><span class="n">now</span><span class="p">())</span>
     <span class="n">now_str</span> <span class="o">=</span> <span class="n">dt_as_str</span><span class="p">(</span><span class="n">dt_from_epoch</span><span class="p">(</span><span class="n">now_epoch</span><span class="p">))</span>
     <span class="n">issues_by_collection</span> <span class="o">=</span> <span class="p">{}</span>
@@ -1012,9 +1177,12 @@
                 <span class="p">{</span><span class="n">epoch_field</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;$gt&quot;</span><span class="p">:</span> <span class="n">now_epoch</span><span class="p">}},</span>
                 <span class="n">collection</span><span class="o">=</span><span class="n">coll</span><span class="p">,</span>
             <span class="p">)</span>
+            <span class="c1"># Recheck violations against post-query completion time to filter</span>
+            <span class="c1"># out any documents that were written while the test is running.</span>
+            <span class="n">checked_epoch</span> <span class="o">=</span> <span class="n">dt_to_epoch</span><span class="p">(</span><span class="n">dt</span><span class="o">.</span><span class="n">now</span><span class="p">())</span>
             <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">docs</span><span class="p">:</span>
                 <span class="n">value</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">epoch_field</span><span class="p">)</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">_is_epoch_int</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">_is_epoch_int</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="ow">or</span> <span class="n">value</span> <span class="o">&lt;=</span> <span class="n">checked_epoch</span><span class="p">:</span>
                     <span class="k">continue</span>
                 <span class="n">found</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
                     <span class="s2">&quot;collection&quot;</span><span class="p">:</span> <span class="n">coll</span><span class="p">,</span>
@@ -1032,9 +1200,13 @@
                 <span class="p">]},</span>
                 <span class="n">collection</span><span class="o">=</span><span class="n">coll</span><span class="p">,</span>
             <span class="p">)</span>
+            <span class="c1"># Use query completion, not the potentially stale scan cutoff.</span>
+            <span class="n">checked_dt</span> <span class="o">=</span> <span class="n">dt</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
             <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">docs</span><span class="p">:</span>
                 <span class="n">value</span> <span class="o">=</span> <span class="n">doc</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">field</span><span class="p">)</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">_is_datetime_string</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+                <span class="k">if</span> <span class="p">(</span>
+                        <span class="ow">not</span> <span class="n">_is_datetime_string</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                        <span class="ow">or</span> <span class="n">dt_as_dt</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">checked_dt</span><span class="p">):</span>
                     <span class="k">continue</span>
                 <span class="n">found</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
                     <span class="s2">&quot;collection&quot;</span><span class="p">:</span> <span class="n">coll</span><span class="p">,</span>
@@ -1294,7 +1466,7 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">func</span> <span class="o">=</span> <span class="s2">&quot;check_integrity_orphaned_images&quot;</span>
     <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">func</span><span class="si">}</span><span class="s2">: starting orphaned image check&quot;</span><span class="p">)</span>
-    <span class="n">time_start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
+    <span class="n">time_orphaned_image_check</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span>
 
     <span class="c1"># Collect all stored image_ids from GridFS metadata.</span>
     <span class="n">bucket</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;images&quot;</span><span class="p">]</span>
@@ -1336,9 +1508,11 @@
             <span class="sa">f</span><span class="s2">&quot;out of </span><span class="si">{</span><span class="n">total_images</span><span class="si">}</span><span class="s2"> total&quot;</span>
         <span class="p">)</span>
 
-    <span class="n">elapsed</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span> <span class="o">-</span> <span class="n">time_start</span>
+    <span class="n">elapsed_orphaned_image_check</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">perf_counter</span><span class="p">()</span> <span class="o">-</span> <span class="n">time_orphaned_image_check</span>
+    <span class="p">)</span>
     <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">func</span><span class="si">}</span><span class="s2">: completed in </span><span class="si">{</span><span class="n">elapsed</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2">s; &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">func</span><span class="si">}</span><span class="s2">: completed in </span><span class="si">{</span><span class="n">elapsed_orphaned_image_check</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2">s; &quot;</span>
         <span class="sa">f</span><span class="s2">&quot;total=</span><span class="si">{</span><span class="n">total_images</span><span class="si">}</span><span class="s2"> orphaned=</span><span class="si">{</span><span class="n">orphaned_count</span><span class="si">}</span><span class="s2">&quot;</span>
     <span class="p">)</span>
 
@@ -1359,6 +1533,12 @@
 <span class="sd">    Primarily used by other functions to convert results retrieved from</span>
 <span class="sd">    storage.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">_require_stored_id</span><span class="p">(</span>
+        <span class="n">t</span><span class="p">,</span> <span class="s2">&quot;uniq_id&quot;</span><span class="p">,</span> <span class="s2">&quot;Trade&quot;</span><span class="p">,</span> <span class="n">function_name</span><span class="o">=</span><span class="s2">&quot;reconstruct_trade&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">_require_stored_id</span><span class="p">(</span>
+        <span class="n">t</span><span class="p">,</span> <span class="s2">&quot;trade_id&quot;</span><span class="p">,</span> <span class="s2">&quot;Trade&quot;</span><span class="p">,</span> <span class="n">function_name</span><span class="o">=</span><span class="s2">&quot;reconstruct_trade&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
     <span class="n">close_dt</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;close_dt&quot;</span><span class="p">]</span>
     <span class="c1"># Trade() expects a close_dt during initialization; rebuild unclosed</span>
     <span class="c1"># trades using open_dt first, then restore unclosed state.</span>
@@ -1420,24 +1600,36 @@
 
 
 <div class="viewcode-block" id="get_trades_by_field"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.get_trades_by_field">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_trades_by_field</span><span class="p">(</span><span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-                        <span class="n">value</span><span class="p">,</span>
+                        <span class="n">values</span><span class="p">,</span>
                         <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;trades&quot;</span><span class="p">],</span>
                         <span class="n">limit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
                         <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                        <span class="o">*</span><span class="p">,</span>
+                        <span class="n">start_dt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                        <span class="n">end_dt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                         <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns Trade() objects matching the field=value provided.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns Trade() objects matching the field and values provided.</span>
 
+<span class="sd">    If values is a list, return trades matching any value in the list.</span>
 <span class="sd">    Default limit=0 returns all objects, or set to return only top X.</span>
+<span class="sd">    Optional start_dt/end_dt restrict when trades opened, including both</span>
+<span class="sd">    dates. Leave these unset to retrieve the full trade history.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># Retrieve trades from storage</span>
-    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Retrieving trades by </span><span class="si">{</span><span class="n">field</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2">, &quot;</span>
-             <span class="sa">f</span><span class="s2">&quot;limit=</span><span class="si">{</span><span class="n">limit</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Retrieving trades by </span><span class="si">{</span><span class="n">field</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">values</span><span class="si">}</span><span class="s2">, &quot;</span>
+             <span class="sa">f</span><span class="s2">&quot;limit=</span><span class="si">{</span><span class="n">limit</span><span class="si">}</span><span class="s2">, start_dt=</span><span class="si">{</span><span class="n">start_dt</span><span class="si">}</span><span class="s2">, end_dt=</span><span class="si">{</span><span class="n">end_dt</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
     <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">date_bounds</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="n">start_dt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">date_bounds</span><span class="p">[</span><span class="s2">&quot;start_dt&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">start_dt</span>
+    <span class="k">if</span> <span class="n">end_dt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">date_bounds</span><span class="p">[</span><span class="s2">&quot;end_dt&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">end_dt</span>
     <span class="n">r</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">get_trades_by_field</span><span class="p">(</span><span class="n">field</span><span class="o">=</span><span class="n">field</span><span class="p">,</span>
-                                <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">,</span>
+                                <span class="n">values</span><span class="o">=</span><span class="n">values</span><span class="p">,</span>
                                 <span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">,</span>
                                 <span class="n">limit</span><span class="o">=</span><span class="n">limit</span><span class="p">,</span>
                                 <span class="n">show_progress</span><span class="o">=</span><span class="n">show_progress</span><span class="p">,</span>
+                                <span class="o">**</span><span class="n">date_bounds</span><span class="p">,</span>
                                 <span class="p">)</span>
     <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Retrieved </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="p">)</span><span class="si">}</span><span class="s2"> trade records&quot;</span><span class="p">)</span>
 
@@ -1451,32 +1643,6 @@
         <span class="n">update_progbar</span><span class="p">(</span><span class="n">pbar</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">total</span><span class="p">)</span>
     <span class="n">finish_progbar</span><span class="p">(</span><span class="n">pbar</span><span class="p">)</span>
     <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Returning </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="si">}</span><span class="s2"> Trade objects&quot;</span><span class="p">)</span>
-
-    <span class="k">return</span> <span class="n">result</span></div>
-
-
-<div class="viewcode-block" id="get_trades_by_field_in"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.get_trades_by_field_in">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_trades_by_field_in</span><span class="p">(</span><span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-                           <span class="n">values</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
-                           <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;trades&quot;</span><span class="p">],</span>
-                           <span class="n">limit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-                           <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-                           <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return Trade objects where field is in values.&quot;&quot;&quot;</span>
-    <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="n">r</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">get_trades_by_field_in</span><span class="p">(</span><span class="n">field</span><span class="o">=</span><span class="n">field</span><span class="p">,</span>
-                                   <span class="n">values</span><span class="o">=</span><span class="n">values</span><span class="p">,</span>
-                                   <span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">,</span>
-                                   <span class="n">limit</span><span class="o">=</span><span class="n">limit</span><span class="p">,</span>
-                                   <span class="n">show_progress</span><span class="o">=</span><span class="n">show_progress</span><span class="p">,</span>
-                                   <span class="p">)</span>
-
-    <span class="n">total</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
-    <span class="n">pbar</span> <span class="o">=</span> <span class="n">start_progbar</span><span class="p">(</span><span class="n">show_progress</span><span class="p">,</span> <span class="n">total</span><span class="p">,</span>
-                         <span class="s2">&quot;Trade objects built&quot;</span><span class="p">)</span>
-    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
-        <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">reconstruct_trade</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
-        <span class="n">update_progbar</span><span class="p">(</span><span class="n">pbar</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">total</span><span class="p">)</span>
-    <span class="n">finish_progbar</span><span class="p">(</span><span class="n">pbar</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">result</span></div>
 
@@ -1574,10 +1740,10 @@
             <span class="n">all_trades</span> <span class="o">=</span> <span class="n">get_all_trades</span><span class="p">()</span>
         <span class="k">elif</span> <span class="n">bt_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">ts_id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">all_trades</span> <span class="o">=</span> <span class="n">get_trades_by_field</span><span class="p">(</span><span class="n">field</span><span class="o">=</span><span class="s2">&quot;bt_id&quot;</span><span class="p">,</span>
-                                             <span class="n">value</span><span class="o">=</span><span class="n">bt_id</span><span class="p">)</span>
+                                             <span class="n">values</span><span class="o">=</span><span class="n">bt_id</span><span class="p">)</span>
         <span class="k">elif</span> <span class="n">bt_id</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">ts_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">all_trades</span> <span class="o">=</span> <span class="n">get_trades_by_field</span><span class="p">(</span><span class="n">field</span><span class="o">=</span><span class="s2">&quot;ts_id&quot;</span><span class="p">,</span>
-                                             <span class="n">value</span><span class="o">=</span><span class="n">ts_id</span><span class="p">)</span>
+                                             <span class="n">values</span><span class="o">=</span><span class="n">ts_id</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Integrity check supports bt_id or ts_id, not &quot;</span>
                              <span class="sa">f</span><span class="s2">&quot;both!  We got ts_id=</span><span class="si">{</span><span class="n">ts_id</span><span class="si">}</span><span class="s2"> bt_id=</span><span class="si">{</span><span class="n">bt_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -1861,6 +2027,10 @@
 <span class="sd">    Primarily used by other functions to convert results retrieved from</span>
 <span class="sd">    storage.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">_require_stored_id</span><span class="p">(</span>
+        <span class="n">ts</span><span class="p">,</span> <span class="s2">&quot;ts_id&quot;</span><span class="p">,</span> <span class="s2">&quot;TradeSeries&quot;</span><span class="p">,</span>
+        <span class="n">function_name</span><span class="o">=</span><span class="s2">&quot;reconstruct_tradeseries&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
     <span class="k">return</span> <span class="n">TradeSeries</span><span class="p">(</span><span class="n">start_dt</span><span class="o">=</span><span class="n">ts</span><span class="p">[</span><span class="s2">&quot;start_dt&quot;</span><span class="p">],</span>
                        <span class="n">end_dt</span><span class="o">=</span><span class="n">ts</span><span class="p">[</span><span class="s2">&quot;end_dt&quot;</span><span class="p">],</span>
                        <span class="n">timeframe</span><span class="o">=</span><span class="n">ts</span><span class="p">[</span><span class="s2">&quot;timeframe&quot;</span><span class="p">],</span>
@@ -1902,8 +2072,19 @@
                              <span class="n">limit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
                              <span class="n">include_trades</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
                              <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                             <span class="o">*</span><span class="p">,</span>
+                             <span class="n">trade_series_ids</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                             <span class="n">start_dt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                             <span class="n">end_dt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                              <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns a list of all TradeSeries matching the bt_id provided.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return TradeSeries matching the field and value provided.</span>
+
+<span class="sd">    Set include_trades=True to also load the trades for each series.</span>
+<span class="sd">    Optional trade_series_ids restricts the result to those stored IDs.</span>
+<span class="sd">    An empty or omitted list does not restrict results.</span>
+<span class="sd">    Optional start_dt/end_dt restrict when those trades opened, including</span>
+<span class="sd">    both dates. The TradeSeries attributes keep their stored date range.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># Retrieve TradeSeries from storage</span>
     <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Retrieving TradeSeries by </span><span class="si">{</span><span class="n">field</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2"> with limit=</span><span class="si">{</span><span class="n">limit</span><span class="si">}</span><span class="s2"> &quot;</span>
              <span class="sa">f</span><span class="s2">&quot;and include_trades=</span><span class="si">{</span><span class="n">include_trades</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -1913,12 +2094,22 @@
                                      <span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">,</span>
                                      <span class="n">limit</span><span class="o">=</span><span class="n">limit</span><span class="p">,</span>
                                      <span class="n">show_progress</span><span class="o">=</span><span class="n">show_progress</span><span class="p">,</span>
+                                     <span class="o">**</span><span class="p">(</span>
+                                         <span class="p">{</span><span class="s2">&quot;trade_series_ids&quot;</span><span class="p">:</span>
+                                          <span class="n">trade_series_ids</span><span class="p">}</span>
+                                         <span class="k">if</span> <span class="n">trade_series_ids</span> <span class="k">else</span> <span class="p">{}</span>
+                                     <span class="p">),</span>
                                      <span class="p">)</span>
     <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Retrieved </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="p">)</span><span class="si">}</span><span class="s2"> TradeSeries records&quot;</span><span class="p">)</span>
 
     <span class="c1"># Reconstruct TradeSeries objects and optionally load trades</span>
     <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Building TradeSeries objects and optionally loading trades&quot;</span><span class="p">)</span>
     <span class="n">total</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
+    <span class="n">date_bounds</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="n">start_dt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">date_bounds</span><span class="p">[</span><span class="s2">&quot;start_dt&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">start_dt</span>
+    <span class="k">if</span> <span class="n">end_dt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">date_bounds</span><span class="p">[</span><span class="s2">&quot;end_dt&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">end_dt</span>
     <span class="n">pbar</span> <span class="o">=</span> <span class="n">start_progbar</span><span class="p">(</span><span class="n">show_progress</span><span class="p">,</span> <span class="n">total</span><span class="p">,</span>
                          <span class="s2">&quot;TradeSeries objects built&quot;</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
@@ -1926,8 +2117,9 @@
         <span class="k">if</span> <span class="n">include_trades</span><span class="p">:</span>
             <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Loading trades for ts_id=</span><span class="si">{</span><span class="n">ts</span><span class="o">.</span><span class="n">ts_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="n">ts</span><span class="o">.</span><span class="n">trades</span> <span class="o">=</span> <span class="n">get_trades_by_field</span><span class="p">(</span><span class="n">field</span><span class="o">=</span><span class="s2">&quot;ts_id&quot;</span><span class="p">,</span>
-                                            <span class="n">value</span><span class="o">=</span><span class="n">ts</span><span class="o">.</span><span class="n">ts_id</span><span class="p">,</span>
+                                            <span class="n">values</span><span class="o">=</span><span class="n">ts</span><span class="o">.</span><span class="n">ts_id</span><span class="p">,</span>
                                             <span class="n">collection</span><span class="o">=</span><span class="n">collection_trades</span><span class="p">,</span>
+                                            <span class="o">**</span><span class="n">date_bounds</span><span class="p">,</span>
                                             <span class="p">)</span>
             <span class="n">ts</span><span class="o">.</span><span class="n">sort_trades</span><span class="p">()</span>
         <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ts</span><span class="p">)</span>
@@ -1992,6 +2184,7 @@
 
 <span class="sd">    Optionally filters by bt_id.  Earliest start_dt and latest end_dt</span>
 <span class="sd">    are returned as strings.  pretty=True returns a formatted string.</span>
+<span class="sd">    Integrity checks include all stored Trades, even outside series dates.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">check_integrity</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">bt_id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -2011,7 +2204,7 @@
         <span class="c1"># Loop through all TradeSeries/Trades, noting any issues found</span>
         <span class="n">trade_overlaps</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">ts</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">all_ts</span><span class="p">):</span>
-            <span class="n">ts</span><span class="o">.</span><span class="n">load_trades</span><span class="p">()</span>
+            <span class="n">ts</span><span class="o">.</span><span class="n">load_trades</span><span class="p">(</span><span class="n">start_dt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">end_dt</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
             <span class="n">last_trade</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="n">last_close_tf</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">ts</span><span class="o">.</span><span class="n">trades</span><span class="p">:</span>
@@ -2127,9 +2320,15 @@
 <span class="sd">    meant to be subclassed, dicts are returned so subclass implementations</span>
 <span class="sd">    can convert them into their specific object types as needed.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">dhm</span><span class="o">.</span><span class="n">get_all_records_by_collection</span><span class="p">(</span><span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">,</span>
-                                             <span class="n">limit</span><span class="o">=</span><span class="n">limit</span><span class="p">,</span>
-                                             <span class="n">show_progress</span><span class="o">=</span><span class="n">show_progress</span><span class="p">)</span></div>
+    <span class="n">backtest_documents</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">get_all_records_by_collection</span><span class="p">(</span>
+        <span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="n">limit</span><span class="p">,</span> <span class="n">show_progress</span><span class="o">=</span><span class="n">show_progress</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">for</span> <span class="n">backtest_document</span> <span class="ow">in</span> <span class="n">backtest_documents</span><span class="p">:</span>
+        <span class="n">_require_stored_id</span><span class="p">(</span>
+            <span class="n">backtest_document</span><span class="p">,</span> <span class="s2">&quot;bt_id&quot;</span><span class="p">,</span> <span class="s2">&quot;Backtest&quot;</span><span class="p">,</span>
+            <span class="n">function_name</span><span class="o">=</span><span class="s2">&quot;get_all_backtests&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">backtest_documents</span></div>
 
 
 <div class="viewcode-block" id="get_backtests_by_field"><a class="viewcode-back" href="../../api/dhtrader.dhstore.html#dhtrader.dhstore.get_backtests_by_field">[docs]</a><span class="k">def</span><span class="w"> </span><span class="nf">get_backtests_by_field</span><span class="p">(</span><span class="n">field</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -2150,6 +2349,11 @@
                                         <span class="n">limit</span><span class="o">=</span><span class="n">limit</span><span class="p">,</span>
                                         <span class="n">show_progress</span><span class="o">=</span><span class="n">show_progress</span><span class="p">,</span>
                                         <span class="p">)</span>
+    <span class="k">for</span> <span class="n">backtest_document</span> <span class="ow">in</span> <span class="n">result</span><span class="p">:</span>
+        <span class="n">_require_stored_id</span><span class="p">(</span>
+            <span class="n">backtest_document</span><span class="p">,</span> <span class="s2">&quot;bt_id&quot;</span><span class="p">,</span> <span class="s2">&quot;Backtest&quot;</span><span class="p">,</span>
+            <span class="n">function_name</span><span class="o">=</span><span class="s2">&quot;get_backtests_by_field&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
 
     <span class="k">return</span> <span class="n">result</span></div>
 
@@ -2344,6 +2548,12 @@
 <span class="sd">    Reconstructs using constructor fields first, then reattaches any</span>
 <span class="sd">    remaining stored keys via setattr to preserve post-init state.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">_require_stored_id</span><span class="p">(</span>
+        <span class="n">tp</span><span class="p">,</span> <span class="s2">&quot;tp_id&quot;</span><span class="p">,</span> <span class="s2">&quot;TradePlan&quot;</span><span class="p">,</span> <span class="n">function_name</span><span class="o">=</span><span class="s2">&quot;reconstruct_tradeplan&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">_require_stored_id</span><span class="p">(</span>
+        <span class="n">tp</span><span class="p">,</span> <span class="s2">&quot;uniq_id&quot;</span><span class="p">,</span> <span class="s2">&quot;TradePlan&quot;</span><span class="p">,</span> <span class="n">function_name</span><span class="o">=</span><span class="s2">&quot;reconstruct_tradeplan&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
     <span class="n">raw_ts</span> <span class="o">=</span> <span class="n">tp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;tradeseries&quot;</span><span class="p">)</span>
     <span class="n">ts</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">raw_ts</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
@@ -2361,7 +2571,7 @@
             <span class="p">)</span>
 
     <span class="k">if</span> <span class="n">ts</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">ts</span><span class="o">.</span><span class="n">trades</span> <span class="o">=</span> <span class="n">get_trades_by_field_in</span><span class="p">(</span>
+        <span class="n">ts</span><span class="o">.</span><span class="n">trades</span> <span class="o">=</span> <span class="n">get_trades_by_field</span><span class="p">(</span>
             <span class="n">field</span><span class="o">=</span><span class="s2">&quot;trade_id&quot;</span><span class="p">,</span>
             <span class="n">values</span><span class="o">=</span><span class="n">trade_ids</span><span class="p">,</span>
             <span class="n">collection</span><span class="o">=</span><span class="n">collection_trades</span><span class="p">,</span>
@@ -2600,6 +2810,9 @@
     <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">None</span>
 
+    <span class="n">_require_stored_id</span><span class="p">(</span>
+        <span class="n">i</span><span class="p">,</span> <span class="s2">&quot;ind_id&quot;</span><span class="p">,</span> <span class="s2">&quot;Indicator&quot;</span><span class="p">,</span> <span class="n">function_name</span><span class="o">=</span><span class="s2">&quot;get_indicator&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
     <span class="c1"># The stored class_name attribute tells us which object class to return</span>
     <span class="k">if</span> <span class="n">i</span><span class="p">[</span><span class="s2">&quot;class_name&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;IndicatorSMA&quot;</span><span class="p">:</span>
         <span class="n">result</span> <span class="o">=</span> <span class="n">IndicatorSMA</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="n">i</span><span class="p">[</span><span class="s2">&quot;description&quot;</span><span class="p">],</span>
@@ -2689,6 +2902,10 @@
     <span class="n">pbar</span> <span class="o">=</span> <span class="n">start_progbar</span><span class="p">(</span><span class="n">show_progress</span><span class="p">,</span> <span class="n">total</span><span class="p">,</span>
                          <span class="s2">&quot;IndicatorDataPoint objects built&quot;</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">working</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">_require_stored_id</span><span class="p">(</span>
+            <span class="n">d</span><span class="p">,</span> <span class="s2">&quot;ind_id&quot;</span><span class="p">,</span> <span class="s2">&quot;IndicatorDataPoint&quot;</span><span class="p">,</span>
+            <span class="n">function_name</span><span class="o">=</span><span class="s2">&quot;get_indicator_datapoints&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
         <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">IndicatorDataPoint</span><span class="p">(</span><span class="n">dt</span><span class="o">=</span><span class="n">d</span><span class="p">[</span><span class="s2">&quot;dt&quot;</span><span class="p">],</span>
                                          <span class="n">value</span><span class="o">=</span><span class="n">d</span><span class="p">[</span><span class="s2">&quot;value&quot;</span><span class="p">],</span>
                                          <span class="n">ind_id</span><span class="o">=</span><span class="n">d</span><span class="p">[</span><span class="s2">&quot;ind_id&quot;</span><span class="p">],</span>
@@ -2706,9 +2923,13 @@
                                <span class="n">collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">COLLECTIONS</span><span class="p">[</span><span class="s2">&quot;ind_dps&quot;</span><span class="p">],</span>
                                <span class="n">skip_dupes</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
                                <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Store one or more IndicatorDatapoint() objects in central storage.&quot;&quot;&quot;</span>
-    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Processing </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">datapoints</span><span class="p">)</span><span class="si">}</span><span class="s2"> datapoints with &quot;</span>
-             <span class="sa">f</span><span class="s2">&quot;skip_dupes=</span><span class="si">{</span><span class="n">skip_dupes</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Store datapoints, logging per-call details only at DEBUG.</span>
+
+<span class="sd">    Indicator storage invokes this for individual datapoints which is too</span>
+<span class="sd">    verbose for INFO logging each call.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Processing </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">datapoints</span><span class="p">)</span><span class="si">}</span><span class="s2"> datapoints with &quot;</span>
+              <span class="sa">f</span><span class="s2">&quot;skip_dupes=</span><span class="si">{</span><span class="n">skip_dupes</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
     <span class="n">store_dps</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">r_skipped</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">datapoints</span><span class="p">:</span>
@@ -2738,12 +2959,14 @@
             <span class="n">store_dps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">to_clean_dict</span><span class="p">())</span>
 
     <span class="n">op_timer</span> <span class="o">=</span> <span class="n">OperationTimer</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;Indicator Datapoints Storage Job&quot;</span><span class="p">)</span>
-    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Storing </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">store_dps</span><span class="p">)</span><span class="si">}</span><span class="s2"> datapoints to collection=</span><span class="si">{</span><span class="n">collection</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;Storing </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">store_dps</span><span class="p">)</span><span class="si">}</span><span class="s2"> datapoints to collection=</span><span class="si">{</span><span class="n">collection</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
     <span class="n">r_stored</span> <span class="o">=</span> <span class="n">dhm</span><span class="o">.</span><span class="n">store_indicator_datapoints</span><span class="p">(</span><span class="n">datapoints</span><span class="o">=</span><span class="n">store_dps</span><span class="p">,</span>
                                               <span class="n">collection</span><span class="o">=</span><span class="n">collection</span><span class="p">,</span>
                                               <span class="p">)</span>
     <span class="n">op_timer</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
-    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Complete: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">store_dps</span><span class="p">)</span><span class="si">}</span><span class="s2"> stored, </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">r_skipped</span><span class="p">)</span><span class="si">}</span><span class="s2"> skipped&quot;</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Complete: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">store_dps</span><span class="p">)</span><span class="si">}</span><span class="s2"> stored, </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">r_skipped</span><span class="p">)</span><span class="si">}</span><span class="s2"> skipped&quot;</span><span class="p">)</span>
     <span class="n">result</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;skipped&quot;</span><span class="p">:</span> <span class="n">r_skipped</span><span class="p">,</span>
               <span class="s2">&quot;stored&quot;</span><span class="p">:</span> <span class="n">r_stored</span><span class="p">,</span>
               <span class="s2">&quot;elapsed&quot;</span><span class="p">:</span> <span class="n">op_timer</span><span class="p">,</span>
@@ -2908,6 +3131,10 @@
                                           <span class="p">)</span>
     <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">raw_docs</span><span class="p">:</span>
+        <span class="n">_require_stored_id</span><span class="p">(</span>
+            <span class="n">doc</span><span class="p">,</span> <span class="s2">&quot;ind_id&quot;</span><span class="p">,</span> <span class="s2">&quot;Indicator&quot;</span><span class="p">,</span>
+            <span class="n">function_name</span><span class="o">=</span><span class="s2">&quot;get_indicators_by_name&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
         <span class="n">common</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="n">doc</span><span class="p">[</span><span class="s2">&quot;description&quot;</span><span class="p">],</span>
                       <span class="n">timeframe</span><span class="o">=</span><span class="n">doc</span><span class="p">[</span><span class="s2">&quot;timeframe&quot;</span><span class="p">],</span>
                       <span class="n">trading_hours</span><span class="o">=</span><span class="n">doc</span><span class="p">[</span><span class="s2">&quot;trading_hours&quot;</span><span class="p">],</span>
@@ -3009,7 +3236,10 @@
                 <span class="n">symbol</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;ES&quot;</span><span class="p">,</span>
                 <span class="n">show_progress</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                 <span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return candle docs within the given start and end epochs, inclusive.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return candles within the given start and end epochs, inclusive.</span>
+
+<span class="sd">    Log the request and final count at INFO; intermediate retrieval and</span>
+<span class="sd">    object-building milestones are available at DEBUG.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># Retrieve candle dictionaries from storage</span>
     <span class="n">log_sym</span> <span class="o">=</span> <span class="n">symbol</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">symbol</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="n">symbol</span><span class="o">.</span><span class="n">ticker</span>
@@ -3023,10 +3253,10 @@
                              <span class="n">symbol</span><span class="o">=</span><span class="n">symbol</span><span class="p">,</span>
                              <span class="n">show_progress</span><span class="o">=</span><span class="n">show_progress</span><span class="p">,</span>
                              <span class="p">)</span>
-    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Finished retrieval from storage&quot;</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Finished retrieval from storage&quot;</span><span class="p">)</span>
 
     <span class="c1"># Build Candle() objects from retrieved dictionaries</span>
-    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Building Candle objects from retrieved data&quot;</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Building Candle objects from retrieved data&quot;</span><span class="p">)</span>
     <span class="n">candles</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">total</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
     <span class="n">pbar</span> <span class="o">=</span> <span class="n">start_progbar</span><span class="p">(</span><span class="n">show_progress</span><span class="p">,</span> <span class="n">total</span><span class="p">,</span>
