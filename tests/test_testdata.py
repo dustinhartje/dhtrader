@@ -33,6 +33,7 @@ class _StoredObjectDouble:
     """Expose to_clean_dict() like storage-returned dhtrader objects."""
 
     def __init__(self, **fields):
+        """Set the fields exposed by the stored-object test double."""
         self.__dict__.update(fields)
 
     def to_clean_dict(self):
@@ -252,6 +253,7 @@ def test_extract_candles_queries_epochs_and_writes_files(
                    c_volume=10, c_symbol="ES")]
 
     def fake_get_candles(**kwargs):
+        """Record the Candle query and return the test Candles."""
         calls.append(kwargs)
         return cans
 
@@ -273,8 +275,7 @@ def test_extract_candles_queries_epochs_and_writes_files(
 
 def test_extract_trades_filters_annotates_splits_and_writes_files(
         monkeypatch, tmp_path):
-    """Trades are date-limited, annotated with prior indicator values,
-    split by direction and written to every output file."""
+    """Save date-limited Trades with indicator data, grouped by direction."""
     long_ts_id = "DELETEME_ts_long"
     short_ts_id = "DELETEME_ts_short"
     stored_trades = {
@@ -289,6 +290,7 @@ def test_extract_trades_filters_annotates_splits_and_writes_files(
     calls = []
 
     def fake_get_trades_by_field(field, values):
+        """Record the Trade query and return the stored test Trades."""
         calls.append((field, values))
         return [_StoredObjectDouble(**t) for t in stored_trades[values]]
 
@@ -335,8 +337,7 @@ def test_extract_trades_filters_annotates_splits_and_writes_files(
 
 def test_extract_trades_without_options_returns_unmodified_trades(
         monkeypatch, tmp_path):
-    """A single ts_id string is accepted and no files or annotations are
-    produced when no dates, indicator datapoints or out_file are given."""
+    """Extract Trades without changing them when no options are requested."""
     ts_id = "DELETEME_ts"
     stored = [_trade_dict("2099-01-05 10:15:00", "long", ts_id),
               _trade_dict("2099-01-06 10:15:00", "short", ts_id)]
@@ -368,11 +369,11 @@ def test_extract_rejects_non_string_non_list_ids(method, id_arg):
 
 def test_extract_tradeseries_overrides_dates_and_writes_files(
         monkeypatch, tmp_path):
-    """TradeSeries load without trades, take date overrides and write
-    JSON-encoded nested CSV columns."""
+    """Extract and save TradeSeries with the requested dates."""
     calls = []
 
     def fake_get_tradeseries_by_field(field, value, include_trades):
+        """Record the TradeSeries query and return the test TradeSeries."""
         calls.append((field, value, include_trades))
         return [_StoredObjectDouble(
             ts_id=value, bt_id="DELETEME_bt", name="DELETEME",
@@ -397,11 +398,11 @@ def test_extract_tradeseries_overrides_dates_and_writes_files(
 
 def test_extract_backtests_overrides_dates_and_writes_files(
         monkeypatch, tmp_path):
-    """Backtest documents take date overrides and write JSON-encoded
-    nested CSV columns."""
+    """Extract and save Backtests with the requested dates."""
     calls = []
 
     def fake_get_backtests_by_field(field, value):
+        """Record the Backtest query and return the test Backtest documents."""
         calls.append((field, value))
         return [{"_id": "DELETEME_doc", "bt_id": value,
                  "start_dt": "2099-01-01 00:00:00",
@@ -425,13 +426,13 @@ def test_extract_backtests_overrides_dates_and_writes_files(
 
 def test_extract_indicator_datapoints_queries_range_and_writes_files(
         monkeypatch, tmp_path):
-    """Indicator datapoints are queried by range and written with all
-    datapoint fields as CSV columns."""
+    """Extract and save IndicatorDataPoints within the requested dates."""
     calls = []
     dps = [_StoredObjectDouble(dt="2099-01-05 10:00:00", value=1.5,
                                ind_id="DELETEME_ind", epoch=1, name="EMA")]
 
     def fake_get_indicator_datapoints(ind_id, earliest_dt, latest_dt):
+        """Record the IndicatorDataPoint query and return test datapoints."""
         calls.append((ind_id, earliest_dt, latest_dt))
         return dps
 
@@ -457,8 +458,11 @@ def test_extract_indicator_datapoints_queries_range_and_writes_files(
 @pytest.mark.historical
 @pytest.mark.suppress_stdout
 def test_set1_fresh_extraction_matches_disk():
-    """Fresh set1 extraction from storage matches the on-disk JSON files,
-    apart from fields regenerated when stored objects are recreated."""
+    """Verify freshly extracted set1 data matches the saved reference files.
+
+    Ignore fields expected to be regenerated when stored objects are recreated,
+    such as creation timestamps, unique IDs, etc.
+    """
     metadata = _read_json(TESTDATA_DIR / "set1_metadata.json")
     extracted = extract_testdata(blob=dict(metadata, name="set1"),
                                  write=False)
@@ -491,8 +495,10 @@ def test_set1_fresh_extraction_matches_disk():
 @pytest.mark.historical
 @pytest.mark.suppress_stdout
 def test_set1_rebuild_matches_disk():
-    """Objects rebuilt from set1 files reproduce the on-disk JSON, apart
-    from identities Rebuilder regenerates and extraction-only fields."""
+    """Verify rebuilt set1 objects match the saved reference files.
+
+    Exclude regenerated identities and fields added only during extraction.
+    """
     rebuilder = Rebuilder()
     for timeframe in ("1m", "e1h"):
         candles_file = SET1_DIR / f"set1_{timeframe}_candles.json"

@@ -442,11 +442,10 @@ def bulk_upsert_documents(
         *,
         database: str = None,
         ) -> dict:
-    """Validate and ordered-upsert plain documents in a custom collection.
+    """Store or replace a batch of custom documents.
 
-    The batch must contain BSON-compatible dictionaries with distinct,
-    non-blank string identities. No documents are written unless the full
-    batch passes validation.
+    Reject managed collections and delegate validation and ordered writes
+    to dhmongo.bulk_upsert_documents(). Return its write summary.
     """
     count = len(documents) if isinstance(documents, (list, tuple)) else None
     log.info(
@@ -503,7 +502,7 @@ def iter_custom_documents_by_field(
 
 def verify_database_configuration(
         configuration: dict, *, database: str = None) -> dict:
-    """Inspect configured storage without provisioning or changing defaults.
+    """Check configured Mongo storage against expectations.
 
     Pass the dictionary loaded from the provisioning JSON. Omit database to
     inspect every configured database, or select one by name. Return

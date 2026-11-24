@@ -103,6 +103,7 @@ def test_trade_queries_bound_open_dates_before_limit(
 @pytest.mark.parametrize("list_value", [False, True])
 def test_trade_queries_reject_reversed_dates_before_database_query(
         monkeypatch, list_value):
+    """Reject reversed Trade dates before querying the database."""
     collection = Mock()
     monkeypatch.setattr(_dhm, "db", {"DELETEME_trades": collection})
     value = [] if list_value else "DELETEME_series"
@@ -119,6 +120,7 @@ def test_trade_queries_reject_reversed_dates_before_database_query(
 
 
 def test_trade_query_with_empty_value_list_skips_database(monkeypatch):
+    """Skip the database query when the Trade search list is empty."""
     collection = Mock()
     monkeypatch.setattr(_dhm, "db", {"DELETEME_trades": collection})
 
@@ -168,6 +170,7 @@ def test_tradeseries_query_applies_optional_id_filter(
 
 
 def test_trade_date_bounds_preserve_an_open_epoch_predicate(monkeypatch):
+    """Keep the original Trade search condition when adding date limits."""
     epoch = dt_to_epoch("2099-01-02 10:00:00")
     cursor = Mock()
     cursor.sort.return_value = cursor
@@ -665,22 +668,27 @@ def test_store_and_get_event_roundtrip(cleanup_dhmongo_storage):
 
 class _FakeDatabase:
     def __init__(self, collections):
+        """Set the collections available in the fake database."""
         self.collections = collections
 
     def __getitem__(self, name):
+        """Get a collection from the fake database by name."""
         return self.collections[name]
 
 
 class _FakeClient:
     def __init__(self, databases):
+        """Set the databases available in the fake client."""
         self.databases = databases
 
     def __getitem__(self, name):
+        """Get a database from the fake client by name."""
         return self.databases[name]
 
 
 class _FakeCursor:
     def __init__(self, documents, error_at=None):
+        """Set up the fake cursor's documents and tracking fields."""
         self.documents = documents
         self.error_at = error_at
         self.batch_size_value = None
@@ -688,14 +696,17 @@ class _FakeCursor:
         self.close_count = 0
 
     def batch_size(self, size):
+        """Record the requested cursor batch size."""
         self.batch_size_value = size
         return self
 
     def limit(self, limit):
+        """Record the requested document limit."""
         self.limit_value = limit
         return self
 
     def __iter__(self):
+        """Simulate reading documents with a result limit or a forced error."""
         for index, document in enumerate(self.documents):
             if index == self.error_at:
                 raise RuntimeError("cursor iteration failed")
@@ -707,6 +718,7 @@ class _FakeCursor:
             raise RuntimeError("cursor iteration failed")
 
     def close(self):
+        """Count calls to close the fake cursor."""
         self.close_count += 1
 
 

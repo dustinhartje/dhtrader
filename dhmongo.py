@@ -174,11 +174,10 @@ def _validate_database_configuration(configuration: dict) -> None:
 
 
 def _configuration_index_matches(actual: dict, desired: dict) -> bool:
-    """Compare ordinary index semantics, ignoring server metadata and names.
+    """Check whether index settings match the configured requirements.
 
     Extra sparse, partial, TTL, collation, or other behavioral options must
     not be mistaken for the ordinary index requested by configuration.
-    Extra unrelated indexes, including MongoDB's built-in _id, are allowed.
     """
     ordinary_fields = {"v", "ns", "name", "key", "unique"}
     return (
@@ -193,7 +192,7 @@ def _configuration_index_matches(actual: dict, desired: dict) -> bool:
 
 def verify_database_configuration(
         configuration: dict, *, database: str = None) -> dict:
-    """Read-only inspection of a caller-provided provisioning configuration.
+    """Check Mongo databases, collections and indexes match expectations.
 
     The caller loads the JSON configuration; this library owns no deployment
     paths or application-specific database/index definitions. Omit database
@@ -583,10 +582,11 @@ def bulk_upsert_documents(
         *,
         database: str = None,
         ) -> dict:
-    """Validate and ordered-upsert plain documents by their identity field.
+    """Store or replace custom documents using their IDs.
 
     Each document must be a BSON-compatible dict with a non-blank string
     identity. The input batch is validated completely before any write.
+    Match existing documents using identity_field then apply replacements.
     """
     if not isinstance(documents, (list, tuple)):
         log.critical(
@@ -712,6 +712,7 @@ def iter_custom_documents_by_field(
         raise ValueError("limit must be a non-negative integer")
 
     def _iterate():
+        """Iterate over matching custom documents."""
         cursor = None
         try:
             target_db = db if database is None else mc[database]

@@ -22,6 +22,7 @@ from dhtrader import (
 ])
 def test_Backtest_load_tradeseries_preserves_metadata_with_date_bounds(
         monkeypatch, bounds, trade_series_ids):
+    """Load selected TradeSeries without changing Backtest dates or IDs."""
     backtest = create_backtest(bt_id="DELETEME_scoped_backtest")
     series = [
         Mock(ts_id="DELETEME_series_b"), Mock(ts_id="DELETEME_series_a"),

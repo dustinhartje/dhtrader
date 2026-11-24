@@ -696,6 +696,7 @@ def test_reconstruct_tradeplan_always_hydrates_by_trade_id(monkeypatch):
 
     def fake_get_trades_by_field(field, values, collection, limit=0,
                                  show_progress=False):
+        """Return the expected Trades after checking the Trade ID query."""
         assert field == "trade_id"
         assert values == [t_late.trade_id, t_early.trade_id]
         return [t_late, t_early]
@@ -773,6 +774,7 @@ def test_TradePlan_additional_fields_survive_storage_and_reconstruction(
     stored_tradeplans = []
 
     def store_tradeplan(document, collection):
+        """Capture the TradePlan document submitted for storage."""
         stored_tradeplans.append(document)
         return {}
 

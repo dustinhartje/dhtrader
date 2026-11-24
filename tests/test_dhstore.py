@@ -152,6 +152,7 @@ def test_check_integrity_future_datetimes_rechecks_fetched_timestamps(
 @pytest.mark.parametrize("bt_id", [None, "DELETEME_integrity_backtest"])
 def test_review_tradeseries_checks_trades_outside_series_dates(
         monkeypatch, bt_id):
+    """Find Trade overlaps even outside the TradeSeries date limits."""
     series = TradeSeries(
         start_dt="2099-01-02 00:00:00", end_dt="2099-01-03 00:00:00",
         timeframe="5m", trading_hours="rth", symbol=Mock(),
@@ -221,6 +222,7 @@ def test_trade_loaders_forward_dates_before_reconstruction(
 @pytest.mark.parametrize("include_trades", [False, True])
 def test_series_loader_bounds_trades_without_changing_metadata(
         monkeypatch, include_trades):
+    """Keep TradeSeries dates unchanged when limiting loaded Trades by date."""
     document = {"ts_id": "DELETEME_scoped_series"}
     series = Mock(
         ts_id=document["ts_id"], start_dt="2099-01-01 00:00:00",
@@ -1396,7 +1398,7 @@ def test_generic_persistence_wrappers_and_public_exports(monkeypatch):
 ])
 def test_generic_persistence_wrappers_reject_managed_collections(
         monkeypatch, operation, managed_collection):
-    """New generic operations preserve managed-collection protection."""
+    """Keep managed collections protected from custom document operations."""
     bulk = Mock()
     stream = Mock()
     count = Mock()
@@ -1503,6 +1505,7 @@ def test_stored_object_reconstruction_rejects_missing_ids(
 @pytest.mark.parametrize("id_field", ["image_id", "uniq_id"])
 def test_image_retrieval_rejects_missing_stored_ids(
         monkeypatch, id_field):
+    """Reject stored images with missing IDs."""
     metadata = {
         "image_id": "DELETEME_image_12345678",
         "uniq_id": "DELETEME_image_uuid",
@@ -1520,6 +1523,7 @@ def test_image_retrieval_rejects_missing_stored_ids(
 @pytest.mark.parametrize("id_field", ["image_id", "uniq_id"])
 def test_image_metadata_retrieval_rejects_missing_stored_ids(
         monkeypatch, id_field):
+    """Reject image metadata with missing stored IDs."""
     metadata = {
         "image_id": "DELETEME_image_12345678",
         "uniq_id": "DELETEME_image_uuid",
@@ -1537,6 +1541,7 @@ def test_image_metadata_retrieval_rejects_missing_stored_ids(
 
 
 def test_indicator_retrieval_rejects_missing_stored_id(monkeypatch):
+    """Reject stored Indicators with missing IDs."""
     retrieve = Mock(return_value=[{"ind_id": None}])
     monkeypatch.setattr(_dhm, "get_indicator", retrieve)
 
@@ -1547,6 +1552,7 @@ def test_indicator_retrieval_rejects_missing_stored_id(monkeypatch):
 
 
 def test_named_indicator_retrieval_rejects_missing_stored_id(monkeypatch):
+    """Reject named Indicators with missing stored IDs."""
     retrieve = Mock(return_value=[{"ind_id": None}])
     monkeypatch.setattr(_dhm, "get_indicators_by_name", retrieve)
 
@@ -1558,6 +1564,7 @@ def test_named_indicator_retrieval_rejects_missing_stored_id(monkeypatch):
 
 def test_indicator_datapoint_retrieval_rejects_missing_indicator_id(
         monkeypatch):
+    """Reject IndicatorDataPoints with missing Indicator IDs."""
     retrieve = Mock(return_value=[{"ind_id": None}])
     monkeypatch.setattr(_dhm, "get_indicator_datapoints", retrieve)
 
@@ -1571,6 +1578,7 @@ def test_indicator_datapoint_retrieval_rejects_missing_indicator_id(
 @pytest.mark.parametrize("record", [{"bt_id": None}, {}])
 def test_backtest_retrieval_rejects_missing_stored_id(
         monkeypatch, lookup, record):
+    """Reject stored Backtests with missing IDs."""
     retrieve = Mock(return_value=[record])
     if lookup == "all":
         monkeypatch.setattr(

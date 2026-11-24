@@ -182,7 +182,7 @@ def test_TradeSeries_stats_category_combinations_match_full_stats(
 
 def test_TradeSeries_stats_requests_skip_unneeded_work(
         monkeypatch, stats_tradeseries):
-    """Skip distributions in both APIs and extra calendar work by field."""
+    """Skip unneeded work for requested TradeSeries statistics."""
     calls = {
         "duration": 0, "gain_loss": 0, "percentile": 0,
         "median": 0, "calendar": 0,
@@ -194,22 +194,27 @@ def test_TradeSeries_stats_requests_skip_unneeded_work(
     original_datetime = _dht.dt_as_dt
 
     def duration(trade):
+        """Count Trade duration calculations."""
         calls["duration"] += 1
         return original_duration(trade)
 
     def gain_loss(trade):
+        """Count Trade gain/loss calculations."""
         calls["gain_loss"] += 1
         return original_gain_loss(trade)
 
     def percentile(*args, **kwargs):
+        """Count percentile calculations."""
         calls["percentile"] += 1
         return original_percentile(*args, **kwargs)
 
     def median(*args, **kwargs):
+        """Count median calculations."""
         calls["median"] += 1
         return original_median(*args, **kwargs)
 
     def as_datetime(value):
+        """Count datetime conversions."""
         calls["calendar"] += 1
         return original_datetime(value)
 
@@ -326,6 +331,7 @@ def test_TradeSeries_stats_requests_preserve_input_failures(
 ])
 def test_TradeSeries_load_trades_preserves_metadata_with_date_bounds(
         monkeypatch, start_bounds, expected_start, end_bounds, expected_end):
+    """Keep TradeSeries dates and IDs when loading Trades with date limits."""
     series = create_tradeseries(
         ts_id="DELETEME_scoped_series", bt_id="DELETEME_scoped_backtest",
     )
@@ -356,6 +362,7 @@ def test_TradeSeries_load_trades_preserves_metadata_with_date_bounds(
 
 
 def test_TradeSeries_load_trades_uses_current_restricted_dates(monkeypatch):
+    """Use the TradeSeries' current date limits when loading Trades."""
     series = create_tradeseries(ts_id="DELETEME_restricted_series")
     retrieve = Mock(return_value=[])
     monkeypatch.setattr(_dht, "get_trades_by_field", retrieve)
