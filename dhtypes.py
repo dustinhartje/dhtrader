@@ -3884,11 +3884,12 @@ class TradeSeries():
         Omit both request arguments to provide complete statistics. Otherwise
         provide one nonempty collection of category names or existing output
         field names. Categories are:
-          - 'activity' (counts, success and calendar)
-          - 'setup_risk_reward' (setup/min/max)
-          - 'profit_loss' (sequence, averages and effective risk/reward)
-          - 'durations' (percentiles/median)
-          - 'trade_ticks' (unique stop/profit/offset configurations)
+
+        - 'activity' (counts, success and calendar)
+        - 'setup_risk_reward' (setup/min/max)
+        - 'profit_loss' (sequence, averages and effective risk/reward)
+        - 'durations' (percentiles/median)
+        - 'trade_ticks' (unique stop/profit/offset configurations)
         """
         fields = self._requested_stat_fields(stats_categories, requested_stats)
         duration_fields = fields & self._STATS_CATEGORIES["durations"]
